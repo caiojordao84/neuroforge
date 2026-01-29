@@ -1,0 +1,235 @@
+import React, { useState, useCallback } from 'react';
+import { Handle, Position } from '@xyflow/react';
+import { boardConfigs } from '@/stores/useSimulationStore';
+import { cn } from '@/lib/utils';
+import type { BoardType } from '@/types';
+
+interface MCUNodeProps {
+  id: string;
+  data: Record<string, unknown>;
+  selected?: boolean;
+}
+
+export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
+  const mcuType = (data.mcuType as BoardType) || 'arduino-uno';
+  const config = boardConfigs[mcuType];
+  const label = (data.label as string) || config.name;
+  const isRunning = (data.isRunning as boolean) ?? false;
+  
+  // Track which pins are being hovered
+  const [hoveredPin, setHoveredPin] = useState<number | null>(null);
+  // Track selected pin for configuration
+  const [selectedPin, setSelectedPin] = useState<number | null>(null);
+
+  const handlePinClick = useCallback((pin: number) => {
+    setSelectedPin(pin === selectedPin ? null : pin);
+  }, [selectedPin]);
+
+  const isArduino = mcuType === 'arduino-uno';
+  const isESP32 = mcuType === 'esp32-devkit';
+  const isPico = mcuType === 'raspberry-pi-pico';
+
+  // Get board color based on type
+  const getBoardColor = () => {
+    if (isArduino) return 'bg-[#1a5fb4]';
+    if (isESP32) return 'bg-[#2d5016]';
+    if (isPico) return 'bg-[#c51e4a]';
+    return 'bg-[#1a5fb4]';
+  };
+
+  const getBorderColor = () => {
+    if (isArduino) return 'border-[#0d3a7a]';
+    if (isESP32) return 'border-[#1a3a0d]';
+    if (isPico) return 'border-[#8b1539]';
+    return 'border-[#0d3a7a]';
+  };
+
+  return (
+    <div
+      className={cn(
+        'relative rounded-lg overflow-hidden',
+        'border-4',
+        selected ? 'border-[#00d9ff]' : getBorderColor(),
+        'shadow-lg transition-all duration-200',
+        isArduino ? 'w-[200px] h-[280px]' : 'w-[240px] h-[320px]'
+      )}
+    >
+      {/* Board background */}
+      <div className={cn('w-full h-full', getBoardColor())}>
+        {/* Header with board name */}
+        <div className={cn('px-3 py-2', getBorderColor())}>
+          <span className="text-white text-xs font-bold truncate block">{label}</span>
+        </div>
+
+        {/* USB Port */}
+        <div className="absolute top-8 left-1/2 -translate-x-1/2 w-12 h-8 bg-[#333] rounded border-2 border-[#555]" />
+
+        {/* Power pins on left */}
+        <div className="absolute top-20 left-2 flex flex-col gap-1">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full bg-red-500" />
+            <span className="text-[8px] text-white">5V</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full bg-black border border-gray-600" />
+            <span className="text-[8px] text-white">GND</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full bg-yellow-500" />
+            <span className="text-[8px] text-white">VIN</span>
+          </div>
+        </div>
+
+        {/* Digital pins on right with interactive hitboxes */}
+        <div className="absolute top-20 right-0 flex flex-col gap-0.5">
+          {config.digitalPins.slice(0, 14).map((pin) => (
+            <div key={pin} className="flex items-center gap-1 relative">
+              <span className="text-[7px] text-white">D{pin}</span>
+              <button
+                className={cn(
+                  'w-2.5 h-2.5 rounded-full transition-all duration-150',
+                  selectedPin === pin 
+                    ? 'bg-[#00d9ff] scale-125 ring-2 ring-white' 
+                    : hoveredPin === pin
+                      ? 'bg-white scale-110'
+                      : 'bg-[#00d9ff] hover:bg-white'
+                )}
+                title={`Digital Pin ${pin}${selectedPin === pin ? ' (Selected)' : ''}`}
+                onMouseEnter={() => setHoveredPin(pin)}
+                onMouseLeave={() => setHoveredPin(null)}
+                onClick={() => handlePinClick(pin)}
+              />
+              {/* Pin handle for wiring */}
+              <Handle
+                type="source"
+                position={Position.Right}
+                id={`D${pin}`}
+                style={{
+                  position: 'absolute',
+                  right: -8,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: 10,
+                  height: 10,
+                  background: selectedPin === pin ? '#00d9ff' : '#00d9ff',
+                  border: '2px solid #0a0e14',
+                  opacity: 0.8,
+                  zIndex: 10,
+                }}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Analog pins on bottom */}
+        <div className="absolute bottom-4 left-2 flex flex-row gap-1">
+          {config.analogPins.slice(0, 6).map((pin, i) => (
+            <div key={pin} className="flex flex-col items-center gap-0.5 relative">
+              <button
+                className={cn(
+                  'w-2.5 h-2.5 rounded-full transition-all duration-150',
+                  selectedPin === pin 
+                    ? 'bg-[#ffd600] scale-125 ring-2 ring-white' 
+                    : hoveredPin === pin
+                      ? 'bg-white scale-110'
+                      : 'bg-[#ffd600] hover:bg-white'
+                )}
+                title={`Analog Pin A${i}${selectedPin === pin ? ' (Selected)' : ''}`}
+                onMouseEnter={() => setHoveredPin(pin)}
+                onMouseLeave={() => setHoveredPin(null)}
+                onClick={() => handlePinClick(pin)}
+              />
+              <span className="text-[7px] text-white">A{i}</span>
+              {/* Pin handle for wiring */}
+              <Handle
+                type="source"
+                position={Position.Bottom}
+                id={`A${i}`}
+                style={{
+                  position: 'absolute',
+                  bottom: -8,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: 10,
+                  height: 10,
+                  background: '#ffd600',
+                  border: '2px solid #0a0e14',
+                  opacity: 0.8,
+                  zIndex: 10,
+                }}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Reset button */}
+        <div className="absolute bottom-4 right-4">
+          <div className="w-6 h-4 bg-[#333] rounded border border-[#555] flex items-center justify-center">
+            <span className="text-[6px] text-white">RST</span>
+          </div>
+        </div>
+
+        {/* Main chip */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+          <div className={cn(
+            'w-12 h-16 rounded border flex items-center justify-center',
+            isArduino ? 'bg-[#222] border-[#444]' : 
+            isESP32 ? 'bg-[#1a1a1a] border-[#333]' : 
+            'bg-[#1a1a1a] border-[#333]'
+          )}>
+            <span className="text-[8px] text-[#666]">
+              {isArduino ? 'ATmega' : isESP32 ? 'ESP32' : 'RP2040'}
+            </span>
+          </div>
+        </div>
+
+        {/* Status LED */}
+        <div className="absolute top-16 left-1/2 -translate-x-1/2">
+          <div className={cn(
+            'w-2 h-2 rounded-full transition-colors duration-200',
+            isRunning ? 'bg-green-400 animate-pulse' : 'bg-gray-600'
+          )} />
+        </div>
+
+        {/* Power handles */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="5V"
+          style={{
+            left: -8,
+            top: 82,
+            width: 10,
+            height: 10,
+            background: '#ff4444',
+            border: '2px solid #0a0e14',
+          }}
+        />
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="GND"
+          style={{
+            left: -8,
+            top: 98,
+            width: 10,
+            height: 10,
+            background: '#444444',
+            border: '2px solid #0a0e14',
+          }}
+        />
+      </div>
+
+      {/* Selected pin indicator */}
+      {selectedPin !== null && (
+        <div className="absolute bottom-8 left-2 right-2 bg-black/80 rounded px-2 py-1 text-center">
+          <span className="text-[10px] text-[#00d9ff]">
+            Pin {selectedPin} selected
+          </span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MCUNode;

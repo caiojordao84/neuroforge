@@ -1,0 +1,242 @@
+/* NeuroForge - Main Styles */
+
+/* ============================================
+   Global Styles
+   ============================================ */
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: #0a0e14;
+  color: #e6e6e6;
+}
+
+/* ============================================
+   Scrollbar Styles
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 217, 255, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 217, 255, 0.5);
+}
+
+/* ============================================
+   Selection Styles
+   ============================================ */
+
+::selection {
+  background: rgba(0, 217, 255, 0.3);
+  color: #fff;
+}
+
+/* ============================================
+   React Flow Custom Styles
+   ============================================ */
+
+.react-flow {
+  --xy-edge-stroke: rgba(0, 217, 255, 0.5);
+  --xy-edge-stroke-selected: #00d9ff;
+  --xy-connectionline-stroke: #00d9ff;
+  --xy-handle-background: #00d9ff;
+  --xy-handle-border-color: #0a0e14;
+  --xy-minimap-background-color: #151b24;
+  --xy-minimap-mask-background-color: rgba(10, 14, 20, 0.8);
+  --xy-controls-button-background-color: #151b24;
+  --xy-controls-button-background-color-hover: #1a2330;
+  --xy-controls-button-color: #e6e6e6;
+  --xy-controls-button-color-hover: #00d9ff;
+  --xy-controls-button-border-color: rgba(0, 217, 255, 0.3);
+  --xy-edge-label-background-color: #151b24;
+  --xy-edge-label-color: #e6e6e6;
+}
+
+.react-flow__edge-path {
+  stroke-width: 2;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #00d9ff;
+  stroke-width: 3;
+}
+
+.react-flow__handle {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #0a0e14;
+  transition: all 0.2s ease;
+}
+
+.react-flow__handle:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
+}
+
+.react-flow__node {
+  transition: transform 0.2s ease;
+}
+
+.react-flow__node.selected {
+  box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+}
+
+.react-flow__controls {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.react-flow__controls-button {
+  border-bottom: 1px solid rgba(0, 217, 255, 0.2);
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: none;
+}
+
+.react-flow__minimap {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* ============================================
+   Monaco Editor Custom Styles
+   ============================================ */
+
+.monaco-editor {
+  border-radius: 0 0 8px 8px;
+}
+
+.monaco-editor .overflow-guard {
+  border-radius: 0 0 8px 8px;
+}
+
+/* ============================================
+   Animation Keyframes
+   ============================================ */
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(0, 217, 255, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 217, 255, 0.8);
+  }
+}
+
+@keyframes led-blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes servo-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(180deg);
+  }
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+
+.glow-blue {
+  box-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
+}
+
+.glow-yellow {
+  box-shadow: 0 0 10px rgba(255, 214, 0, 0.5);
+}
+
+.text-glow {
+  text-shadow: 0 0 10px currentColor;
+}
+
+.border-glow {
+  border-color: rgba(0, 217, 255, 0.5);
+  box-shadow: 0 0 10px rgba(0, 217, 255, 0.2);
+}
+
+/* ============================================
+   Component Specific Styles
+   ============================================ */
+
+/* LED glow effect */
+.led-glow {
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+/* Button press effect */
+.button-press {
+  transform: translateY(2px);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Servo arm */
+.servo-arm {
+  transform-origin: center bottom;
+  transition: transform 0.1s ease-out;
+}
+
+/* Potentiometer track */
+.pot-track {
+  background: linear-gradient(to top, #0088cc, #00d9ff);
+}
+
+/* ============================================
+   Responsive Styles
+   ============================================ */
+
+@media (max-width: 768px) {
+  .floating-window {
+    max-width: 100vw;
+    max-height: 100vh;
+  }
+  
+  .left-sidebar {
+    width: 50px;
+  }
+  
+  .main-content {
+    left: 50px;
+  }
+}
+
+/* ============================================
+   Print Styles
+   ============================================ */
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

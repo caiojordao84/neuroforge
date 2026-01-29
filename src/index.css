@@ -1,0 +1,144 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* NeuroForge Dark Theme */
+    --background: 210 33% 4%;
+    --foreground: 0 0% 90%;
+    --card: 213 27% 11%;
+    --card-foreground: 0 0% 90%;
+    --popover: 213 27% 11%;
+    --popover-foreground: 0 0% 90%;
+    --primary: 189 100% 50%;
+    --primary-foreground: 210 33% 4%;
+    --secondary: 213 27% 11%;
+    --secondary-foreground: 0 0% 90%;
+    --muted: 213 27% 15%;
+    --muted-foreground: 220 9% 65%;
+    --accent: 50 100% 50%;
+    --accent-foreground: 210 33% 4%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 189 100% 50% / 0.3;
+    --input: 189 100% 50% / 0.2;
+    --ring: 189 100% 50%;
+    --radius: 0.5rem;
+    
+    /* NeuroForge Custom Colors */
+    --nf-bg-dark: #0a0e14;
+    --nf-bg-panel: #151b24;
+    --nf-accent-blue: #00d9ff;
+    --nf-accent-yellow: #ffd600;
+    --nf-text-primary: #e6e6e6;
+    --nf-text-secondary: #9ca3af;
+    --nf-border: rgba(0, 217, 255, 0.3);
+  }
+
+  .dark {
+    --background: 210 33% 4%;
+    --foreground: 0 0% 90%;
+    --card: 213 27% 11%;
+    --card-foreground: 0 0% 90%;
+    --popover: 213 27% 11%;
+    --popover-foreground: 0 0% 90%;
+    --primary: 189 100% 50%;
+    --primary-foreground: 210 33% 4%;
+    --secondary: 213 27% 11%;
+    --secondary-foreground: 0 0% 90%;
+    --muted: 213 27% 15%;
+    --muted-foreground: 220 9% 65%;
+    --accent: 50 100% 50%;
+    --accent-foreground: 210 33% 4%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 189 100% 50% / 0.3;
+    --input: 189 100% 50% / 0.2;
+    --ring: 189 100% 50%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  
+  body {
+    @apply bg-[#0a0e14] text-[#e6e6e6];
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  }
+}
+
+@layer components {
+  /* Custom scrollbar for webkit browsers */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgba(0, 217, 255, 0.3);
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 217, 255, 0.5);
+  }
+  
+  /* Glow effects */
+  .glow-blue {
+    box-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
+  }
+  
+  .glow-yellow {
+    box-shadow: 0 0 10px rgba(255, 214, 0, 0.5);
+  }
+  
+  /* Panel styles */
+  .nf-panel {
+    @apply bg-[#151b24] border border-[rgba(0,217,255,0.3)] rounded-lg;
+  }
+  
+  /* Button styles */
+  .nf-button-primary {
+    @apply bg-[#00d9ff] text-[#0a0e14] hover:bg-[#00a8cc];
+  }
+  
+  .nf-button-secondary {
+    @apply bg-transparent border border-[rgba(0,217,255,0.3)] text-[#9ca3af] hover:text-[#00d9ff] hover:bg-[rgba(0,217,255,0.1)];
+  }
+}
+
+@layer utilities {
+  /* Animation utilities */
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  /* Text utilities */
+  .text-glow-blue {
+    text-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
+  }
+  
+  /* Border utilities */
+  .border-glow {
+    border-color: rgba(0, 217, 255, 0.5);
+    box-shadow: 0 0 10px rgba(0, 217, 255, 0.2);
+  }
+}
