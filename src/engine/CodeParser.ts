@@ -4,12 +4,16 @@ import type { Language } from '@/types';
 // Code Parser - Parses Arduino C++ and MicroPython
 export class CodeParser {
   private language: Language = 'cpp';
+  private variables: Map<string, number> = new Map();
 
   setLanguage(language: Language): void {
     this.language = language;
   }
 
   parse(code: string): { setup: () => void; loop: () => void } | null {
+    // Reset variables for each parse
+    this.variables.clear();
+    
     if (this.language === 'cpp') {
       return this.parseCpp(code);
     } else {
@@ -19,6 +23,9 @@ export class CodeParser {
 
   private parseCpp(code: string): { setup: () => void; loop: () => void } | null {
     try {
+      // Extract global variable declarations first
+      this.extractGlobalVariables(code);
+
       // Extract setup function - improved regex to handle various formatting
       const setupMatch = this.extractFunction(code, 'setup');
       const loopMatch = this.extractFunction(code, 'loop');
@@ -38,6 +45,30 @@ export class CodeParser {
       console.error('C++ parse error:', error);
       return null;
     }
+  }
+
+  // Extract global variable declarations
+  private extractGlobalVariables(code: string): void {
+    // Match patterns like: const int ledPin = 13;
+    const globalVarRegex = /(?:const\s+)?(?:int|byte|long|float|double)\s+(\w+)\s*=\s*([\d.]+)\s*;/g;
+    let match;
+
+    while ((match = globalVarRegex.exec(code)) !== null) {
+      const varName = match[1];
+      const value = parseFloat(match[2]);
+      this.variables.set(varName, value);
+      console.log(`Extracted global variable: ${varName} = ${value}`);
+    }
+  }
+
+  // Resolve variable name to value
+  private resolveVariable(name: string): number | null {
+    if (this.variables.has(name)) {
+      return this.variables.get(name)!;
+    }
+    // Try to parse as number directly
+    const num = parseInt(name, 10);
+    return isNaN(num) ? null : num;
   }
 
   // Extract function body by finding matching braces
@@ -103,27 +134,39 @@ export class CodeParser {
       return;
     }
 
-    const pinModeMatch = cleanLine.match(/pinMode\s*\(\s*(\d+)\s*,\s*(\w+)\s*\)/);
+    // pinMode with variable or literal
+    const pinModeMatch = cleanLine.match(/pinMode\s*\(\s*(\w+)\s*,\s*(\w+)\s*\)/);
     if (pinModeMatch) {
-      const pin = parseInt(pinModeMatch[1], 10);
-      const mode = pinModeMatch[2] as 'INPUT' | 'OUTPUT' | 'INPUT_PULLUP';
-      simulationEngine.pinMode(pin, mode);
+      const pinValue = this.resolveVariable(pinModeMatch[1]);
+      if (pinValue !== null) {
+        const mode = pinModeMatch[2] as 'INPUT' | 'OUTPUT' | 'INPUT_PULLUP';
+        simulationEngine.pinMode(pinValue, mode);
+      } else {
+        console.warn(`Could not resolve pin variable: ${pinModeMatch[1]}`);
+      }
       return;
     }
 
-    const digitalWriteMatch = cleanLine.match(/digitalWrite\s*\(\s*(\d+)\s*,\s*(\w+)\s*\)/);
+    // digitalWrite with variable or literal
+    const digitalWriteMatch = cleanLine.match(/digitalWrite\s*\(\s*(\w+)\s*,\s*(\w+)\s*\)/);
     if (digitalWriteMatch) {
-      const pin = parseInt(digitalWriteMatch[1], 10);
-      const value = digitalWriteMatch[2] as 'HIGH' | 'LOW';
-      simulationEngine.digitalWrite(pin, value);
+      const pinValue = this.resolveVariable(digitalWriteMatch[1]);
+      if (pinValue !== null) {
+        const value = digitalWriteMatch[2] as 'HIGH' | 'LOW';
+        simulationEngine.digitalWrite(pinValue, value);
+      } else {
+        console.warn(`Could not resolve pin variable: ${digitalWriteMatch[1]}`);
+      }
       return;
     }
 
-    const analogWriteMatch = cleanLine.match(/analogWrite\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)/);
+    const analogWriteMatch = cleanLine.match(/analogWrite\s*\(\s*(\w+)\s*,\s*(\d+)\s*\)/);
     if (analogWriteMatch) {
-      const pin = parseInt(analogWriteMatch[1], 10);
-      const value = parseInt(analogWriteMatch[2], 10);
-      simulationEngine.analogWrite(pin, value);
+      const pinValue = this.resolveVariable(analogWriteMatch[1]);
+      if (pinValue !== null) {
+        const value = parseInt(analogWriteMatch[2], 10);
+        simulationEngine.analogWrite(pinValue, value);
+      }
       return;
     }
 
@@ -140,10 +183,12 @@ export class CodeParser {
       return;
     }
 
-    const digitalReadMatch = cleanLine.match(/digitalRead\s*\(\s*(\d+)\s*\)/);
+    const digitalReadMatch = cleanLine.match(/digitalRead\s*\(\s*(\w+)\s*\)/);
     if (digitalReadMatch) {
-      const pin = parseInt(digitalReadMatch[1], 10);
-      simulationEngine.digitalRead(pin);
+      const pinValue = this.resolveVariable(digitalReadMatch[1]);
+      if (pinValue !== null) {
+        simulationEngine.digitalRead(pinValue);
+      }
       return;
     }
 
@@ -154,7 +199,10 @@ export class CodeParser {
         const analogPin = 14 + parseInt(pin.slice(1), 10);
         simulationEngine.analogRead(analogPin);
       } else {
-        simulationEngine.analogRead(parseInt(pin, 10));
+        const pinValue = this.resolveVariable(pin);
+        if (pinValue !== null) {
+          simulationEngine.analogRead(pinValue);
+        }
       }
       return;
     }
