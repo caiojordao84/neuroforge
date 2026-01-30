@@ -42,7 +42,7 @@ FILES:
 ---
 
 **FIX 1.2: Remove Generic Board Component**
-CURRENT STATE: A placeholder "Board" component exists in the component library.
+CURRENT STATE: A placeholder "Board" component exists in the codebase.
 REQUIRED BEHAVIOR:
 - Delete the generic Board component entirely from the codebase
 - All circuit connections must originate from specific microcontroller components (Arduino Uno, ESP32, Raspberry Pi Pico, etc.)
@@ -143,6 +143,148 @@ STATUS: IMPLEMENTED
 FILES:
 - src/components/FloatingWindow.tsx
 - src/stores/useUIStore.ts (persist enabled)
+
+---
+
+**FIX 1.6: Code Parser Function Extraction**
+CURRENT STATE: CodeParser uses simple regex that fails with complex function bodies containing nested braces or multiple statements.
+REQUIRED BEHAVIOR:
+- Parser must correctly extract setup() and loop() function bodies regardless of formatting
+- Must handle nested braces (if statements, for loops, while loops)
+- Must support multi-line code with Serial.println and other complex statements
+- Must not break when function closing brace is not on a new line
+
+IMPLEMENTATION REQUIREMENTS:
+- Replace regex-based function extraction with brace-counting algorithm
+- Implement extractFunction method that counts opening and closing braces
+- Handle both sync and async function bodies
+- Support nested control structures
+
+STATUS: IMPLEMENTED
+- extractFunction method created with brace counting logic
+- Correctly parses functions with nested structures
+- Handles various code formatting styles
+- Tested with Serial.println in loop() and complex multi-line code
+
+FILES:
+- src/engine/CodeParser.ts (extractFunction method)
+
+COMMIT:
+- https://github.com/caiojordao84/neuroforge/commit/4c52abac002198eafd448fc77725c3e5951eaa80
+
+---
+
+**FIX 1.7: LED Component State Management**
+CURRENT STATE: LED does not respond to pin changes when code is updated without recreating the component.
+REQUIRED BEHAVIOR:
+- LED must track which MCU pin it is connected to
+- LED must only react to pinChange events for its connected pin
+- LED must maintain event listeners when simulation stops and restarts
+- LED must reset visual state when simulation stops
+
+IMPLEMENTATION REQUIREMENTS:
+- Add connectedPin state to track pin connection
+- Implement connection detection from useConnectionStore
+- Filter pinChange events by connected pin number
+- Add simulationStopped event handler to reset LED state
+
+STATUS: IMPLEMENTED
+- connectedPin state added to LEDNode
+- Connection detection extracts pin number from connection IDs
+- pinChange listener filters by connectedPin
+- simulationStopped handler resets isOn and brightness
+- Improved connection wiring check
+
+FILES:
+- src/components/nodes/LEDNode.tsx
+
+COMMIT:
+- https://github.com/caiojordao84/neuroforge/commit/0823b83fd0d46981a07391d9547cebe16b66e9bc
+
+---
+
+**FIX 1.8: Simulation Engine Event Listener Persistence**
+CURRENT STATE: Event listeners are removed when simulation stops, causing components to stop responding when code changes.
+REQUIRED BEHAVIOR:
+- Event listeners must persist across simulation runs
+- Pin states must reset when starting a new simulation
+- Components must receive simulationStopped event to reset visual state
+- No duplicate listeners should accumulate
+
+IMPLEMENTATION REQUIREMENTS:
+- Remove removeAllListeners() call from stop() method
+- Add resetSimulation() call in start() to clear pin states
+- Emit simulationStopped event before clearing state
+- Keep listener management in component lifecycle hooks
+
+STATUS: IMPLEMENTED
+- Removed removeAllListeners() from stop()
+- Added simulationStore.resetSimulation() in start()
+- Added emit('simulationStopped') in stop()
+- Components now maintain listeners between runs
+- Pin states properly reset on each new run
+
+FILES:
+- src/engine/SimulationEngine.ts
+
+COMMIT:
+- https://github.com/caiojordao84/neuroforge/commit/47aa79592c70ef50e989d772efb15408536bdbb6
+
+---
+
+**FIX 1.9: Variable Support in Code Parser**
+CURRENT STATE: Parser only recognizes literal numbers in pinMode and digitalWrite, failing when variables are used.
+REQUIRED BEHAVIOR:
+- Parser must extract global variable declarations (const int ledPin = 13;)
+- Parser must resolve variable names to their values in function calls
+- Must support both variables and literals in all Arduino functions
+- Must log extracted variables for debugging
+
+IMPLEMENTATION REQUIREMENTS:
+- Add extractGlobalVariables method to parse variable declarations
+- Create resolveVariable method to convert names to values
+- Update all function regex patterns to accept \w+ instead of \d+
+- Store variables in Map for fast lookup
+- Support const, int, byte, long, float, double types
+
+STATUS: IMPLEMENTED
+- extractGlobalVariables parses global declarations with regex
+- resolveVariable converts variable names to numeric values
+- Updated pinMode, digitalWrite, analogWrite, digitalRead, analogRead to support variables
+- variables Map cleared on each parse to prevent stale values
+- Console logging for debugging variable extraction
+
+FILES:
+- src/engine/CodeParser.ts
+
+COMMIT:
+- https://github.com/caiojordao84/neuroforge/commit/e648d374cf8382f0a6a9d5312be81f9ad0386473
+
+---
+
+**FIX 1.10: Loop Execution Re-entrancy Prevention**
+CURRENT STATE: TypeScript warning TS6133 for unused isLoopExecuting variable.
+REQUIRED BEHAVIOR:
+- Prevent overlapping loop executions when scheduleLoop is called multiple times
+- Use isLoopExecuting flag to guard against re-entrancy
+- Avoid race conditions in async loop execution
+
+IMPLEMENTATION REQUIREMENTS:
+- Add guard check at start of scheduleLoop
+- Return early if isLoopExecuting is true
+- This makes the variable actually read, fixing the warning
+
+STATUS: IMPLEMENTED
+- Added guard check in scheduleLoop: if (this.isLoopExecuting) return;
+- Prevents re-entrant calls to scheduleLoop
+- Fixes TS6133 compiler warning
+- Improves simulation stability
+
+FILES:
+- src/engine/SimulationEngine.ts
+
+COMMIT:
+- https://github.com/caiojordao84/neuroforge/commit/f067b278092c0d930d5931ed7217219fdbc088f7
 
 ---
 
@@ -532,10 +674,15 @@ COMPLETED:
 - FIX 1.3: Microcontroller Component Interaction (MCUNode with pin hitboxes)
 - FIX 1.4: Wire System Overhaul (Manhattan routing, color coding, mostly complete)
 - FIX 1.5: Floating Window Stability (Smooth drag, z-index, localStorage persistence)
+- FIX 1.6: Code Parser Function Extraction (Brace counting algorithm for robust parsing)
+- FIX 1.7: LED Component State Management (Connected pin tracking, event filtering)
+- FIX 1.8: Simulation Engine Event Listener Persistence (Listeners persist across runs)
+- FIX 1.9: Variable Support in Code Parser (Global variable extraction and resolution)
+- FIX 1.10: Loop Execution Re-entrancy Prevention (Guard check in scheduleLoop)
 - FEATURE 2.1: Multi-File Code Editor with Tabs (Tab management, MCU assignment, Drag-and-Drop, Shortcuts)
 - FEATURE 2.2: Libraries Management System (Library store, panel, and injection)
 - FEATURE 2.3: Microcontrollers as First-Class Components (MCUPropertiesPanel, drag from library)
-- FEATURE 2.4: Universal Component Properties System (Implemented for MCU)
+- FEATURE 2.4: Universal Component Properties System (Implemented for all component types)
 
 PENDING:
 - FIX 1.2: Remove Generic Board Component (Remove hardcoded board from CanvasArea)
