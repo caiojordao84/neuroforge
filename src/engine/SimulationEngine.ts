@@ -110,12 +110,13 @@ class EventEmitter {
 export class SimulationEngine extends EventEmitter {
   private isRunning = false;
   private isPaused = false;
-  private loopIntervalId: number | null = null;
+  private loopTimeoutId: number | null = null;
   private timeoutIds: number[] = [];
   private setupExecuted = false;
-  private loopFunction: (() => void) | null = null;
+  private loopFunction: (() => void | Promise<void>) | null = null;
   private speedMultiplier = 1;
   private pinCache: Map<number, PinState> = new Map();
+  private isLoopExecuting = false;
 
   constructor() {
     super();
@@ -125,7 +126,7 @@ export class SimulationEngine extends EventEmitter {
     return preprocessCode(code, language);
   }
 
-  start(setupFn: () => void, loopFn: () => void, speed = 1): void {
+  start(setupFn: () => void, loopFn: () => void | Promise<void>, speed = 1): void {
     if (this.isRunning) {
       this.stop();
     }
@@ -154,7 +155,8 @@ export class SimulationEngine extends EventEmitter {
       return;
     }
 
-    this.runLoop();
+    // Start the loop - will wait for each iteration to complete before scheduling next
+    this.scheduleLoop();
   }
 
   stop(): void {
@@ -162,13 +164,14 @@ export class SimulationEngine extends EventEmitter {
     this.isPaused = false;
     this.setupExecuted = false;
     this.loopFunction = null;
+    this.isLoopExecuting = false;
 
     this.timeoutIds.forEach((id) => clearTimeout(id));
     this.timeoutIds = [];
 
-    if (this.loopIntervalId !== null) {
-      clearTimeout(this.loopIntervalId);
-      this.loopIntervalId = null;
+    if (this.loopTimeoutId !== null) {
+      clearTimeout(this.loopTimeoutId);
+      this.loopTimeoutId = null;
     }
 
     const simulationStore = useSimulationStore.getState();
@@ -204,7 +207,8 @@ export class SimulationEngine extends EventEmitter {
     simulationStore.startSimulation();
     serialStore.addTerminalLine('▶️ Simulation resumed', 'success');
 
-    this.runLoop();
+    // Resume the loop
+    this.scheduleLoop();
   }
 
   reset(): void {
@@ -224,26 +228,55 @@ export class SimulationEngine extends EventEmitter {
     serialStore.addTerminalLine(`⚡ Simulation speed: ${speed}x`, 'info');
   }
 
-  private runLoop(): void {
+  private scheduleLoop(): void {
     if (!this.isRunning || this.isPaused || !this.loopFunction) {
       return;
     }
 
-    try {
-      this.loopFunction();
-    } catch (error) {
-      const serialStore = useSerialStore.getState();
-      serialStore.addTerminalLine(
-        `❌ Loop error: ${error instanceof Error ? error.message : String(error)}`,
-        'error'
-      );
-      this.stop();
-      return;
-    }
+    // Execute the loop function
+    this.isLoopExecuting = true;
 
-    this.loopIntervalId = window.setTimeout(() => {
-      this.runLoop();
-    }, 0);
+    try {
+      const result = this.loopFunction();
+
+      // Handle both sync and async loop functions
+      if (result instanceof Promise) {
+        result
+          .then(() => {
+            this.isLoopExecuting = false;
+            // Schedule next iteration immediately after current completes
+            if (this.isRunning && !this.isPaused) {
+              this.loopTimeoutId = window.setTimeout(() => {
+                this.scheduleLoop();
+              }, 0);
+            }
+          })
+          .catch((error) => {
+            this.handleLoopError(error);
+          });
+      } else {
+        // Sync function completed
+        this.isLoopExecuting = false;
+        // Schedule next iteration immediately after current completes
+        if (this.isRunning && !this.isPaused) {
+          this.loopTimeoutId = window.setTimeout(() => {
+            this.scheduleLoop();
+          }, 0);
+        }
+      }
+    } catch (error) {
+      this.handleLoopError(error);
+    }
+  }
+
+  private handleLoopError(error: unknown): void {
+    this.isLoopExecuting = false;
+    const serialStore = useSerialStore.getState();
+    serialStore.addTerminalLine(
+      `❌ Loop error: ${error instanceof Error ? error.message : String(error)}`,
+      'error'
+    );
+    this.stop();
   }
 
   pinMode(pin: number, mode: PinMode): void {
