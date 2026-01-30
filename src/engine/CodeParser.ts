@@ -19,24 +19,56 @@ export class CodeParser {
 
   private parseCpp(code: string): { setup: () => void; loop: () => void } | null {
     try {
-      const setupMatch = code.match(/void\s+setup\s*\(\s*\)\s*\{([\s\S]*?)\n\}/);
-      const loopMatch = code.match(/void\s+loop\s*\(\s*\)\s*\{([\s\S]*?)\n\}/);
+      // Extract setup function - improved regex to handle various formatting
+      const setupMatch = this.extractFunction(code, 'setup');
+      const loopMatch = this.extractFunction(code, 'loop');
 
-      if (!setupMatch || !loopMatch) {
-        throw new Error('Could not find setup() or loop() functions');
+      if (!setupMatch) {
+        throw new Error('Could not find setup() function');
+      }
+      if (!loopMatch) {
+        throw new Error('Could not find loop() function');
       }
 
-      const setupBody = setupMatch[1];
-      const loopBody = loopMatch[1];
-
-      const setupFn = this.createCppFunction(setupBody);
-      const loopFn = this.createCppFunction(loopBody);
+      const setupFn = this.createCppFunction(setupMatch);
+      const loopFn = this.createCppFunction(loopMatch);
 
       return { setup: setupFn, loop: loopFn };
     } catch (error) {
       console.error('C++ parse error:', error);
       return null;
     }
+  }
+
+  // Extract function body by finding matching braces
+  private extractFunction(code: string, functionName: string): string | null {
+    // Find the function declaration
+    const funcRegex = new RegExp(`void\\s+${functionName}\\s*\\(\\s*\\)\\s*\\{`);
+    const match = code.match(funcRegex);
+    
+    if (!match) {
+      return null;
+    }
+
+    const startIndex = match.index! + match[0].length;
+    let braceCount = 1;
+    let endIndex = startIndex;
+
+    // Find the matching closing brace
+    while (braceCount > 0 && endIndex < code.length) {
+      if (code[endIndex] === '{') {
+        braceCount++;
+      } else if (code[endIndex] === '}') {
+        braceCount--;
+      }
+      endIndex++;
+    }
+
+    if (braceCount !== 0) {
+      return null; // Unbalanced braces
+    }
+
+    return code.substring(startIndex, endIndex - 1);
   }
 
   private createCppFunction(body: string): () => void {
@@ -127,7 +159,7 @@ export class CodeParser {
       return;
     }
 
-    if (cleanLine.match(/^\s*(int|float|double|char|bool|byte|long)\s+/)) {
+    if (cleanLine.match(/^\s*(int|float|double|char|bool|byte|long|const)\s+/)) {
       return;
     }
 
@@ -136,6 +168,10 @@ export class CodeParser {
     }
 
     if (cleanLine.startsWith('for')) {
+      return;
+    }
+
+    if (cleanLine.startsWith('while')) {
       return;
     }
 
