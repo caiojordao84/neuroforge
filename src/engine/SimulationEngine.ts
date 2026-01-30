@@ -140,6 +140,9 @@ export class SimulationEngine extends EventEmitter {
     const simulationStore = useSimulationStore.getState();
     const serialStore = useSerialStore.getState();
 
+    // Reset pin states
+    simulationStore.resetSimulation();
+
     simulationStore.startSimulation();
     serialStore.addTerminalLine('▶️ Simulation started', 'success');
 
@@ -180,7 +183,10 @@ export class SimulationEngine extends EventEmitter {
     simulationStore.stopSimulation();
     serialStore.addTerminalLine('⏹️ Simulation stopped', 'info');
 
-    this.removeAllListeners();
+    // Notify components that simulation stopped so they can reset their state
+    this.emit('simulationStopped', {});
+
+    // Don't remove listeners - components need them to react to pin changes
     this.pinCache.clear();
   }
 
