@@ -37,6 +37,9 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
   const windowRef = useRef<HTMLDivElement>(null);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
 
+  // Guard: if window state doesn't exist (e.g. new window type added but not in persisted storage), return null
+  if (!windowState) return null;
+
   const [isResizing, setIsResizing] = useState(false);
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
 
@@ -51,7 +54,7 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
       // Calculate new position based on current position + drag offset
       const currentX = windowState.position.x;
       const currentY = windowState.position.y;
-      
+
       const newPosition = {
         x: currentX + info.offset.x,
         y: currentY + info.offset.y,
@@ -61,11 +64,11 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
       const padding = 20;
       const constrainedPosition = {
         x: Math.max(
-          padding, 
+          padding,
           Math.min(window.innerWidth - windowState.size.width - padding, newPosition.x)
         ),
         y: Math.max(
-          padding, 
+          padding,
           Math.min(window.innerHeight - windowState.size.height - padding, newPosition.y)
         ),
       };
@@ -160,7 +163,7 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ 
+      transition={{
         duration: 0.15
       }}
       style={{

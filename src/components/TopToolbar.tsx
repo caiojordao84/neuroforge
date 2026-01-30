@@ -12,10 +12,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { 
-  Play, 
-  Square, 
-  RotateCcw, 
+import {
+  Play,
+  Square,
+  RotateCcw,
   FastForward,
   Cpu,
   Zap
@@ -44,7 +44,10 @@ export const TopToolbar: React.FC = () => {
       simulationEngine.stop();
     } else {
       codeParser.setLanguage(language);
-      const parsed = codeParser.parse(code);
+
+      // Preprocess code to inject libraries
+      const processedCode = simulationEngine.preprocess(code, language);
+      const parsed = codeParser.parse(processedCode);
 
       if (parsed) {
         startSimulation();
@@ -102,19 +105,19 @@ export const TopToolbar: React.FC = () => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-[#151b24] border-[rgba(0,217,255,0.3)]">
-              <SelectItem 
+              <SelectItem
                 value="arduino-uno"
                 className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)]"
               >
                 Arduino Uno R3
               </SelectItem>
-              <SelectItem 
+              <SelectItem
                 value="esp32-devkit"
                 className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)]"
               >
                 ESP32 DevKit V1
               </SelectItem>
-              <SelectItem 
+              <SelectItem
                 value="raspberry-pi-pico"
                 className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)]"
               >
@@ -135,8 +138,8 @@ export const TopToolbar: React.FC = () => {
           </SelectTrigger>
           <SelectContent className="bg-[#151b24] border-[rgba(0,217,255,0.3)]">
             {[1, 2, 5, 10].map((s) => (
-              <SelectItem 
-                key={s} 
+              <SelectItem
+                key={s}
                 value={s.toString()}
                 className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)]"
               >

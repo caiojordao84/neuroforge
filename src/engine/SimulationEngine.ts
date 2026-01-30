@@ -1,6 +1,75 @@
 import { useSimulationStore } from '@/stores/useSimulationStore';
 import { useSerialStore } from '@/stores/useSerialStore';
-import type { PinState, PinMode } from '@/types';
+import { useLibraryStore } from '@/stores/useLibraryStore';
+import type { PinState, PinMode, Language } from '@/types';
+
+// Preprocessor to inject libraries
+const preprocessCode = (code: string, language: Language): string => {
+  const { libraries } = useLibraryStore.getState();
+  let processedCode = code;
+
+  if (language === 'cpp') {
+    // Basic C++ include handler (non-recursive for now)
+    const includeRegex = /#include\s*[<"](.+)[>"]/g;
+    let match;
+
+    // We need to match all includes, find library, and inject content
+    // To avoid regex state issues with global flag, we'll collect replacements first
+    const replacements: { start: number, end: number, content: string }[] = [];
+
+    while ((match = includeRegex.exec(code)) !== null) {
+      const libName = match[1];
+      const lib = libraries.find(l => l.name === libName && l.language === 'cpp');
+
+      if (lib) {
+        replacements.push({
+          start: match.index,
+          end: match.index + match[0].length,
+          content: `// Included from ${lib.name}\n${lib.content}\n`
+        });
+      }
+    }
+
+    // Apply replacements in reverse order to preserve indices
+    for (let i = replacements.length - 1; i >= 0; i--) {
+      const r = replacements[i];
+      processedCode = processedCode.substring(0, r.start) + r.content + processedCode.substring(r.end);
+    }
+  } else if (language === 'micropython' || language === 'circuitpython') {
+    // Basic Python import handler
+    // Supports: import module
+    // Does NOT support: from module import * (yet, for custom libs)
+    const importRegex = /^import\s+(\w+)/gm;
+    let match;
+    const replacements: { start: number, end: number, content: string }[] = [];
+
+    while ((match = importRegex.exec(code)) !== null) {
+      const libName = match[1];
+      // Try to find lib with .py extension or just name
+      const lib = libraries.find(l =>
+        (l.name === libName || l.name === `${libName}.py`) &&
+        (l.language === 'micropython' || l.language === 'circuitpython')
+      );
+
+      if (lib) {
+        replacements.push({
+          start: match.index,
+          end: match.index + match[0].length,
+          content: `# Imported from ${lib.name}\n${lib.content}\n`
+        });
+      }
+    }
+
+    for (let i = replacements.length - 1; i >= 0; i--) {
+      const r = replacements[i];
+      processedCode = processedCode.substring(0, r.start) + r.content + processedCode.substring(r.end);
+    }
+  }
+
+  return processedCode;
+};
+
+// Event emitter for pin changes
 
 // Event emitter for pin changes
 type EventCallback = (data: unknown) => void;
@@ -50,6 +119,10 @@ export class SimulationEngine extends EventEmitter {
 
   constructor() {
     super();
+  }
+
+  preprocess(code: string, language: Language): string {
+    return preprocessCode(code, language);
   }
 
   start(setupFn: () => void, loopFn: () => void, speed = 1): void {

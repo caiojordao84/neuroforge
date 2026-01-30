@@ -11,7 +11,6 @@ import {
   type Node,
   type Edge,
   useReactFlow,
-  ReactFlowProvider,
   Panel,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -20,6 +19,7 @@ import { nodeTypes } from './nodes';
 import { edgeTypes } from './edges';
 import { useSimulationStore } from '@/stores/useSimulationStore';
 import { useSerialStore } from '@/stores/useSerialStore';
+import { useUIStore } from '@/stores/useUIStore';
 import { simulationEngine } from '@/engine/SimulationEngine';
 import { codeParser } from '@/engine/CodeParser';
 import { cn } from '@/lib/utils';
@@ -43,8 +43,8 @@ const CanvasInner: React.FC = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const { screenToFlowPosition } = useReactFlow();
 
-  const { 
-    status, 
+  const {
+    status,
     speed,
     setSpeed,
     code,
@@ -55,17 +55,25 @@ const CanvasInner: React.FC = () => {
   } = useSimulationStore();
 
   const { addTerminalLine } = useSerialStore();
+  const { openWindow } = useUIStore();
 
+  // Handle node click to open properties window
+  const onNodeClick = useCallback((_event: React.MouseEvent, _node: Node) => {
+    console.log('onNodeClick fired, opening properties window');
+    openWindow('properties');
+  }, [openWindow]);
+
+  // Handle node double-click to open properties window
+  const onNodeDoubleClick = useCallback((_event: React.MouseEvent, _node: Node) => {
+    console.log('onNodeDoubleClick fired, opening properties window');
+    openWindow('properties');
+  }, [openWindow]);
+
+  // Initialize with empty canvas - MCU components are draggable from Components Library
+  // No hardcoded board component - users should drag MCUs from the library
   useEffect(() => {
-    const boardNode: Node = {
-      id: 'board',
-      type: 'default',
-      position: { x: 50, y: 100 },
-      data: { label: 'Board' },
-      draggable: false,
-      selectable: false,
-    };
-    setNodes([boardNode]);
+    // Canvas starts empty, ready for user to drag components
+    setNodes([]);
   }, [setNodes]);
 
   // Validate connection before creating edge
@@ -74,16 +82,16 @@ const CanvasInner: React.FC = () => {
     if (connection.source === connection.target) {
       return false;
     }
-    
+
     // Don't allow duplicate connections
     const existingEdge = edges.find(
       (e) => e.source === connection.source && e.target === connection.target &&
-             e.sourceHandle === connection.sourceHandle && e.targetHandle === connection.targetHandle
+        e.sourceHandle === connection.sourceHandle && e.targetHandle === connection.targetHandle
     );
     if (existingEdge) {
       return false;
     }
-    
+
     return true;
   }, [edges]);
 
@@ -97,10 +105,10 @@ const CanvasInner: React.FC = () => {
       // Determine wire color based on handles
       const sourceHandle = params.sourceHandle || '';
       const targetHandle = params.targetHandle || '';
-      
+
       let wireType = 'digital';
-      if (sourceHandle.includes('5V') || targetHandle.includes('5V') || 
-          sourceHandle.includes('VIN') || targetHandle.includes('VIN')) {
+      if (sourceHandle.includes('5V') || targetHandle.includes('5V') ||
+        sourceHandle.includes('VIN') || targetHandle.includes('VIN')) {
         wireType = 'power';
       } else if (sourceHandle.includes('GND') || targetHandle.includes('GND')) {
         wireType = 'ground';
@@ -108,8 +116,8 @@ const CanvasInner: React.FC = () => {
         wireType = 'analog';
       }
 
-      const newEdge: Edge = { 
-        ...params, 
+      const newEdge: Edge = {
+        ...params,
         id: `e${params.source}-${params.target}-${Date.now()}`,
         type: 'manhattan',
         animated: wireType === 'power' || wireType === 'ground',
@@ -133,7 +141,7 @@ const CanvasInner: React.FC = () => {
 
       const type = event.dataTransfer.getData('application/reactflow') as string;
       const componentDataStr = event.dataTransfer.getData('componentData');
-      
+
       if (!type) return;
 
       const componentData = componentDataStr ? JSON.parse(componentDataStr) : {};
@@ -173,7 +181,7 @@ const CanvasInner: React.FC = () => {
     } else {
       codeParser.setLanguage(language);
       const parsed = codeParser.parse(code);
-      
+
       if (parsed) {
         startSimulation();
         simulationEngine.start(parsed.setup, parsed.loop, speed);
@@ -203,6 +211,8 @@ const CanvasInner: React.FC = () => {
         onConnect={onConnect}
         onDrop={onDrop}
         onDragOver={onDragOver}
+        onNodeClick={onNodeClick}
+        onNodeDoubleClick={onNodeDoubleClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
@@ -219,14 +229,14 @@ const CanvasInner: React.FC = () => {
           strokeDasharray: '5,5',
         }}
       >
-        <Background 
-          color="#1a3a5c" 
-          gap={20} 
+        <Background
+          color="#1a3a5c"
+          gap={20}
           size={1}
           style={{ backgroundColor: '#0a0e14' }}
         />
         <Controls className="bg-[#151b24] border-[rgba(0,217,255,0.3)]" />
-        <MiniMap 
+        <MiniMap
           className="bg-[#151b24] border border-[rgba(0,217,255,0.3)]"
           nodeColor="#00d9ff"
           maskColor="rgba(10, 14, 20, 0.8)"
@@ -248,8 +258,8 @@ const CanvasInner: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent className="bg-[#151b24] border-[rgba(0,217,255,0.3)]">
                   {[1, 2, 5, 10].map((s) => (
-                    <SelectItem 
-                      key={s} 
+                    <SelectItem
+                      key={s}
                       value={s.toString()}
                       className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)] text-xs"
                     >
@@ -309,11 +319,11 @@ const CanvasInner: React.FC = () => {
             )}
           >
             <div className="flex items-center gap-2">
-              <Cpu 
+              <Cpu
                 className={cn(
                   'w-4 h-4',
                   status === 'running' ? 'text-green-400 animate-pulse' : 'text-[#9ca3af]'
-                )} 
+                )}
               />
               <span className={cn(
                 status === 'running' ? 'text-green-400' : 'text-[#9ca3af]'
@@ -331,13 +341,11 @@ const CanvasInner: React.FC = () => {
   );
 };
 
-// Main canvas component with provider
+// Main canvas component - no provider needed here as App.tsx provides it
 export const CanvasArea: React.FC = () => {
   return (
     <div className="w-full h-full">
-      <ReactFlowProvider>
-        <CanvasInner />
-      </ReactFlowProvider>
+      <CanvasInner />
     </div>
   );
 };

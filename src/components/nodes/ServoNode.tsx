@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { simulationEngine } from '@/engine/SimulationEngine';
 import { useConnectionStore } from '@/stores/useConnectionStore';
+import { useUIStore } from '@/stores/useUIStore';
 import { cn } from '@/lib/utils';
 
 interface ServoNodeProps {
@@ -15,11 +16,16 @@ export const ServoNode: React.FC<ServoNodeProps> = ({ data, selected, id }) => {
   const [targetAngle, setTargetAngle] = useState((data.angle as number) ?? 90);
   const [isProperlyWired, setIsProperlyWired] = useState(false);
   const [connectedPin, setConnectedPin] = useState<number | undefined>(data.connectedPin as number);
-  
+
   const { connections } = useConnectionStore();
+  const { openWindow } = useUIStore();
   const minAngle = (data.minAngle as number) ?? 0;
   const maxAngle = (data.maxAngle as number) ?? 180;
   const label = (data.label as string) || 'Servo';
+
+  const handleDoubleClick = useCallback(() => {
+    openWindow('properties');
+  }, [openWindow]);
 
   useEffect(() => {
     const checkWiring = () => {
@@ -48,7 +54,7 @@ export const ServoNode: React.FC<ServoNodeProps> = ({ data, selected, id }) => {
   useEffect(() => {
     const unsubscribe = simulationEngine.on('pinChange', (event) => {
       const pinEvent = event as { pin: number; value: 'HIGH' | 'LOW' | number };
-      
+
       if (connectedPin === pinEvent.pin) {
         if (typeof pinEvent.value === 'number') {
           const newAngle = Math.round((pinEvent.value / 255) * (maxAngle - minAngle) + minAngle);
@@ -91,6 +97,8 @@ export const ServoNode: React.FC<ServoNodeProps> = ({ data, selected, id }) => {
         selected ? 'border-[#00d9ff]' : 'border-[rgba(0,217,255,0.3)]',
         'shadow-lg transition-all duration-200'
       )}
+      onDoubleClick={handleDoubleClick}
+      title="Double-click to open properties"
     >
       <svg width="70" height="70" viewBox="0 0 70 70">
         <defs>

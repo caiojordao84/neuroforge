@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { simulationEngine } from '@/engine/SimulationEngine';
 import { useConnectionStore } from '@/stores/useConnectionStore';
+import { useUIStore } from '@/stores/useUIStore';
 import { cn } from '@/lib/utils';
 
 interface LEDNodeProps {
@@ -17,8 +18,13 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
   const color = (data.color as string) || '#ff0000';
   const connectedPins = (data.connectedPins as Record<string, number | undefined>) || {};
   const label = (data.label as string) || 'LED';
-  
+
   const { connections } = useConnectionStore();
+  const { openWindow } = useUIStore();
+
+  const handleDoubleClick = useCallback(() => {
+    openWindow('properties');
+  }, [openWindow]);
 
   useEffect(() => {
     const checkWiring = () => {
@@ -40,9 +46,9 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
           : anodeConnection.source;
         const pinMatch = otherEnd.match(/D(\d+)/);
         if (pinMatch) {
-          data.connectedPins = { 
-            ...connectedPins, 
-            anode: parseInt(pinMatch[1], 10) 
+          data.connectedPins = {
+            ...connectedPins,
+            anode: parseInt(pinMatch[1], 10)
           };
         }
       }
@@ -54,7 +60,7 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
   useEffect(() => {
     const unsubscribe = simulationEngine.on('pinChange', (event) => {
       const pinEvent = event as { pin: number; value: 'HIGH' | 'LOW' | number };
-      
+
       if (connectedPins?.anode === pinEvent.pin) {
         if (typeof pinEvent.value === 'number') {
           setIsOn(pinEvent.value > 0);
@@ -77,6 +83,8 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
         selected ? 'border-[#00d9ff]' : 'border-[rgba(0,217,255,0.3)]',
         'shadow-lg transition-all duration-200'
       )}
+      onDoubleClick={handleDoubleClick}
+      title="Double-click to open properties"
     >
       <svg width="60" height="60" viewBox="0 0 60 60">
         <defs>
@@ -87,7 +95,7 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
-          
+
           <radialGradient id={`ledGradient-${id}`} cx="50%" cy="30%" r="50%">
             <stop offset="0%" stopColor="#ffffff" stopOpacity={0.8} />
             <stop offset="100%" stopColor={color} stopOpacity={1} />

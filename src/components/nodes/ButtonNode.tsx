@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { simulationEngine } from '@/engine/SimulationEngine';
 import { useConnectionStore } from '@/stores/useConnectionStore';
+import { useUIStore } from '@/stores/useUIStore';
 import { cn } from '@/lib/utils';
 
 interface ButtonNodeProps {
@@ -14,10 +15,15 @@ export const ButtonNode: React.FC<ButtonNodeProps> = ({ data, selected, id }) =>
   const [isPressed, setIsPressed] = useState((data.isPressed as boolean) ?? false);
   const [isProperlyWired, setIsProperlyWired] = useState(false);
   const [connectedPin, setConnectedPin] = useState<number | undefined>(data.connectedPin as number);
-  
+
   const { connections } = useConnectionStore();
+  const { openWindow } = useUIStore();
   const isPullUp = (data.isPullUp as boolean) ?? false;
   const label = (data.label as string) || 'Button';
+
+  const handleDoubleClick = useCallback(() => {
+    openWindow('properties');
+  }, [openWindow]);
 
   useEffect(() => {
     const checkWiring = () => {
@@ -45,28 +51,28 @@ export const ButtonNode: React.FC<ButtonNodeProps> = ({ data, selected, id }) =>
 
   const handleMouseDown = useCallback(() => {
     setIsPressed(true);
-    
+
     if (connectedPin !== undefined) {
       const value = isPullUp ? 'LOW' : 'HIGH';
-      
-      simulationEngine.emit('buttonPress', { 
-        pin: connectedPin, 
+
+      simulationEngine.emit('buttonPress', {
+        pin: connectedPin,
         pressed: true,
-        value 
+        value
       });
     }
   }, [connectedPin, isPullUp]);
 
   const handleMouseUp = useCallback(() => {
     setIsPressed(false);
-    
+
     if (connectedPin !== undefined) {
       const value = isPullUp ? 'HIGH' : 'LOW';
-      
-      simulationEngine.emit('buttonPress', { 
-        pin: connectedPin, 
+
+      simulationEngine.emit('buttonPress', {
+        pin: connectedPin,
         pressed: false,
-        value 
+        value
       });
     }
   }, [connectedPin, isPullUp]);
@@ -85,10 +91,12 @@ export const ButtonNode: React.FC<ButtonNodeProps> = ({ data, selected, id }) =>
         selected ? 'border-[#00d9ff]' : 'border-[rgba(0,217,255,0.3)]',
         'shadow-lg transition-all duration-200'
       )}
+      onDoubleClick={handleDoubleClick}
+      title="Double-click to open properties"
     >
-      <svg 
-        width="60" 
-        height="60" 
+      <svg
+        width="60"
+        height="60"
         viewBox="0 0 60 60"
         className="cursor-pointer select-none"
         onMouseDown={handleMouseDown}

@@ -17,7 +17,7 @@ interface FileStore {
   files: CodeFile[];
   activeFileId: string | null;
   nextFileNumber: number;
-  
+
   // Actions
   createFile: (name?: string, language?: Language) => string;
   deleteFile: (id: string) => void;
@@ -29,6 +29,7 @@ interface FileStore {
   setMainFile: (id: string) => void;
   getFileById: (id: string) => CodeFile | undefined;
   getFilesByMCU: (mcuId: string) => CodeFile[];
+  reorderFiles: (newOrder: CodeFile[]) => void;
 }
 
 const defaultCppCode = `// Arduino LED Blink Example
@@ -79,7 +80,7 @@ export const useFileStore = create<FileStore>()(
       createFile: (name?: string, language: Language = 'cpp') => {
         const { nextFileNumber } = get();
         const fileName = name || `sketch_${nextFileNumber}.${language === 'cpp' ? 'ino' : 'py'}`;
-        
+
         const newFile: CodeFile = {
           id: generateFileId(),
           name: fileName,
@@ -101,7 +102,7 @@ export const useFileStore = create<FileStore>()(
 
       deleteFile: (id) => {
         const { files, activeFileId } = get();
-        
+
         // Don't allow deleting the last file
         if (files.length <= 1) {
           return;
@@ -115,10 +116,10 @@ export const useFileStore = create<FileStore>()(
 
         set((state) => {
           const newFiles = state.files.filter((f) => f.id !== id);
-          const newActiveId = activeFileId === id 
-            ? newFiles.find((f) => f.isMain)?.id || newFiles[0]?.id 
+          const newActiveId = activeFileId === id
+            ? newFiles.find((f) => f.isMain)?.id || newFiles[0]?.id
             : activeFileId;
-          
+
           return {
             files: newFiles,
             activeFileId: newActiveId,
@@ -182,10 +183,14 @@ export const useFileStore = create<FileStore>()(
       getFilesByMCU: (mcuId) => {
         return get().files.filter((f) => f.mcuId === mcuId);
       },
+
+      reorderFiles: (newOrder) => {
+        set({ files: newOrder });
+      },
     }),
     {
       name: 'neuroforge-file-store',
-      partialize: (state) => ({ 
+      partialize: (state) => ({
         files: state.files,
         nextFileNumber: state.nextFileNumber,
       }),

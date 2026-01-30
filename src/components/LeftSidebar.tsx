@@ -1,5 +1,12 @@
 import React from 'react';
-import { Code, Cpu, Terminal, Zap } from 'lucide-react';
+import {
+  Code,
+  Cpu,
+  Terminal,
+  Zap,
+  PanelTopOpen,
+  Book,
+} from 'lucide-react';
 import { useUIStore, type WindowId } from '@/stores/useUIStore';
 import { cn } from '@/lib/utils';
 
@@ -12,6 +19,8 @@ interface SidebarTab {
 const tabs: SidebarTab[] = [
   { id: 'codeEditor', icon: Code, label: 'Code Editor' },
   { id: 'componentsLibrary', icon: Cpu, label: 'Components' },
+  { id: 'libraries', icon: Book, label: 'Libraries' },
+  { id: 'properties', icon: PanelTopOpen, label: 'Properties' },
   { id: 'serialMonitor', icon: Terminal, label: 'Serial Monitor' },
   { id: 'terminal', icon: Zap, label: 'Terminal' },
 ];
@@ -21,7 +30,7 @@ export const LeftSidebar: React.FC = () => {
 
   const handleTabClick = (tabId: WindowId) => {
     const window = windows[tabId];
-    if (window.isOpen) {
+    if (window?.isOpen) {
       // If already open, just bring to front or minimize
       if (window.isMinimized) {
         openWindow(tabId);
@@ -61,7 +70,10 @@ export const LeftSidebar: React.FC = () => {
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const window = windows[tab.id];
-          const isActive = window.isOpen && !window.isMinimized;
+          // Use optional chaining carefully - defaultWindows usually has all keys but persistence might mess it up temporarily if schema changed
+          const isOpen = window?.isOpen || false;
+          const isMinimized = window?.isMinimized || false;
+          const isActive = isOpen && !isMinimized;
 
           return (
             <button
@@ -102,12 +114,12 @@ export const LeftSidebar: React.FC = () => {
               </div>
 
               {/* Active indicator dot */}
-              {window.isOpen && (
+              {isOpen && (
                 <div
                   className={cn(
                     'absolute -top-0.5 -right-0.5',
                     'w-2.5 h-2.5 rounded-full',
-                    window.isMinimized ? 'bg-yellow-500' : 'bg-green-500',
+                    isMinimized ? 'bg-yellow-500' : 'bg-green-500',
                     'border-2 border-[#0a0e14]'
                   )}
                 />

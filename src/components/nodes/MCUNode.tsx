@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { boardConfigs } from '@/stores/useSimulationStore';
+import { useUIStore } from '@/stores/useUIStore';
 import { cn } from '@/lib/utils';
 import type { BoardType } from '@/types';
 
@@ -15,15 +16,20 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
   const config = boardConfigs[mcuType];
   const label = (data.label as string) || config.name;
   const isRunning = (data.isRunning as boolean) ?? false;
-  
-  // Track which pins are being hovered
-  const [hoveredPin, setHoveredPin] = useState<number | null>(null);
-  // Track selected pin for configuration
-  const [selectedPin, setSelectedPin] = useState<number | null>(null);
+  const { openWindow } = useUIStore();
 
-  const handlePinClick = useCallback((pin: number) => {
+  // Track which pins are being hovered
+  const [hoveredPin, setHoveredPin] = useState<number | string | null>(null);
+  // Track selected pin for configuration
+  const [selectedPin, setSelectedPin] = useState<number | string | null>(null);
+
+  const handlePinClick = useCallback((pin: number | string) => {
     setSelectedPin(pin === selectedPin ? null : pin);
   }, [selectedPin]);
+
+  const handleDoubleClick = useCallback(() => {
+    openWindow('properties');
+  }, [openWindow]);
 
   const isArduino = mcuType === 'arduino-uno';
   const isESP32 = mcuType === 'esp32-devkit';
@@ -53,6 +59,8 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
         'shadow-lg transition-all duration-200',
         isArduino ? 'w-[200px] h-[280px]' : 'w-[240px] h-[320px]'
       )}
+      onDoubleClick={handleDoubleClick}
+      title="Double-click to open properties"
     >
       {/* Board background */}
       <div className={cn('w-full h-full', getBoardColor())}>
@@ -64,19 +72,117 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
         {/* USB Port */}
         <div className="absolute top-8 left-1/2 -translate-x-1/2 w-12 h-8 bg-[#333] rounded border-2 border-[#555]" />
 
-        {/* Power pins on left */}
-        <div className="absolute top-20 left-2 flex flex-col gap-1">
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-red-500" />
+        {/* Power pins on left with interactive hitboxes */}
+        <div className="absolute top-20 left-0 flex flex-col gap-1">
+          {/* 5V Pin */}
+          <div className="flex items-center gap-1 relative">
+            <button
+              className={cn(
+                'w-3 h-3 rounded-full transition-all duration-150',
+                selectedPin === '5V'
+                  ? 'bg-red-400 scale-125 ring-2 ring-white'
+                  : hoveredPin === '5V'
+                    ? 'bg-red-300 scale-110'
+                    : 'bg-red-500 hover:bg-red-400'
+              )}
+              title={`5V Power${selectedPin === '5V' ? ' (Selected)' : ''}`}
+              onMouseEnter={() => setHoveredPin('5V')}
+              onMouseLeave={() => setHoveredPin(null)}
+              onClick={() => handlePinClick('5V')}
+            />
             <span className="text-[8px] text-white">5V</span>
+            {/* Power handle for wiring - source type so other nodes can connect to it */}
+            <Handle
+              type="source"
+              position={Position.Left}
+              id="5V"
+              style={{
+                position: 'absolute',
+                left: -8,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: 10,
+                height: 10,
+                background: '#ff4444',
+                border: '2px solid #0a0e14',
+                opacity: 0.8,
+                zIndex: 10,
+              }}
+            />
           </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-black border border-gray-600" />
+
+          {/* GND Pin */}
+          <div className="flex items-center gap-1 relative">
+            <button
+              className={cn(
+                'w-3 h-3 rounded-full border border-gray-600 transition-all duration-150',
+                selectedPin === 'GND'
+                  ? 'bg-gray-500 scale-125 ring-2 ring-white'
+                  : hoveredPin === 'GND'
+                    ? 'bg-gray-600 scale-110'
+                    : 'bg-black hover:bg-gray-700'
+              )}
+              title={`GND${selectedPin === 'GND' ? ' (Selected)' : ''}`}
+              onMouseEnter={() => setHoveredPin('GND')}
+              onMouseLeave={() => setHoveredPin(null)}
+              onClick={() => handlePinClick('GND')}
+            />
             <span className="text-[8px] text-white">GND</span>
+            {/* Power handle for wiring - source type so other nodes can connect to it */}
+            <Handle
+              type="source"
+              position={Position.Left}
+              id="GND"
+              style={{
+                position: 'absolute',
+                left: -8,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: 10,
+                height: 10,
+                background: '#444444',
+                border: '2px solid #0a0e14',
+                opacity: 0.8,
+                zIndex: 10,
+              }}
+            />
           </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-yellow-500" />
+
+          {/* VIN Pin */}
+          <div className="flex items-center gap-1 relative">
+            <button
+              className={cn(
+                'w-3 h-3 rounded-full transition-all duration-150',
+                selectedPin === 'VIN'
+                  ? 'bg-yellow-300 scale-125 ring-2 ring-white'
+                  : hoveredPin === 'VIN'
+                    ? 'bg-yellow-300 scale-110'
+                    : 'bg-yellow-500 hover:bg-yellow-400'
+              )}
+              title={`VIN${selectedPin === 'VIN' ? ' (Selected)' : ''}`}
+              onMouseEnter={() => setHoveredPin('VIN')}
+              onMouseLeave={() => setHoveredPin(null)}
+              onClick={() => handlePinClick('VIN')}
+            />
             <span className="text-[8px] text-white">VIN</span>
+            {/* Power handle for wiring - source type so other nodes can connect to it */}
+            <Handle
+              type="source"
+              position={Position.Left}
+              id="VIN"
+              style={{
+                position: 'absolute',
+                left: -8,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: 10,
+                height: 10,
+                background: '#ffd700',
+                border: '2px solid #0a0e14',
+                opacity: 0.8,
+                zIndex: 10,
+              }}
+            />
           </div>
         </div>
 
@@ -88,8 +194,8 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
               <button
                 className={cn(
                   'w-2.5 h-2.5 rounded-full transition-all duration-150',
-                  selectedPin === pin 
-                    ? 'bg-[#00d9ff] scale-125 ring-2 ring-white' 
+                  selectedPin === pin
+                    ? 'bg-[#00d9ff] scale-125 ring-2 ring-white'
                     : hoveredPin === pin
                       ? 'bg-white scale-110'
                       : 'bg-[#00d9ff] hover:bg-white'
@@ -128,8 +234,8 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
               <button
                 className={cn(
                   'w-2.5 h-2.5 rounded-full transition-all duration-150',
-                  selectedPin === pin 
-                    ? 'bg-[#ffd600] scale-125 ring-2 ring-white' 
+                  selectedPin === pin
+                    ? 'bg-[#ffd600] scale-125 ring-2 ring-white'
                     : hoveredPin === pin
                       ? 'bg-white scale-110'
                       : 'bg-[#ffd600] hover:bg-white'
@@ -173,9 +279,9 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
           <div className={cn(
             'w-12 h-16 rounded border flex items-center justify-center',
-            isArduino ? 'bg-[#222] border-[#444]' : 
-            isESP32 ? 'bg-[#1a1a1a] border-[#333]' : 
-            'bg-[#1a1a1a] border-[#333]'
+            isArduino ? 'bg-[#222] border-[#444]' :
+              isESP32 ? 'bg-[#1a1a1a] border-[#333]' :
+                'bg-[#1a1a1a] border-[#333]'
           )}>
             <span className="text-[8px] text-[#666]">
               {isArduino ? 'ATmega' : isESP32 ? 'ESP32' : 'RP2040'}
@@ -191,40 +297,13 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
           )} />
         </div>
 
-        {/* Power handles */}
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="5V"
-          style={{
-            left: -8,
-            top: 82,
-            width: 10,
-            height: 10,
-            background: '#ff4444',
-            border: '2px solid #0a0e14',
-          }}
-        />
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="GND"
-          style={{
-            left: -8,
-            top: 98,
-            width: 10,
-            height: 10,
-            background: '#444444',
-            border: '2px solid #0a0e14',
-          }}
-        />
       </div>
 
       {/* Selected pin indicator */}
       {selectedPin !== null && (
         <div className="absolute bottom-8 left-2 right-2 bg-black/80 rounded px-2 py-1 text-center">
           <span className="text-[10px] text-[#00d9ff]">
-            Pin {selectedPin} selected
+            {typeof selectedPin === 'string' ? selectedPin : `Pin ${selectedPin}`} selected
           </span>
         </div>
       )}

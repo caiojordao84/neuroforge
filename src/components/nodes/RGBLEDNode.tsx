@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { simulationEngine } from '@/engine/SimulationEngine';
 import { useConnectionStore } from '@/stores/useConnectionStore';
+import { useUIStore } from '@/stores/useUIStore';
 import { cn } from '@/lib/utils';
 
 interface RGBLEDNodeProps {
@@ -13,11 +14,16 @@ interface RGBLEDNodeProps {
 export const RGBLEDNode: React.FC<RGBLEDNodeProps> = ({ data, selected, id }) => {
   const [rgbColor, setRgbColor] = useState((data.rgbColor as { r: number; g: number; b: number }) ?? { r: 0, g: 0, b: 0 });
   const [isProperlyWired, setIsProperlyWired] = useState(false);
-  
+
   const { connections } = useConnectionStore();
+  const { openWindow } = useUIStore();
   const isCommonAnode = (data.isCommonAnode as boolean) ?? false;
   const connectedPins = (data.connectedPins as Record<string, number | undefined>) || {};
   const label = (data.label as string) || 'RGB LED';
+
+  const handleDoubleClick = useCallback(() => {
+    openWindow('properties');
+  }, [openWindow]);
 
   useEffect(() => {
     const checkWiring = () => {
@@ -60,10 +66,10 @@ export const RGBLEDNode: React.FC<RGBLEDNodeProps> = ({ data, selected, id }) =>
   useEffect(() => {
     const unsubscribe = simulationEngine.on('pinChange', (event) => {
       const pinEvent = event as { pin: number; value: 'HIGH' | 'LOW' | number };
-      
+
       setRgbColor((prev: { r: number; g: number; b: number }) => {
         const newColor = { ...prev };
-        
+
         if (connectedPins?.red === pinEvent.pin) {
           if (typeof pinEvent.value === 'number') {
             newColor.r = pinEvent.value;
@@ -85,7 +91,7 @@ export const RGBLEDNode: React.FC<RGBLEDNodeProps> = ({ data, selected, id }) =>
             newColor.b = pinEvent.value === 'HIGH' ? 255 : 0;
           }
         }
-        
+
         return newColor;
       });
     });
@@ -104,6 +110,8 @@ export const RGBLEDNode: React.FC<RGBLEDNodeProps> = ({ data, selected, id }) =>
         selected ? 'border-[#00d9ff]' : 'border-[rgba(0,217,255,0.3)]',
         'shadow-lg transition-all duration-200'
       )}
+      onDoubleClick={handleDoubleClick}
+      title="Double-click to open properties"
     >
       <svg width="70" height="70" viewBox="0 0 70 70">
         <defs>

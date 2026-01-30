@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { simulationEngine } from '@/engine/SimulationEngine';
 import { useConnectionStore } from '@/stores/useConnectionStore';
+import { useUIStore } from '@/stores/useUIStore';
 import { cn } from '@/lib/utils';
 
 interface PotentiometerNodeProps {
@@ -16,9 +17,14 @@ export const PotentiometerNode: React.FC<PotentiometerNodeProps> = ({ data, sele
   const [isDragging, setIsDragging] = useState(false);
   const [isProperlyWired, setIsProperlyWired] = useState(false);
   const [connectedPin, setConnectedPin] = useState<number | undefined>(data.connectedPin as number);
-  
+
   const { connections } = useConnectionStore();
+  const { openWindow } = useUIStore();
   const label = (data.label as string) || 'Pot';
+
+  const handleDoubleClick = useCallback(() => {
+    openWindow('properties');
+  }, [openWindow]);
 
   useEffect(() => {
     const checkWiring = () => {
@@ -80,10 +86,10 @@ export const PotentiometerNode: React.FC<PotentiometerNodeProps> = ({ data, sele
 
     const rect = svg.getBoundingClientRect();
     const y = e.clientY - rect.top;
-    
+
     const newPercentage = Math.max(0, Math.min(100, 100 - (y / 70) * 100));
     const newValue = Math.round((newPercentage / 100) * 1023);
-    
+
     setPercentage(Math.round(newPercentage));
     setValue(newValue);
   }, []);
@@ -98,10 +104,12 @@ export const PotentiometerNode: React.FC<PotentiometerNodeProps> = ({ data, sele
         selected ? 'border-[#00d9ff]' : 'border-[rgba(0,217,255,0.3)]',
         'shadow-lg transition-all duration-200'
       )}
+      onDoubleClick={handleDoubleClick}
+      title="Double-click to open properties"
     >
-      <svg 
-        width="50" 
-        height="70" 
+      <svg
+        width="50"
+        height="70"
         viewBox="0 0 50 70"
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}

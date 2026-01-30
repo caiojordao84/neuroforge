@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { 
-  SimulationStatus, 
-  Language, 
-  BoardType, 
+import type {
+  SimulationStatus,
+  Language,
+  BoardType,
   BoardConfig,
-  PinState 
+  PinState
 } from '@/types';
 
 interface SimulationStore {
@@ -14,22 +14,24 @@ interface SimulationStore {
   language: Language;
   speed: number;
   code: string;
+  codeByMcu: Record<string, string>; // Map of MCU ID to code
   isLoopRunning: boolean;
-  
+
   // Board selection
   selectedBoard: BoardType;
-  
+
   // Pin states
   pins: Map<number, PinState>;
-  
+
   // Actions
   setStatus: (status: SimulationStatus) => void;
   setLanguage: (language: Language) => void;
   setSpeed: (speed: number) => void;
   setCode: (code: string) => void;
+  setCodeForMcu: (mcuId: string, code: string) => void;
   setIsLoopRunning: (isRunning: boolean) => void;
   setSelectedBoard: (board: BoardType) => void;
-  
+
   // Pin operations
   setPinMode: (pin: number, mode: PinState['mode']) => void;
   digitalWrite: (pin: number, value: 'HIGH' | 'LOW') => void;
@@ -38,7 +40,7 @@ interface SimulationStore {
   analogRead: (pin: number) => number;
   getPinState: (pin: number) => PinState | undefined;
   resetPins: () => void;
-  
+
   // Start/Stop/Reset
   startSimulation: () => void;
   stopSimulation: () => void;
@@ -206,6 +208,7 @@ export const useSimulationStore = create<SimulationStore>()(
       language: 'cpp',
       speed: 1,
       code: defaultCppCode,
+      codeByMcu: {},
       isLoopRunning: false,
       selectedBoard: 'arduino-uno',
       pins: new Map(),
@@ -213,7 +216,7 @@ export const useSimulationStore = create<SimulationStore>()(
       setStatus: (status) => set({ status }),
       setLanguage: (language) => {
         const currentLang = get().language;
-        
+
         // If switching languages, update the default code
         if (language !== currentLang) {
           const newCode = defaultCodeMap[language];
@@ -224,6 +227,9 @@ export const useSimulationStore = create<SimulationStore>()(
       },
       setSpeed: (speed) => set({ speed }),
       setCode: (code) => set({ code }),
+      setCodeForMcu: (mcuId, code) => set((state) => ({
+        codeByMcu: { ...state.codeByMcu, [mcuId]: code }
+      })),
       setIsLoopRunning: (isLoopRunning) => set({ isLoopRunning }),
       setSelectedBoard: (selectedBoard) => set({ selectedBoard }),
 
@@ -310,8 +316,8 @@ export const useSimulationStore = create<SimulationStore>()(
     }),
     {
       name: 'neuroforge-simulation-store',
-      partialize: (state) => ({ 
-        language: state.language, 
+      partialize: (state) => ({
+        language: state.language,
         code: state.code,
         selectedBoard: state.selectedBoard,
         speed: state.speed,
