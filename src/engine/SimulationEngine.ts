@@ -233,6 +233,11 @@ export class SimulationEngine extends EventEmitter {
       return;
     }
 
+    // Prevent overlapping loop executions
+    if (this.isLoopExecuting) {
+      return;
+    }
+
     // Execute the loop function
     this.isLoopExecuting = true;
 
