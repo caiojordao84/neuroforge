@@ -19,6 +19,7 @@ import { nodeTypes } from './nodes';
 import { edgeTypes } from './edges';
 import { useSimulationStore } from '@/stores/useSimulationStore';
 import { useSerialStore } from '@/stores/useSerialStore';
+import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { simulationEngine } from '@/engine/SimulationEngine';
 import { codeParser } from '@/engine/CodeParser';
@@ -54,6 +55,8 @@ const CanvasInner: React.FC = () => {
     resetSimulation,
   } = useSimulationStore();
 
+  const { addConnection, removeConnection, setNodes: setStoreNodes, setEdges: setStoreEdges } = useConnectionStore();
+
   const { addTerminalLine } = useSerialStore();
   const { openWindow } = useUIStore();
 
@@ -75,6 +78,15 @@ const CanvasInner: React.FC = () => {
     // Canvas starts empty, ready for user to drag components
     setNodes([]);
   }, [setNodes]);
+
+  // Sync React Flow nodes/edges with Connection Store
+  useEffect(() => {
+    setStoreNodes(nodes);
+  }, [nodes, setStoreNodes]);
+
+  useEffect(() => {
+    setStoreEdges(edges);
+  }, [edges, setStoreEdges]);
 
   // Validate connection before creating edge
   const isValidConnection = useCallback((connection: Connection): boolean => {
@@ -129,11 +141,28 @@ const CanvasInner: React.FC = () => {
           strokeWidth: wireType === 'power' || wireType === 'ground' ? 3 : 2,
         },
       };
+
+      // Add edge to React Flow state
       setEdges((eds) => addEdge(newEdge, eds));
+
+      // Add connection to the store for components to detect
+      const connection = {
+        id: newEdge.id,
+        source: `${params.source}:${params.sourceHandle || 'default'}`,
+        target: `${params.target}:${params.targetHandle || 'default'}`,
+      };
+      addConnection(connection);
+
       addTerminalLine(`🔗 Connected: ${sourceHandle} → ${targetHandle}`, 'info');
     },
-    [setEdges, addTerminalLine, isValidConnection]
+    [setEdges, addConnection, addTerminalLine, isValidConnection]
   );
+
+  const onEdgesDelete = useCallback((deletedEdges: Edge[]) => {
+    deletedEdges.forEach((edge) => {
+      removeConnection(edge.id);
+    });
+  }, [removeConnection]);
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
@@ -209,6 +238,7 @@ const CanvasInner: React.FC = () => {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onEdgesDelete={onEdgesDelete}
         onDrop={onDrop}
         onDragOver={onDragOver}
         onNodeClick={onNodeClick}
