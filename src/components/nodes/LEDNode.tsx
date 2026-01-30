@@ -15,8 +15,8 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
   const [isOn, setIsOn] = useState((data.isOn as boolean) ?? false);
   const [brightness, setBrightness] = useState((data.brightness as number) ?? 255);
   const [isProperlyWired, setIsProperlyWired] = useState(false);
+  const [connectedPin, setConnectedPin] = useState<number | null>(null);
   const color = (data.color as string) || '#ff0000';
-  const connectedPins = (data.connectedPins as Record<string, number | undefined>) || {};
   const label = (data.label as string) || 'LED';
 
   const { connections } = useConnectionStore();
@@ -26,11 +26,15 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
     openWindow('properties');
   }, [openWindow]);
 
+  // Check wiring and find connected MCU pin
   useEffect(() => {
     const checkWiring = () => {
+      // Find connection to anode
       const anodeConnection = connections.find(
         (c) => c.source === `${id}:anode` || c.target === `${id}:anode`
       );
+      
+      // Find connection to cathode
       const cathodeConnection = connections.find(
         (c) => c.source === `${id}:cathode` || c.target === `${id}:cathode`
       );
@@ -40,28 +44,33 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
 
       setIsProperlyWired(hasAnodeConnection && hasCathodeConnection);
 
+      // Extract pin number from anode connection
       if (anodeConnection) {
-        const otherEnd = anodeConnection.source.startsWith(id)
+        const otherEnd = anodeConnection.source === `${id}:anode`
           ? anodeConnection.target
           : anodeConnection.source;
+        
+        // Match patterns like "mcu_123:D13" or "board:D13"
         const pinMatch = otherEnd.match(/D(\d+)/);
         if (pinMatch) {
-          data.connectedPins = {
-            ...connectedPins,
-            anode: parseInt(pinMatch[1], 10)
-          };
+          const pinNumber = parseInt(pinMatch[1], 10);
+          setConnectedPin(pinNumber);
         }
+      } else {
+        setConnectedPin(null);
       }
     };
 
     checkWiring();
-  }, [connections, data, id, connectedPins]);
+  }, [connections, id]);
 
+  // Listen for pin changes from simulation engine
   useEffect(() => {
     const unsubscribe = simulationEngine.on('pinChange', (event) => {
       const pinEvent = event as { pin: number; value: 'HIGH' | 'LOW' | number };
 
-      if (connectedPins?.anode === pinEvent.pin) {
+      // Only react if this LED is connected to the changed pin
+      if (connectedPin !== null && connectedPin === pinEvent.pin) {
         if (typeof pinEvent.value === 'number') {
           setIsOn(pinEvent.value > 0);
           setBrightness(pinEvent.value);
@@ -73,7 +82,17 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
     });
 
     return unsubscribe;
-  }, [connectedPins]);
+  }, [connectedPin]);
+
+  // Reset LED state when simulation stops
+  useEffect(() => {
+    const unsubscribe = simulationEngine.on('simulationStopped', () => {
+      setIsOn(false);
+      setBrightness(0);
+    });
+
+    return unsubscribe;
+  }, []);
 
   return (
     <div
