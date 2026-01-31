@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as os from 'os';
 
 export type BoardType = 'arduino-uno' | 'esp32' | 'raspberry-pi-pico';
+export type SimulationMode = 'interpreter' | 'qemu';
 
 export interface CompileResult {
   success: boolean;
@@ -33,8 +34,16 @@ export class CompilerService {
 
   /**
    * Get FQBN (Fully Qualified Board Name) for a board type
+   * @param board - Board type (arduino-uno, esp32, etc)
+   * @param mode - Simulation mode (qemu uses custom core with NeuroForge Time)
    */
-  private getFQBN(board: BoardType): string {
+  private getFQBN(board: BoardType, mode: SimulationMode = 'interpreter'): string {
+    // NeuroForge Time: Use custom QEMU board for Arduino Uno in QEMU mode
+    if (mode === 'qemu' && board === 'arduino-uno') {
+      return 'neuroforge:avr-qemu:unoqemu';
+    }
+
+    // Default boards for interpreter mode
     const fqbnMap: Record<BoardType, string> = {
       'arduino-uno': 'arduino:avr:uno',
       'esp32': 'esp32:esp32:esp32',
@@ -45,8 +54,15 @@ export class CompilerService {
 
   /**
    * Compile Arduino sketch to firmware
+   * @param code - Arduino sketch code
+   * @param board - Target board type
+   * @param mode - Simulation mode (interpreter or qemu)
    */
-  async compile(code: string, board: BoardType = 'arduino-uno'): Promise<CompileResult> {
+  async compile(
+    code: string,
+    board: BoardType = 'arduino-uno',
+    mode: SimulationMode = 'interpreter'
+  ): Promise<CompileResult> {
     const sketchName = `sketch_${Date.now()}`;
     const sketchDir = path.join(this.tempDir, sketchName);
     // IMPORTANT: .ino file MUST have same name as folder (arduino-cli requirement)
@@ -60,11 +76,11 @@ export class CompilerService {
       fs.writeFileSync(sketchFile, code, 'utf-8');
       console.log(`✅ Created sketch: ${sketchFile}`);
 
-      // Get FQBN for the board
-      const fqbn = this.getFQBN(board);
+      // Get FQBN for the board and mode
+      const fqbn = this.getFQBN(board, mode);
+      console.log(`🔧 Compiling with arduino-cli: ${fqbn} (mode: ${mode})`);
 
       // Compile using arduino-cli
-      console.log(`🔧 Compiling with arduino-cli: ${fqbn}`);
       const result = await this.runArduinoCli([
         'compile',
         '--fqbn', fqbn,
