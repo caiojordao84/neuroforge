@@ -19,6 +19,8 @@ export class QEMUSimulationEngine extends EventEmitter {
   private pollInterval: NodeJS.Timeout | null = null;
   private _isRunning = false;
   private _isPaused = false;
+  private _firmwarePath: string | null = null;
+  private _board: BoardType = 'arduino-uno';
 
   constructor() {
     super();
@@ -33,6 +35,9 @@ export class QEMUSimulationEngine extends EventEmitter {
    * Load firmware into QEMU
    */
   async loadFirmware(firmwarePath: string, board: BoardType = 'arduino-uno'): Promise<void> {
+    this._firmwarePath = firmwarePath;
+    this._board = board;
+    console.log(`📦 Firmware loaded: ${firmwarePath} (${board})`);
     this.emit('firmware-loaded', firmwarePath, board);
   }
 
@@ -40,8 +45,13 @@ export class QEMUSimulationEngine extends EventEmitter {
    * Start QEMU simulation
    */
   async start(): Promise<void> {
+    if (!this._firmwarePath) {
+      throw new Error('No firmware loaded. Call loadFirmware() first.');
+    }
+
     try {
-      await this.runner.start();
+      // Start QEMU with firmware
+      await this.runner.start(this._firmwarePath, this._board as any);
       this._isRunning = true;
       this._isPaused = false;
 
