@@ -1,12 +1,20 @@
-// Stub temporario - parsing basico de codigo Arduino
+// Stub temporario - parsing de codigo Arduino
 
 export interface ParsedCode {
   variables: string[];
   functions: string[];
   pins: number[];
+  setup?: string;
+  loop?: string;
 }
 
 class CodeParser {
+  private currentLanguage: string = 'cpp';
+
+  setLanguage(language: string) {
+    this.currentLanguage = language;
+  }
+
   parse(code: string): ParsedCode {
     const variables: string[] = [];
     const functions: string[] = [];
@@ -18,7 +26,15 @@ class CodeParser {
       functions.push(match[1]);
     }
 
-    // Extrair pinos (pinMode, digitalWrite, etc)
+    // Extrair setup
+    const setupMatch = code.match(/void\s+setup\s*\(\)\s*{([^}]*)}/s);
+    const setup = setupMatch ? setupMatch[1] : '';
+
+    // Extrair loop
+    const loopMatch = code.match(/void\s+loop\s*\(\)\s*{([^}]*)}/s);
+    const loop = loopMatch ? loopMatch[1] : '';
+
+    // Extrair pinos
     const pinMatches = code.matchAll(/\b(pinMode|digitalWrite|digitalRead|analogRead|analogWrite)\s*\(\s*(\d+)/g);
     for (const match of pinMatches) {
       const pin = parseInt(match[2]);
@@ -27,7 +43,7 @@ class CodeParser {
       }
     }
 
-    return { variables, functions, pins };
+    return { variables, functions, pins, setup, loop };
   }
 }
 

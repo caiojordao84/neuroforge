@@ -7,14 +7,10 @@ export interface TranspileResult {
 }
 
 class Transpiler {
-  async transpile(code: string, language: 'cpp' | 'python'): Promise<TranspileResult> {
+  transpile(_code: string, _fromLang: 'cpp' | 'python', _toLang?: 'cpp' | 'python'): string {
     // TODO: Integrar com arduino-cli ou compilador real
-    console.log(`[Transpiler] Transpiling ${language} code...`);
-    
-    return {
-      success: true,
-      output: 'Compiled successfully (stub)'
-    };
+    console.log('[Transpiler] Transpiling code...');
+    return _code; // Retorna codigo sem modificacao
   }
 }
 
