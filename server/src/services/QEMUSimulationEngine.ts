@@ -21,6 +21,7 @@ export class QEMUSimulationEngine extends EventEmitter {
   private _isPaused = false;
   private _firmwarePath: string | null = null;
   private _board: BoardType = 'arduino-uno';
+  private gpioErrorShown = false;
 
   constructor() {
     super();
@@ -50,6 +51,9 @@ export class QEMUSimulationEngine extends EventEmitter {
     }
 
     try {
+      // Reset GPIO error flag
+      this.gpioErrorShown = false;
+
       // Start QEMU with firmware
       await this.runner.start(this._firmwarePath, this._board as any);
       this._isRunning = true;
@@ -108,6 +112,7 @@ export class QEMUSimulationEngine extends EventEmitter {
     this.runner.stop();
     this._isRunning = false;
     this._isPaused = false;
+    this.gpioErrorShown = false;
   }
 
   /**
@@ -165,6 +170,7 @@ export class QEMUSimulationEngine extends EventEmitter {
     if (this.pollInterval) return;
 
     console.log('🔄 Starting GPIO polling at 20 FPS...');
+    console.log('⚠️ Note: QEMU AVR GPIO monitoring is experimental. Serial output will work normally.');
 
     this.pollInterval = setInterval(async () => {
       try {
@@ -188,8 +194,13 @@ export class QEMUSimulationEngine extends EventEmitter {
           }
         }
       } catch (error) {
-        // Don't spam errors if polling fails
-        // console.error('GPIO polling error:', error);
+        // QEMU AVR doesn't reliably support GPIO monitoring via 'info registers'
+        // This is expected - show warning once, then silently continue
+        if (!this.gpioErrorShown) {
+          console.log('⚠️ GPIO monitoring not available in this QEMU build (continuing with serial only)');
+          this.gpioErrorShown = true;
+        }
+        // Don't spam errors - GPIO monitoring is optional
       }
     }, 50); // 20 FPS (1000ms / 20 = 50ms)
   }
