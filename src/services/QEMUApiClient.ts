@@ -1,5 +1,7 @@
 import type { BoardType } from '@/types';
 
+export type SimulationMode = 'interpreter' | 'qemu';
+
 export interface CompileResponse {
   success: boolean;
   firmwarePath?: string;
@@ -33,15 +35,22 @@ export class QEMUApiClient {
 
   /**
    * Compile Arduino code to firmware
+   * @param code - Arduino sketch code
+   * @param board - Target board type
+   * @param mode - Simulation mode (qemu uses NeuroForge Time board)
    */
-  async compile(code: string, board: BoardType = 'arduino-uno'): Promise<CompileResponse> {
+  async compile(
+    code: string,
+    board: BoardType = 'arduino-uno',
+    mode: SimulationMode = 'qemu'
+  ): Promise<CompileResponse> {
     try {
       const response = await fetch(`${this.baseUrl}/api/compile`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ code, board })
+        body: JSON.stringify({ code, board, mode })
       });
 
       const data = await response.json();
