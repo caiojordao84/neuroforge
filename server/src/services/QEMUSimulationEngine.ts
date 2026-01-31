@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import { QEMURunner } from './QEMURunner';
+import { QEMUMonitorService } from './QEMUMonitorService';
 import type { BoardType } from './CompilerService';
 
 export interface PinState {
@@ -12,6 +13,7 @@ export interface PinState {
  */
 export class QEMUSimulationEngine extends EventEmitter {
   private runner: QEMURunner;
+  private monitor: QEMUMonitorService;
   private pinStates: Map<number, PinState>;
   private serialBuffer: string[];
   private pollInterval: NodeJS.Timeout | null = null;
@@ -21,6 +23,7 @@ export class QEMUSimulationEngine extends EventEmitter {
   constructor() {
     super();
     this.runner = new QEMURunner();
+    this.monitor = new QEMUMonitorService();
     this.pinStates = new Map();
     this.serialBuffer = [];
     this.setupRunnerEvents();
@@ -41,7 +44,21 @@ export class QEMUSimulationEngine extends EventEmitter {
       await this.runner.start();
       this._isRunning = true;
       this._isPaused = false;
-      this.startPinPolling();
+
+      // Connect to QEMU monitor
+      const monitorSocket = this.runner.getMonitorSocket();
+      if (monitorSocket) {
+        try {
+          await this.monitor.connect(monitorSocket);
+          console.log('✅ QEMU Monitor connected, starting GPIO polling...');
+          this.startGPIOPolling();
+        } catch (error) {
+          console.error('⚠️ Failed to connect QEMU monitor:', error);
+          console.log('⚠️ Continuing without GPIO monitoring...');
+        }
+      } else {
+        console.warn('⚠️ No monitor socket available, GPIO polling disabled');
+      }
     } catch (error) {
       this._isRunning = false;
       throw error;
@@ -67,6 +84,7 @@ export class QEMUSimulationEngine extends EventEmitter {
     // Forward stopped event
     this.runner.on('stopped', () => {
       this._isRunning = false;
+      this.stopGPIOPolling();
       this.emit('stopped');
     });
   }
@@ -75,7 +93,8 @@ export class QEMUSimulationEngine extends EventEmitter {
    * Stop QEMU simulation
    */
   stop(): void {
-    this.stopPinPolling();
+    this.stopGPIOPolling();
+    this.monitor.disconnect();
     this.runner.stop();
     this._isRunning = false;
     this._isPaused = false;
@@ -85,7 +104,7 @@ export class QEMUSimulationEngine extends EventEmitter {
    * Pause simulation
    */
   pause(): void {
-    this.stopPinPolling();
+    this.stopGPIOPolling();
     this._isPaused = true;
     this.emit('paused');
   }
@@ -94,7 +113,7 @@ export class QEMUSimulationEngine extends EventEmitter {
    * Resume simulation
    */
   resume(): void {
-    this.startPinPolling();
+    this.startGPIOPolling();
     this._isPaused = false;
     this.emit('resumed');
   }
@@ -113,71 +132,67 @@ export class QEMUSimulationEngine extends EventEmitter {
    * Set pin state (simulate input, e.g. button press)
    */
   async setPinState(pin: number, value: number): Promise<void> {
-    // Simulate external input to QEMU
-    const port = this.pinToPort(pin);
-    const pinBit = pin % 8;
-    await this.runner.writeGPIO(port, pinBit, value);
-    
-    // Update local cache
-    const currentState = this.pinStates.get(pin) || { mode: 'INPUT', value: 0 };
-    currentState.value = value;
-    this.pinStates.set(pin, currentState);
-    
-    this.emit('pin-change', pin, currentState);
+    try {
+      // Write to QEMU via monitor
+      await this.monitor.setGPIOPin(pin, value === 1 ? 'HIGH' : 'LOW');
+      
+      // Update local cache
+      const currentState = this.pinStates.get(pin) || { mode: 'INPUT', value: 0 };
+      currentState.value = value;
+      this.pinStates.set(pin, currentState);
+      
+      this.emit('pin-change', pin, currentState);
+    } catch (error) {
+      console.error('Error setting pin state:', error);
+      throw error;
+    }
   }
 
   /**
-   * Start polling GPIO pins from QEMU
+   * Start polling GPIO pins from QEMU (20 FPS)
    */
-  private startPinPolling(): void {
+  private startGPIOPolling(): void {
     if (this.pollInterval) return;
 
-    this.pollInterval = setInterval(async () => {
-      // Poll pin 13 (LED on Arduino Uno)
-      const pin13 = await this.pollPin(13);
-      if (pin13 !== null) {
-        const currentState = this.pinStates.get(13) || { mode: 'OUTPUT', value: 0 };
-        if (currentState.value !== pin13) {
-          currentState.value = pin13;
-          this.pinStates.set(13, currentState);
-          this.emit('pin-change', 13, currentState);
-        }
-      }
+    console.log('🔄 Starting GPIO polling at 20 FPS...');
 
-      // TODO: Poll other pins as needed
-    }, 100); // Poll every 100ms
+    this.pollInterval = setInterval(async () => {
+      try {
+        // Get all pin states from QEMU monitor
+        const pinStates = await this.monitor.getGPIOState();
+
+        // Update local cache and emit changes
+        for (const { pin, state } of pinStates) {
+          const currentState = this.pinStates.get(pin);
+          const newValue = state === 'HIGH' ? 1 : 0;
+
+          // Check if state changed
+          if (!currentState || currentState.value !== newValue) {
+            const updatedState: PinState = {
+              mode: 'OUTPUT', // Assume OUTPUT for now (can be refined)
+              value: newValue
+            };
+
+            this.pinStates.set(pin, updatedState);
+            this.emit('pin-change', pin, updatedState);
+          }
+        }
+      } catch (error) {
+        // Don't spam errors if polling fails
+        // console.error('GPIO polling error:', error);
+      }
+    }, 50); // 20 FPS (1000ms / 20 = 50ms)
   }
 
   /**
    * Stop polling GPIO pins
    */
-  private stopPinPolling(): void {
+  private stopGPIOPolling(): void {
     if (this.pollInterval) {
       clearInterval(this.pollInterval);
       this.pollInterval = null;
+      console.log('⏸️ GPIO polling stopped');
     }
-  }
-
-  /**
-   * Poll a single pin from QEMU
-   */
-  private async pollPin(pin: number): Promise<number | null> {
-    try {
-      const port = this.pinToPort(pin);
-      const pinBit = pin % 8;
-      return await this.runner.readGPIO(port, pinBit);
-    } catch {
-      return null;
-    }
-  }
-
-  /**
-   * Convert Arduino pin number to AVR port (PORTB, PORTC, PORTD)
-   */
-  private pinToPort(pin: number): string {
-    if (pin >= 8 && pin <= 13) return 'PORTB';
-    if (pin >= 14 && pin <= 19) return 'PORTC';
-    return 'PORTD';
   }
 
   /**
