@@ -1,10 +1,13 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useSimulationStore } from '@/stores/useSimulationStore';
 import { useSerialStore } from '@/stores/useSerialStore';
+import { useQEMUStore } from '@/store/useQEMUStore';
+import { useQEMUSimulation } from '@/hooks/useQEMUSimulation';
 import { simulationEngine } from '@/engine/SimulationEngine';
 import { codeParser } from '@/engine/CodeParser';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { SimulationModeToggle } from '@/components/SimulationModeToggle';
 import {
   Select,
   SelectContent,
@@ -18,7 +21,8 @@ import {
   RotateCcw,
   FastForward,
   Cpu,
-  Zap
+  Zap,
+  Loader2
 } from 'lucide-react';
 
 export const TopToolbar: React.FC = () => {
@@ -36,13 +40,47 @@ export const TopToolbar: React.FC = () => {
   } = useSimulationStore();
 
   const { addTerminalLine } = useSerialStore();
+  const { mode, isCompiling, compilationError, setCompilationError } = useQEMUStore();
+  const { compileAndStart, stopQEMU, isBackendConnected } = useQEMUSimulation();
+
+  // Show compilation errors
+  useEffect(() => {
+    if (compilationError) {
+      addTerminalLine(`❌ Compilation Error: ${compilationError}`, 'error');
+    }
+  }, [compilationError, addTerminalLine]);
+
+  // Clear compilation error when code changes
+  useEffect(() => {
+    setCompilationError(null);
+  }, [code, setCompilationError]);
 
   // Handle run/stop
   const handleRun = useCallback(async () => {
+    // Stop simulation
     if (status === 'running') {
-      stopSimulation();
-      simulationEngine.stop();
+      if (mode === 'qemu') {
+        await stopQEMU();
+        stopSimulation();
+      } else {
+        stopSimulation();
+        simulationEngine.stop();
+      }
+      return;
+    }
+
+    // Start simulation
+    if (mode === 'qemu') {
+      // QEMU Mode: Compile and run on real QEMU
+      if (!isBackendConnected) {
+        addTerminalLine('❌ QEMU Backend is not connected. Start server: cd server && npm run dev', 'error');
+        return;
+      }
+
+      addTerminalLine('🔨 Compiling sketch for QEMU...', 'info');
+      await compileAndStart(code, selectedBoard);
     } else {
+      // Fake Mode: Use JavaScript interpreter
       codeParser.setLanguage(language);
 
       // Preprocess code to inject libraries
@@ -56,20 +94,25 @@ export const TopToolbar: React.FC = () => {
         addTerminalLine('❌ Failed to parse code', 'error');
       }
     }
-  }, [status, code, language, speed, startSimulation, stopSimulation, addTerminalLine]);
+  }, [status, mode, code, language, speed, selectedBoard, isBackendConnected, startSimulation, stopSimulation, compileAndStart, stopQEMU, addTerminalLine]);
 
   // Handle reset
   const handleReset = useCallback(() => {
+    if (mode === 'qemu') {
+      stopQEMU();
+    }
     resetSimulation();
     simulationEngine.reset();
     addTerminalLine('🔄 Simulation reset', 'info');
-  }, [resetSimulation, addTerminalLine]);
+  }, [mode, resetSimulation, stopQEMU, addTerminalLine]);
 
   // Handle speed change
   const handleSpeedChange = useCallback((newSpeed: number) => {
     setSpeed(newSpeed);
-    simulationEngine.setSpeed(newSpeed);
-  }, [setSpeed]);
+    if (mode === 'fake') {
+      simulationEngine.setSpeed(newSpeed);
+    }
+  }, [mode, setSpeed]);
 
   return (
     <div
@@ -126,29 +169,36 @@ export const TopToolbar: React.FC = () => {
             </SelectContent>
           </Select>
         </div>
+
+        <div className="w-px h-6 bg-[rgba(0,217,255,0.2)]" />
+
+        {/* Simulation Mode Toggle */}
+        <SimulationModeToggle />
       </div>
 
-      {/* Center section - Speed */}
-      <div className="flex items-center gap-2">
-        <span className="text-[#9ca3af] text-sm">Speed:</span>
-        <Select value={speed.toString()} onValueChange={(v) => handleSpeedChange(parseInt(v, 10))}>
-          <SelectTrigger className="w-[80px] h-9 bg-[#151b24] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm">
-            <FastForward className="w-4 h-4 mr-1" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="bg-[#151b24] border-[rgba(0,217,255,0.3)]">
-            {[1, 2, 5, 10].map((s) => (
-              <SelectItem
-                key={s}
-                value={s.toString()}
-                className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)]"
-              >
-                {s}x
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Center section - Speed (only for fake mode) */}
+      {mode === 'fake' && (
+        <div className="flex items-center gap-2">
+          <span className="text-[#9ca3af] text-sm">Speed:</span>
+          <Select value={speed.toString()} onValueChange={(v) => handleSpeedChange(parseInt(v, 10))}>
+            <SelectTrigger className="w-[80px] h-9 bg-[#151b24] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm">
+              <FastForward className="w-4 h-4 mr-1" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-[#151b24] border-[rgba(0,217,255,0.3)]">
+              {[1, 2, 5, 10].map((s) => (
+                <SelectItem
+                  key={s}
+                  value={s.toString()}
+                  className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)]"
+                >
+                  {s}x
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Right section - Controls */}
       <div className="flex items-center gap-2">
@@ -156,7 +206,7 @@ export const TopToolbar: React.FC = () => {
           variant="outline"
           size="sm"
           onClick={handleReset}
-          disabled={status === 'idle'}
+          disabled={status === 'idle' || isCompiling}
           className="h-9 px-3 bg-transparent border-[rgba(0,217,255,0.3)] text-[#9ca3af] hover:text-[#00d9ff] hover:bg-[rgba(0,217,255,0.1)]"
         >
           <RotateCcw className="w-4 h-4 mr-1" />
@@ -166,6 +216,7 @@ export const TopToolbar: React.FC = () => {
         <Button
           size="sm"
           onClick={handleRun}
+          disabled={isCompiling || (mode === 'qemu' && !isBackendConnected && status !== 'running')}
           className={cn(
             'h-9 px-5',
             status === 'running'
@@ -173,7 +224,12 @@ export const TopToolbar: React.FC = () => {
               : 'bg-[#00d9ff] hover:bg-[#00a8cc] text-[#0a0e14]'
           )}
         >
-          {status === 'running' ? (
+          {isCompiling ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              Compiling...
+            </>
+          ) : status === 'running' ? (
             <>
               <Square className="w-4 h-4 mr-1" fill="currentColor" />
               Stop
@@ -181,7 +237,7 @@ export const TopToolbar: React.FC = () => {
           ) : (
             <>
               <Play className="w-4 h-4 mr-1" fill="currentColor" />
-              Run
+              {mode === 'qemu' ? 'Compile & Run' : 'Run'}
             </>
           )}
         </Button>
