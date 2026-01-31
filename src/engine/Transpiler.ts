@@ -1,12 +1,11 @@
 // Stub temporario - transpilacao de codigo
+import type { Language } from '@/types/index';
 
 export interface TranspileResult {
   success: boolean;
   output?: string;
   errors?: string[];
 }
-
-type Language = 'cpp' | 'python' | 'micropython';
 
 class Transpiler {
   transpile(_code: string, _fromLang: Language, _toLang?: Language): string {
