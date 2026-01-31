@@ -91,51 +91,52 @@ if (-not $elfPath) {
 Write-Host "[INFO] Firmware: $elfPath" -ForegroundColor Yellow
 Write-Host "[INFO] Tamanho: $((Get-Item $elfPath).Length) bytes" -ForegroundColor Gray
 Write-Host ""
+
+# Criar arquivo de log para serial output
+$logFile = "serial_output_$Sketch.log"
+if (Test-Path $logFile) {
+    Remove-Item $logFile
+}
+
 Write-Host "[INFO] Executando $Sketch no QEMU..." -ForegroundColor Yellow
+Write-Host "[INFO] Serial output estará em: $logFile" -ForegroundColor Yellow
 Write-Host "[INFO] Pressione Ctrl+C para parar" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "===========================================" -ForegroundColor DarkGray
 Write-Host ""
 
-# Listar máquinas disponíveis
-$machines = & $qemuPath -machine help 2>&1
+# Iniciar job para ler o log em tempo real
+$tailJob = Start-Job -ScriptBlock {
+    param($file)
+    while (-not (Test-Path $file)) { Start-Sleep -Milliseconds 100 }
+    Get-Content $file -Wait
+} -ArgumentList (Resolve-Path -Path . | Join-Path -ChildPath $logFile)
 
-# Tentar diferentes nomes de máquina
-$machineNames = @("uno", "arduino-uno", "arduino-mega-2560-v3", "arduino-mega", "arduino")
-$machineFound = $false
-
-foreach ($machine in $machineNames) {
-    if ($machines -match $machine) {
-        Write-Host "[DEBUG] Usando machine: $machine" -ForegroundColor DarkGray
-        Write-Host ""
-        $machineFound = $true
-        
-        # Executar QEMU
-        & $qemuPath `
-            -machine $machine `
-            -bios $elfPath `
-            -serial stdio `
-            -nographic `
-            -d guest_errors
-        
-        break
-    }
-}
-
-if (-not $machineFound) {
-    Write-Host "[WARNING] Nenhuma máquina Arduino encontrada" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "Máquinas AVR disponíveis:" -ForegroundColor Yellow
-    & $qemuPath -machine help 2>&1 | Select-String "avr" | ForEach-Object {
-        Write-Host "  $_" -ForegroundColor Gray
-    }
-    Write-Host ""
-    Write-Host "[INFO] Tentando Arduino Mega..." -ForegroundColor Yellow
-    
-    # Fallback: tentar arduino-mega
+# Executar QEMU com output para arquivo
+try {
     & $qemuPath `
-        -machine arduino-mega-2560-v3 `
+        -machine uno `
         -bios $elfPath `
-        -serial stdio `
-        -nographic
+        -serial file:$logFile `
+        -nographic `
+        -d guest_errors 2>&1 | Out-Null
+} catch {
+    Write-Host "[ERROR] QEMU crashed: $_" -ForegroundColor Red
+} finally {
+    # Parar job de tail
+    Stop-Job $tailJob
+    Remove-Job $tailJob
+    
+    # Mostrar conteúdo final do log
+    Write-Host ""
+    Write-Host "===========================================" -ForegroundColor DarkGray
+    Write-Host "=== Serial Output Final ===" -ForegroundColor Cyan
+    if (Test-Path $logFile) {
+        Get-Content $logFile
+    } else {
+        Write-Host "[WARNING] Nenhum output serial capturado" -ForegroundColor Yellow
+    }
 }
+
+Write-Host ""
+Write-Host "[INFO] Log salvo em: $logFile" -ForegroundColor Yellow
