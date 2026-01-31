@@ -64,6 +64,14 @@ router.post('/simulate/start', async (req: Request, res: Response) => {
 
     const boardType = (board as BoardType) || 'arduino-uno';
     
+    // Stop existing simulation if running
+    if (engine.isRunning()) {
+      console.log('⚠️ QEMU already running, stopping previous simulation...');
+      engine.stop();
+      // Wait a bit for cleanup
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
     await engine.loadFirmware(firmwarePath, boardType);
     await engine.start();
 
