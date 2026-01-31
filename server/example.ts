@@ -22,13 +22,24 @@ async function main() {
     console.log(`[GPIO] Pino ${pin} = ${value ? 'HIGH' : 'LOW'}`);
   });
 
+  // Caminho correto: poc/ está na raiz do projeto, não dentro de server/
   const firmwarePath = path.join(
     __dirname,
-    '../poc/build/serial_test_serial_test/serial_test.ino.elf'
+    '../../poc/build/serial_test_serial_test/serial_test.ino.elf'
   );
 
   console.log(`[Engine] Carregando: ${firmwarePath}\n`);
-  await engine.loadFirmware(firmwarePath, 'uno');
+  
+  try {
+    await engine.loadFirmware(firmwarePath, 'uno');
+  } catch (err) {
+    console.error('[Engine] ERRO ao carregar firmware:', err);
+    console.log('\n[Engine] Certifique-se de que o firmware foi compilado:');
+    console.log('  cd ../poc');
+    console.log('  arduino-cli compile --fqbn arduino:avr:uno serial_test');
+    console.log('\n[Engine] Ou use um firmware de exemplo existente.');
+    process.exit(1);
+  }
 
   console.log('[Engine] Iniciando...\n');
   await engine.start();
