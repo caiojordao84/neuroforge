@@ -93,94 +93,145 @@
 
 ---
 
-## 🔄 FASE 2: NeuroForge Time + GPIO Real - EM PROGRESSO (31/01/2026)
+## ✅ FASE 2: NeuroForge Time - COMPLETA (31/01/2026) 🎉
 
-### 🎯 Objetivo
+### 🎯 Objetivo Alcançado
 
-Resolver o problema fundamental de temporização no QEMU AVR:
-- QEMU não emula Timer0/Timer1 corretamente
-- `delay()` trava indefinidamente
-- `millis()` sempre retorna 0
-- **Solução:** Clock virtual unificado, independente do hardware emulado
+✅ **Problema resolvido:** QEMU não emulava Timer0/Timer1 corretamente  
+✅ **Solução implementada:** Clock virtual unificado, independente do hardware  
+✅ **Resultado:** `delay()` e `millis()` funcionando perfeitamente no QEMU!
 
-### 🕐 NeuroForge Time - Arquitetura
+### ✅ Implementação Completa
 
-#### API Comum (todas as linguagens)
+#### ✅ NeuroForge Time v0 - Firmware-based
 
-```c
-// nf_time.h - Contrato unificado
-
-uint32_t nf_now_ms(void);      // Tempo atual da simulação (ms)
-uint32_t nf_now_us(void);      // Tempo atual da simulação (µs)
-void nf_sleep_ms(uint32_t ms); // Dormir N ms em tempo de simulação
-void nf_advance_ms(uint32_t);  // Avançar clock virtual (runtime interno)
-```
-
-#### Implementação v0 - Firmware-based (🔄 Atual)
-
-**Características:**
-- Clock virtual mantido dentro do firmware
-- Usa busy-wait com `_delay_ms()` (baseado em F_CPU)
-- Funciona imediatamente, sem modificar QEMU ou backend
-- Limitação: não permite pause/step/fast-forward do host
-
-**Arquivos:**
+**Arquivos criados:**
 ```
 server/cores/neuroforge_qemu/
-├── nf_time.h              # API comum
-├── nf_time.cpp            # Implementação do clock virtual
-└── nf_arduino_time.cpp    # Override delay/millis/micros
+├── nf_time.h                  ✅ API comum
+├── nf_time.cpp                ✅ Clock virtual com multiplicador ajustável
+├── nf_arduino_time.cpp        ✅ Override delay/millis/micros
+├── boards.txt                 ✅ Board unoqemu registrado
+├── README.md                  ✅ Documentação completa
+├── install-core.ps1           ✅ Instalador Windows
+├── install-core.sh            ✅ Instalador Linux/macOS
+├── patch-wiring.ps1           ✅ Patch automático wiring.c
+└── update-nf-time.ps1         ✅ Atualizador rápido
 ```
 
-**Implementação:**
-```cpp
-// nf_time.cpp
-static volatile uint32_t nf_ms = 0;
+**Características implementadas:**
+- ✅ Clock virtual baseado em busy-wait (`_delay_ms()`)
+- ✅ Funciona sem modificar QEMU ou backend
+- ✅ Multiplicador de timing ajustável (`QEMU_TIMING_MULTIPLIER`)
+- ✅ Override completo de `delay()`, `millis()`, `micros()`
+- ✅ Patch automático de `wiring.c` para evitar conflitos
+- ✅ Board `arduino:avr:unoqemu` registrado no arduino-cli
 
-void nf_sleep_ms(uint32_t ms) {
-  while (ms--) {
-    _delay_ms(1);     // Busy-wait (funciona no QEMU AVR)
-    nf_advance_ms(1); // Avança clock virtual
-  }
-}
+**Backend Integration:**
+- ✅ `CompilerService.ts` usa board `unoqemu` em modo QEMU
+- ✅ Parâmetro `mode: 'qemu' | 'interpreter'` na API
+- ✅ `QEMURunner.ts` com throttling real-time (`-icount shift=auto`)
 
-// nf_arduino_time.cpp
-void delay(unsigned long ms) {
-  nf_sleep_ms((uint32_t)ms); // Substitui delay() original
-}
+**Frontend Integration:**
+- ✅ `QEMUApiClient.compile()` passa modo de simulação
+- ✅ Compilação automática com board correto
 
-unsigned long millis() {
-  return nf_now_ms(); // Lê clock virtual
-}
+**Testing realizados:**
+- ✅ LED blink com `delay(500)` funcionando
+- ✅ Serial Monitor mostrando timing correto
+- ✅ Timing ajustável via `QEMU_TIMING_MULTIPLIER`
+- ✅ Sketch complexo (múltiplos delays) funcional
+
+---
+
+## 🚧 PRÓXIMA MISSÃO - Fevereiro 2026
+
+### 🎯 Fase 2.5: Botão STOP Funcional (1-2 dias)
+
+**Objetivo:** Implementar funcionalidade do botão STOP no frontend
+
+#### Tarefas
+
+- [ ] **Frontend - TopToolbar.tsx**:
+  - [ ] Adicionar botão "Stop" ao lado de "Compile & Run"
+  - [ ] Chamar `qemuApi.stopSimulation()` ao clicar
+  - [ ] Desabilitar botão quando não há simulação rodando
+  - [ ] Feedback visual (loading state)
+  - [ ] Ícone de stop (Square icon)
+
+- [ ] **Frontend - useQEMUSimulation.ts**:
+  - [ ] Adicionar função `stopSimulation()`
+  - [ ] Limpar Serial Monitor ao parar
+  - [ ] Resetar estados de pinos
+  - [ ] Atualizar `isRunning` no store
+
+- [ ] **Backend - API já existe** ✅:
+  - [x] `POST /api/simulate/stop` já implementado
+  - [x] `QEMUSimulationEngine.stop()` funcional
+  - [x] Cleanup de processo QEMU
+
+- [ ] **Testing**:
+  - [ ] Clicar Stop durante simulação
+  - [ ] Verificar Serial Monitor limpo
+  - [ ] Verificar LEDs resetados
+  - [ ] Testar Compile & Run → Stop → Compile & Run novamente
+
+**Design do botão:**
+```tsx
+<Button 
+  onClick={handleStop}
+  disabled={!isRunning}
+  variant="destructive"
+>
+  <Square className="h-4 w-4 mr-2" />
+  Stop
+</Button>
 ```
 
-**Board de Simulação:**
-```ini
-# boards.txt
-unoqemu.name=NeuroForge Uno (QEMU)
-unoqemu.build.core=neuroforge_qemu
-unoqemu.build.mcu=atmega328p
-unoqemu.build.f_cpu=16000000L
-```
+---
 
-**Integração Backend:**
-```typescript
-// CompilerService.ts
-const board = mode === 'qemu' 
-  ? 'neuroforge:avr-qemu:unoqemu'
-  : 'arduino:avr:uno';
-```
+### 🔌 Fase 3: GPIO Real via QEMU Monitor (5-7 dias)
 
-#### Implementação v1 - Host-driven (⏳ Futuro)
+#### QEMU Monitor Integration
+- [ ] **QEMU Monitor Protocol**:
+  - [ ] Conectar ao QEMU Monitor via TCP (Windows) / Unix socket (Linux/Mac)
+  - [ ] Implementar comando `info registers` para ler AVR registers
+  - [ ] Implementar leitura de GPIO registers (PORTB, PORTC, PORTD)
+  - [ ] Implementar escrita em GPIO registers (simular botão pressionado)
+- [ ] **Pin State Polling**:
+  - [ ] Polling loop a cada 50ms (20 FPS) para ler estados de pinos
+  - [ ] Detectar mudanças e emitir eventos `pinChange` via WebSocket
+  - [ ] Mapear registradores AVR para números de pinos Arduino
+- [ ] **Pin Write Implementation**:
+  - [ ] Endpoint `POST /api/simulate/pins/:pin` escrever no QEMU
+  - [ ] Simular botões/sensores alterando registradores
+  - [ ] Validar tipo de pino (INPUT/OUTPUT) antes de escrever
+- [ ] **Frontend Pin Interaction**:
+  - [ ] Button component envia pin write ao clicar
+  - [ ] Potentiometer envia analogWrite ao arrastar slider
+  - [ ] LED atualiza estado visual baseado em pinChange real
 
-**Características:**
-- Clock virtual vem do backend (NeuroForge server)
+#### Testing & Validation
+- [ ] Testar circuitos complexos (múltiplos LEDs + buttons)
+- [ ] Validar timing de `delay()` e `millis()`
+- [ ] Testar PWM real (analogWrite em pinos PWM)
+- [ ] Performance profiling (latência pin polling)
+
+---
+
+## 🛠️ Melhorias Futuras - NeuroForge Time v1
+
+### Implementação v1 - Host-driven (⏳ Futuro)
+
+**Características planejadas:**
+- Clock virtual controlado pelo backend
 - Device virtual QEMU expõe registrador de tempo
-- Firmware lê `nf_now_ms()` de memória mapeada
-- Permite pause, step, fast-forward, rewind
-- Multi-MCU sincronizado
+- Firmware lê `nf_now_ms()` de memória mapeada (0x1000)
+- **Controles UI**: pause, step, fast-forward, rewind
+- **Multi-MCU sincronizado**: vários MCUs compartilham o clock
+- **Determinístico**: reprodução de traces, debugging preciso
 
-**Arquitetura:**
+**Arquitetura v1:**
 ```
 Backend (simulationTimeMs)
        ↓
@@ -188,179 +239,34 @@ QEMU Device Virtual (0x1000)
        ↓
 Firmware lê nf_now_ms() → [0x1000]
        ↓
-arduino delay()/millis()
+Arduino delay()/millis()
 ```
 
-**Vantagens:**
-- 🎮 **Controle total**: pause, step, fast-forward, rewind
-- 🔄 **Multi-MCU sync**: vários MCUs compartilham o clock
-- 📊 **Determinístico**: reprodução de traces, debugging preciso
-- 🌐 **Multi-linguagem**: Python, Rust, C, todos usam o mesmo clock
-
----
-
-### ⏱️ NeuroForge Time v0 - Tarefas (3-4 dias)
-
-- [🔄] **Core arduino-uno-qemu**:
-  - [🔄] Criar `server/cores/neuroforge_qemu/`
-  - [🔄] Implementar `nf_time.h` / `nf_time.cpp`
-  - [🔄] Implementar `nf_arduino_time.cpp`
-  - [🔄] Criar `boards.txt` com board `unoqemu`
-  - [🔄] Registrar core no arduino-cli
-- [⏳] **Backend Integration**:
-  - [⏳] CompilerService usar board `neuroforge:avr-qemu:unoqemu` em modo QEMU
-  - [⏳] Script de instalação do core (install-core.sh/ps1)
-- [⏳] **Testing**:
-  - [⏳] LED blink com `delay(500)` funcionando
-  - [⏳] Serial Monitor: "LED ON" / "LED OFF" a cada 500ms
-  - [⏳] Sketch com `millis()` (blink sem delay)
-  - [⏳] Sketch complexo (múltiplos delays, lógica)
-
----
-
-### 🔌 GPIO Real via QEMU Monitor (5-7 dias)
-
-#### QEMU Monitor Integration
-- [⏳] **QEMU Monitor Protocol**:
-  - [⏳] Conectar ao QEMU Monitor via TCP (Windows) / Unix socket (Linux/Mac)
-  - [⏳] Implementar comando `info registers` para ler AVR registers
-  - [⏳] Implementar leitura de GPIO registers (PORTB, PORTC, PORTD)
-  - [⏳] Implementar escrita em GPIO registers (simular botão pressionado)
-- [⏳] **Pin State Polling**:
-  - [⏳] Polling loop a cada 50ms (20 FPS) para ler estados de pinos
-  - [⏳] Detectar mudanças e emitir eventos `pinChange` via WebSocket
-  - [⏳] Mapear registradores AVR para números de pinos Arduino
-- [⏳] **Pin Write Implementation**:
-  - [⏳] Endpoint `POST /api/simulate/pins/:pin` escrever no QEMU
-  - [⏳] Simular botões/sensores alterando registradores
-  - [⏳] Validar tipo de pino (INPUT/OUTPUT) antes de escrever
-- [⏳] **Frontend Pin Interaction**:
-  - [⏳] Button component envia pin write ao clicar
-  - [⏳] Potentiometer envia analogWrite ao arrastar slider
-  - [⏳] LED atualiza estado visual baseado em pinChange real
-
-#### Testing & Validation
-- [⏳] Testar circuitos complexos (múltiplos LEDs + buttons)
-- [⏳] Validar timing de `delay()` e `millis()`
-- [⏳] Testar PWM real (analogWrite em pinos PWM)
-- [⏳] Performance profiling (latência pin polling)
-
----
-
-## 🚧 PRÓXIMOS PASSOS - Fevereiro 2026
-
-### 🟡 Fase 3: Expand Simulation Engine (MÉDIA PRIORIDADE)
-
-#### Componentes Maker (5-7 dias)
-- [ ] **Displays**:
-  - [ ] LCD 16x2 (I2C)
-  - [ ] OLED 128x64 (SPI/I2C)
-  - [ ] TM1637 7-segment
-- [ ] **Sensores**:
-  - [ ] Ultrasonic HC-SR04
-  - [ ] DHT22 (temp/humidity)
-  - [ ] LDR (photoresistor)
-  - [ ] PIR motion sensor
-- [ ] **Atuadores**:
-  - [ ] Buzzer (tone/noTone)
-  - [ ] Relay module
-  - [ ] DC Motor com L298N
-
-#### Code Generation (3-4 dias)
-- [ ] Template System por componente
-- [ ] Smart Code Generator:
-  - [ ] Analisa circuito e gera `setup()` + `loop()`
-  - [ ] Merge inteligente de código
-  - [ ] Preservar código do usuário (`// USER CODE START`)
-
----
-
-### 🟢 Fase 4: Multi-Board + Multi-Language Support
-
-#### ESP32 Support via QEMU (7-10 dias)
-- [ ] QEMU ESP32 integration (qemu-system-xtensa)
-- [ ] WiFi simulation (mock HTTP requests)
-- [ ] Bluetooth simulation (mock BLE)
-- [ ] Dual-core simulation
-- [ ] **NeuroForge Time para ESP32**
-
-#### Raspberry Pi Pico Support (5-7 dias)
-- [ ] QEMU ARM Cortex-M0+ (qemu-system-arm)
-- [ ] PIO (Programmable I/O) simulation
-- [ ] **MicroPython support real** com nf_time
-
-#### Multi-Language Runtime (7-10 dias)
-- [ ] **MicroPython VM** com NeuroForge Time:
-  ```python
-  import time
-  time.sleep(0.5)  # → nf_sleep_ms(500)
-  time.time()      # → nf_now_ms() / 1000.0
-  ```
-- [ ] **Rust embedded** com nf_time:
-  ```rust
-  use nf_time::*;
-  nf_sleep_ms(1000);
-  let now = nf_now_ms();
-  ```
-- [ ] **Bare-metal C** com nf_time diretamente
-
----
-
-### 🔵 Fase 5: Smart Home Dashboard (FUTURO)
-
-#### Dashboard Layout (4-5 dias)
-- [ ] Sistema de Rooms (Sala, Cozinha, Quarto)
-- [ ] Grid layout drag & drop
-- [ ] Device Cards:
-  - [ ] Lights (on/off, dimmer, RGB)
-  - [ ] Switches
-  - [ ] Sensors (temp, humidity, motion)
-- [ ] Real-time Sync: Dashboard ↔ Simulação
-
-#### Automation (3-4 dias)
-- [ ] Rules Engine: IF-THEN-ELSE visual
-- [ ] Schedules (agendar ações)
-- [ ] Scenes (Movie Mode, Away Mode, Party Mode)
-
----
-
-### 🟣 Fase 6: Industrial Features (FUTURO)
-
-#### PLC Simulator (7-10 dias)
-- [ ] Virtual PLC com Modbus RTU/TCP
-- [ ] Ladder Logic Viewer
-- [ ] Import .st (Structured Text) / .ld (Ladder Diagram)
-
-#### SCADA Interface (5-7 dias)
-- [ ] Dashboard industrial (cinza/azul)
-- [ ] HMI Elements: Tanks, Pipes, Valves, Motors, Gauges
-- [ ] Real-time data + Alarms/Warnings
+**Timeline:** Q2 2026 (Abril-Junho)
 
 ---
 
 ## 📊 KPIs e Metas
 
-### Mês 1 (Fevereiro 2026)
-- 🎯 **NeuroForge Time v0** funcionando (delay/millis perfeito)
-- 🎯 **QEMU GPIO Real** funcionando com polling
+### ✅ Mês 1 - Janeiro 2026 (COMPLETO)
+- ✅ **NeuroForge Time v0** funcionando (delay/millis perfeito)
+- ✅ **QEMU Integration** completa
+- ✅ **Backend API REST** completo
+- ✅ **WebSocket real-time** funcional
+- ⏳ **GPIO Real** (próxima fase)
+
+### Mês 2 - Fevereiro 2026
+- 🎯 **Botão STOP** funcional
+- 🎯 **GPIO Real** via QEMU Monitor
 - 🎯 **5 placas**: Arduino, ESP32, RP2040, STM32, ESP8266
 - 🎯 **30 componentes** maker + sensores
 - 🎯 **100 beta testers**
 
-### Mês 3 (Abril 2026)
+### Mês 3 - Março 2026
 - 🎯 **NeuroForge Time v1** (host-driven)
-- 🎯 **8 placas** + 50 componentes
-- 🎯 **PLC/Modbus** funcionais
+- 🎯 **Pause/Step/Fast-forward** controls
 - 🎯 **MicroPython + CircuitPython**
 - 🎯 **1.000 usuários ativos**
-
-### Mês 6 (Julho 2026)
-- 🎯 **10 placas** + 100 componentes
-- 🎯 **AI code generation**
-- 🎯 **Collaboration** real-time
-- 🎯 **Pause/Step/Fast-forward** controls
-- 🎯 **10.000 usuários ativos**
-- 🎯 **500 pagantes** (15k MRR)
 
 ---
 
@@ -394,7 +300,7 @@ arduino delay()/millis()
 - **Socket.IO** (WebSocket)
 - **QEMU 8.2+** (AVR emulation)
 - **arduino-cli** (compilation)
-- **NeuroForge Time** (clock virtual unificado)
+- **NeuroForge Time** (clock virtual unificado) ✅
 
 ### DevOps
 - **Docker** + **Docker Compose**
@@ -408,7 +314,8 @@ arduino delay()/millis()
 
 - [x] README.md detalhado
 - [x] Server README.md (installation guide)
-- [x] NeuroForge Time documentation (README)
+- [x] NeuroForge Time documentation (NEUROFORGE_TIME_IMPLEMENTATION.md)
+- [x] Core installation scripts (PowerShell + Bash)
 - [ ] API Documentation (OpenAPI/Swagger)
 - [ ] Component SDK docs
 - [ ] User Guide (20 tutorials)
@@ -428,4 +335,5 @@ arduino delay()/millis()
 
 ---
 
-**Última atualização:** 31/01/2026 08:04 PM WET
+**Última atualização:** 31/01/2026 10:26 PM WET  
+**Status:** 🎉 **FASE 2 COMPLETA!** NeuroForge Time funcionando!
