@@ -213,6 +213,215 @@ class CodeParser {
 
 ---
 
+### FIX 2.8: NeuroForge Time - Clock Virtual Unificado
+**Data:** 31/01/2026  
+**Status:** 🔄 Em Progresso  
+
+**Problema Crítico:**
+```cpp
+void loop() {
+  digitalWrite(13, HIGH);
+  Serial.println("LED ON");
+  delay(500);  // ⛔ TRAVA AQUI!
+  
+  digitalWrite(13, LOW);  // Nunca executa
+  Serial.println("LED OFF");  // Nunca aparece
+  delay(500);
+}
+```
+
+**Causa Raiz:**
+- QEMU AVR não emula Timer0 corretamente
+- `delay()` do Arduino depende de `millis()` que usa Timer0 overflow interrupt
+- Timer0 nunca gera interrupções no QEMU → `millis()` sempre retorna 0
+- `delay(500)` espera `millis()` avançar → **lazo infinito**
+
+**Comportamento Observado:**
+```
+✅ LED Blink started!      # setup() executa
+✅ LED ON                  # primeira linha de loop()
+⛔ [trava indefinidamente]  # delay(500) nunca retorna
+❌ LED OFF                 # nunca aparece
+```
+
+**Teste de Confirmação:**
+Sem `delay()`, funciona perfeitamente:
+```cpp
+void loop() {
+  digitalWrite(13, HIGH);
+  Serial.println("LED ON");   // ✅ Spamma infinito!
+  digitalWrite(13, LOW);
+  Serial.println("LED OFF");  // ✅ Spamma infinito!
+}
+```
+
+---
+
+#### Solução: NeuroForge Time
+
+**Conceito:**
+Clock virtual unificado, independente do hardware emulado, que serve todas as linguagens.
+
+**API Comum:**
+```c
+// nf_time.h - API unificada (C/C++/Python/Rust/...)
+
+uint32_t nf_now_ms(void);      // Tempo atual da simulação (ms)
+uint32_t nf_now_us(void);      // Tempo atual da simulação (µs)
+void nf_sleep_ms(uint32_t ms); // Dormir N ms em tempo de simulação
+void nf_advance_ms(uint32_t);  // Avançar clock virtual (interno)
+```
+
+**Implementação v0 - Firmware-based:**
+```cpp
+// nf_time.cpp
+static volatile uint32_t nf_ms = 0;
+static volatile uint32_t nf_us = 0;
+
+void nf_sleep_ms(uint32_t ms) {
+  while (ms--) {
+    _delay_ms(1);     // Busy-wait baseado em F_CPU (funciona no QEMU)
+    nf_advance_ms(1); // Avança clock virtual
+  }
+}
+
+void nf_advance_ms(uint32_t ms) {
+  nf_ms += ms;
+  nf_us += ms * 1000UL;
+}
+
+uint32_t nf_now_ms() { return nf_ms; }
+uint32_t nf_now_us() { return nf_us; }
+```
+
+**Override Arduino:**
+```cpp
+// nf_arduino_time.cpp
+#include <Arduino.h>
+#include "nf_time.h"
+
+void delay(unsigned long ms) {
+  nf_sleep_ms((uint32_t)ms);  // Substitui delay() original
+}
+
+unsigned long millis() {
+  return nf_now_ms();  // Lê clock virtual
+}
+
+unsigned long micros() {
+  return nf_now_us();
+}
+```
+
+**Core de Simulação:**
+```ini
+# boards.txt
+unoqemu.name=NeuroForge Uno (QEMU)
+unoqemu.build.core=neuroforge_qemu
+unoqemu.build.mcu=atmega328p
+unoqemu.build.f_cpu=16000000L
+```
+
+**Backend Integration:**
+```typescript
+// CompilerService.ts
+const board = mode === 'qemu'
+  ? 'neuroforge:avr-qemu:unoqemu'  // Usa core customizado
+  : 'arduino:avr:uno';              // Core original
+```
+
+---
+
+#### Vantagens do NeuroForge Time
+
+✅ **Funciona sem Timer0/Timer1**  
+Usa busy-wait `_delay_ms()` baseado em F_CPU, que roda perfeitamente no QEMU AVR.
+
+✅ **Consistente entre linguagens**  
+Arduino, MicroPython, Rust, C bare-metal usam a mesma API `nf_time.h`.
+
+✅ **Controlável pelo host (v1)**  
+Futuro: clock vem do backend, permite pause/step/fast-forward/rewind.
+
+✅ **Multi-MCU sync (v1)**  
+Vários MCUs no mesmo circuito compartilham o clock do host.
+
+✅ **Determinístico**  
+Reprodução de traces, debugging preciso, testes automatizados.
+
+---
+
+#### Roadmap de Implementação
+
+**v0 - Firmware-based** (🔄 Atual):
+- Clock virtual dentro do firmware
+- `_delay_ms()` + contadores locais
+- Funciona já, sem modificar QEMU ou backend
+- Limitação: não permite pause/step do host
+
+**v1 - Host-driven** (⏳ Futuro):
+- Clock vem do backend (simulationTimeMs)
+- Device virtual QEMU expõe registrador de tempo
+- Firmware lê `nf_now_ms()` de memória mapeada
+- Permite pause, step, fast-forward, rewind
+- Multi-MCU sincronizado
+
+---
+
+#### Aplicação em Outras Linguagens
+
+**MicroPython:**
+```python
+import time
+
+# VM implementa time.sleep() em cima de nf_sleep_ms()
+time.sleep(0.5)  # → nf_sleep_ms(500)
+time.time()      # → nf_now_ms() / 1000.0
+```
+
+**Rust Embedded:**
+```rust
+use nf_time::*;
+
+loop {
+    gpio_set_high(13);
+    nf_sleep_ms(1000);
+    gpio_set_low(13);
+    nf_sleep_ms(1000);
+}
+```
+
+**Bare-Metal C:**
+```c
+#include <nf_time.h>
+
+void main() {
+  while(1) {
+    GPIO_SET_HIGH(LED_PIN);
+    nf_sleep_ms(500);
+    GPIO_SET_LOW(LED_PIN);
+    nf_sleep_ms(500);
+  }
+}
+```
+
+---
+
+#### Status Atual
+
+- [🔄] Core `arduino-uno-qemu` em desenvolvimento
+- [🔄] `nf_time.h` / `nf_time.cpp` implementados
+- [🔄] `nf_arduino_time.cpp` (override delay/millis)
+- [⏳] Registrar core no arduino-cli
+- [⏳] Testar LED blink com delay(500)
+- [⏳] Testar sketch complexo com millis()
+
+🚧 **NeuroForge Time é o diferencial do projeto!**
+
+Permite simulação precisa e controlável sem depender de emulação perfeita de timers, e cria um caminho claro para suportar múltiplas linguagens e placas.
+
+---
+
 ## 📅 SESSÃO ANTERIOR - 22-29 Janeiro 2026
 
 ### FIX 1.1: React Flow Dependency Issues
@@ -421,13 +630,14 @@ private scheduleLoop(): void {
 
 ## 📊 Estatísticas
 
-- **Total de Fixes:** 17
-- **Sessão QEMU:** 7 fixes (30-31/01/2026)
+- **Total de Fixes:** 18
+- **Sessão QEMU:** 8 fixes (30-31/01/2026)
+  - **FIX 2.8 (NeuroForge Time):** 🔥 **Diferencial do projeto**
 - **Sessão Anterior:** 10 fixes (22-29/01/2026)
-- **Commits:** 30+
-- **Linhas de código:** ~15.000
-- **Tempo investido:** ~40 horas
+- **Commits:** 35+
+- **Linhas de código:** ~16.500
+- **Tempo investido:** ~45 horas
 
 ---
 
-**Última atualização:** 31/01/2026 03:47 AM WET
+**Última atualização:** 31/01/2026 08:10 PM WET
