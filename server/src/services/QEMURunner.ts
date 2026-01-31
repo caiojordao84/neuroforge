@@ -43,6 +43,8 @@ export class QEMURunner extends EventEmitter {
 
     const args = this.buildQemuArgs(board);
 
+    console.log('🚀 Starting QEMU with args:', args.join(' '));
+
     this.process = spawn(this.qemuPath, args, {
       stdio: ['ignore', 'pipe', 'pipe']
     });
@@ -62,7 +64,40 @@ export class QEMURunner extends EventEmitter {
       this.captureSerial(this.process.stdout);
     }
 
+    // Wait for monitor socket to be ready
+    await this.waitForMonitorSocket();
+
     this.emit('started');
+  }
+
+  /**
+   * Wait for monitor socket to be created by QEMU
+   */
+  private async waitForMonitorSocket(timeout: number = 5000): Promise<void> {
+    if (!this.monitorSocket) {
+      return;
+    }
+
+    const startTime = Date.now();
+    
+    while (!fs.existsSync(this.monitorSocket)) {
+      if (Date.now() - startTime > timeout) {
+        console.warn(`⚠️ Timeout waiting for QEMU monitor socket: ${this.monitorSocket}`);
+        return; // Don't throw, just warn (QEMU might still work)
+      }
+      
+      // Wait 50ms before checking again
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+
+    console.log('✅ QEMU monitor socket ready:', this.monitorSocket);
+  }
+
+  /**
+   * Get monitor socket path
+   */
+  getMonitorSocket(): string | null {
+    return this.monitorSocket;
   }
 
   /**
@@ -95,7 +130,12 @@ export class QEMURunner extends EventEmitter {
 
     // Clean up monitor socket
     if (this.monitorSocket && fs.existsSync(this.monitorSocket)) {
-      fs.unlinkSync(this.monitorSocket);
+      try {
+        fs.unlinkSync(this.monitorSocket);
+        console.log('🧹 Cleaned up monitor socket:', this.monitorSocket);
+      } catch (error) {
+        console.error('Error cleaning up monitor socket:', error);
+      }
       this.monitorSocket = null;
     }
   }
