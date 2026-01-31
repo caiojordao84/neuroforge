@@ -394,7 +394,7 @@ Reprodução de traces, debugging preciso, testes automatizados.
 
 #### Roadmap de Implementação
 
-**v0 - Firmware-based** (✅ COMPLETA):
+**v0 - Firmware-based** (✅ COMPLETA - 31/01/2026):
 - ✅ Clock virtual dentro do firmware
 - ✅ `_delay_ms()` + contadores locais
 - ✅ Override de delay/millis/micros
@@ -402,14 +402,14 @@ Reprodução de traces, debugging preciso, testes automatizados.
 - ✅ Scripts de instalação automática
 - ✅ Funciona já, sem modificar QEMU ou backend
 
-**v1 - Host-driven** (⏳ Futuro):
+**v1 - Host-driven** (⏳ Futuro - Q2 2026):
 - [ ] Clock vem do backend (simulationTimeMs)
 - [ ] Device virtual QEMU expõe registrador de tempo
 - [ ] Firmware lê `nf_now_ms()` de memória mapeada
 - [ ] Permite pause, step, fast-forward, rewind
 - [ ] Multi-MCU sincronizado
 
-🚧 **NeuroForge Time é o diferencial do projeto!**
+🔥 **NeuroForge Time é o diferencial do projeto!**
 
 Permite simulação precisa e controlável sem depender de emulação perfeita de timers, e cria um caminho claro para suportar múltiplas linguagens e placas.
 
@@ -430,6 +430,8 @@ Transformar botão "Compile & Run" em "STOP" após simulação iniciar.
 - [ ] onClick: compile+run → stop simulation
 - [ ] Loading state durante compilação
 - [ ] Desabilitar durante loading
+- [ ] Limpar Serial Monitor ao parar
+- [ ] Resetar estados de componentes
 
 **Implementação:**
 ```tsx
@@ -668,10 +670,11 @@ private scheduleLoop(): void {
   - **FIX 2.8 (NeuroForge Time):** ✅ **COMPLETO - Diferencial do projeto**
   - **FIX 2.9 (Stop Button):** 🎯 **PRÓXIMO**
 - **Sessão Anterior:** 10 fixes (22-29/01/2026)
-- **Commits:** 40+
-- **Linhas de código:** ~17.000
-- **Tempo investido:** ~50 horas
+- **Commits:** 50+
+- **Linhas de código:** ~18.000
+- **Tempo investido:** ~60 horas
 
 ---
 
-**Última atualização:** 31/01/2026 10:20 PM WET
+**Última atualização:** 31/01/2026 10:30 PM WET  
+**Status:** 🎉 **FASE 2 (NeuroForge Time) COMPLETA!**
