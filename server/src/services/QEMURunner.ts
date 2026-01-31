@@ -164,7 +164,11 @@ export class QEMURunner extends EventEmitter {
       '-machine', 'arduino-uno',
       '-bios', this.firmwarePath!,
       '-nographic',
-      '-serial', 'stdio'
+      '-serial', 'stdio',
+      // ⏱️ NEUROFORGE TIME: Enable real-time execution
+      // Without this, QEMU runs as fast as possible (millions of instructions/sec)
+      // With this, QEMU throttles to match real hardware timing (16MHz ATmega328P)
+      '-icount', 'shift=auto',
     ];
 
     // Add monitor
