@@ -1,0 +1,16 @@
+{
+  "name": "neuroforge-server",
+  "version": "1.0.0",
+  "description": "NeuroForge QEMU Backend Server",
+  "main": "dist/example.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/example.js",
+    "dev": "tsc && node dist/example.js"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.6.2"
+  }
+}
