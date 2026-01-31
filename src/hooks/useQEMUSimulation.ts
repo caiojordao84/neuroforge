@@ -1,9 +1,9 @@
 import { useEffect, useCallback } from 'react';
-import { useQEMUStore } from '@/store/useQEMUStore';
+import { useQEMUStore } from '@/stores/useQEMUStore';
 import { qemuApi } from '@/services/QEMUApiClient';
 import { qemuWebSocket } from '@/services/QEMUWebSocket';
-import { useSimulationStore } from '@/store/useSimulationStore';
-import { useSerialStore } from '@/store/useSerialStore';
+import { useSimulationStore } from '@/stores/useSimulationStore';
+import { useSerialStore } from '@/stores/useSerialStore';
 
 /**
  * Hook for managing QEMU simulation lifecycle

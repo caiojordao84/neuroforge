@@ -1,4 +1,4 @@
-import { useQEMUStore } from '@/store/useQEMUStore';
+import { useQEMUStore } from '@/stores/useQEMUStore';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';

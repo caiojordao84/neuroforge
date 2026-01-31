@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect } from 'react';
 import { useSimulationStore } from '@/stores/useSimulationStore';
 import { useSerialStore } from '@/stores/useSerialStore';
-import { useQEMUStore } from '@/store/useQEMUStore';
+import { useQEMUStore } from '@/stores/useQEMUStore';
 import { useQEMUSimulation } from '@/hooks/useQEMUSimulation';
 import { simulationEngine } from '@/engine/SimulationEngine';
 import { codeParser } from '@/engine/CodeParser';
