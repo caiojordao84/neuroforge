@@ -4,9 +4,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
-/**
- * QEMURunner - Gerencia execucao do QEMU e comunicacao com firmware
- */
 export class QEMURunner extends EventEmitter {
   private process: ChildProcess | null = null;
   private serialLogPath: string;
@@ -118,8 +115,8 @@ export class QEMURunner extends EventEmitter {
           end: currentSize
         });
 
-        stream.on('data', (chunk: Buffer) => {
-          const data = chunk.toString('utf-8');
+        stream.on('data', (chunk: string | Buffer) => {
+          const data = Buffer.isBuffer(chunk) ? chunk.toString('utf-8') : chunk;
           this.serialBuffer += data;
 
           const lines = this.serialBuffer.split('\n');
