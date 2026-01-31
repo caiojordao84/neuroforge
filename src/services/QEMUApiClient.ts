@@ -34,23 +34,14 @@ export class QEMUApiClient {
   /**
    * Compile Arduino code to firmware
    */
-  async compile(code: string, board: BoardType = 'Arduino Uno'): Promise<CompileResponse> {
+  async compile(code: string, board: BoardType = 'arduino-uno'): Promise<CompileResponse> {
     try {
-      const boardMap: Record<string, string> = {
-        'Arduino Uno': 'arduino-uno',
-        'ESP32': 'esp32',
-        'Raspberry Pi Pico': 'raspberry-pi-pico'
-      };
-
       const response = await fetch(`${this.baseUrl}/api/compile`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          code,
-          board: boardMap[board] || 'arduino-uno'
-        })
+        body: JSON.stringify({ code, board })
       });
 
       const data = await response.json();
@@ -66,23 +57,14 @@ export class QEMUApiClient {
   /**
    * Start QEMU simulation
    */
-  async startSimulation(firmwarePath: string, board: BoardType = 'Arduino Uno'): Promise<CompileResponse> {
+  async startSimulation(firmwarePath: string, board: BoardType = 'arduino-uno'): Promise<CompileResponse> {
     try {
-      const boardMap: Record<string, string> = {
-        'Arduino Uno': 'arduino-uno',
-        'ESP32': 'esp32',
-        'Raspberry Pi Pico': 'raspberry-pi-pico'
-      };
-
       const response = await fetch(`${this.baseUrl}/api/simulate/start`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          firmwarePath,
-          board: boardMap[board] || 'arduino-uno'
-        })
+        body: JSON.stringify({ firmwarePath, board })
       });
 
       const data = await response.json();

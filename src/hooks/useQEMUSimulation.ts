@@ -16,15 +16,13 @@ export function useQEMUSimulation() {
     isWebSocketConnected,
     setWebSocketConnected,
     setSimulationRunning,
-    firmwarePath,
     setFirmwarePath,
-    isCompiling,
     setCompiling,
     setCompilationError
   } = useQEMUStore();
 
-  const { isRunning } = useSimulationStore();
-  const { addLine } = useSerialStore();
+  const { status } = useSimulationStore();
+  const { addSerialLine } = useSerialStore();
 
   /**
    * Check backend health on mount
@@ -66,7 +64,7 @@ export function useQEMUSimulation() {
       }),
 
       qemuWebSocket.on('serial', (line: string) => {
-        addLine(line);
+        addSerialLine(line, 'output');
       }),
 
       qemuWebSocket.on('pinChange', ({ pin, value }) => {
@@ -87,7 +85,7 @@ export function useQEMUSimulation() {
       unsubscribers.forEach(unsub => unsub());
       qemuWebSocket.disconnect();
     };
-  }, [mode, isBackendConnected, setWebSocketConnected, setSimulationRunning, addLine]);
+  }, [mode, isBackendConnected, setWebSocketConnected, setSimulationRunning, addSerialLine]);
 
   /**
    * Compile and start QEMU simulation
@@ -141,7 +139,6 @@ export function useQEMUSimulation() {
     mode,
     isBackendConnected,
     isWebSocketConnected,
-    isCompiling,
     compileAndStart,
     stopQEMU
   };
