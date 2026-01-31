@@ -129,7 +129,7 @@ npm run dev  # Reinicia backend
 - ✅ TopToolbar: Compile & Run button + connection badges
 - ✅ TypeScript errors fixed
 
-### ✅ **Fase 2: NeuroForge Time - COMPLETE** (31/01/2026)
+### ✅ **Fase 2: NeuroForge Time - COMPLETE** (31/01/2026) 🎉
 
 - ✅ Core `neuroforge:avr-qemu:unoqemu` criado
 - ✅ `nf_time.h` / `nf_time.cpp` implementados
@@ -138,16 +138,34 @@ npm run dev  # Reinicia backend
 - ✅ Teste: LED blink com delay(500) funcionando no QEMU
 - ✅ Scripts de instalação: `install-core.ps1`, `patch-wiring.ps1`, `update-nf-time.ps1`
 
-### 🔄 **Fase 3: UI/UX Polish - IN PROGRESS**
+### 🚧 **Próxima Missão: Botão STOP** (1-2 dias)
 
-**Próxima Missão:**
-- 🎯 **Stop Button Toggle**: Transformar "Compile & Run" em "STOP" após iniciar
-  - [ ] Estado do botão baseado em `isRunning`
-  - [ ] Ícone muda: Play → Stop
-  - [ ] Texto muda: "Compile & Run" → "STOP"
-  - [ ] Cor muda: verde → vermelho
-  - [ ] onClick: compile+run → stop simulation
-  - [ ] Loading state durante compilação
+**Objetivo:** Transformar "Compile & Run" em botão toggle Play/Stop
+
+**Tarefas:**
+- [ ] Estado do botão baseado em `isRunning`
+- [ ] Ícone muda: Play → Stop
+- [ ] Texto muda: "Compile & Run" → "STOP"
+- [ ] Cor muda: verde → vermelho
+- [ ] onClick: compile+run → stop simulation
+- [ ] Loading state durante compilação
+- [ ] Limpar Serial Monitor ao parar
+- [ ] Resetar estados de componentes
+
+**Design:**
+```tsx
+{!isRunning ? (
+  <Button onClick={handleCompileAndRun}>
+    <Play className="h-4 w-4 mr-2" />
+    Compile & Run
+  </Button>
+) : (
+  <Button onClick={handleStop} variant="destructive">
+    <Square className="h-4 w-4 mr-2" />
+    STOP
+  </Button>
+)}
+```
 
 ---
 
@@ -298,7 +316,7 @@ neuroforge/
 - ✅ WebSocket real-time events
 - ✅ Compile & Run workflow
 
-### ✅ Fase 2: NeuroForge Time (COMPLETE - 31/01/2026)
+### ✅ Fase 2: NeuroForge Time (COMPLETE - 31/01/2026) 🎉
 - ✅ Core `neuroforge:avr-qemu:unoqemu`
 - ✅ `nf_time.h` API comum
 - ✅ Override delay/millis/micros
@@ -306,14 +324,12 @@ neuroforge/
 - ✅ Teste: LED blink delay(500) funcionando
 - ✅ Scripts de instalação automática
 
-### 🔄 Fase 3: UI/UX Polish (Em Progresso)
+### 🎯 Fase 2.5: Botão STOP (PRÓXIMO - 1-2 dias)
 - 🎯 **Stop Button Toggle** (próximo)
 - ⏳ Loading states e feedback visual
 - ⏳ Error handling e mensagens amigáveis
-- ⏳ Pause/Resume controls
-- ⏳ Step-by-step execution
 
-### 🚀 Fase 4: GPIO Real + Componentes
+### ⏳ Fase 3: GPIO Real + Componentes
 - [ ] GPIO Real via QEMU Monitor
 - [ ] LED visual feedback real-time
 - [ ] Button input → QEMU GPIO write
@@ -321,12 +337,13 @@ neuroforge/
 - [ ] PWM para servos
 - [ ] ADC para potenciômetros
 
-### 🌐 Fase 5: Multi-Board + Multi-Language
+### 🚀 Fase 4: Multi-Board + Multi-Language
 - [ ] ESP32 (QEMU xtensa)
 - [ ] Raspberry Pi Pico (QEMU ARM)
 - [ ] **MicroPython** com NeuroForge Time
 - [ ] **Rust embedded** com nf_time
 - [ ] NeuroForge Time v1 (host-driven clock)
+- [ ] Pause/Resume/Step controls
 
 ---
 
@@ -420,4 +437,8 @@ MIT License - veja [LICENSE](LICENSE) para detalhes.
   <strong>Made with ❤️ by <a href="https://github.com/caiojordao84">caiojordao84</a></strong>
   <br>
   <sub>NeuroForge - Real QEMU-based Arduino/ESP32 Simulator</sub>
+  <br><br>
+  <strong>🎉 FASE 2 COMPLETA! NeuroForge Time funcionando! 🎉</strong>
+  <br>
+  <sub>🎯 Próxima Missão: Botão STOP</sub>
 </div>
