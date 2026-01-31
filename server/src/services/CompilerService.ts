@@ -47,8 +47,10 @@ export class CompilerService {
    * Compile Arduino sketch to firmware
    */
   async compile(code: string, board: BoardType = 'arduino-uno'): Promise<CompileResult> {
-    const sketchDir = path.join(this.tempDir, `sketch_${Date.now()}`);
-    const sketchFile = path.join(sketchDir, 'sketch.ino');
+    const sketchName = `sketch_${Date.now()}`;
+    const sketchDir = path.join(this.tempDir, sketchName);
+    // IMPORTANT: .ino file MUST have same name as folder (arduino-cli requirement)
+    const sketchFile = path.join(sketchDir, `${sketchName}.ino`);
 
     try {
       // Create sketch directory
@@ -56,11 +58,13 @@ export class CompilerService {
 
       // Write sketch file
       fs.writeFileSync(sketchFile, code, 'utf-8');
+      console.log(`✅ Created sketch: ${sketchFile}`);
 
       // Get FQBN for the board
       const fqbn = this.getFQBN(board);
 
       // Compile using arduino-cli
+      console.log(`🔧 Compiling with arduino-cli: ${fqbn}`);
       const result = await this.runArduinoCli([
         'compile',
         '--fqbn', fqbn,
@@ -77,12 +81,22 @@ export class CompilerService {
         };
       }
 
-      // Find the hex file
-      const hexFile = path.join(sketchDir, 'sketch.ino.hex');
-      if (!fs.existsSync(hexFile)) {
+      // Find the hex/elf file (arduino-cli names it after the sketch)
+      const hexFile = path.join(sketchDir, `${sketchName}.ino.hex`);
+      const elfFile = path.join(sketchDir, `${sketchName}.ino.elf`);
+      
+      // Prefer .elf for QEMU, fallback to .hex
+      let firmwarePath: string;
+      if (fs.existsSync(elfFile)) {
+        firmwarePath = elfFile;
+        console.log(`✅ ELF firmware created: ${elfFile}`);
+      } else if (fs.existsSync(hexFile)) {
+        firmwarePath = hexFile;
+        console.log(`✅ HEX firmware created: ${hexFile}`);
+      } else {
         return {
           success: false,
-          error: 'Hex file not found after compilation',
+          error: 'Firmware file not found after compilation',
           stdout: result.stdout,
           stderr: result.stderr
         };
@@ -90,7 +104,7 @@ export class CompilerService {
 
       return {
         success: true,
-        firmwarePath: hexFile,
+        firmwarePath,
         stdout: result.stdout,
         stderr: result.stderr
       };
