@@ -23,23 +23,39 @@ export class QEMUMonitorService {
   } | null = null;
 
   /**
-   * Connect to QEMU monitor socket
+   * Connect to QEMU monitor (auto-detect Unix socket or TCP)
    */
-  async connect(socketPath: string): Promise<void> {
+  async connect(address: string): Promise<void> {
     if (this.socket) {
       throw new Error('Already connected to QEMU monitor');
     }
 
-    this.socketPath = socketPath;
+    // Detect connection type
+    if (address.includes(':')) {
+      // TCP format: "127.0.0.1:4444"
+      const [host, portStr] = address.split(':');
+      const port = parseInt(portStr, 10);
+      await this.connectTcp(host, port);
+    } else {
+      // Unix socket format: "/tmp/qemu-monitor-xxx.sock"
+      await this.connectUnix(address);
+    }
+  }
 
-    // Wait for socket file to exist (up to 5 seconds)
-    await this.waitForSocket(socketPath, 5000);
+  /**
+   * Connect to QEMU monitor via TCP
+   */
+  private async connectTcp(host: string, port: number): Promise<void> {
+    console.log(`🔌 Connecting to QEMU monitor via TCP: ${host}:${port}`);
+
+    // Wait for port to be listening
+    await this.waitForTcpPort(host, port, 5000);
 
     return new Promise((resolve, reject) => {
-      this.socket = net.createConnection(socketPath);
+      this.socket = net.connect({ host, port });
 
       this.socket.on('connect', () => {
-        console.log('✅ Connected to QEMU monitor:', socketPath);
+        console.log(`✅ Connected to QEMU monitor via TCP: ${host}:${port}`);
         
         // Setup data handler
         this.socket!.on('data', (data) => this.handleData(data));
@@ -48,19 +64,83 @@ export class QEMUMonitorService {
       });
 
       this.socket.on('error', (error) => {
-        console.error('QEMU monitor connection error:', error);
+        console.error('QEMU monitor TCP connection error:', error);
         reject(error);
       });
 
       this.socket.on('close', () => {
-        console.log('QEMU monitor connection closed');
+        console.log('QEMU monitor TCP connection closed');
         this.socket = null;
       });
     });
   }
 
   /**
-   * Wait for socket file to exist
+   * Connect to QEMU monitor via Unix socket
+   */
+  private async connectUnix(socketPath: string): Promise<void> {
+    console.log(`🔌 Connecting to QEMU monitor via Unix socket: ${socketPath}`);
+
+    this.socketPath = socketPath;
+
+    // Wait for socket file to exist
+    await this.waitForSocket(socketPath, 5000);
+
+    return new Promise((resolve, reject) => {
+      this.socket = net.createConnection(socketPath);
+
+      this.socket.on('connect', () => {
+        console.log('✅ Connected to QEMU monitor via Unix socket:', socketPath);
+        
+        // Setup data handler
+        this.socket!.on('data', (data) => this.handleData(data));
+        
+        resolve();
+      });
+
+      this.socket.on('error', (error) => {
+        console.error('QEMU monitor Unix socket connection error:', error);
+        reject(error);
+      });
+
+      this.socket.on('close', () => {
+        console.log('QEMU monitor Unix socket connection closed');
+        this.socket = null;
+      });
+    });
+  }
+
+  /**
+   * Wait for TCP port to be listening
+   */
+  private async waitForTcpPort(host: string, port: number, timeout: number): Promise<void> {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeout) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const client = net.connect({ host, port }, () => {
+            client.end();
+            resolve();
+          });
+
+          client.on('error', reject);
+          client.setTimeout(200);
+        });
+
+        // Connection succeeded, port is ready
+        return;
+      } catch {
+        // Port not ready, wait and retry
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    throw new Error(`Timeout waiting for QEMU monitor TCP port: ${host}:${port}`);
+  }
+
+  /**
+   * Wait for Unix socket file to exist
    */
   private async waitForSocket(socketPath: string, timeout: number): Promise<void> {
     const startTime = Date.now();
