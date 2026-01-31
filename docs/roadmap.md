@@ -51,77 +51,124 @@
 - [x] Frontend compilando e funcional (LED piscando)
 - [x] 40+ dependências instaladas e configuradas
 
+### ✓ FASE 1: Integração QEMU Real - COMPLETA (31/01/2026) 🚀
+- [x] **Backend API REST completa**:
+  - [x] `POST /api/compile` - Compila código Arduino com arduino-cli
+  - [x] `POST /api/simulate/start` - Inicia simulação QEMU
+  - [x] `POST /api/simulate/stop` - Para simulação
+  - [x] `GET /api/simulate/status` - Status da simulação
+  - [x] `GET /api/simulate/pins/:pin` - Lê estado de pino
+  - [x] `POST /api/simulate/pins/:pin` - Escreve estado de pino
+  - [x] `GET /api/simulate/serial` - Obtém buffer serial
+  - [x] `DELETE /api/simulate/serial` - Limpa buffer serial
+- [x] **WebSocket real-time** (Socket.IO):
+  - [x] Evento `serial` - Linha de saída serial
+  - [x] Evento `pinChange` - Mudança de estado de pino
+  - [x] Evento `simulationStarted/Stopped/Paused/Resumed`
+  - [x] Auto-reconnect implementado
+- [x] **Frontend Integration**:
+  - [x] `useQEMUStore` - Estado global QEMU (Zustand)
+  - [x] `SimulationModeToggle` - Toggle Fake/QEMU
+  - [x] `QEMUApiClient` - Cliente REST API
+  - [x] `QEMUWebSocket` - Cliente Socket.IO
+  - [x] `useQEMUSimulation` - Hook de lifecycle
+  - [x] TopToolbar com botão "Compile & Run"
+  - [x] Badges de status: Backend Connected, QEMU Connected
+  - [x] Serial Monitor conectado ao WebSocket real
+- [x] **Dependências instaladas**:
+  - [x] Frontend: framer-motion, vaul, react-hook-form, next-themes
+  - [x] Backend: express, cors, socket.io, tsx
+- [x] **Testes realizados**:
+  - [x] LED blink funciona em modo Interpreter (fake)
+  - [x] LED blink funciona em modo QEMU Real
+  - [x] Compilação arduino-cli operacional
+  - [x] QEMU AVR rodando firmware.hex com sucesso
+  - [x] Serial Monitor exibindo output em tempo real
+  - [x] WebSocket connection estável
+
 ---
 
 ## 🚧 PRÓXIMOS PASSOS - Fevereiro 2026
 
-### 🔴 Fase 1: Integração QEMU Real (ALTA PRIORIDADE)
+### 🔴 Fase 2: GPIO Real via QEMU Monitor (ALTA PRIORIDADE)
 
-#### Backend API (3-5 dias)
-- [ ] REST API para compilação:
-  - `POST /api/compile` - Recebe código, retorna firmware.hex
-  - `POST /api/simulate/start` - Inicia QEMU
-  - `POST /api/simulate/stop` - Para QEMU
-  - `GET /api/simulate/pins/:pin` - Lê estado de pino via QEMU monitor
-  - `POST /api/simulate/pins/:pin` - Escreve estado de pino (simular botão)
-- [ ] WebSocket para Serial Monitor:
-  - `WS /api/serial` - Stream bidirecional de dados seriais
-  - Auto-reconnect em caso de desconexão
-- [ ] GPIO Monitor real:
-  - Polling de registradores AVR via QEMU monitor
-  - Emitir eventos `pinChange` para frontend
+#### QEMU Monitor Integration (5-7 dias)
+- [ ] **QEMU Monitor Protocol**:
+  - [ ] Conectar ao QEMU Monitor via Unix socket/TCP
+  - [ ] Implementar comando `info registers` para ler AVR registers
+  - [ ] Implementar leitura de GPIO registers (PORTB, PORTC, PORTD)
+  - [ ] Implementar escrita em GPIO registers (simular botão pressionado)
+- [ ] **Pin State Polling**:
+  - [ ] Polling loop a cada 100ms para ler estados de pinos
+  - [ ] Detectar mudanças e emitir eventos `pinChange` via WebSocket
+  - [ ] Mapear registradores AVR para números de pinos Arduino
+- [ ] **Pin Write Implementation**:
+  - [ ] Endpoint `POST /api/simulate/pins/:pin` escrever no QEMU
+  - [ ] Simular botões/sensores alterando registradores
+  - [ ] Validar tipo de pino (INPUT/OUTPUT) antes de escrever
+- [ ] **Frontend Pin Interaction**:
+  - [ ] Button component envia pin write ao clicar
+  - [ ] Potentiometer envia analogWrite ao arrastar slider
+  - [ ] LED atualiza estado visual baseado em pinChange real
 
-#### Frontend Integration (2-3 dias)
-- [ ] Toggle **"Simulação Fake"** vs **"QEMU Real"**
-- [ ] Service layer para comunicação com backend:
-  - `QEMUApiClient.ts` - Chamadas REST
-  - `QEMUWebSocket.ts` - WebSocket handler
-- [ ] Conectar Serial Monitor ao WebSocket
-- [ ] Conectar LED/Button ao estado de pinos do QEMU
-- [ ] Indicator visual: "QEMU Running" com status
-
-#### Docker & Deploy (1-2 dias)
-- [ ] Dockerfile com QEMU + arduino-cli
-- [ ] docker-compose.yml (frontend + backend + QEMU)
-- [ ] Deploy na Vercel (frontend) + Railway (backend)
+#### Testing & Validation (2-3 dias)
+- [ ] Testar circuitos complexos (múltiplos LEDs + buttons)
+- [ ] Validar timing de `delay()` e `millis()`
+- [ ] Testar PWM real (analogWrite em pinos PWM)
+- [ ] Performance profiling (latência pin polling)
 
 ---
 
-### 🟡 Fase 2: Expand Simulation Engine (MÉDIA PRIORIDADE)
+### 🟡 Fase 3: Expand Simulation Engine (MÉDIA PRIORIDADE)
 
 #### Componentes Maker (5-7 dias)
 - [ ] **Displays**:
-  - LCD 16x2 (I2C)
-  - OLED 128x64 (SPI/I2C)
-  - TM1637 7-segment
+  - [ ] LCD 16x2 (I2C)
+  - [ ] OLED 128x64 (SPI/I2C)
+  - [ ] TM1637 7-segment
 - [ ] **Sensores**:
-  - Ultrasonic HC-SR04
-  - DHT22 (temp/humidity)
-  - LDR (photoresistor)
-  - PIR motion sensor
+  - [ ] Ultrasonic HC-SR04
+  - [ ] DHT22 (temp/humidity)
+  - [ ] LDR (photoresistor)
+  - [ ] PIR motion sensor
 - [ ] **Atuadores**:
-  - Buzzer (tone/noTone)
-  - Relay module
-  - DC Motor com L298N
+  - [ ] Buzzer (tone/noTone)
+  - [ ] Relay module
+  - [ ] DC Motor com L298N
 
 #### Code Generation (3-4 dias)
 - [ ] Template System por componente
 - [ ] Smart Code Generator:
-  - Analisa circuito e gera `setup()` + `loop()`
-  - Merge inteligente de código
-  - Preservar código do usuário (`// USER CODE START`)
+  - [ ] Analisa circuito e gera `setup()` + `loop()`
+  - [ ] Merge inteligente de código
+  - [ ] Preservar código do usuário (`// USER CODE START`)
 
 ---
 
-### 🟢 Fase 3: Smart Home Dashboard (BAIXA PRIORIDADE)
+### 🟢 Fase 4: Multi-Board Support (BAIXA PRIORIDADE)
+
+#### ESP32 Support via QEMU (7-10 dias)
+- [ ] QEMU ESP32 integration (qemu-system-xtensa)
+- [ ] WiFi simulation (mock HTTP requests)
+- [ ] Bluetooth simulation (mock BLE)
+- [ ] Dual-core simulation
+
+#### Raspberry Pi Pico Support (5-7 dias)
+- [ ] QEMU ARM Cortex-M0+ (qemu-system-arm)
+- [ ] PIO (Programmable I/O) simulation
+- [ ] MicroPython support real
+
+---
+
+### 🔵 Fase 5: Smart Home Dashboard (FUTURO)
 
 #### Dashboard Layout (4-5 dias)
 - [ ] Sistema de Rooms (Sala, Cozinha, Quarto)
 - [ ] Grid layout drag & drop
 - [ ] Device Cards:
-  - Lights (on/off, dimmer, RGB)
-  - Switches
-  - Sensors (temp, humidity, motion)
+  - [ ] Lights (on/off, dimmer, RGB)
+  - [ ] Switches
+  - [ ] Sensors (temp, humidity, motion)
 - [ ] Real-time Sync: Dashboard ↔ Simulação
 
 #### Automation (3-4 dias)
@@ -131,7 +178,7 @@
 
 ---
 
-### 🔵 Fase 4: Industrial Features (FUTURO)
+### 🟣 Fase 6: Industrial Features (FUTURO)
 
 #### PLC Simulator (7-10 dias)
 - [ ] Virtual PLC com Modbus RTU/TCP
@@ -148,9 +195,9 @@
 ## 📊 KPIs e Metas
 
 ### Mês 1 (Fevereiro 2026)
+- 🎯 **QEMU GPIO Real** funcionando com polling
 - 🎯 **5 placas**: Arduino, ESP32, RP2040, STM32, ESP8266
 - 🎯 **30 componentes** maker + sensores
-- 🎯 **QEMU integrado** e funcional
 - 🎯 **100 beta testers**
 
 ### Mês 3 (Abril 2026)
@@ -190,6 +237,7 @@
 - **Monaco Editor** (code editor)
 - **Radix UI** + **Tailwind CSS** (components)
 - **Zustand** (state management)
+- **Socket.IO Client** (WebSocket)
 
 ### Backend
 - **Node.js 20** + **TypeScript**
@@ -208,7 +256,8 @@
 
 ## 📝 Documentação
 
-- [ ] README.md detalhado
+- [x] README.md detalhado
+- [x] Server README.md (installation guide)
 - [ ] API Documentation (OpenAPI/Swagger)
 - [ ] Component SDK docs
 - [ ] User Guide (20 tutorials)
@@ -228,4 +277,4 @@
 
 ---
 
-**Última atualização:** 31/01/2026 03:47 AM WET
+**Última atualização:** 31/01/2026 11:06 AM WET
