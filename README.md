@@ -24,7 +24,104 @@ NeuroForge é um simulador de microcontroladores **baseado em QEMU real** para A
 - 🔌 **Backend QEMU Real**: Compilação arduino-cli + execução QEMU
 - 📊 **Serial Monitor**: Captura UART em tempo real via WebSocket
 - 🔗 **WebSocket Communication**: Comunicação bidirecional frontend ↔ backend
+- ⏱️ **NeuroForge Time**: Sistema de temporização unificado entre linguagens
 - 🛠️ **Multi-Board**: Arduino Uno, ESP32, Raspberry Pi Pico (em desenvolvimento)
+
+---
+
+## 🕐 NeuroForge Time - Arquitetura de Temporização
+
+### O Problema
+
+QEMU AVR não emula Timer0 corretamente, causando:
+- `delay()` trava indefinidamente
+- `millis()` sempre retorna 0
+- Sketches simples (LED blink) não funcionam
+
+### A Solução: Clock Virtual Unificado
+
+NeuroForge implementa um **sistema de tempo virtual** controlado pelo host, independente dos timers do hardware emulado.
+
+```c
+// nf_time.h - API comum para todas as linguagens
+
+uint32_t nf_now_ms(void);      // Tempo atual da simulação (ms)
+uint32_t nf_now_us(void);      // Tempo atual da simulação (µs)
+void nf_sleep_ms(uint32_t ms); // Dormir N ms em tempo de simulação
+void nf_advance_ms(uint32_t);  // Avançar clock virtual (interno)
+```
+
+### Implementação por Linguagem
+
+#### Arduino (C/C++)
+```cpp
+// Core arduino-uno-qemu sobrescreve delay/millis/micros
+
+void delay(unsigned long ms) {
+  nf_sleep_ms(ms);  // Usa NeuroForge Time em vez de Timer0
+}
+
+unsigned long millis() {
+  return nf_now_ms();  // Lê clock virtual
+}
+
+unsigned long micros() {
+  return nf_now_us();
+}
+```
+
+#### MicroPython / CircuitPython
+```python
+import time
+
+# VM implementa time.time() e time.sleep() em cima de nf_time
+time.sleep(0.5)  # → nf_sleep_ms(500)
+time.time()      # → nf_now_ms() / 1000.0
+```
+
+#### Bare-Metal C
+```c
+#include <nf_time.h>
+
+void main() {
+  while(1) {
+    GPIO_SET_HIGH(13);
+    nf_sleep_ms(1000);
+    GPIO_SET_LOW(13);
+    nf_sleep_ms(1000);
+  }
+}
+```
+
+### Vantagens
+
+✅ **Funciona sem Timer0/Timer1**: Usa busy-wait + clock virtual  
+✅ **Consistente entre linguagens**: Arduino, Python, Rust, C usam mesma API  
+✅ **Controlável pelo host**: Permite pause, step, fast-forward, rewind  
+✅ **Determinístico**: Reprodução de traces, debugging preciso  
+✅ **Multi-MCU sync**: Múltiplos MCUs no mesmo circuito compartilham o clock  
+
+### Implementação v0 (Atual)
+
+```cpp
+// nf_time.cpp - implementação dentro do firmware
+
+static volatile uint32_t nf_ms = 0;
+
+void nf_sleep_ms(uint32_t ms) {
+  while (ms--) {
+    _delay_ms(1);     // Busy-wait baseado em F_CPU (funciona no QEMU)
+    nf_advance_ms(1); // Avança clock virtual
+  }
+}
+```
+
+### Implementação v1 (Futuro)
+
+- Clock vem do host (backend)
+- Device virtual QEMU expõe registrador de tempo
+- Firmware lê `nf_now_ms()` de memória mapeada
+- Permite pause, step, fast-forward controlados pelo frontend
 
 ---
 
@@ -56,6 +153,14 @@ NeuroForge é um simulador de microcontroladores **baseado em QEMU real** para A
 - ✅ Serial Monitor exibe output em tempo real
 - ✅ WebSocket connection estável
 - ✅ Mode switching funcionando perfeitamente
+
+### 🔄 **Fase 2: NeuroForge Time - IN PROGRESS** (31/01/2026)
+
+- 🔄 Core `arduino-uno-qemu` criado
+- 🔄 `nf_time.h` / `nf_time.cpp` implementados
+- 🔄 Override de `delay()`, `millis()`, `micros()`
+- 🔄 Testes: LED blink com delay(500) funcionando no QEMU
+- ⏳ GPIO Real via QEMU Monitor (próximo)
 
 ---
 
@@ -115,12 +220,16 @@ npm run dev
    ```cpp
    void setup() {
      pinMode(LED_BUILTIN, OUTPUT);
+     Serial.begin(9600);
+     Serial.println("LED Blink started!");
    }
    void loop() {
      digitalWrite(LED_BUILTIN, HIGH);
-     delay(1000);
+     Serial.println("LED ON");
+     delay(500);
      digitalWrite(LED_BUILTIN, LOW);
-     delay(1000);
+     Serial.println("LED OFF");
+     delay(500);
    }
    ```
 4. Clique em **"Compile & Run"**
@@ -155,12 +264,22 @@ neuroforge/
 │   └── App.tsx
 ├── server/                     # Backend Node.js + Express
 │   ├── src/
-│   │   ├── CompilerService.ts             # ✅ arduino-cli wrapper
-│   │   ├── QEMURunner.ts                  # ✅ QEMU process manager
-│   │   ├── QEMUSimulationEngine.ts        # ✅ High-level API
+│   │   ├── services/
+│   │   │   ├── CompilerService.ts         # ✅ arduino-cli wrapper
+│   │   │   ├── QEMURunner.ts              # ✅ QEMU process manager
+│   │   │   ├── QEMUSimulationEngine.ts    # ✅ High-level API
+│   │   │   ├── QEMUMonitorService.ts      # ✅ QEMU Monitor (TCP/Unix)
+│   │   │   └── ...
+│   │   ├── api/
+│   │   │   └── routes.ts                  # ✅ REST endpoints
 │   │   └── server.ts                      # ✅ Express + Socket.IO server
+│   ├── cores/
+│   │   └── neuroforge_qemu/               # 🔄 Core Arduino-QEMU
+│   │       ├── nf_time.h                  # 🔄 NeuroForge Time API
+│   │       ├── nf_time.cpp                # 🔄 Implementação do clock virtual
+│   │       └── nf_arduino_time.cpp        # 🔄 delay/millis override
 │   ├── package.json
-│   └── README.md                          # Documentação detalhada
+│   └── README.md
 ├── poc/
 │   └── qemu-avr-test/                     # Testes QEMU manuais
 ├── docs/
@@ -185,12 +304,18 @@ neuroforge/
 - ✅ WebSocket real-time events
 - ✅ Compile & Run workflow
 
-### 🔄 Fase 2: GPIO Real (Em Progresso)
-- [ ] QEMU Monitor integration (QMP/HMP)
-- [ ] `info qtree` GPIO state reading
-- [ ] Pin state WebSocket updates (20 FPS)
-- [ ] LED visual feedback real-time
-- [ ] Button input → QEMU GPIO write
+### 🔄 Fase 2: NeuroForge Time + GPIO Real (Em Progresso)
+- 🔄 **NeuroForge Time v0** (delay/millis funcional)
+  - 🔄 Core `arduino-uno-qemu`
+  - 🔄 `nf_time.h` API comum
+  - 🔄 Override delay/millis/micros
+  - 🔄 Teste: LED blink delay(500)
+- ⏳ **GPIO Real via QEMU Monitor**
+  - ⏳ TCP/Unix socket connection
+  - ⏳ `info registers` parsing
+  - ⏳ Pin state polling (20 FPS)
+  - ⏳ LED visual feedback real-time
+  - ⏳ Button input → QEMU GPIO write
 
 ### 🚀 Fase 3: Serial RX + Componentes
 - [ ] Serial RX (input para QEMU)
@@ -199,16 +324,20 @@ neuroforge/
 - [ ] I2C/SPI displays
 - [ ] Sensores (DHT, ultrasonic)
 
-### 🌐 Fase 4: Multi-Board
+### 🌐 Fase 4: Multi-Board + Multi-Language
 - [ ] ESP32 (QEMU xtensa)
 - [ ] Raspberry Pi Pico (QEMU ARM)
 - [ ] STM32 (QEMU Cortex-M)
+- [ ] **MicroPython** com NeuroForge Time
+- [ ] **Rust embedded** com nf_time
+- [ ] **Bare-metal C** com nf_time
 
 ### 🎨 Fase 5: UI/UX Polish
 - [ ] Component library (drag & drop)
 - [ ] Circuit wiring visualization
 - [ ] Project save/load
 - [ ] Code templates
+- [ ] Pause/Step/Fast-forward controls
 
 ---
 
@@ -221,17 +350,19 @@ cd server
 npm run dev
 
 # Em outro terminal:
-curl -X POST http://localhost:3001/compile \
+curl -X POST http://localhost:3001/api/compile \
   -H "Content-Type: application/json" \
-  -d '{"code":"void setup() { pinMode(13, OUTPUT); } void loop() { digitalWrite(13, HIGH); delay(1000); digitalWrite(13, LOW); delay(1000); }"}'
+  -d '{"code":"void setup() { pinMode(13, OUTPUT); Serial.begin(9600); Serial.println(\"LED Blink started!\"); } void loop() { digitalWrite(13, HIGH); Serial.println(\"LED ON\"); delay(500); digitalWrite(13, LOW); Serial.println(\"LED OFF\"); delay(500); }","board":"arduino-uno"}'
 
-curl -X POST http://localhost:3001/simulate/start
+curl -X POST http://localhost:3001/api/simulate/start \
+  -H "Content-Type: application/json" \
+  -d '{"firmwarePath":"/path/to/firmware.elf","board":"arduino-uno"}'
 
 # Ver serial output
-curl http://localhost:3001/serial
+curl http://localhost:3001/api/simulate/serial
 
 # Parar simulação
-curl -X POST http://localhost:3001/simulate/stop
+curl -X POST http://localhost:3001/api/simulate/stop
 ```
 
 ### Via arduino-cli + QEMU (manual)
@@ -243,7 +374,7 @@ cd poc/qemu-avr-test
 arduino-cli compile --fqbn arduino:avr:uno serial_test
 
 # Rodar no QEMU
-qemu-system-avr -machine uno -bios build/serial_test.ino.elf -serial stdio -nographic
+qemu-system-avr -machine arduino-uno -bios build/serial_test.ino.elf -serial stdio -nographic
 ```
 
 ---
@@ -253,6 +384,7 @@ qemu-system-avr -machine uno -bios build/serial_test.ino.elf -serial stdio -nogr
 - **QEMU Integration**: [`server/README.md`](server/README.md)
 - **Roadmap Detalhado**: [`docs/roadmap.md`](docs/roadmap.md)
 - **Fixes & Features**: [`docs/fixes.md`](docs/fixes.md)
+- **NeuroForge Time**: Esta seção (🕐 acima)
 - **API Reference**: (em breve)
 - **Component Guide**: (em breve)
 
@@ -275,6 +407,7 @@ qemu-system-avr -machine uno -bios build/serial_test.ino.elf -serial stdio -nogr
 - **arduino-cli** (compilation)
 - **QEMU AVR** (emulation)
 - **TypeScript** + **tsx** (dev runtime)
+- **NeuroForge Time** (clock virtual)
 
 ---
 
