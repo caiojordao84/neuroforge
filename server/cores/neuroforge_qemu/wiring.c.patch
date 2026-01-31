@@ -1,0 +1,26 @@
+# Patch for wiring.c to disable original timing functions
+# This allows nf_arduino_time.cpp to override them
+
+# Find these functions in wiring.c and comment them out:
+# - unsigned long millis()
+# - unsigned long micros()
+# - void delay(unsigned long ms)
+
+# Instructions:
+# 1. Open: %LOCALAPPDATA%\Arduino15\packages\arduino\hardware\avr\1.8.7\cores\neuroforge_qemu\wiring.c
+# 2. Search for: unsigned long millis()
+# 3. Comment out the entire function (add /* at start, */ at end)
+# 4. Repeat for micros() and delay()
+
+# Example:
+/*
+unsigned long millis()
+{
+	uint8_t oldSREG = SREG;
+	unsigned long m;
+	cli();
+	m = timer0_millis;
+	SREG = oldSREG;
+	return m;
+}
+*/
