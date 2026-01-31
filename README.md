@@ -24,7 +24,7 @@ NeuroForge é um simulador de microcontroladores **baseado em QEMU real** para A
 - 🔌 **Backend QEMU Real**: Compilação arduino-cli + execução QEMU
 - 📊 **Serial Monitor**: Captura UART em tempo real via WebSocket
 - 🔗 **WebSocket Communication**: Comunicação bidirecional frontend ↔ backend
-- ⏱️ **NeuroForge Time**: Sistema de temporização unificado entre linguagens
+- ⏱️ **NeuroForge Time**: Sistema de temporização unificado com timing ajustável
 - 🛠️ **Multi-Board**: Arduino Uno, ESP32, Raspberry Pi Pico (em desenvolvimento)
 
 ---
@@ -40,7 +40,7 @@ QEMU AVR não emula Timer0 corretamente, causando:
 
 ### A Solução: Clock Virtual Unificado
 
-NeuroForge implementa um **sistema de tempo virtual** controlado pelo host, independente dos timers do hardware emulado.
+NeuroForge implementa um **sistema de tempo virtual** independente dos timers do hardware emulado.
 
 ```c
 // nf_time.h - API comum para todas as linguagens
@@ -51,69 +51,43 @@ void nf_sleep_ms(uint32_t ms); // Dormir N ms em tempo de simulação
 void nf_advance_ms(uint32_t);  // Avançar clock virtual (interno)
 ```
 
-### Implementação por Linguagem
-
-#### Arduino (C/C++)
-```cpp
-// Core arduino-uno-qemu sobrescreve delay/millis/micros
-
-void delay(unsigned long ms) {
-  nf_sleep_ms(ms);  // Usa NeuroForge Time em vez de Timer0
-}
-
-unsigned long millis() {
-  return nf_now_ms();  // Lê clock virtual
-}
-
-unsigned long micros() {
-  return nf_now_us();
-}
-```
-
-#### MicroPython / CircuitPython
-```python
-import time
-
-# VM implementa time.time() e time.sleep() em cima de nf_time
-time.sleep(0.5)  # → nf_sleep_ms(500)
-time.time()      # → nf_now_ms() / 1000.0
-```
-
-#### Bare-Metal C
-```c
-#include <nf_time.h>
-
-void main() {
-  while(1) {
-    GPIO_SET_HIGH(13);
-    nf_sleep_ms(1000);
-    GPIO_SET_LOW(13);
-    nf_sleep_ms(1000);
-  }
-}
-```
-
-### Vantagens
-
-✅ **Funciona sem Timer0/Timer1**: Usa busy-wait + clock virtual  
-✅ **Consistente entre linguagens**: Arduino, Python, Rust, C usam mesma API  
-✅ **Controlável pelo host**: Permite pause, step, fast-forward, rewind  
-✅ **Determinístico**: Reprodução de traces, debugging preciso  
-✅ **Multi-MCU sync**: Múltiplos MCUs no mesmo circuito compartilham o clock  
-
-### Implementação v0 (Atual)
+### Implementação v0 (Atual) - ✅ COMPLETA
 
 ```cpp
 // nf_time.cpp - implementação dentro do firmware
 
+#define QEMU_TIMING_MULTIPLIER 10  // Ajustável!
+
 static volatile uint32_t nf_ms = 0;
 
 void nf_sleep_ms(uint32_t ms) {
-  while (ms--) {
-    _delay_ms(1);     // Busy-wait baseado em F_CPU (funciona no QEMU)
-    nf_advance_ms(1); // Avança clock virtual
+  while (ms > 0) {
+    for (uint16_t i = 0; i < QEMU_TIMING_MULTIPLIER; i++) {
+      _delay_ms(1);     // Busy-wait baseado em F_CPU
+    }
+    nf_advance_ms(1);   // Avança clock virtual
+    ms--;
   }
 }
+```
+
+#### Ajuste de Timing
+
+Se o timing estiver incorreto, ajuste `QEMU_TIMING_MULTIPLIER` em `server/cores/neuroforge_qemu/nf_time.cpp`:
+
+- **Muito lento**: diminua para `5` ou `3`
+- **Muito rápido**: aumente para `20` ou `50`
+- **Ideal (500ms reais)**: deixe em `10` (padrão)
+
+```bash
+# Após ajustar:
+cd server/cores
+.\update-nf-time.ps1  # Windows
+# ou
+./update-nf-time.sh   # Linux/macOS
+
+cd ..
+npm run dev  # Reinicia backend
 ```
 
 ### Implementação v1 (Futuro)
@@ -122,6 +96,14 @@ void nf_sleep_ms(uint32_t ms) {
 - Device virtual QEMU expõe registrador de tempo
 - Firmware lê `nf_now_ms()` de memória mapeada
 - Permite pause, step, fast-forward controlados pelo frontend
+
+### Vantagens
+
+✅ **Funciona sem Timer0/Timer1**: Usa busy-wait + clock virtual  
+✅ **Consistente entre linguagens**: Arduino, Python, Rust, C usam mesma API  
+✅ **Timing ajustável**: Configurável via `QEMU_TIMING_MULTIPLIER`  
+✅ **Determinístico**: Reprodução de traces, debugging preciso  
+✅ **Multi-MCU sync** (v1): Múltiplos MCUs compartilham o clock  
 
 ---
 
@@ -145,22 +127,27 @@ void nf_sleep_ms(uint32_t ms) {
 - ✅ `QEMUWebSocket`: Socket.IO client
 - ✅ `useQEMUSimulation`: Lifecycle hook
 - ✅ TopToolbar: Compile & Run button + connection badges
-- ✅ TypeScript errors fixed (framer-motion, vaul, react-hook-form, next-themes)
+- ✅ TypeScript errors fixed
 
-**Testes Realizados:**
-- ✅ LED blink compila com arduino-cli
-- ✅ QEMU executa firmware.hex com sucesso
-- ✅ Serial Monitor exibe output em tempo real
-- ✅ WebSocket connection estável
-- ✅ Mode switching funcionando perfeitamente
+### ✅ **Fase 2: NeuroForge Time - COMPLETE** (31/01/2026)
 
-### 🔄 **Fase 2: NeuroForge Time - IN PROGRESS** (31/01/2026)
+- ✅ Core `neuroforge:avr-qemu:unoqemu` criado
+- ✅ `nf_time.h` / `nf_time.cpp` implementados
+- ✅ Override de `delay()`, `millis()`, `micros()`
+- ✅ Timing ajustável via `QEMU_TIMING_MULTIPLIER`
+- ✅ Teste: LED blink com delay(500) funcionando no QEMU
+- ✅ Scripts de instalação: `install-core.ps1`, `patch-wiring.ps1`, `update-nf-time.ps1`
 
-- 🔄 Core `arduino-uno-qemu` criado
-- 🔄 `nf_time.h` / `nf_time.cpp` implementados
-- 🔄 Override de `delay()`, `millis()`, `micros()`
-- 🔄 Testes: LED blink com delay(500) funcionando no QEMU
-- ⏳ GPIO Real via QEMU Monitor (próximo)
+### 🔄 **Fase 3: UI/UX Polish - IN PROGRESS**
+
+**Próxima Missão:**
+- 🎯 **Stop Button Toggle**: Transformar "Compile & Run" em "STOP" após iniciar
+  - [ ] Estado do botão baseado em `isRunning`
+  - [ ] Ícone muda: Play → Stop
+  - [ ] Texto muda: "Compile & Run" → "STOP"
+  - [ ] Cor muda: verde → vermelho
+  - [ ] onClick: compile+run → stop simulation
+  - [ ] Loading state durante compilação
 
 ---
 
@@ -175,21 +162,28 @@ void nf_sleep_ms(uint32_t ms) {
   - Linux: `sudo apt install qemu-system-avr`
   - macOS: `brew install qemu`
 
-### Windows (PowerShell)
-
-```powershell
-git clone https://github.com/caiojordao84/neuroforge.git
-cd neuroforge
-.\install-deps.ps1
-```
-
-### Linux/macOS (Bash)
+### Instalação
 
 ```bash
 git clone https://github.com/caiojordao84/neuroforge.git
 cd neuroforge
-chmod +x install-deps.sh
-./install-deps.sh
+npm install
+cd server && npm install
+```
+
+### Instalar Core NeuroForge Time
+
+**Windows:**
+```powershell
+cd server\cores
+.\install-core.ps1
+```
+
+**Linux/macOS:**
+```bash
+cd server/cores
+chmod +x install-core.sh
+./install-core.sh
 ```
 
 ---
@@ -221,19 +215,19 @@ npm run dev
    void setup() {
      pinMode(LED_BUILTIN, OUTPUT);
      Serial.begin(9600);
-     Serial.println("LED Blink started!");
+     Serial.println("--- Sistema de Pisca LED Iniciado ---");
    }
    void loop() {
      digitalWrite(LED_BUILTIN, HIGH);
-     Serial.println("LED ON");
+     Serial.println("Status: LED LIGADO");
      delay(500);
      digitalWrite(LED_BUILTIN, LOW);
-     Serial.println("LED OFF");
+     Serial.println("Status: LED DESLIGADO");
      delay(500);
    }
    ```
 4. Clique em **"Compile & Run"**
-5. Veja o LED piscar no canvas + Serial Monitor!
+5. Veja o LED piscar no canvas + Serial Monitor com timing correto!
 
 ---
 
@@ -274,19 +268,20 @@ neuroforge/
 │   │   │   └── routes.ts                  # ✅ REST endpoints
 │   │   └── server.ts                      # ✅ Express + Socket.IO server
 │   ├── cores/
-│   │   └── neuroforge_qemu/               # 🔄 Core Arduino-QEMU
-│   │       ├── nf_time.h                  # 🔄 NeuroForge Time API
-│   │       ├── nf_time.cpp                # 🔄 Implementação do clock virtual
-│   │       └── nf_arduino_time.cpp        # 🔄 delay/millis override
+│   │   └── neuroforge_qemu/               # ✅ Core Arduino-QEMU
+│   │       ├── nf_time.h                  # ✅ NeuroForge Time API
+│   │       ├── nf_time.cpp                # ✅ Clock virtual ajustável
+│   │       ├── nf_arduino_time.cpp        # ✅ delay/millis override
+│   │       ├── boards.txt                 # ✅ Board definition
+│   │       └── README.md
 │   ├── package.json
 │   └── README.md
-├── poc/
-│   └── qemu-avr-test/                     # Testes QEMU manuais
 ├── docs/
-│   ├── roadmap.md                         # ✅ Fase 1 COMPLETE
-│   └── fixes.md                           # ✅ Feature 2.5 documentada
-├── install-deps.ps1
-├── install-deps.sh
+│   ├── roadmap.md                         # ✅ Fase 2 COMPLETE
+│   └── fixes.md                           # ✅ NeuroForge Time documentado
+├── install-core.ps1
+├── patch-wiring.ps1
+├── update-nf-time.ps1
 └── README.md                              # Este arquivo
 ```
 
@@ -299,45 +294,39 @@ neuroforge/
 - ✅ arduino-cli compilation
 - ✅ QEMU process management
 - ✅ Serial Monitor (TX only)
-- ✅ GPIO Polling (mock)
 - ✅ Frontend dual mode toggle
 - ✅ WebSocket real-time events
 - ✅ Compile & Run workflow
 
-### 🔄 Fase 2: NeuroForge Time + GPIO Real (Em Progresso)
-- 🔄 **NeuroForge Time v0** (delay/millis funcional)
-  - 🔄 Core `arduino-uno-qemu`
-  - 🔄 `nf_time.h` API comum
-  - 🔄 Override delay/millis/micros
-  - 🔄 Teste: LED blink delay(500)
-- ⏳ **GPIO Real via QEMU Monitor**
-  - ⏳ TCP/Unix socket connection
-  - ⏳ `info registers` parsing
-  - ⏳ Pin state polling (20 FPS)
-  - ⏳ LED visual feedback real-time
-  - ⏳ Button input → QEMU GPIO write
+### ✅ Fase 2: NeuroForge Time (COMPLETE - 31/01/2026)
+- ✅ Core `neuroforge:avr-qemu:unoqemu`
+- ✅ `nf_time.h` API comum
+- ✅ Override delay/millis/micros
+- ✅ Timing ajustável (`QEMU_TIMING_MULTIPLIER`)
+- ✅ Teste: LED blink delay(500) funcionando
+- ✅ Scripts de instalação automática
 
-### 🚀 Fase 3: Serial RX + Componentes
+### 🔄 Fase 3: UI/UX Polish (Em Progresso)
+- 🎯 **Stop Button Toggle** (próximo)
+- ⏳ Loading states e feedback visual
+- ⏳ Error handling e mensagens amigáveis
+- ⏳ Pause/Resume controls
+- ⏳ Step-by-step execution
+
+### 🚀 Fase 4: GPIO Real + Componentes
+- [ ] GPIO Real via QEMU Monitor
+- [ ] LED visual feedback real-time
+- [ ] Button input → QEMU GPIO write
 - [ ] Serial RX (input para QEMU)
-- [ ] PWM para servos (QEMU timer simulation)
+- [ ] PWM para servos
 - [ ] ADC para potenciômetros
-- [ ] I2C/SPI displays
-- [ ] Sensores (DHT, ultrasonic)
 
-### 🌐 Fase 4: Multi-Board + Multi-Language
+### 🌐 Fase 5: Multi-Board + Multi-Language
 - [ ] ESP32 (QEMU xtensa)
 - [ ] Raspberry Pi Pico (QEMU ARM)
-- [ ] STM32 (QEMU Cortex-M)
 - [ ] **MicroPython** com NeuroForge Time
 - [ ] **Rust embedded** com nf_time
-- [ ] **Bare-metal C** com nf_time
-
-### 🎨 Fase 5: UI/UX Polish
-- [ ] Component library (drag & drop)
-- [ ] Circuit wiring visualization
-- [ ] Project save/load
-- [ ] Code templates
-- [ ] Pause/Step/Fast-forward controls
+- [ ] NeuroForge Time v1 (host-driven clock)
 
 ---
 
@@ -352,7 +341,7 @@ npm run dev
 # Em outro terminal:
 curl -X POST http://localhost:3001/api/compile \
   -H "Content-Type: application/json" \
-  -d '{"code":"void setup() { pinMode(13, OUTPUT); Serial.begin(9600); Serial.println(\"LED Blink started!\"); } void loop() { digitalWrite(13, HIGH); Serial.println(\"LED ON\"); delay(500); digitalWrite(13, LOW); Serial.println(\"LED OFF\"); delay(500); }","board":"arduino-uno"}'
+  -d '{"code":"void setup() { pinMode(13, OUTPUT); Serial.begin(9600); Serial.println(\"LED Blink started!\"); } void loop() { digitalWrite(13, HIGH); Serial.println(\"LED ON\"); delay(500); digitalWrite(13, LOW); Serial.println(\"LED OFF\"); delay(500); }","board":"arduino-uno","mode":"qemu"}'
 
 curl -X POST http://localhost:3001/api/simulate/start \
   -H "Content-Type: application/json" \
@@ -365,26 +354,14 @@ curl http://localhost:3001/api/simulate/serial
 curl -X POST http://localhost:3001/api/simulate/stop
 ```
 
-### Via arduino-cli + QEMU (manual)
-
-```bash
-cd poc/qemu-avr-test
-
-# Compilar sketch
-arduino-cli compile --fqbn arduino:avr:uno serial_test
-
-# Rodar no QEMU
-qemu-system-avr -machine arduino-uno -bios build/serial_test.ino.elf -serial stdio -nographic
-```
-
 ---
 
 ## 📚 Documentação
 
+- **NeuroForge Time**: [`server/cores/NEUROFORGE_TIME_IMPLEMENTATION.md`](server/cores/NEUROFORGE_TIME_IMPLEMENTATION.md)
 - **QEMU Integration**: [`server/README.md`](server/README.md)
 - **Roadmap Detalhado**: [`docs/roadmap.md`](docs/roadmap.md)
 - **Fixes & Features**: [`docs/fixes.md`](docs/fixes.md)
-- **NeuroForge Time**: Esta seção (🕐 acima)
 - **API Reference**: (em breve)
 - **Component Guide**: (em breve)
 
