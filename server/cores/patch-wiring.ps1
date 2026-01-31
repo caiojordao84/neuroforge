@@ -11,7 +11,7 @@ $ARDUINO_DATA = "$env:LOCALAPPDATA\Arduino15"
 $AVR_PATH = Get-ChildItem -Path "$ARDUINO_DATA\packages\arduino\hardware\avr" -Directory | Sort-Object Name -Descending | Select-Object -First 1
 
 if (-not $AVR_PATH) {
-    Write-Host "❌ Core Arduino AVR não encontrado!" -ForegroundColor Red
+    Write-Host "[X] Core Arduino AVR nao encontrado!" -ForegroundColor Red
     exit 1
 }
 
@@ -19,18 +19,18 @@ $AVR_VERSION = $AVR_PATH.Name
 $WIRING_FILE = "$ARDUINO_DATA\packages\arduino\hardware\avr\$AVR_VERSION\cores\neuroforge_qemu\wiring.c"
 
 if (-not (Test-Path $WIRING_FILE)) {
-    Write-Host "❌ wiring.c não encontrado em: $WIRING_FILE" -ForegroundColor Red
-    Write-Host "💡 Execute install-core.ps1 primeiro!" -ForegroundColor Yellow
+    Write-Host "[X] wiring.c nao encontrado em: $WIRING_FILE" -ForegroundColor Red
+    Write-Host "[!] Execute install-core.ps1 primeiro!" -ForegroundColor Yellow
     exit 1
 }
 
-Write-Host "✅ Encontrado: $WIRING_FILE" -ForegroundColor Green
+Write-Host "[OK] Encontrado: $WIRING_FILE" -ForegroundColor Green
 
 # 2. Backup
 $BACKUP_FILE = "$WIRING_FILE.backup"
 if (-not (Test-Path $BACKUP_FILE)) {
     Copy-Item -Path $WIRING_FILE -Destination $BACKUP_FILE
-    Write-Host "💾 Backup criado: $BACKUP_FILE" -ForegroundColor Green
+    Write-Host "[OK] Backup criado: $BACKUP_FILE" -ForegroundColor Green
 }
 
 # 3. Read file
@@ -38,12 +38,12 @@ $content = Get-Content $WIRING_FILE -Raw
 
 # 4. Check if already patched
 if ($content -match "#define NEUROFORGE_TIME_PATCHED") {
-    Write-Host "⚠️  wiring.c já foi patchado anteriormente!" -ForegroundColor Yellow
-    Write-Host "✅ Nada a fazer." -ForegroundColor Green
+    Write-Host "[!] wiring.c ja foi patchado anteriormente!" -ForegroundColor Yellow
+    Write-Host "[OK] Nada a fazer." -ForegroundColor Green
     exit 0
 }
 
-Write-Host "🔧 Aplicando patch..." -ForegroundColor Cyan
+Write-Host "[...] Aplicando patch..." -ForegroundColor Cyan
 
 # 5. Add patch marker at the beginning
 $patchedContent = "// NEUROFORGE_TIME_PATCHED - timing functions disabled`n"
@@ -62,15 +62,15 @@ $patchedContent = $patchedContent -replace '(?s)(void delay\(unsigned long ms\)\
 # 9. Save patched file
 Set-Content -Path $WIRING_FILE -Value $patchedContent -NoNewline
 
-Write-Host "✅ Patch aplicado com sucesso!" -ForegroundColor Green
+Write-Host "[OK] Patch aplicado com sucesso!" -ForegroundColor Green
 Write-Host ""
-Write-Host "Funções desabilitadas:" -ForegroundColor Cyan
-Write-Host "  • millis()" -ForegroundColor Gray
-Write-Host "  • micros()" -ForegroundColor Gray
-Write-Host "  • delay()" -ForegroundColor Gray
+Write-Host "Funcoes desabilitadas:" -ForegroundColor Cyan
+Write-Host "  - millis()" -ForegroundColor Gray
+Write-Host "  - micros()" -ForegroundColor Gray
+Write-Host "  - delay()" -ForegroundColor Gray
 Write-Host ""
-Write-Host "Substituídas por: nf_arduino_time.cpp (NeuroForge Time)" -ForegroundColor Green
+Write-Host "Substituidas por: nf_arduino_time.cpp (NeuroForge Time)" -ForegroundColor Green
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green
-Write-Host "✅ Pronto! Tente compilar novamente." -ForegroundColor Green
+Write-Host "[OK] Pronto! Tente compilar novamente." -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
