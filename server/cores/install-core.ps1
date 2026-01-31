@@ -80,7 +80,18 @@ if ((Get-Content $BOARDS_FILE -Raw) -match "unoqemu.name") {
     Write-Host "✅ Board unoqemu registrado" -ForegroundColor Green
 }
 
-# 7. Verificar instalação
+# 7. Aplicar patch no wiring.c
+Write-Host ""
+Write-Host "🔧 Aplicando patch no wiring.c..." -ForegroundColor Cyan
+
+& "$PSScriptRoot\patch-wiring.ps1"
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Falha ao aplicar patch!" -ForegroundColor Red
+    exit 1
+}
+
+# 8. Verificar instalação
 Write-Host ""
 Write-Host "🔍 Verificando instalação..." -ForegroundColor Cyan
 
@@ -93,7 +104,7 @@ foreach ($file in $files) {
     }
 }
 
-# 8. Testar arduino-cli
+# 9. Testar arduino-cli
 Write-Host ""
 Write-Host "🧪 Testando arduino-cli..." -ForegroundColor Cyan
 
@@ -107,14 +118,14 @@ if ($boards) {
     Write-Host "💡 Tente: arduino-cli core update-index" -ForegroundColor Yellow
 }
 
-# 9. Sucesso!
+# 10. Sucesso!
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green
 Write-Host "✅ Instalação concluída com sucesso!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Próximos passos:" -ForegroundColor Cyan
-Write-Host "1. Compilar sketch: arduino-cli compile --fqbn arduino:avr:unoqemu sketch/" -ForegroundColor White
-Write-Host "2. Executar no QEMU: qemu-system-avr -machine arduino-uno -bios sketch.elf -serial stdio" -ForegroundColor White
-Write-Host "3. Testar no NeuroForge: npm run dev (backend + frontend)" -ForegroundColor White
+Write-Host "1. Reiniciar backend: npm run dev" -ForegroundColor White
+Write-Host "2. Testar no NeuroForge: Compile & Run no frontend" -ForegroundColor White
+Write-Host "3. Verificar Serial Monitor: LED ON/OFF deve aparecer!" -ForegroundColor White
 Write-Host ""
