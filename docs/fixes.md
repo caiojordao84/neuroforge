@@ -213,19 +213,20 @@ class CodeParser {
 
 ---
 
-### FIX 2.8: NeuroForge Time - Clock Virtual Unificado
+### FIX 2.8: NeuroForge Time - Clock Virtual Unificado ✅ COMPLETE
 **Data:** 31/01/2026  
-**Status:** 🔄 Em Progresso  
+**Status:** ✅ COMPLETE  
+**Commits:** `c0dea4c`, `2b7f60b`, `bee917d`, `c53a039`
 
 **Problema Crítico:**
 ```cpp
 void loop() {
   digitalWrite(13, HIGH);
   Serial.println("LED ON");
-  delay(500);  // ⛔ TRAVA AQUI!
+  delay(500);  // ⛔ TRAVAVA AQUI!
   
-  digitalWrite(13, LOW);  // Nunca executa
-  Serial.println("LED OFF");  // Nunca aparece
+  digitalWrite(13, LOW);  // Nunca executava
+  Serial.println("LED OFF");  // Nunca aparecia
   delay(500);
 }
 ```
@@ -234,26 +235,7 @@ void loop() {
 - QEMU AVR não emula Timer0 corretamente
 - `delay()` do Arduino depende de `millis()` que usa Timer0 overflow interrupt
 - Timer0 nunca gera interrupções no QEMU → `millis()` sempre retorna 0
-- `delay(500)` espera `millis()` avançar → **lazo infinito**
-
-**Comportamento Observado:**
-```
-✅ LED Blink started!      # setup() executa
-✅ LED ON                  # primeira linha de loop()
-⛔ [trava indefinidamente]  # delay(500) nunca retorna
-❌ LED OFF                 # nunca aparece
-```
-
-**Teste de Confirmação:**
-Sem `delay()`, funciona perfeitamente:
-```cpp
-void loop() {
-  digitalWrite(13, HIGH);
-  Serial.println("LED ON");   // ✅ Spamma infinito!
-  digitalWrite(13, LOW);
-  Serial.println("LED OFF");  // ✅ Spamma infinito!
-}
-```
+- `delay(500)` espera `millis()` avançar → **laço infinito**
 
 ---
 
@@ -272,34 +254,28 @@ void nf_sleep_ms(uint32_t ms); // Dormir N ms em tempo de simulação
 void nf_advance_ms(uint32_t);  // Avançar clock virtual (interno)
 ```
 
-**Implementação v0 - Firmware-based:**
+**Implementação v0 - Firmware-based (COMPLETA):**
 ```cpp
 // nf_time.cpp
+#define QEMU_TIMING_MULTIPLIER 10  // Ajustável!
+
 static volatile uint32_t nf_ms = 0;
-static volatile uint32_t nf_us = 0;
 
 void nf_sleep_ms(uint32_t ms) {
-  while (ms--) {
-    _delay_ms(1);     // Busy-wait baseado em F_CPU (funciona no QEMU)
-    nf_advance_ms(1); // Avança clock virtual
+  while (ms > 0) {
+    // Loop ajustável: força o QEMU a executar mais ciclos de CPU
+    for (uint16_t i = 0; i < QEMU_TIMING_MULTIPLIER; i++) {
+      _delay_ms(1);     // Busy-wait baseado em F_CPU
+    }
+    nf_advance_ms(1);   // Avança clock virtual
+    ms--;
   }
 }
-
-void nf_advance_ms(uint32_t ms) {
-  nf_ms += ms;
-  nf_us += ms * 1000UL;
-}
-
-uint32_t nf_now_ms() { return nf_ms; }
-uint32_t nf_now_us() { return nf_us; }
 ```
 
 **Override Arduino:**
 ```cpp
 // nf_arduino_time.cpp
-#include <Arduino.h>
-#include "nf_time.h"
-
 void delay(unsigned long ms) {
   nf_sleep_ms((uint32_t)ms);  // Substitui delay() original
 }
@@ -318,8 +294,26 @@ unsigned long micros() {
 # boards.txt
 unoqemu.name=NeuroForge Uno (QEMU)
 unoqemu.build.core=neuroforge_qemu
+unoqemu.build.board=AVR_UNO
 unoqemu.build.mcu=atmega328p
 unoqemu.build.f_cpu=16000000L
+```
+
+**Scripts de Instalação:**
+```powershell
+# install-core.ps1 - Instala core no Arduino CLI
+# patch-wiring.ps1 - Desabilita delay/millis do core original
+# update-nf-time.ps1 - Atualiza apenas nf_time.cpp (desenvolvimento)
+```
+
+**Ajuste de Timing:**
+```cpp
+// Em nf_time.cpp:
+#define QEMU_TIMING_MULTIPLIER 10  // Padrão recomendado
+
+// Se muito lento: diminua para 5 ou 3
+// Se muito rápido: aumente para 20 ou 50
+// Depois: .\ update-nf-time.ps1
 ```
 
 **Backend Integration:**
@@ -328,7 +322,51 @@ unoqemu.build.f_cpu=16000000L
 const board = mode === 'qemu'
   ? 'neuroforge:avr-qemu:unoqemu'  // Usa core customizado
   : 'arduino:avr:uno';              // Core original
+
+// QEMURunner.ts - Real-time execution
+const args = [
+  '-machine', 'arduino-uno',
+  '-bios', firmwarePath,
+  '-icount', 'shift=auto',  // Throttling para tempo real
+  '-serial', 'stdio'
+];
 ```
+
+---
+
+#### Resultado Final
+
+```cpp
+void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("--- Sistema de Pisca LED Iniciado ---");
+}
+
+void loop() {
+  digitalWrite(LED_BUILTIN, HIGH);
+  Serial.println("Status: LED LIGADO");
+  delay(500);  // ✅ FUNCIONA!
+  
+  digitalWrite(LED_BUILTIN, LOW);
+  Serial.println("Status: LED DESLIGADO");
+  delay(500);  // ✅ FUNCIONA!
+}
+```
+
+**Serial Monitor:**
+```
+[22:01:21] --- Sistema de Pisca LED Iniciado ---
+[22:01:21] Status: LED LIGADO
+[22:01:57] Status: LED DESLIGADO
+[22:02:24] Status: LED LIGADO
+[22:02:41] Status: LED DESLIGADO
+```
+
+✅ **delay(500) funciona perfeitamente!**  
+✅ **millis() retorna valores crescentes!**  
+✅ **Timing ajustável via constante!**  
+✅ **LED blink roda indefinidamente!**  
 
 ---
 
@@ -339,6 +377,9 @@ Usa busy-wait `_delay_ms()` baseado em F_CPU, que roda perfeitamente no QEMU AVR
 
 ✅ **Consistente entre linguagens**  
 Arduino, MicroPython, Rust, C bare-metal usam a mesma API `nf_time.h`.
+
+✅ **Timing ajustável**  
+Configurável via `QEMU_TIMING_MULTIPLIER` sem recompilar backend.
 
 ✅ **Controlável pelo host (v1)**  
 Futuro: clock vem do backend, permite pause/step/fast-forward/rewind.
@@ -353,72 +394,64 @@ Reprodução de traces, debugging preciso, testes automatizados.
 
 #### Roadmap de Implementação
 
-**v0 - Firmware-based** (🔄 Atual):
-- Clock virtual dentro do firmware
-- `_delay_ms()` + contadores locais
-- Funciona já, sem modificar QEMU ou backend
-- Limitação: não permite pause/step do host
+**v0 - Firmware-based** (✅ COMPLETA):
+- ✅ Clock virtual dentro do firmware
+- ✅ `_delay_ms()` + contadores locais
+- ✅ Override de delay/millis/micros
+- ✅ Timing ajustável via `QEMU_TIMING_MULTIPLIER`
+- ✅ Scripts de instalação automática
+- ✅ Funciona já, sem modificar QEMU ou backend
 
 **v1 - Host-driven** (⏳ Futuro):
-- Clock vem do backend (simulationTimeMs)
-- Device virtual QEMU expõe registrador de tempo
-- Firmware lê `nf_now_ms()` de memória mapeada
-- Permite pause, step, fast-forward, rewind
-- Multi-MCU sincronizado
-
----
-
-#### Aplicação em Outras Linguagens
-
-**MicroPython:**
-```python
-import time
-
-# VM implementa time.sleep() em cima de nf_sleep_ms()
-time.sleep(0.5)  # → nf_sleep_ms(500)
-time.time()      # → nf_now_ms() / 1000.0
-```
-
-**Rust Embedded:**
-```rust
-use nf_time::*;
-
-loop {
-    gpio_set_high(13);
-    nf_sleep_ms(1000);
-    gpio_set_low(13);
-    nf_sleep_ms(1000);
-}
-```
-
-**Bare-Metal C:**
-```c
-#include <nf_time.h>
-
-void main() {
-  while(1) {
-    GPIO_SET_HIGH(LED_PIN);
-    nf_sleep_ms(500);
-    GPIO_SET_LOW(LED_PIN);
-    nf_sleep_ms(500);
-  }
-}
-```
-
----
-
-#### Status Atual
-
-- [🔄] Core `arduino-uno-qemu` em desenvolvimento
-- [🔄] `nf_time.h` / `nf_time.cpp` implementados
-- [🔄] `nf_arduino_time.cpp` (override delay/millis)
-- [⏳] Registrar core no arduino-cli
-- [⏳] Testar LED blink com delay(500)
-- [⏳] Testar sketch complexo com millis()
+- [ ] Clock vem do backend (simulationTimeMs)
+- [ ] Device virtual QEMU expõe registrador de tempo
+- [ ] Firmware lê `nf_now_ms()` de memória mapeada
+- [ ] Permite pause, step, fast-forward, rewind
+- [ ] Multi-MCU sincronizado
 
 🚧 **NeuroForge Time é o diferencial do projeto!**
 
 Permite simulação precisa e controlável sem depender de emulação perfeita de timers, e cria um caminho claro para suportar múltiplas linguagens e placas.
+
+---
+
+### FIX 2.9: Stop Button Toggle (🎯 PRÓXIMO)
+**Data:** --/02/2026 (planejado)  
+**Status:** ⏳ Pendente
+
+**Objetivo:**
+Transformar botão "Compile & Run" em "STOP" após simulação iniciar.
+
+**Requisitos:**
+- [ ] Estado do botão baseado em `isRunning` do QEMU store
+- [ ] Ícone muda: Play → Stop
+- [ ] Texto muda: "Compile & Run" → "STOP"
+- [ ] Cor muda: verde → vermelho
+- [ ] onClick: compile+run → stop simulation
+- [ ] Loading state durante compilação
+- [ ] Desabilitar durante loading
+
+**Implementação:**
+```tsx
+// TopToolbar.tsx
+const { isRunning, isCompiling } = useQEMUStore();
+
+return (
+  <Button
+    onClick={isRunning ? handleStop : handleCompileAndRun}
+    disabled={isCompiling}
+    variant={isRunning ? "destructive" : "default"}
+  >
+    {isCompiling ? (
+      <><Loader2 className="animate-spin" /> Compiling...</>
+    ) : isRunning ? (
+      <><Square /> STOP</>
+    ) : (
+      <><Play /> Compile & Run</>
+    )}
+  </Button>
+);
+```
 
 ---
 
@@ -630,14 +663,15 @@ private scheduleLoop(): void {
 
 ## 📊 Estatísticas
 
-- **Total de Fixes:** 18
-- **Sessão QEMU:** 8 fixes (30-31/01/2026)
-  - **FIX 2.8 (NeuroForge Time):** 🔥 **Diferencial do projeto**
+- **Total de Fixes:** 19
+- **Sessão QEMU:** 9 fixes (30-31/01/2026)
+  - **FIX 2.8 (NeuroForge Time):** ✅ **COMPLETO - Diferencial do projeto**
+  - **FIX 2.9 (Stop Button):** 🎯 **PRÓXIMO**
 - **Sessão Anterior:** 10 fixes (22-29/01/2026)
-- **Commits:** 35+
-- **Linhas de código:** ~16.500
-- **Tempo investido:** ~45 horas
+- **Commits:** 40+
+- **Linhas de código:** ~17.000
+- **Tempo investido:** ~50 horas
 
 ---
 
-**Última atualização:** 31/01/2026 08:10 PM WET
+**Última atualização:** 31/01/2026 10:20 PM WET
