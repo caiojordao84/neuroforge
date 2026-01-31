@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { CompilerService } from '../services/CompilerService';
+import { CompilerService, SimulationMode } from '../services/CompilerService';
 import { QEMUSimulationEngine } from '../services/QEMUSimulationEngine';
 import { BoardType } from '../services/CompilerService';
 
@@ -10,10 +10,11 @@ const engine = new QEMUSimulationEngine();
 /**
  * POST /api/compile
  * Compile Arduino code to firmware
+ * Body: { code: string, board?: BoardType, mode?: SimulationMode }
  */
 router.post('/compile', async (req: Request, res: Response) => {
   try {
-    const { code, board } = req.body;
+    const { code, board, mode } = req.body;
 
     if (!code) {
       return res.status(400).json({
@@ -23,7 +24,10 @@ router.post('/compile', async (req: Request, res: Response) => {
     }
 
     const boardType = (board as BoardType) || 'arduino-uno';
-    const result = await compiler.compile(code, boardType);
+    const simulationMode = (mode as SimulationMode) || 'interpreter';
+    
+    console.log(`📝 Compiling for board: ${boardType}, mode: ${simulationMode}`);
+    const result = await compiler.compile(code, boardType, simulationMode);
 
     if (result.success) {
       res.json({
