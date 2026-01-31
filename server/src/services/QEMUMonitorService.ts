@@ -214,6 +214,7 @@ export class QEMUMonitorService {
   /**
    * Get GPIO state for all pins
    * Returns state of all 20 Arduino Uno pins (D0-D13, A0-A5)
+   * Note: QEMU AVR may not support this - returns empty array on failure
    */
   async getGPIOState(): Promise<PinState[]> {
     try {
@@ -259,7 +260,8 @@ export class QEMUMonitorService {
 
       return pinStates;
     } catch (error) {
-      console.error('Error getting GPIO state:', error);
+      // QEMU AVR may not support 'info registers' command
+      // Silently return empty array
       return [];
     }
   }
