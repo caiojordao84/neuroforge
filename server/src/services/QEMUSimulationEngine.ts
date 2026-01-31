@@ -56,18 +56,18 @@ export class QEMUSimulationEngine extends EventEmitter {
       this._isPaused = false;
 
       // Connect to QEMU monitor
-      const monitorSocket = this.runner.getMonitorSocket();
-      if (monitorSocket) {
+      const monitorInfo = this.runner.getMonitorInfo();
+      if (monitorInfo) {
         try {
-          await this.monitor.connect(monitorSocket);
-          console.log('✅ QEMU Monitor connected, starting GPIO polling...');
+          await this.monitor.connect(monitorInfo.address);
+          console.log(`✅ QEMU Monitor connected (${monitorInfo.type}), starting GPIO polling...`);
           this.startGPIOPolling();
         } catch (error) {
           console.error('⚠️ Failed to connect QEMU monitor:', error);
           console.log('⚠️ Continuing without GPIO monitoring...');
         }
       } else {
-        console.warn('⚠️ No monitor socket available, GPIO polling disabled');
+        console.warn('⚠️ No monitor available, GPIO polling disabled');
       }
     } catch (error) {
       this._isRunning = false;
