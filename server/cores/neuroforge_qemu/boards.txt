@@ -1,0 +1,50 @@
+##############################################################
+# NeuroForge AVR Boards for QEMU Simulation
+##############################################################
+
+##############################################################
+# NeuroForge Uno (QEMU)
+# 
+# Board de simulação baseado em Arduino Uno.
+# Usa o core neuroforge_qemu com NeuroForge Time.
+# 
+# Especificações idênticas ao Uno real:
+# - MCU: ATmega328P
+# - Clock: 16MHz
+# - Variável: atmega328
+# 
+# Diferenças:
+# - delay/millis/micros usam nf_time em vez de Timer0
+# - Funciona perfeitamente no qemu-system-avr
+##############################################################
+
+unoqemu.name=NeuroForge Uno (QEMU)
+
+unoqemu.vid.0=0x2341
+unoqemu.pid.0=0x0043
+unoqemu.vid.1=0x2341
+unoqemu.pid.1=0x0001
+unoqemu.vid.2=0x2A03
+unoqemu.pid.2=0x0043
+unoqemu.vid.3=0x2341
+unoqemu.pid.3=0x0243
+
+unoqemu.upload.tool=avrdude
+unoqemu.upload.protocol=arduino
+unoqemu.upload.maximum_size=32256
+unoqemu.upload.maximum_data_size=2048
+unoqemu.upload.speed=115200
+
+unoqemu.bootloader.tool=avrdude
+unoqemu.bootloader.low_fuses=0xFF
+unoqemu.bootloader.high_fuses=0xDE
+unoqemu.bootloader.extended_fuses=0xFD
+unoqemu.bootloader.unlock_bits=0x3F
+unoqemu.bootloader.lock_bits=0x0F
+unoqemu.bootloader.file=optiboot/optiboot_atmega328.hex
+
+unoqemu.build.mcu=atmega328p
+unoqemu.build.f_cpu=16000000L
+unoqemu.build.board=AVR_UNO
+unoqemu.build.core=neuroforge_qemu
+unoqemu.build.variant=standard
