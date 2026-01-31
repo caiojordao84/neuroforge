@@ -17,6 +17,13 @@
 static volatile uint32_t nf_ms = 0;
 static volatile uint32_t nf_us = 0;
 
+// Multiplicador de timing para QEMU
+// Ajuste este valor se o timing estiver muito rapido ou lento:
+// - Valores maiores = mais lento (mais ciclos de CPU)
+// - Valores menores = mais rapido (menos ciclos de CPU)
+// - Valor recomendado: 10 (testado no QEMU AVR 16MHz)
+#define QEMU_TIMING_MULTIPLIER 10
+
 /**
  * Retorna o tempo atual em milissegundos.
  */
@@ -42,30 +49,29 @@ void nf_advance_ms(uint32_t ms) {
 }
 
 /**
- * Implementacao v0 de sleep (VERSAO AGRESSIVA para QEMU).
+ * Implementacao v0 de sleep para QEMU.
  * 
- * QEMU AVR executa instrucoes muito rapido mesmo com -icount.
- * Esta versao usa loops multiplos de busy-wait para forcar
- * o QEMU a gastar mais tempo.
+ * QEMU AVR executa instrucoes muito rapido. Esta versao usa
+ * um multiplicador para ajustar o timing.
  * 
- * A cada 1ms de delay solicitado, executa 1000 iteracoes de
- * _delay_ms(1), criando um busy-wait muito mais longo.
+ * Cada 1ms de delay solicitado executa QEMU_TIMING_MULTIPLIER
+ * iteracoes de _delay_ms(1), criando um busy-wait ajustavel.
  * 
  * Limitacoes v0:
  * - Nao permite pause/step do host
  * - CPU fica 100% ocupada durante delay
- * - Timing ainda pode ser impreciso no QEMU
+ * - Timing pode variar entre diferentes maquinas
  * 
  * Vantagens v0:
  * - Funciona imediatamente no QEMU
  * - Nao precisa modificar backend
  * - delay() e millis() ficam corretos
+ * - Timing ajustavel via QEMU_TIMING_MULTIPLIER
  */
 void nf_sleep_ms(uint32_t ms) {
   while (ms > 0) {
-    // Loop agressivo: 1000x _delay_ms(1) por millisegundo
-    // Isso forca o QEMU a executar muitos mais ciclos de CPU
-    for (uint16_t i = 0; i < 1000; i++) {
+    // Loop ajustavel: QEMU_TIMING_MULTIPLIER x _delay_ms(1) por millisegundo
+    for (uint16_t i = 0; i < QEMU_TIMING_MULTIPLIER; i++) {
       _delay_ms(1);
     }
     
