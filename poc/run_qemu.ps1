@@ -43,23 +43,48 @@ if (-not $qemuPath) {
     Write-Host "[ERROR] qemu-system-avr não encontrado!" -ForegroundColor Red
     Write-Host ""
     Write-Host "Opções:" -ForegroundColor Yellow
-    Write-Host "1. Execute: .\fix_qemu_path.ps1" -ForegroundColor Gray
-    Write-Host "2. Localize manualmente:" -ForegroundColor Gray
-    Write-Host "   Get-ChildItem -Path C:\ -Filter qemu-system-avr.exe -Recurse -ErrorAction SilentlyContinue" -ForegroundColor DarkGray
-    Write-Host "3. Reinstale: choco uninstall qemu -y; choco install qemu -y" -ForegroundColor Gray
+    Write-Host "1. Adicione ao PATH: `$env:Path += ';C:\Program Files\qemu'" -ForegroundColor Gray
+    Write-Host "2. Execute: .\fix_qemu_path.ps1" -ForegroundColor Gray
+    Write-Host "3. Reinstale: .\install_qemu_avr.ps1" -ForegroundColor Gray
     exit 1
 }
 
 Write-Host "[OK] QEMU encontrado: $qemuPath" -ForegroundColor Green
 Write-Host ""
 
-# Path do firmware
-$buildFolder = "build\$Sketch`_$Sketch.ino"
-$elfPath = "$buildFolder\$Sketch.ino.elf"
+# Tentar diferentes padrões de caminho do firmware
+$possiblePaths = @(
+    "build\$Sketch\$Sketch.ino.elf",
+    "build\$Sketch`_$Sketch\$Sketch.ino.elf",
+    "build\$Sketch`_$Sketch.ino\$Sketch.ino.elf",
+    "$Sketch\build\arduino.avr.uno\$Sketch.ino.elf"
+)
 
-if (-not (Test-Path $elfPath)) {
-    Write-Host "[ERROR] Firmware não encontrado: $elfPath" -ForegroundColor Red
+$elfPath = $null
+foreach ($path in $possiblePaths) {
+    if (Test-Path $path) {
+        $elfPath = $path
+        break
+    }
+}
+
+if (-not $elfPath) {
+    Write-Host "[ERROR] Firmware não encontrado!" -ForegroundColor Red
+    Write-Host "Procurado em:" -ForegroundColor Yellow
+    foreach ($path in $possiblePaths) {
+        Write-Host "  - $path" -ForegroundColor Gray
+    }
+    Write-Host ""
     Write-Host "Execute primeiro: .\compile.ps1" -ForegroundColor Yellow
+    
+    # Listar o que existe no build
+    if (Test-Path "build") {
+        Write-Host ""
+        Write-Host "Conteúdo de build/:" -ForegroundColor Yellow
+        Get-ChildItem -Path build -Recurse | Where-Object { $_.Extension -eq ".elf" } | ForEach-Object {
+            Write-Host "  - $($_.FullName)" -ForegroundColor Gray
+        }
+    }
     exit 1
 }
 
@@ -76,7 +101,7 @@ Write-Host ""
 $machines = & $qemuPath -machine help 2>&1
 
 # Tentar diferentes nomes de máquina
-$machineNames = @("uno", "arduino-uno", "arduino", "avr")
+$machineNames = @("uno", "arduino-uno", "arduino-mega-2560-v3", "arduino-mega", "arduino")
 $machineFound = $false
 
 foreach ($machine in $machineNames) {
@@ -98,22 +123,19 @@ foreach ($machine in $machineNames) {
 }
 
 if (-not $machineFound) {
-    Write-Host "[WARNING] Máquina Arduino não encontrada nas opções:" -ForegroundColor Yellow
-    Write-Host $machines -ForegroundColor DarkGray
+    Write-Host "[WARNING] Nenhuma máquina Arduino encontrada" -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "[INFO] Tentando modo genérico AVR..." -ForegroundColor Yellow
+    Write-Host "Máquinas AVR disponíveis:" -ForegroundColor Yellow
+    & $qemuPath -machine help 2>&1 | Select-String "avr" | ForEach-Object {
+        Write-Host "  $_" -ForegroundColor Gray
+    }
     Write-Host ""
+    Write-Host "[INFO] Tentando Arduino Mega..." -ForegroundColor Yellow
     
-    # Fallback: modo genérico AVR
+    # Fallback: tentar arduino-mega
     & $qemuPath `
-        -M help 2>&1 | Select-String "avr" | ForEach-Object {
-            Write-Host "  $_" -ForegroundColor Gray
-        }
-    
-    Write-Host ""
-    Write-Host "[ERROR] QEMU instalado pode não ter suporte a AVR" -ForegroundColor Red
-    Write-Host "Versão do QEMU:" -ForegroundColor Yellow
-    & $qemuPath --version | Select-Object -First 1
-    Write-Host ""
-    Write-Host "QEMU precisa ser versão 5.1+ para suporte AVR" -ForegroundColor Yellow
+        -machine arduino-mega-2560-v3 `
+        -bios $elfPath `
+        -serial stdio `
+        -nographic
 }
