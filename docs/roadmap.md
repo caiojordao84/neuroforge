@@ -302,11 +302,70 @@ Arduino delay()/millis()
 - **arduino-cli** (compilation)
 - **NeuroForge Time** (clock virtual unificado) ✅
 
-### DevOps
-- **Docker** + **Docker Compose**
+### Development
+- **Docker** + **Docker Compose** (local development)
 - **GitHub Actions** (CI/CD)
-- **Vercel** (frontend)
-- **Railway** (backend)
+- Desenvolvimento local prioritário
+- Deployment será configurado quando necessário
+
+---
+
+## 🚀 FASE 8: Production Deployment (⏳ FUTURO - Quando abrir o site)
+
+**Nota:** Esta fase será implementada quando o projeto estiver pronto para produção. Foco atual: desenvolvimento local e features core.
+
+### Frontend Deployment
+- [ ] **Opções de hosting**:
+  - [ ] Vercel (recomendado para React)
+  - [ ] Netlify
+  - [ ] Cloudflare Pages
+- [ ] **Configurações**:
+  - [ ] Environment variables production
+  - [ ] Build optimization
+  - [ ] CDN setup
+  - [ ] Custom domain
+
+### Backend Deployment
+- [ ] **Opções de hosting**:
+  - [ ] Railway (Node.js + QEMU)
+  - [ ] AWS Lambda + API Gateway (serverless)
+  - [ ] Cloudflare Workers (edge computing)
+  - [ ] Google Cloud Run (containers)
+  - [ ] DigitalOcean App Platform
+- [ ] **Infraestrutura**:
+  - [ ] Database (PostgreSQL ou MongoDB)
+  - [ ] Redis (caching + sessions)
+  - [ ] File storage (S3 ou similar)
+  - [ ] Load balancer
+
+### DevOps & Monitoring
+- [ ] **CI/CD Pipeline**:
+  - [ ] GitHub Actions deploy automático
+  - [ ] Preview deployments (PRs)
+  - [ ] Rollback strategy
+- [ ] **Monitoring**:
+  - [ ] Error tracking (Sentry)
+  - [ ] Performance monitoring (New Relic/Datadog)
+  - [ ] Uptime monitoring
+  - [ ] Log aggregation
+- [ ] **Security**:
+  - [ ] SSL/TLS certificates
+  - [ ] API rate limiting
+  - [ ] DDoS protection
+  - [ ] Firewall rules
+
+### Scaling Strategy
+- [ ] **Horizontal scaling**:
+  - [ ] Multiple backend instances
+  - [ ] Session persistence (Redis)
+  - [ ] WebSocket sticky sessions
+- [ ] **Performance**:
+  - [ ] CDN for static assets
+  - [ ] Database read replicas
+  - [ ] Caching layer
+  - [ ] Code splitting
+
+**Timeline:** Q4 2026 (quando houver 100+ usuários ativos)
 
 ---
 
@@ -335,5 +394,5 @@ Arduino delay()/millis()
 
 ---
 
-**Última atualização:** 31/01/2026 10:26 PM WET  
-**Status:** 🎉 **FASE 2 COMPLETA!** NeuroForge Time funcionando!
+**Última atualização:** 01/02/2026 09:42 AM WET  
+**Status:** 🎯 **FASE 2.5 (Botão STOP)** - Próxima missão!
