@@ -524,50 +524,254 @@ void loop() {
 
 ---
 
-### FIX 2.10: GPIO Real via QEMU Monitor (🎯 PRÓXIMO)
-**Data:** --/02/2026 (planejado)  
-**Status:** ⏳ Pendente
+### FIX 2.10: GPIO Real via QEMU Monitor (⏳ EM PROGRESSO)
+**Data:** 01/02/2026  
+**Status:** ⏳ Parte 1 COMPLETA / Parte 2 Pendente  
+**Commits:** `0c36e86c`, `73883099`, `802ec7a0`, `ba92029b`
 
 **Objetivo:**
 Integrar QEMU Monitor para ler/escrever GPIO real e atualizar componentes visuais.
 
+---
+
+#### Parte 1: Conectar ao QEMU Monitor ✅ COMPLETE
+
+**Implementação:**
+
+```typescript
+// QEMURunner.ts - Monitor TCP connection
+class QEMURunner extends EventEmitter {
+  private monitorPort: number = 4444;
+  private monitorSocket: net.Socket | null = null;
+  private monitorBuffer: string = '';
+  private monitorConnected: boolean = false;
+  private pendingRequests: MonitorRequest[] = [];
+  
+  async start() {
+    const args = [
+      '-machine', this.board,
+      '-bios', this.firmwarePath,
+      '-serial', `file:${this.serialLogPath}`,
+      '-monitor', `tcp:127.0.0.1:${this.monitorPort},server,nowait`,  // ✅ NEW
+      '-nographic',
+      '-d', 'guest_errors'
+    ];
+    
+    // ...
+    this.connectMonitor();  // ✅ NEW
+  }
+  
+  private connectMonitor(): void {
+    // Retry logic: 5 tentativas com 200ms delay
+    const attemptConnection = () => {
+      this.monitorSocket = net.createConnection(this.monitorPort, '127.0.0.1');
+      
+      this.monitorSocket.on('connect', () => {
+        this.monitorConnected = true;
+        this.emit('monitor-connected');
+      });
+      
+      this.monitorSocket.on('data', (chunk: Buffer) => {
+        this.monitorBuffer += chunk.toString('utf-8');
+        this.processMonitorBuffer();
+      });
+      
+      this.monitorSocket.on('error', (err) => {
+        if (retries < maxRetries) {
+          retries++;
+          setTimeout(attemptConnection, retryDelay);
+        }
+      });
+    };
+    attemptConnection();
+  }
+  
+  async sendMonitorCommand(cmd: string, timeoutMs = 500): Promise<string> {
+    if (!this.monitorConnected) {
+      throw new Error('QEMU monitor not connected');
+    }
+    
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new Error('QEMU monitor command timeout'));
+      }, timeoutMs);
+      
+      const request: MonitorRequest = {
+        resolve,
+        reject,
+        accumulator: '',
+        timeoutId
+      };
+      
+      this.pendingRequests.push(request);
+      this.monitorSocket!.write(cmd + '\n');
+    });
+  }
+  
+  private processMonitorBuffer(): void {
+    const request = this.pendingRequests[0];
+    request.accumulator += this.monitorBuffer;
+    this.monitorBuffer = '';
+    
+    // Detecta final da resposta pelo prompt "(qemu) "
+    if (request.accumulator.includes('(qemu)')) {
+      this.pendingRequests.shift();
+      clearTimeout(request.timeoutId);
+      
+      // Limpa echo do comando e prompt
+      let response = request.accumulator;
+      const lines = response.split('\n');
+      lines.shift(); // Remove comando ecoado
+      response = lines.join('\n').replace(/\(qemu\)\s*$/, '').trim();
+      
+      request.resolve(response);
+    }
+  }
+}
+```
+
+**Recursos implementados:**
+- ✅ **TCP endpoint**: `-monitor tcp:127.0.0.1:4444,server,nowait`
+- ✅ **Conexão automática**: Conecta após QEMU iniciar
+- ✅ **Retry logic**: 5 tentativas com 200ms delay
+- ✅ **Request-response queue**: Fila de pedidos pendentes
+- ✅ **Prompt detection**: Detecta `(qemu)` para fim de resposta
+- ✅ **Timeout handling**: 500ms default, configurável
+- ✅ **Cleanup**: Fecha socket e limpa fila ao parar
+- ✅ **Eventos**: `'monitor-connected'` e `'monitor-error'`
+- ✅ **API pública**: `sendMonitorCommand(cmd, timeout)`
+
+**Script de teste:**
+
+```bash
+cd server
+npm run test:monitor
+```
+
+**Saída esperada:**
+```
+============================================================
+QEMU Monitor Connection Test
+============================================================
+
+📦 Using firmware: blink.elf
+
+🚀 Starting QEMU...
+✅ QEMU process started
+[QEMURunner] Conectando ao QEMU Monitor em 127.0.0.1:4444...
+[QEMURunner] Monitor conectado!
+✅ QEMU Monitor connected
+
+📝 Test 1: help
+✅ Received 87 lines
+
+📝 Test 2: info registers
+✅ Received 35 lines
+First 10 lines:
+   PC:    00000000
+   SP:    00000000
+   rampD: 00
+   rampX: 00
+   ...
+
+📝 Test 3: info qtree
+✅ Received 42 lines
+
+📝 Test 4: Multiple rapid commands
+✅ All rapid commands succeeded
+```
+
+**Documentação:**
+- ✅ `server/README_MONITOR.md` - Guia completo de uso
+- ✅ `server/example-monitor.ts` - Script de teste funcional
+- ✅ `npm run test:monitor` - Comando para testar
+
+✅ **Monitor TCP connection funcional!**
+
+---
+
+#### Parte 2: GPIO Register Parsing (🎯 PRÓXIMO)
+
 **Requisitos:**
-- [ ] Conectar ao QEMU Monitor (TCP no Windows, Unix socket no Linux)
-- [ ] Implementar polling de registradores AVR (PORTB, PORTC, PORTD)
-- [ ] Mapear registradores para números de pinos Arduino
+- [ ] Parser para `info registers` output
+- [ ] Extrair valores de PORTB, PORTC, PORTD
+- [ ] Mapear registradores para pinos Arduino:
+  - PORTB[0-7] → Pinos 8-13 (digital)
+  - PORTC[0-5] → Pinos A0-A5 (analog)
+  - PORTD[0-7] → Pinos 0-7 (digital)
+- [ ] Implementar polling loop (50ms = 20 FPS)
+- [ ] Detectar mudanças de estado
 - [ ] Emitir eventos `pinChange` via WebSocket
-- [ ] LED atualiza visual baseado em estado real do QEMU
+- [ ] LED atualiza visual em tempo real
 - [ ] Botão simula input escrevendo no GPIO
-- [ ] Testar circuitos complexos (múltiplos LEDs + botões)
 
 **Implementação planejada:**
 ```typescript
 // QEMUMonitorService.ts
 class QEMUMonitorService {
   async readGPIORegisters(): Promise<GPIOState> {
-    // info registers via QEMU Monitor
-    // Parse PORTB, PORTC, PORTD
+    const output = await runner.sendMonitorCommand('info registers');
+    
+    // Parse output:
+    // PORTB: 00
+    // PORTC: 00
+    // PORTD: 00
+    const portB = parseInt(output.match(/PORTB:\s+([0-9a-fA-F]+)/)[1], 16);
+    const portC = parseInt(output.match(/PORTC:\s+([0-9a-fA-F]+)/)[1], 16);
+    const portD = parseInt(output.match(/PORTD:\s+([0-9a-fA-F]+)/)[1], 16);
+    
     // Mapear bits para pinos Arduino
+    const pins = new Map<number, 0 | 1>();
+    
+    // PORTB[0-5] = Pinos 8-13
+    for (let i = 0; i < 6; i++) {
+      pins.set(8 + i, (portB >> i) & 1);
+    }
+    
+    // PORTC[0-5] = Pinos A0-A5 (14-19)
+    for (let i = 0; i < 6; i++) {
+      pins.set(14 + i, (portC >> i) & 1);
+    }
+    
+    // PORTD[0-7] = Pinos 0-7
+    for (let i = 0; i < 8; i++) {
+      pins.set(i, (portD >> i) & 1);
+    }
+    
+    return { pins, timestamp: Date.now() };
   }
   
-  async writeGPIOPin(pin: number, value: 0 | 1) {
-    // Escrever no registrador correto
-    // Simular botão pressionado
+  async writeGPIOPin(pin: number, value: 0 | 1): Promise<void> {
+    // Mapear pino Arduino para registrador/bit AVR
+    const { port, bit } = this.mapArduinoPinToAVR(pin);
+    
+    // Ler valor atual
+    const current = await this.readRegister(port);
+    
+    // Modificar bit
+    const newValue = value ? (current | (1 << bit)) : (current & ~(1 << bit));
+    
+    // Escrever de volta
+    await runner.sendMonitorCommand(`p ${port} = ${newValue}`);
   }
 }
 
-// Polling loop (50ms = 20 FPS)
+// Polling loop no servidor
 setInterval(async () => {
-  const gpioState = await monitor.readGPIORegisters();
+  if (!runner.running) return;
+  
+  const gpioState = await monitorService.readGPIORegisters();
   
   // Comparar com estado anterior
   const changes = detectChanges(prevState, gpioState);
   
-  // Emitir eventos
+  // Emitir eventos via WebSocket
   changes.forEach(({ pin, value }) => {
     io.emit('pinChange', { pin, value });
   });
-}, 50);
+  
+  prevState = gpioState;
+}, 50);  // 20 FPS
 ```
 
 ---
@@ -784,14 +988,16 @@ private scheduleLoop(): void {
 - **Sessão QEMU:** 10 fixes (30 Jan - 01 Fev 2026)
   - **FIX 2.8 (NeuroForge Time):** ✅ **COMPLETO - Diferencial do projeto**
   - **FIX 2.9 (Stop Button):** ✅ **COMPLETO - UX melhorado**
-  - **FIX 2.10 (GPIO Real):** 🎯 **PRÓXIMO**
+  - **FIX 2.10 (GPIO via Monitor):**
+    - ✅ **Parte 1 (TCP Connection) COMPLETA**
+    - 🎯 **Parte 2 (GPIO Parsing) PRÓXIMO**
 - **Sessão Anterior:** 10 fixes (22-29/01/2026)
-- **Commits:** 55+
-- **Linhas de código:** ~19.000
-- **Tempo investido:** ~70 horas
+- **Commits:** 59+
+- **Linhas de código:** ~20.500
+- **Tempo investido:** ~75 horas
 
 ---
 
-**Última atualização:** 01/02/2026 11:30 AM WET  
-**Status:** 🎉 **FASE 2.5 (Stop Button) COMPLETA!**  
-**Próxima Missão:** 🎯 **GPIO Real via QEMU Monitor**
+**Última atualização:** 01/02/2026 1:30 PM WET  
+**Status:** 🎉 **FASE 2.10.1 (Monitor Connection) COMPLETA!**  
+**Próxima Missão:** 🎯 **Parsing GPIO registers do QEMU Monitor**
