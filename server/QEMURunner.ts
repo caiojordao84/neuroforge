@@ -110,14 +110,19 @@ export class QEMURunner extends EventEmitter {
     this.process.kill('SIGTERM');
     this.isRunning = false;
 
-    // Cleanup serial log
-    if (fs.existsSync(this.serialLogPath)) {
-      try {
-        fs.unlinkSync(this.serialLogPath);
-      } catch (err) {
-        console.warn('[QEMURunner] Erro ao limpar log:', err);
+    // Cleanup serial log after a delay (Windows file locks)
+    setTimeout(() => {
+      if (fs.existsSync(this.serialLogPath)) {
+        try {
+          fs.unlinkSync(this.serialLogPath);
+        } catch (err: any) {
+          // Ignore EBUSY errors on Windows - file is still locked
+          if (err.code !== 'EBUSY' && err.code !== 'EPERM') {
+            console.warn('[QEMURunner] Erro ao limpar log:', err);
+          }
+        }
       }
-    }
+    }, 1000);
   }
 
   private connectMonitor(): void {
