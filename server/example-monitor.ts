@@ -23,7 +23,15 @@ function findFirmware(): string | null {
     path.join(__dirname, 'test-firmware', 'blink.elf'),
     path.join(__dirname, 'test-firmware', 'blink.hex'),
     
-    // POC directories
+    // POC build directory (output of compile.ps1)
+    path.join(__dirname, '..', 'poc', 'build', 'blink.ino.elf'),
+    path.join(__dirname, '..', 'poc', 'build', 'blink.ino.hex'),
+    path.join(__dirname, '..', 'poc', 'build', 'serial_test.ino.elf'),
+    path.join(__dirname, '..', 'poc', 'build', 'serial_test.ino.hex'),
+    path.join(__dirname, '..', 'poc', 'build', 'gpio_test.ino.elf'),
+    path.join(__dirname, '..', 'poc', 'build', 'gpio_test.ino.hex'),
+    
+    // POC individual sketch directories
     path.join(__dirname, '..', 'poc', 'blink', 'build', 'blink.ino.elf'),
     path.join(__dirname, '..', 'poc', 'blink', 'build', 'blink.ino.hex'),
     path.join(__dirname, '..', 'poc', 'serial_test', 'build', 'serial_test.ino.elf'),
@@ -61,15 +69,16 @@ async function testMonitor() {
     console.error();
     console.error('Option 2 - Use Arduino CLI directly:');
     console.error('  cd poc/blink');
-    console.error('  arduino-cli compile --fqbn neuroforge:avr-qemu:unoqemu .');
+    console.error('  arduino-cli compile --fqbn arduino:avr:uno .');
     console.error();
     console.error('📍 The firmware will be created in:');
-    console.error('  poc/blink/build/blink.ino.elf');
+    console.error('  poc/build/blink.ino.elf');
     console.error();
     process.exit(1);
   }
 
-  console.log('✅ Found firmware:', firmwarePath);
+  console.log('✅ Found firmware:', path.basename(firmwarePath));
+  console.log('📍 Location:', firmwarePath);
   console.log();
 
   // Create QEMU runner with monitor on port 4444
