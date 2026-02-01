@@ -1,5 +1,6 @@
 import { QEMURunner } from './QEMURunner';
 import { EventEmitter } from 'events';
+import { QEMUGPIOService, PinChange } from './QEMUGPIOService';
 
 export interface SimulationState {
   isRunning: boolean;
@@ -13,8 +14,8 @@ export interface SimulationState {
 
 export class QEMUSimulationEngine extends EventEmitter {
   private runner: QEMURunner | null = null;
+  private gpioService: QEMUGPIOService | null = null;
   private state: SimulationState;
-  private pollInterval: NodeJS.Timeout | null = null;
 
   constructor() {
     super();
@@ -25,7 +26,7 @@ export class QEMUSimulationEngine extends EventEmitter {
       firmwarePath: null,
       serialOutput: [],
       gpioStates: {},
-      cycleCount: 0
+      cycleCount: 0,
     };
   }
 
@@ -49,6 +50,7 @@ export class QEMUSimulationEngine extends EventEmitter {
     }
 
     this.runner = new QEMURunner(this.state.firmwarePath, this.state.board);
+    this.gpioService = new QEMUGPIOService(this.runner);
 
     this.runner.on('serial', (line: string) => {
       this.state.serialOutput.push(line);
@@ -57,15 +59,30 @@ export class QEMUSimulationEngine extends EventEmitter {
 
     this.runner.on('started', () => {
       this.state.isRunning = true;
-      this.startPolling();
+      if (this.gpioService) {
+        this.gpioService.startPolling();
+      }
       this.emit('started');
     });
 
     this.runner.on('stopped', () => {
       this.state.isRunning = false;
-      this.stopPolling();
+      if (this.gpioService) {
+        this.gpioService.stopPolling();
+      }
       this.emit('stopped');
     });
+
+    if (this.gpioService) {
+      this.gpioService.on('gpio-changes', (changes: PinChange[]) => {
+        changes.forEach(change => {
+          const key = `D${change.pin}`;
+          this.state.gpioStates[key] = change.to;
+          this.emit('pin-change', { pin: change.pin, value: change.to });
+        });
+        this.state.cycleCount++;
+      });
+    }
 
     await this.runner.start();
   }
@@ -76,10 +93,13 @@ export class QEMUSimulationEngine extends EventEmitter {
     }
 
     this.runner.stop();
-    this.stopPolling();
+    if (this.gpioService) {
+      this.gpioService.stopPolling();
+    }
     this.state.isRunning = false;
     this.state.serialOutput = [];
     this.state.cycleCount = 0;
+    this.state.gpioStates = {};
   }
 
   pause(): void {
@@ -90,35 +110,6 @@ export class QEMUSimulationEngine extends EventEmitter {
   resume(): void {
     this.state.isPaused = false;
     this.emit('resumed');
-  }
-
-  private startPolling(): void {
-    this.pollInterval = setInterval(async () => {
-      if (!this.runner || this.state.isPaused) {
-        return;
-      }
-
-      try {
-        const pin13 = await this.runner.readGPIO('B', 5);
-        const key = 'D13';
-        
-        if (this.state.gpioStates[key] !== pin13) {
-          this.state.gpioStates[key] = pin13;
-          this.emit('pin-change', { pin: 13, value: pin13 });
-        }
-
-        this.state.cycleCount++;
-      } catch (err) {
-        console.error('[QEMUSimulationEngine] Erro ao ler GPIO:', err);
-      }
-    }, 50);
-  }
-
-  private stopPolling(): void {
-    if (this.pollInterval) {
-      clearInterval(this.pollInterval);
-      this.pollInterval = null;
-    }
   }
 
   async setPin(pin: number, value: 0 | 1): Promise<void> {
@@ -138,7 +129,7 @@ export class QEMUSimulationEngine extends EventEmitter {
     await this.runner.sendSerial(data);
   }
 
-  private pinToPort(pin: number): { port: 'B' | 'C' | 'D', bit: number } {
+  private pinToPort(pin: number): { port: 'B' | 'C' | 'D'; bit: number } {
     if (pin >= 8 && pin <= 13) {
       return { port: 'B', bit: pin - 8 };
     } else if (pin >= 0 && pin <= 7) {
@@ -151,6 +142,14 @@ export class QEMUSimulationEngine extends EventEmitter {
 
   getState(): SimulationState {
     return { ...this.state };
+  }
+
+  getPinState(pin: number): 0 | 1 {
+    if (this.gpioService) {
+      return this.gpioService.getPinState(pin);
+    }
+    const key = `D${pin}`;
+    return (this.state.gpioStates[key] ?? 0) as 0 | 1;
   }
 
   clearSerial(): void {
