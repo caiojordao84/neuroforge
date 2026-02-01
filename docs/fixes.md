@@ -4,7 +4,7 @@
 
 ---
 
-## 🎉 SESSÃO QEMU - 30-31 Janeiro 2026
+## 🎉 SESSÃO QEMU - 30 Jan - 01 Fev 2026
 
 ### FIX 2.1: POC QEMU AVR Funcionando
 **Data:** 30/01/2026  
@@ -415,44 +415,159 @@ Permite simulação precisa e controlável sem depender de emulação perfeita d
 
 ---
 
-### FIX 2.9: Stop Button Toggle (🎯 PRÓXIMO)
-**Data:** --/02/2026 (planejado)  
-**Status:** ⏳ Pendente
+### FIX 2.9: Stop Button Toggle ✅ COMPLETE
+**Data:** 01/02/2026  
+**Status:** ✅ COMPLETE  
+**Commit:** `21a40500` - `feat: Implement STOP button toggle with cleanup`
 
 **Objetivo:**
 Transformar botão "Compile & Run" em "STOP" após simulação iniciar.
 
-**Requisitos:**
-- [ ] Estado do botão baseado em `isRunning` do QEMU store
-- [ ] Ícone muda: Play → Stop
-- [ ] Texto muda: "Compile & Run" → "STOP"
-- [ ] Cor muda: verde → vermelho
-- [ ] onClick: compile+run → stop simulation
-- [ ] Loading state durante compilação
-- [ ] Desabilitar durante loading
-- [ ] Limpar Serial Monitor ao parar
-- [ ] Resetar estados de componentes
+**Problema:**
+- Botão não tinha estado visual para "rodando"
+- Usuário não conseguia parar simulação QEMU facilmente
+- Serial Monitor não era limpo ao parar
+- Estado de pinos não resetava entre execuções
+- Lógica misturada entre handleRun e stop
 
 **Implementação:**
-```tsx
-// TopToolbar.tsx
-const { isRunning, isCompiling } = useQEMUStore();
 
-return (
-  <Button
-    onClick={isRunning ? handleStop : handleCompileAndRun}
-    disabled={isCompiling}
-    variant={isRunning ? "destructive" : "default"}
-  >
-    {isCompiling ? (
-      <><Loader2 className="animate-spin" /> Compiling...</>
-    ) : isRunning ? (
-      <><Square /> STOP</>
-    ) : (
-      <><Play /> Compile & Run</>
-    )}
-  </Button>
-);
+```tsx
+// TopToolbar.tsx - Estado unificado
+const isRunning = mode === 'qemu' 
+  ? isSimulationRunning  // QEMU store
+  : status === 'running'; // Fake store
+
+// Separar lógica start/stop
+const handleStart = async () => {
+  if (mode === 'qemu') {
+    await compileAndStart(code, selectedBoard);
+  } else {
+    // Fake mode
+    startSimulation();
+    simulationEngine.start(...);
+  }
+};
+
+const handleStop = async () => {
+  if (mode === 'qemu') {
+    await stopQEMU();
+  } else {
+    simulationEngine.stop();
+  }
+  
+  // Limpeza comum
+  stopSimulation();
+  clearSerial();  // ✅ Limpa Serial Monitor
+  // clearTerminal(); // Opcional
+};
+
+// Botão com 3 estados
+<Button
+  onClick={handleRunStop}
+  disabled={isCompiling || ...}
+  className={isRunning ? 'bg-red-500' : 'bg-[#00d9ff]'}
+>
+  {isCompiling ? (
+    <><Loader2 className="animate-spin" /> Compiling...</>
+  ) : isRunning ? (
+    <><Square /> STOP</>  // ✅ Vermelho
+  ) : (
+    <><Play /> {mode === 'qemu' ? 'Compile & Run' : 'Run'}</>
+  )}
+</Button>
+```
+
+**Recursos implementados:**
+- ✅ **Estado dinâmico**: `isRunning` considera modo fake e QEMU
+- ✅ **3 estados visuais**: Idle (Play verde), Compiling (Loader), Running (STOP vermelho)
+- ✅ **Separação clara**: `handleStart()` e `handleStop()` independentes
+- ✅ **Limpeza automática**: Serial Monitor limpo ao parar
+- ✅ **Reset de pinos**: `stopSimulation()` chama `resetPins()`
+- ✅ **Loading state**: Botão desabilitado durante compilação
+- ✅ **Error handling**: Aviso se backend QEMU não conectado
+- ✅ **Feedback no Terminal**: Mensagens "Simulation started/stopped"
+
+**Ciclo completo:**
+```
+1. Idle: [Play] Compile & Run (verde)
+   ↓ onClick
+2. Compiling: [Loader] Compiling... (desabilitado)
+   ↓ sucesso
+3. Running: [Square] STOP (vermelho)
+   ↓ onClick
+4. Limpeza: clearSerial() + resetPins()
+   ↓
+5. Idle: [Play] Compile & Run (verde)
+```
+
+**Teste realizado:**
+```cpp
+void loop() {
+  digitalWrite(13, HIGH);
+  Serial.println("LED ON");
+  delay(1000);
+  digitalWrite(13, LOW);
+  Serial.println("LED OFF");
+  delay(1000);
+}
+```
+
+**Resultado:**
+- ✅ Compile & Run → Compiling → STOP (vermelho)
+- ✅ Serial Monitor mostra saída em tempo real
+- ✅ Clicar STOP → QEMU para → Serial limpo → volta para Play
+- ✅ Ciclo Compile & Run → STOP → Compile & Run funciona perfeitamente
+- ✅ Modo fake também funciona (SimulationEngine original)
+
+✅ **Botão STOP funcional e intuitivo!**
+
+---
+
+### FIX 2.10: GPIO Real via QEMU Monitor (🎯 PRÓXIMO)
+**Data:** --/02/2026 (planejado)  
+**Status:** ⏳ Pendente
+
+**Objetivo:**
+Integrar QEMU Monitor para ler/escrever GPIO real e atualizar componentes visuais.
+
+**Requisitos:**
+- [ ] Conectar ao QEMU Monitor (TCP no Windows, Unix socket no Linux)
+- [ ] Implementar polling de registradores AVR (PORTB, PORTC, PORTD)
+- [ ] Mapear registradores para números de pinos Arduino
+- [ ] Emitir eventos `pinChange` via WebSocket
+- [ ] LED atualiza visual baseado em estado real do QEMU
+- [ ] Botão simula input escrevendo no GPIO
+- [ ] Testar circuitos complexos (múltiplos LEDs + botões)
+
+**Implementação planejada:**
+```typescript
+// QEMUMonitorService.ts
+class QEMUMonitorService {
+  async readGPIORegisters(): Promise<GPIOState> {
+    // info registers via QEMU Monitor
+    // Parse PORTB, PORTC, PORTD
+    // Mapear bits para pinos Arduino
+  }
+  
+  async writeGPIOPin(pin: number, value: 0 | 1) {
+    // Escrever no registrador correto
+    // Simular botão pressionado
+  }
+}
+
+// Polling loop (50ms = 20 FPS)
+setInterval(async () => {
+  const gpioState = await monitor.readGPIORegisters();
+  
+  // Comparar com estado anterior
+  const changes = detectChanges(prevState, gpioState);
+  
+  // Emitir eventos
+  changes.forEach(({ pin, value }) => {
+    io.emit('pinChange', { pin, value });
+  });
+}, 50);
 ```
 
 ---
@@ -665,16 +780,18 @@ private scheduleLoop(): void {
 
 ## 📊 Estatísticas
 
-- **Total de Fixes:** 19
-- **Sessão QEMU:** 9 fixes (30-31/01/2026)
+- **Total de Fixes:** 20
+- **Sessão QEMU:** 10 fixes (30 Jan - 01 Fev 2026)
   - **FIX 2.8 (NeuroForge Time):** ✅ **COMPLETO - Diferencial do projeto**
-  - **FIX 2.9 (Stop Button):** 🎯 **PRÓXIMO**
+  - **FIX 2.9 (Stop Button):** ✅ **COMPLETO - UX melhorado**
+  - **FIX 2.10 (GPIO Real):** 🎯 **PRÓXIMO**
 - **Sessão Anterior:** 10 fixes (22-29/01/2026)
-- **Commits:** 50+
-- **Linhas de código:** ~18.000
-- **Tempo investido:** ~60 horas
+- **Commits:** 55+
+- **Linhas de código:** ~19.000
+- **Tempo investido:** ~70 horas
 
 ---
 
-**Última atualização:** 31/01/2026 10:30 PM WET  
-**Status:** 🎉 **FASE 2 (NeuroForge Time) COMPLETA!**
+**Última atualização:** 01/02/2026 11:30 AM WET  
+**Status:** 🎉 **FASE 2.5 (Stop Button) COMPLETA!**  
+**Próxima Missão:** 🎯 **GPIO Real via QEMU Monitor**
