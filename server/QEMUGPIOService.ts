@@ -67,23 +67,56 @@ export class QEMUGPIOService extends EventEmitter {
 
   private async readPortByte(address: number): Promise<number> {
     // QEMU monitor: examine 1 byte of memory at given address
-    // Example response: "0x25: 0x20"
+    // Example response (varies by build):
+    //   "0x25: 0x20"
+    //   "0x00000025: 0x20 0x00"
     const cmd = `x/1b 0x${address.toString(16)}`;
     const output = await this.runner.sendMonitorCommand(cmd, 1000);
 
-    const line = output.split('\n').find(l => l.trim().length > 0) ?? '';
-    // Match patterns like "0x25: 0x20" or "0x0025: 0x20"
-    const match = line.match(/0x[0-9a-fA-F]+:\s*(0x[0-9a-fA-F]+|[0-9a-fA-F]+)/);
-    if (match && match[1]) {
-      const raw = match[1].trim();
-      const normalized = raw.toLowerCase().startsWith('0x') ? raw.slice(2) : raw;
-      const value = parseInt(normalized, 16);
-      if (!Number.isNaN(value)) {
-        return value & 0xff;
+    const lines = output
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 0);
+
+    if (lines.length > 0) {
+      const first = lines[0];
+      let token: string | null = null;
+
+      // Prefer value after ':' if present
+      if (first.includes(':')) {
+        const afterColon = first.split(':').slice(1).join(':').trim();
+        token = afterColon.split(/\s+/)[0] || null;
       }
+
+      // Fallback: last hex-like token on the line
+      if (!token) {
+        const hexMatches = first.match(/0x[0-9a-fA-F]+/g);
+        if (hexMatches && hexMatches.length > 0) {
+          token = hexMatches[hexMatches.length - 1];
+        }
+      }
+
+      if (token) {
+        const normalized = token.toLowerCase().startsWith('0x')
+          ? token.slice(2)
+          : token;
+        const value = parseInt(normalized, 16);
+        if (!Number.isNaN(value)) {
+          return value & 0xff;
+        }
+      }
+
+      console.warn(
+        `[QEMUGPIOService] Nao foi possivel fazer parse de byte em 0x${address.toString(
+          16,
+        )}. Linha: "${first}"`,
+      );
+    } else {
+      console.warn(
+        `[QEMUGPIOService] Resposta vazia ao ler byte em 0x${address.toString(16)}`,
+      );
     }
 
-    console.warn(`[QEMUGPIOService] Nao foi possivel fazer parse de byte em 0x${address.toString(16)}`);
     return 0;
   }
 
