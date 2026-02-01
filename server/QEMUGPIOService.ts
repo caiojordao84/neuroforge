@@ -46,6 +46,13 @@ const PIN_MAP: Record<number, { port: PortName; bit: number }> = {
   19: { port: 'C', bit: 5 },
 };
 
+// AVR ATmega328P I/O addresses for ports
+const PORT_ADDRESSES: Record<PortName, number> = {
+  B: 0x25, // PORTB
+  C: 0x28, // PORTC
+  D: 0x2b, // PORTD
+};
+
 export class QEMUGPIOService extends EventEmitter {
   private runner: QEMURunner;
   private pollIntervalMs: number;
@@ -58,28 +65,40 @@ export class QEMUGPIOService extends EventEmitter {
     this.pollIntervalMs = pollIntervalMs;
   }
 
-  async readGPIORegisters(): Promise<PortValues> {
-    const output = await this.runner.sendMonitorCommand('info registers', 1000);
+  private async readPortByte(address: number): Promise<number> {
+    // QEMU monitor: examine 1 byte of memory at given address
+    // Example response: "0x25: 0x20"
+    const cmd = `x/1b 0x${address.toString(16)}`;
+    const output = await this.runner.sendMonitorCommand(cmd, 1000);
 
-    const parsePort = (port: PortName): number => {
-      const regex = new RegExp(`PORT${port}:\\s*([0-9a-fA-Fx]+)`);
-      const match = output.match(regex);
-      if (match && match[1]) {
-        const raw = match[1].trim();
-        const normalized = raw.toLowerCase().startsWith('0x') ? raw.slice(2) : raw;
-        const value = parseInt(normalized, 16);
-        if (!Number.isNaN(value)) {
-          return value & 0xff;
-        }
+    const line = output.split('\n').find(l => l.trim().length > 0) ?? '';
+    // Match patterns like "0x25: 0x20" or "0x0025: 0x20"
+    const match = line.match(/0x[0-9a-fA-F]+:\s*(0x[0-9a-fA-F]+|[0-9a-fA-F]+)/);
+    if (match && match[1]) {
+      const raw = match[1].trim();
+      const normalized = raw.toLowerCase().startsWith('0x') ? raw.slice(2) : raw;
+      const value = parseInt(normalized, 16);
+      if (!Number.isNaN(value)) {
+        return value & 0xff;
       }
-      console.warn(`[QEMUGPIOService] Nao foi possivel fazer parse de PORT${port} a partir de info registers`);
-      return 0;
-    };
+    }
+
+    console.warn(`[QEMUGPIOService] Nao foi possivel fazer parse de byte em 0x${address.toString(16)}`);
+    return 0;
+  }
+
+  async readGPIORegisters(): Promise<PortValues> {
+    // Ler PORTB, PORTC, PORTD diretamente da memoria I/O
+    const [portB, portC, portD] = await Promise.all<Promise<number>>([
+      this.readPortByte(PORT_ADDRESSES.B),
+      this.readPortByte(PORT_ADDRESSES.C),
+      this.readPortByte(PORT_ADDRESSES.D),
+    ]);
 
     const ports: PortValues = {
-      B: parsePort('B'),
-      C: parsePort('C'),
-      D: parsePort('D'),
+      B: portB,
+      C: portC,
+      D: portD,
     };
 
     return ports;
