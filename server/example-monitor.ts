@@ -22,16 +22,17 @@ function findFirmware(): string | null {
     // Server test-firmware
     path.join(__dirname, 'test-firmware', 'blink.elf'),
     path.join(__dirname, 'test-firmware', 'blink.hex'),
-    
+
     // POC build directory (output of compile.ps1)
+    path.join(__dirname, '..', 'poc', 'build', 'blink', 'blink.ino.elf'),
+    path.join(__dirname, '..', 'poc', 'build', 'blink', 'blink.ino.hex'),
+    path.join(__dirname, '..', 'poc', 'build', 'serial_test', 'serial_test.ino.elf'),
+    path.join(__dirname, '..', 'poc', 'build', 'serial_test', 'serial_test.ino.hex'),
+    path.join(__dirname, '..', 'poc', 'build', 'gpio_test', 'gpio_test.ino.elf'),
+    path.join(__dirname, '..', 'poc', 'build', 'gpio_test', 'gpio_test.ino.hex'),
+
+    // Original POC build directory (legacy support)
     path.join(__dirname, '..', 'poc', 'build', 'blink.ino.elf'),
-    path.join(__dirname, '..', 'poc', 'build', 'blink.ino.hex'),
-    path.join(__dirname, '..', 'poc', 'build', 'serial_test.ino.elf'),
-    path.join(__dirname, '..', 'poc', 'build', 'serial_test.ino.hex'),
-    path.join(__dirname, '..', 'poc', 'build', 'gpio_test.ino.elf'),
-    path.join(__dirname, '..', 'poc', 'build', 'gpio_test.ino.hex'),
-    
-    // POC individual sketch directories
     path.join(__dirname, '..', 'poc', 'blink', 'build', 'blink.ino.elf'),
     path.join(__dirname, '..', 'poc', 'blink', 'build', 'blink.ino.hex'),
     path.join(__dirname, '..', 'poc', 'serial_test', 'build', 'serial_test.ino.elf'),
@@ -57,7 +58,7 @@ async function testMonitor() {
 
   // Find a test firmware
   const firmwarePath = findFirmware();
-  
+
   if (!firmwarePath) {
     console.error('❌ No compiled firmware found!');
     console.error();
@@ -200,10 +201,10 @@ async function testMonitor() {
     // Always stop QEMU
     console.log('🛑 Stopping QEMU...');
     runner.stop();
-    
+
     // Give it time to clean up
     await sleep(500);
-    
+
     console.log();
     console.log('='.repeat(60));
     console.log('Test completed');

@@ -1,5 +1,13 @@
 # compile.ps1 - Script para compilar todos os sketches de teste
-# Uso: .\compile.ps1
+# Uso: .\compile.ps1 [-Sketch <name>]
+# Exemplo: .\compile.ps1 -Sketch blink
+
+param(
+    [string]$Sketch = $null
+)
+
+$PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
+Set-Location $PSScriptRoot
 
 Write-Host "=== NeuroForge QEMU POC - Compilation Script ===" -ForegroundColor Cyan
 Write-Host ""
@@ -24,21 +32,49 @@ Write-Host "[OK] Arduino AVR core instalado" -ForegroundColor Green
 Write-Host ""
 
 # Compilar sketches
-$sketches = @(
-    "blink\blink.ino",
-    "serial_test\serial_test.ino",
-    "gpio_test\gpio_test.ino"
-)
+if ($Sketch) {
+    if ($Sketch -like "*\*") {
+        $sketches = @($Sketch)
+    }
+    else {
+        # Se passado apenas o nome (ex: blink), encontrar o .ino
+        $found = Get-ChildItem -Path $Sketch -Filter "*.ino" -ErrorAction SilentlyContinue
+        if ($found) {
+            $sketches = @("$Sketch\$($found.Name)")
+        }
+        else {
+            Write-Host "[ERROR] Sketch '$Sketch' não encontrado!" -ForegroundColor Red
+            exit 1
+        }
+    }
+}
+else {
+    $sketches = @(
+        "blink\blink.ino",
+        "serial_test\serial_test.ino",
+        "gpio_test\gpio_test.ino"
+    )
+}
 
 foreach ($sketch in $sketches) {
     $sketchName = Split-Path $sketch -Leaf
-    Write-Host "[COMPILING] $sketchName" -ForegroundColor Cyan
+    $sketchFolder = Split-Path $sketch -Parent
+    $outputDir = Join-Path "build" $sketchFolder
     
-    arduino-cli compile --fqbn arduino:avr:uno $sketch --output-dir "build\$($sketch.Replace('\', '_').Replace('.ino', ''))"
+    Write-Host "[COMPILING] $sketchName" -ForegroundColor Cyan
+    Write-Host "[OUTPUT] $outputDir" -ForegroundColor Gray
+    
+    # Garantir que o diretório de destino existe
+    if (-not (Test-Path $outputDir)) {
+        New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+    }
+
+    arduino-cli compile --fqbn arduino:avr:uno (Resolve-Path $sketch) --output-dir (Resolve-Path $outputDir)
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[OK] $sketchName compilado com sucesso" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "[ERROR] Falha ao compilar $sketchName" -ForegroundColor Red
     }
     Write-Host ""

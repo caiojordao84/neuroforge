@@ -2,10 +2,13 @@
 # Uso: .\run_qemu.ps1 -Sketch blink
 
 param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [ValidateSet("blink", "serial_test", "gpio_test")]
     [string]$Sketch
 )
+
+$PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
+Set-Location $PSScriptRoot
 
 Write-Host "=== NeuroForge QEMU Runner ===" -ForegroundColor Cyan
 Write-Host ""
@@ -31,7 +34,8 @@ function Find-QEMU {
         if ($cmd) {
             return $cmd.Source
         }
-    } catch {}
+    }
+    catch {}
     
     return $null
 }
@@ -120,9 +124,11 @@ try {
         -serial file:$logFile `
         -nographic `
         -d guest_errors 2>&1 | Out-Null
-} catch {
+}
+catch {
     Write-Host "[ERROR] QEMU crashed: $_" -ForegroundColor Red
-} finally {
+}
+finally {
     # Parar job de tail
     Stop-Job $tailJob
     Remove-Job $tailJob
@@ -133,7 +139,8 @@ try {
     Write-Host "=== Serial Output Final ===" -ForegroundColor Cyan
     if (Test-Path $logFile) {
         Get-Content $logFile
-    } else {
+    }
+    else {
         Write-Host "[WARNING] Nenhum output serial capturado" -ForegroundColor Yellow
     }
 }
