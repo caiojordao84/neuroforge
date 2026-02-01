@@ -166,14 +166,15 @@ async function testMonitor() {
       console.log();
     }
 
-    // Test 4: Multiple rapid commands
+    // Test 4: Multiple rapid commands (monitor processes them sequentially)
     console.log('📤 Test 4: Multiple rapid commands');
     console.log('-'.repeat(60));
     try {
+      // Note: Monitor processes commands sequentially, so we need longer timeout
       const promises = [
-        runner.sendMonitorCommand('info version'),
-        runner.sendMonitorCommand('info network'),
-        runner.sendMonitorCommand('info cpus'),
+        runner.sendMonitorCommand('info version', 1500),
+        runner.sendMonitorCommand('info network', 1500),
+        runner.sendMonitorCommand('info cpus', 1500),
       ];
       await Promise.all(promises);
       console.log('✅ All rapid commands succeeded');
