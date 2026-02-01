@@ -39,9 +39,18 @@ export const TopToolbar: React.FC = () => {
     resetSimulation,
   } = useSimulationStore();
 
-  const { addTerminalLine } = useSerialStore();
-  const { mode, isCompiling, compilationError, setCompilationError } = useQEMUStore();
+  const { addTerminalLine, clearSerial, clearTerminal } = useSerialStore();
+  const { 
+    mode, 
+    isCompiling, 
+    isSimulationRunning,
+    compilationError, 
+    setCompilationError 
+  } = useQEMUStore();
   const { compileAndStart, stopQEMU, isBackendConnected } = useQEMUSimulation();
+
+  // Determine if simulation is running (handles both modes)
+  const isRunning = mode === 'qemu' ? isSimulationRunning : status === 'running';
 
   // Show compilation errors
   useEffect(() => {
@@ -55,21 +64,10 @@ export const TopToolbar: React.FC = () => {
     setCompilationError(null);
   }, [code, setCompilationError]);
 
-  // Handle run/stop
-  const handleRun = useCallback(async () => {
-    // Stop simulation
-    if (status === 'running') {
-      if (mode === 'qemu') {
-        await stopQEMU();
-        stopSimulation();
-      } else {
-        stopSimulation();
-        simulationEngine.stop();
-      }
-      return;
-    }
-
-    // Start simulation
+  /**
+   * Handle START simulation
+   */
+  const handleStart = useCallback(async () => {
     if (mode === 'qemu') {
       // QEMU Mode: Compile and run on real QEMU
       if (!isBackendConnected) {
@@ -90,23 +88,66 @@ export const TopToolbar: React.FC = () => {
       if (parsed) {
         startSimulation();
         simulationEngine.start(parsed.setup, parsed.loop, speed);
+        addTerminalLine('▶️ Simulation started', 'info');
       } else {
         addTerminalLine('❌ Failed to parse code', 'error');
       }
     }
-  }, [status, mode, code, language, speed, selectedBoard, isBackendConnected, startSimulation, stopSimulation, compileAndStart, stopQEMU, addTerminalLine]);
+  }, [mode, code, language, speed, selectedBoard, isBackendConnected, startSimulation, compileAndStart, addTerminalLine]);
 
-  // Handle reset
+  /**
+   * Handle STOP simulation
+   * - Stops QEMU/fake engine
+   * - Clears Serial Monitor
+   * - Clears Terminal (optional)
+   * - Resets pin states
+   */
+  const handleStop = useCallback(async () => {
+    if (mode === 'qemu') {
+      // Stop QEMU simulation
+      await stopQEMU();
+      addTerminalLine('⏹️ QEMU simulation stopped', 'info');
+    } else {
+      // Stop fake simulation
+      simulationEngine.stop();
+      addTerminalLine('⏹️ Simulation stopped', 'info');
+    }
+
+    // Always clean up UI state
+    stopSimulation();
+    clearSerial();
+    // Optional: clear terminal logs
+    // clearTerminal();
+  }, [mode, stopQEMU, stopSimulation, clearSerial, addTerminalLine]);
+
+  /**
+   * Handle Run/Stop toggle
+   */
+  const handleRunStop = useCallback(async () => {
+    if (isRunning) {
+      await handleStop();
+    } else {
+      await handleStart();
+    }
+  }, [isRunning, handleStart, handleStop]);
+
+  /**
+   * Handle reset
+   */
   const handleReset = useCallback(() => {
     if (mode === 'qemu') {
       stopQEMU();
     }
     resetSimulation();
     simulationEngine.reset();
+    clearSerial();
+    clearTerminal();
     addTerminalLine('🔄 Simulation reset', 'info');
-  }, [mode, resetSimulation, stopQEMU, addTerminalLine]);
+  }, [mode, resetSimulation, stopQEMU, clearSerial, clearTerminal, addTerminalLine]);
 
-  // Handle speed change
+  /**
+   * Handle speed change
+   */
   const handleSpeedChange = useCallback((newSpeed: number) => {
     setSpeed(newSpeed);
     if (mode === 'fake') {
@@ -206,20 +247,24 @@ export const TopToolbar: React.FC = () => {
           variant="outline"
           size="sm"
           onClick={handleReset}
-          disabled={status === 'idle' || isCompiling}
+          disabled={status === 'idle' && !isSimulationRunning || isCompiling}
           className="h-9 px-3 bg-transparent border-[rgba(0,217,255,0.3)] text-[#9ca3af] hover:text-[#00d9ff] hover:bg-[rgba(0,217,255,0.1)]"
         >
           <RotateCcw className="w-4 h-4 mr-1" />
           Reset
         </Button>
 
+        {/* Main Run/Stop Button */}
         <Button
           size="sm"
-          onClick={handleRun}
-          disabled={isCompiling || (mode === 'qemu' && !isBackendConnected && status !== 'running')}
+          onClick={handleRunStop}
+          disabled={
+            isCompiling || 
+            (mode === 'qemu' && !isBackendConnected && !isRunning)
+          }
           className={cn(
             'h-9 px-5',
-            status === 'running'
+            isRunning
               ? 'bg-red-500 hover:bg-red-600 text-white'
               : 'bg-[#00d9ff] hover:bg-[#00a8cc] text-[#0a0e14]'
           )}
@@ -229,10 +274,10 @@ export const TopToolbar: React.FC = () => {
               <Loader2 className="w-4 h-4 mr-1 animate-spin" />
               Compiling...
             </>
-          ) : status === 'running' ? (
+          ) : isRunning ? (
             <>
               <Square className="w-4 h-4 mr-1" fill="currentColor" />
-              Stop
+              STOP
             </>
           ) : (
             <>
