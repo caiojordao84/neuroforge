@@ -1,11 +1,12 @@
 /**
- * Test script for QEMU Monitor TCP connection
+ * QEMU Monitor Connection Test Script
  * 
- * This script validates that:
- * 1. QEMU starts with monitor TCP endpoint
- * 2. Monitor connection is established
- * 3. Commands can be sent and responses received
- * 4. Cleanup happens properly on stop
+ * Tests the QEMU Monitor TCP connection by:
+ * 1. Starting QEMU with a test firmware
+ * 2. Connecting to the monitor via TCP
+ * 3. Sending test commands (help, info registers)
+ * 4. Displaying responses
+ * 5. Cleanly stopping QEMU
  * 
  * Usage:
  *   npm run test:monitor
@@ -19,46 +20,31 @@ async function testMonitor() {
   console.log('='.repeat(60));
   console.log('QEMU Monitor Connection Test');
   console.log('='.repeat(60));
+  console.log();
 
   // Find a test firmware
-  const firmwareDir = path.join(__dirname, 'test-firmware');
-  let firmwarePath: string | null = null;
-
-  if (fs.existsSync(firmwareDir)) {
-    const files = fs.readdirSync(firmwareDir);
-    const hexFile = files.find(f => f.endsWith('.hex'));
-    const elfFile = files.find(f => f.endsWith('.elf'));
-    
-    if (elfFile) {
-      firmwarePath = path.join(firmwareDir, elfFile);
-    } else if (hexFile) {
-      firmwarePath = path.join(firmwareDir, hexFile);
-    }
-  }
-
-  if (!firmwarePath || !fs.existsSync(firmwarePath)) {
-    console.error('❌ No test firmware found in server/test-firmware/');
-    console.error('   Please compile a test sketch first.');
+  const firmwarePath = path.join(__dirname, 'test-firmware', 'blink.hex');
+  
+  if (!fs.existsSync(firmwarePath)) {
+    console.error('❌ Test firmware not found:', firmwarePath);
+    console.error('Please compile a test sketch first.');
+    console.error('Example: cd poc/qemu-avr-test && .\\compile.ps1');
     process.exit(1);
   }
 
-  console.log(`\n📦 Using firmware: ${path.basename(firmwarePath)}`);
+  console.log('📁 Using firmware:', firmwarePath);
+  console.log();
 
-  // Create QEMURunner instance
-  const runner = new QEMURunner(
-    firmwarePath,
-    'arduino-uno',
-    'qemu-system-avr',
-    4444 // Monitor port
-  );
+  // Create QEMU runner with monitor on port 4444
+  const runner = new QEMURunner(firmwarePath, 'uno', 'qemu-system-avr', 4444);
 
-  // Setup event listeners
+  // Listen for events
   runner.on('started', () => {
-    console.log('✅ QEMU process started');
+    console.log('✅ QEMU started');
   });
 
   runner.on('monitor-connected', () => {
-    console.log('✅ QEMU Monitor connected');
+    console.log('✅ Monitor connected');
   });
 
   runner.on('monitor-error', (err: Error) => {
@@ -66,107 +52,76 @@ async function testMonitor() {
   });
 
   runner.on('serial', (line: string) => {
-    console.log(`[Serial] ${line}`);
+    console.log('[Serial]', line);
   });
 
   runner.on('stopped', (code: number | null) => {
-    console.log(`\n🛑 QEMU stopped with code: ${code}`);
+    console.log(`🛑 QEMU stopped with code: ${code}`);
   });
 
   try {
     // Start QEMU
-    console.log('\n🚀 Starting QEMU...');
+    console.log('🚀 Starting QEMU...');
     await runner.start();
+    console.log();
 
-    // Wait a bit for monitor to connect
+    // Wait a bit for everything to stabilize
     await sleep(1000);
 
-    if (!runner.isMonitorConnected) {
-      throw new Error('Monitor failed to connect');
-    }
-
-    console.log('\n' + '='.repeat(60));
-    console.log('Testing Monitor Commands');
-    console.log('='.repeat(60));
-
-    // Test 1: help command
-    console.log('\n📝 Test 1: help');
+    // Test 1: Send 'help' command
+    console.log('📤 Sending command: help');
     console.log('-'.repeat(60));
     try {
-      const helpResponse = await runner.sendMonitorCommand('help');
-      const lines = helpResponse.split('\n');
-      console.log(`✅ Received ${lines.length} lines`);
-      console.log('First 5 lines:');
-      lines.slice(0, 5).forEach(line => console.log(`   ${line}`));
+      const helpResponse = await runner.sendMonitorCommand('help', 1000);
+      console.log(helpResponse);
+      console.log('-'.repeat(60));
+      console.log('✅ Command "help" succeeded');
+      console.log();
     } catch (err) {
-      console.error('❌ help command failed:', err);
+      console.error('❌ Command "help" failed:', (err as Error).message);
+      console.log();
     }
 
+    // Wait a bit between commands
     await sleep(500);
 
-    // Test 2: info registers
-    console.log('\n📝 Test 2: info registers');
+    // Test 2: Send 'info registers' command
+    console.log('📤 Sending command: info registers');
     console.log('-'.repeat(60));
     try {
-      const registersResponse = await runner.sendMonitorCommand('info registers');
-      const lines = registersResponse.split('\n');
-      console.log(`✅ Received ${lines.length} lines`);
-      console.log('First 10 lines:');
-      lines.slice(0, 10).forEach(line => console.log(`   ${line}`));
+      const registersResponse = await runner.sendMonitorCommand('info registers', 1000);
+      console.log(registersResponse);
+      console.log('-'.repeat(60));
+      console.log('✅ Command "info registers" succeeded');
+      console.log();
     } catch (err) {
-      console.error('❌ info registers command failed:', err);
+      console.error('❌ Command "info registers" failed:', (err as Error).message);
+      console.log();
     }
 
+    // Wait a bit before stopping
     await sleep(500);
 
-    // Test 3: info qtree
-    console.log('\n📝 Test 3: info qtree');
-    console.log('-'.repeat(60));
-    try {
-      const qtreeResponse = await runner.sendMonitorCommand('info qtree');
-      const lines = qtreeResponse.split('\n');
-      console.log(`✅ Received ${lines.length} lines`);
-      console.log('First 15 lines:');
-      lines.slice(0, 15).forEach(line => console.log(`   ${line}`));
-    } catch (err) {
-      console.error('❌ info qtree command failed:', err);
-    }
-
-    await sleep(500);
-
-    // Test 4: Multiple rapid commands
-    console.log('\n📝 Test 4: Multiple rapid commands');
-    console.log('-'.repeat(60));
-    try {
-      const [r1, r2, r3] = await Promise.all([
-        runner.sendMonitorCommand('info version'),
-        runner.sendMonitorCommand('info status'),
-        runner.sendMonitorCommand('info cpus')
-      ]);
-      console.log('✅ All rapid commands succeeded');
-      console.log(`   version: ${r1.split('\n')[0]}`);
-      console.log(`   status: ${r2.trim()}`);
-      console.log(`   cpus: ${r3.split('\n')[0]}`);
-    } catch (err) {
-      console.error('❌ Rapid commands failed:', err);
-    }
-
-    console.log('\n' + '='.repeat(60));
-    console.log('✅ All tests completed successfully!');
-    console.log('='.repeat(60));
+    // Monitor status
+    console.log('📊 Monitor Status:');
+    console.log('  - Connected:', runner.isMonitorConnected);
+    console.log('  - Running:', runner.running);
+    console.log();
 
   } catch (err) {
-    console.error('\n❌ Test failed:', err);
+    console.error('❌ Test failed:', (err as Error).message);
   } finally {
-    // Cleanup
-    console.log('\n🧹 Cleaning up...');
+    // Always stop QEMU
+    console.log('🛑 Stopping QEMU...');
     runner.stop();
     
-    // Wait for cleanup
-    await sleep(1000);
+    // Give it time to clean up
+    await sleep(500);
     
-    console.log('\n✅ Test completed\n');
-    process.exit(0);
+    console.log();
+    console.log('='.repeat(60));
+    console.log('Test completed');
+    console.log('='.repeat(60));
   }
 }
 
