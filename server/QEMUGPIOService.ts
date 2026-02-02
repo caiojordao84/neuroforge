@@ -78,19 +78,22 @@ export class QEMUGPIOService extends EventEmitter {
       .map(l => l.trim())
       .filter(l => l.length > 0);
 
-    if (lines.length > 0) {
-      const first = lines[0];
+    // Prefer a line that is not just a QEMU prompt
+    const valueLine =
+      lines.find(l => !l.startsWith('(qemu)')) ?? lines[0] ?? '';
+
+    if (valueLine) {
       let token: string | null = null;
 
       // Prefer value after ':' if present
-      if (first.includes(':')) {
-        const afterColon = first.split(':').slice(1).join(':').trim();
+      if (valueLine.includes(':')) {
+        const afterColon = valueLine.split(':').slice(1).join(':').trim();
         token = afterColon.split(/\s+/)[0] || null;
       }
 
       // Fallback: last hex-like token on the line
       if (!token) {
-        const hexMatches = first.match(/0x[0-9a-fA-F]+/g);
+        const hexMatches = valueLine.match(/0x[0-9a-fA-F]+/g);
         if (hexMatches && hexMatches.length > 0) {
           token = hexMatches[hexMatches.length - 1];
         }
@@ -109,7 +112,7 @@ export class QEMUGPIOService extends EventEmitter {
       console.warn(
         `[QEMUGPIOService] Nao foi possivel fazer parse de byte em 0x${address.toString(
           16,
-        )}. Linha: "${first}"`,
+        )}. Linha: "${valueLine}"`,
       );
     } else {
       console.warn(
