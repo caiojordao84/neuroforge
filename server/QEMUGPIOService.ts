@@ -1,5 +1,9 @@
 import { EventEmitter } from 'events';
+import { exec as execCb } from 'node:child_process';
+import { promisify } from 'node:util';
 import { QEMURunner } from './QEMURunner';
+
+const exec = promisify(execCb);
 
 export type PortName = 'B' | 'C' | 'D';
 
@@ -46,12 +50,8 @@ const PIN_MAP: Record<number, { port: PortName; bit: number }> = {
   19: { port: 'C', bit: 5 },
 };
 
-// AVR ATmega328P I/O addresses for ports (I/O space, before 0x20 offset for data memory)
-const PORT_ADDRESSES: Record<PortName, number> = {
-  B: 0x25, // PORTB (I/O address)
-  C: 0x28, // PORTC (I/O address)
-  D: 0x2b, // PORTD (I/O address)
-};
+// Nome do símbolo de shadow em RAM definido no firmware AVR
+const PORTB_SHADOW_SYMBOL = '__nf_portb_shadow';
 
 export class QEMUGPIOService extends EventEmitter {
   private runner: QEMURunner;
@@ -59,18 +59,63 @@ export class QEMUGPIOService extends EventEmitter {
   private pollHandle: NodeJS.Timeout | null = null;
   private lastState: GPIOState | null = null;
 
+  private portBShadowAddress: number | null = null;
+  private triedResolveShadow = false;
+
   constructor(runner: QEMURunner, pollIntervalMs: number = 50) {
     super();
     this.runner = runner;
     this.pollIntervalMs = pollIntervalMs;
   }
 
-  private async readPortByte(address: number): Promise<number> {
-    // QEMU monitor: examine 1 byte of memory at given AVR I/O address.
-    // In AVR, I/O space 0x00-0x3F is mapped into data memory at 0x20-0x5F,
-    // so we add 0x20 to get the corresponding data memory address.
-    const physAddress = address + 0x20;
-    const cmd = `xp /1bx 0x${physAddress.toString(16)}`;
+  private async resolvePortBShadowAddress(): Promise<number | null> {
+    if (this.triedResolveShadow) {
+      return this.portBShadowAddress;
+    }
+    this.triedResolveShadow = true;
+
+    const firmwarePath = process.env.NF_FIRMWARE_PATH;
+    if (!firmwarePath) {
+      console.warn(
+        '[QEMUGPIOService] NF_FIRMWARE_PATH nao definido; GPIO mirror em RAM desativado.',
+      );
+      return null;
+    }
+
+    try {
+      const { stdout } = await exec(`avr-nm -n "${firmwarePath}"`);
+      const lines = stdout.split('\n');
+      for (const line of lines) {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 3) {
+          const [addrHex, , name] = parts;
+          if (name === PORTB_SHADOW_SYMBOL) {
+            const addr = parseInt(addrHex, 16);
+            if (!Number.isNaN(addr)) {
+              this.portBShadowAddress = addr;
+              console.log(
+                `[QEMUGPIOService] ${PORTB_SHADOW_SYMBOL} resolvido em 0x${addr.toString(
+                  16,
+                )}`,
+              );
+              return addr;
+            }
+          }
+        }
+      }
+
+      console.warn(
+        `[QEMUGPIOService] Simbolo ${PORTB_SHADOW_SYMBOL} nao encontrado em ${firmwarePath}`,
+      );
+      return null;
+    } catch (err) {
+      console.error('[QEMUGPIOService] Erro ao executar avr-nm:', err);
+      return null;
+    }
+  }
+
+  private async readByteAt(address: number): Promise<number> {
+    const cmd = `xp /1bx 0x${address.toString(16)}`;
     const output = await this.runner.sendMonitorCommand(cmd, 1000);
 
     const lines = output
@@ -78,21 +123,18 @@ export class QEMUGPIOService extends EventEmitter {
       .map(l => l.trim())
       .filter(l => l.length > 0);
 
-    // Prefer a line that is not just a QEMU prompt
     const valueLine =
       lines.find(l => !l.startsWith('(qemu)')) ?? lines[0] ?? '';
 
     if (valueLine) {
       let token: string | null = null;
 
-      // Prefer hex token after ':' if present
       if (valueLine.includes(':')) {
         const afterColon = valueLine.split(':').slice(1).join(':').trim();
         const parts = afterColon.split(/\s+/);
         token = parts.find(p => /^0x[0-9a-fA-F]+$/.test(p)) || parts[0] || null;
       }
 
-      // Fallback: last hex-like token on the line
       if (!token) {
         const hexMatches = valueLine.match(/0x[0-9a-fA-F]+/g);
         if (hexMatches && hexMatches.length > 0) {
@@ -111,31 +153,30 @@ export class QEMUGPIOService extends EventEmitter {
       }
 
       console.warn(
-        `[QEMUGPIOService] Nao foi possivel fazer parse de byte em 0x${physAddress.toString(
+        `[QEMUGPIOService] Nao foi possivel fazer parse de byte em 0x${address.toString(
           16,
         )}. Linha: "${valueLine}"`,
       );
     } else {
       console.warn(
-        `[QEMUGPIOService] Resposta vazia ao ler byte em 0x${physAddress.toString(16)}`,
+        `[QEMUGPIOService] Resposta vazia ao ler byte em 0x${address.toString(16)}`,
       );
     }
 
     return 0;
   }
 
-  async readGPIORegisters(): Promise<PortValues> {
-    // Ler PORTB, PORTC, PORTD diretamente da memoria I/O (via data memory + 0x20)
-    const [portB, portC, portD] = await Promise.all<Promise<number>>([
-      this.readPortByte(PORT_ADDRESSES.B),
-      this.readPortByte(PORT_ADDRESSES.C),
-      this.readPortByte(PORT_ADDRESSES.D),
-    ]);
+  private async readGPIORegisters(): Promise<PortValues> {
+    const addr = await this.resolvePortBShadowAddress();
+    let portB = 0;
+    if (addr != null) {
+      portB = await this.readByteAt(addr);
+    }
 
     const ports: PortValues = {
       B: portB,
-      C: portC,
-      D: portD,
+      C: 0,
+      D: 0,
     };
 
     return ports;
