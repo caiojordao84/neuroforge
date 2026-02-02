@@ -46,11 +46,11 @@ const PIN_MAP: Record<number, { port: PortName; bit: number }> = {
   19: { port: 'C', bit: 5 },
 };
 
-// AVR ATmega328P I/O addresses for ports
+// AVR ATmega328P I/O addresses for ports (I/O space, before 0x20 offset for data memory)
 const PORT_ADDRESSES: Record<PortName, number> = {
-  B: 0x25, // PORTB
-  C: 0x28, // PORTC
-  D: 0x2b, // PORTD
+  B: 0x25, // PORTB (I/O address)
+  C: 0x28, // PORTC (I/O address)
+  D: 0x2b, // PORTD (I/O address)
 };
 
 export class QEMUGPIOService extends EventEmitter {
@@ -66,11 +66,11 @@ export class QEMUGPIOService extends EventEmitter {
   }
 
   private async readPortByte(address: number): Promise<number> {
-    // QEMU monitor: examine 1 byte of memory at given address in AVR address space.
-    // Using "xp" (examine physical memory) with 1 byte, hex output.
-    // Example expected response (varies by build):
-    //   "00000025: 0x20"
-    const cmd = `xp /1bx 0x${address.toString(16)}`;
+    // QEMU monitor: examine 1 byte of memory at given AVR I/O address.
+    // In AVR, I/O space 0x00-0x3F is mapped into data memory at 0x20-0x5F,
+    // so we add 0x20 to get the corresponding data memory address.
+    const physAddress = address + 0x20;
+    const cmd = `xp /1bx 0x${physAddress.toString(16)}`;
     const output = await this.runner.sendMonitorCommand(cmd, 1000);
 
     const lines = output
@@ -111,13 +111,13 @@ export class QEMUGPIOService extends EventEmitter {
       }
 
       console.warn(
-        `[QEMUGPIOService] Nao foi possivel fazer parse de byte em 0x${address.toString(
+        `[QEMUGPIOService] Nao foi possivel fazer parse de byte em 0x${physAddress.toString(
           16,
         )}. Linha: "${valueLine}"`,
       );
     } else {
       console.warn(
-        `[QEMUGPIOService] Resposta vazia ao ler byte em 0x${address.toString(16)}`,
+        `[QEMUGPIOService] Resposta vazia ao ler byte em 0x${physAddress.toString(16)}`,
       );
     }
 
@@ -125,7 +125,7 @@ export class QEMUGPIOService extends EventEmitter {
   }
 
   async readGPIORegisters(): Promise<PortValues> {
-    // Ler PORTB, PORTC, PORTD diretamente da memoria I/O
+    // Ler PORTB, PORTC, PORTD diretamente da memoria I/O (via data memory + 0x20)
     const [portB, portC, portD] = await Promise.all<Promise<number>>([
       this.readPortByte(PORT_ADDRESSES.B),
       this.readPortByte(PORT_ADDRESSES.C),
