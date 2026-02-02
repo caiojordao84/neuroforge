@@ -46,7 +46,7 @@ const PIN_MAP: Record<number, { port: PortName; bit: number }> = {
   19: { port: 'C', bit: 5 },
 };
 
-// AVR ATmega328P I/O addresses for ports (kept for potential future use)
+// AVR ATmega328P I/O addresses for ports
 const PORT_ADDRESSES: Record<PortName, number> = {
   B: 0x25, // PORTB
   C: 0x28, // PORTC
@@ -66,8 +66,11 @@ export class QEMUGPIOService extends EventEmitter {
   }
 
   private async readPortByte(address: number): Promise<number> {
-    // Legacy helper left for potential future use.
-    const cmd = `x/1b 0x${address.toString(16)}`;
+    // QEMU monitor: examine 1 byte of memory at given address in AVR address space.
+    // Using "xp" (examine physical memory) with 1 byte, hex output.
+    // Example expected response (varies by build):
+    //   "00000025: 0x20"
+    const cmd = `xp /1bx 0x${address.toString(16)}`;
     const output = await this.runner.sendMonitorCommand(cmd, 1000);
 
     const lines = output
@@ -82,10 +85,11 @@ export class QEMUGPIOService extends EventEmitter {
     if (valueLine) {
       let token: string | null = null;
 
-      // Prefer value after ':' if present
+      // Prefer hex token after ':' if present
       if (valueLine.includes(':')) {
         const afterColon = valueLine.split(':').slice(1).join(':').trim();
-        token = afterColon.split(/\s+/)[0] || null;
+        const parts = afterColon.split(/\s+/);
+        token = parts.find(p => /^0x[0-9a-fA-F]+$/.test(p)) || parts[0] || null;
       }
 
       // Fallback: last hex-like token on the line
@@ -121,36 +125,12 @@ export class QEMUGPIOService extends EventEmitter {
   }
 
   async readGPIORegisters(): Promise<PortValues> {
-    // Nova estratégia: usar "info registers" e extrair PORTB/PORTC/PORTD
-    const output = await this.runner.sendMonitorCommand('info registers', 1000);
-
-    if (process.env.NF_DEBUG_MONITOR === '1') {
-      console.log('[QEMUGPIOService] info registers output:\n', output);
-    }
-
-    const parsePort = (label: string): number => {
-      // Ex.: "PORTB: 00" ou "PORTB: 0x20"
-      const regex = new RegExp(`${label}:\s*([0-9a-fA-Fx]+)`, 'i');
-      const match = output.match(regex);
-      if (match && match[1]) {
-        let token = match[1].trim();
-        if (token.toLowerCase().startsWith('0x')) {
-          token = token.slice(2);
-        }
-        const value = parseInt(token, 16);
-        if (!Number.isNaN(value)) {
-          return value & 0xff;
-        }
-      }
-      console.warn(
-        `[QEMUGPIOService] Nao foi possivel ler ${label} em 'info registers'`,
-      );
-      return 0;
-    };
-
-    const portB = parsePort('PORTB');
-    const portC = parsePort('PORTC');
-    const portD = parsePort('PORTD');
+    // Ler PORTB, PORTC, PORTD diretamente da memoria I/O
+    const [portB, portC, portD] = await Promise.all<Promise<number>>([
+      this.readPortByte(PORT_ADDRESSES.B),
+      this.readPortByte(PORT_ADDRESSES.C),
+      this.readPortByte(PORT_ADDRESSES.D),
+    ]);
 
     const ports: PortValues = {
       B: portB,
