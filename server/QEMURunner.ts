@@ -6,6 +6,7 @@ import * as path from 'path';
 import * as os from 'os';
 
 interface MonitorRequest {
+  cmd: string;
   resolve: (value: string) => void;
   reject: (reason: Error) => void;
   accumulator: string;
@@ -181,8 +182,9 @@ export class QEMURunner extends EventEmitter {
   }
 
   private processMonitorBuffer(): void {
-    // Check if we have a pending request
+    // If there is no pending request, discard any prompt/banner
     if (this.pendingRequests.length === 0) {
+      this.monitorBuffer = '';
       return;
     }
 
@@ -190,29 +192,44 @@ export class QEMURunner extends EventEmitter {
     request.accumulator += this.monitorBuffer;
     this.monitorBuffer = '';
 
-    // Check if response is complete (ends with "(qemu) " prompt)
-    if (request.accumulator.includes('(qemu)')) {
-      // Remove the request from queue
-      this.pendingRequests.shift();
-      
-      // Clear timeout
-      clearTimeout(request.timeoutId);
-      
-      // Clean up the response
-      let response = request.accumulator;
-      
-      // Remove the command echo (first line)
-      const lines = response.split('\n');
-      if (lines.length > 0) {
-        lines.shift(); // Remove echoed command
-      }
-      
-      // Remove the final (qemu) prompt
-      response = lines.join('\n').replace(/\(qemu\)\s*$/, '').trim();
-      
-      // Resolve the promise
-      request.resolve(response);
+    // Only consider response complete when it ENDS with the "(qemu)" prompt
+    if (!/\(qemu\)\s*$/m.test(request.accumulator)) {
+      return;
     }
+
+    // We have a complete response for this request
+    this.pendingRequests.shift();
+    clearTimeout(request.timeoutId);
+
+    let response = request.accumulator;
+
+    if (process.env.NF_DEBUG_MONITOR === '1') {
+      console.log('[QEMURunner] Monitor raw response for', request.cmd);
+      console.log(response);
+    }
+
+    const lines = response
+      .split('\n')
+      .map(l => l.replace('\r', ''))
+      .map(l => l.trim());
+
+    // Remove leading empty lines
+    while (lines.length > 0 && lines[0] === '') {
+      lines.shift();
+    }
+
+    // Remove echoed command line if present
+    if (lines.length > 0 && lines[0].includes(request.cmd.split(' ')[0])) {
+      lines.shift();
+    }
+
+    // Remove trailing prompt lines "(qemu) ..."
+    while (lines.length > 0 && lines[lines.length - 1].startsWith('(qemu)')) {
+      lines.pop();
+    }
+
+    response = lines.join('\n').trim();
+    request.resolve(response);
   }
 
   private failPendingRequests(error: Error): void {
@@ -243,10 +260,11 @@ export class QEMURunner extends EventEmitter {
 
       // Add to pending requests queue
       const request: MonitorRequest = {
+        cmd,
         resolve,
         reject,
         accumulator: '',
-        timeoutId
+        timeoutId,
       };
       this.pendingRequests.push(request);
 
