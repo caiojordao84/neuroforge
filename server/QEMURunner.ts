@@ -192,8 +192,8 @@ export class QEMURunner extends EventEmitter {
     request.accumulator += this.monitorBuffer;
     this.monitorBuffer = '';
 
-    // Only consider response complete when it ENDS with the "(qemu)" prompt
-    if (!/\(qemu\)\s*$/m.test(request.accumulator)) {
+    // Consider response complete once we see a QEMU prompt in the buffer
+    if (!request.accumulator.includes('(qemu)')) {
       return;
     }
 
