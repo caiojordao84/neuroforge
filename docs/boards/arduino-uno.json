@@ -1,0 +1,241 @@
+{
+    "id": "arduino-uno",
+    "name": "Arduino Uno R3",
+    "manufacturer": "Arduino",
+    "mcu": "ATmega328P",
+    "category": "maker",
+    "image": "/boards/arduino-uno.svg",
+    "url": "https://store.arduino.cc/products/arduino-uno-rev3",
+    "specs": {
+        "flashMemory": 32768,
+        "sram": 2048,
+        "eeprom": 1024,
+        "clockSpeed": 16000000,
+        "voltage": 5.0
+    },
+    "dimensions": {
+        "width": 68.6,
+        "height": 53.4,
+        "thickness": 1.6
+    },
+    "powerPins": [
+        {
+            "name": "VIN",
+            "direction": "input"
+        },
+        {
+            "name": "5V",
+            "voltage": 5.0,
+            "direction": "output"
+        },
+        {
+            "name": "3V3",
+            "voltage": 3.3,
+            "direction": "output"
+        },
+        {
+            "name": "GND"
+        },
+        {
+            "name": "RESET",
+            "direction": "input"
+        },
+        {
+            "name": "IOREF",
+            "voltage": 5.0,
+            "direction": "output"
+        },
+        {
+            "name": "AREF",
+            "direction": "input"
+        }
+    ],
+    "gpio": [
+        {
+            "pin": 0,
+            "type": "digital",
+            "pwm": false,
+            "interrupt": true,
+            "label": "D0 / RX"
+        },
+        {
+            "pin": 1,
+            "type": "digital",
+            "pwm": false,
+            "interrupt": true,
+            "label": "D1 / TX"
+        },
+        {
+            "pin": 2,
+            "type": "digital",
+            "pwm": false,
+            "interrupt": true,
+            "label": "D2"
+        },
+        {
+            "pin": 3,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "label": "D3 PWM"
+        },
+        {
+            "pin": 4,
+            "type": "digital",
+            "pwm": false,
+            "interrupt": false,
+            "label": "D4"
+        },
+        {
+            "pin": 5,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": false,
+            "label": "D5 PWM"
+        },
+        {
+            "pin": 6,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": false,
+            "label": "D6 PWM"
+        },
+        {
+            "pin": 7,
+            "type": "digital",
+            "pwm": false,
+            "interrupt": false,
+            "label": "D7"
+        },
+        {
+            "pin": 8,
+            "type": "digital",
+            "pwm": false,
+            "interrupt": false,
+            "label": "D8"
+        },
+        {
+            "pin": 9,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": false,
+            "label": "D9 PWM"
+        },
+        {
+            "pin": 10,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": false,
+            "label": "D10 PWM / SS"
+        },
+        {
+            "pin": 11,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": false,
+            "label": "D11 PWM / MOSI"
+        },
+        {
+            "pin": 12,
+            "type": "digital",
+            "pwm": false,
+            "interrupt": false,
+            "label": "D12 / MISO"
+        },
+        {
+            "pin": 13,
+            "type": "digital",
+            "pwm": false,
+            "interrupt": false,
+            "label": "D13 / LED / SCK"
+        },
+        {
+            "pin": 14,
+            "type": "analog",
+            "pwm": false,
+            "adc": true,
+            "label": "A0"
+        },
+        {
+            "pin": 15,
+            "type": "analog",
+            "pwm": false,
+            "adc": true,
+            "label": "A1"
+        },
+        {
+            "pin": 16,
+            "type": "analog",
+            "pwm": false,
+            "adc": true,
+            "label": "A2"
+        },
+        {
+            "pin": 17,
+            "type": "analog",
+            "pwm": false,
+            "adc": true,
+            "label": "A3"
+        },
+        {
+            "pin": 18,
+            "type": "analog",
+            "pwm": false,
+            "adc": true,
+            "label": "A4 / SDA"
+        },
+        {
+            "pin": 19,
+            "type": "analog",
+            "pwm": false,
+            "adc": true,
+            "label": "A5 / SCL"
+        }
+    ],
+    "peripherals": {
+        "serial": {
+            "uarts": 1,
+            "pins": [
+                0,
+                1
+            ]
+        },
+        "i2c": {
+            "channels": 1,
+            "sda": 18,
+            "scl": 19
+        },
+        "spi": {
+            "channels": 1,
+            "miso": 12,
+            "mosi": 11,
+            "sck": 13,
+            "ss": 10
+        }
+    },
+    "usb": {
+        "type": "USB-B",
+        "chipset": "ATmega16U2",
+        "vid": "0x2341",
+        "pid": "0x0043"
+    },
+    "restrictions": {
+        "outputCurrent": 40,
+        "warnings": [
+            "Pins 0 and 1 are used for USB serial communication",
+            "Pin 13 has an onboard LED which may interfere with some applications",
+            "Maximum total current from all I/O pins: 200mA"
+        ]
+    },
+    "compatibility": {
+        "arduinoCore": "1.8.19",
+        "platformio": "atmelavr",
+        "frameworks": [
+            "arduino"
+        ]
+    },
+    "languages": [
+        "arduino-cpp"
+    ],
+    "bootloader": "optiboot"
+}

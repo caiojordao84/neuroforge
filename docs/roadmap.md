@@ -1,398 +1,172 @@
-# 🚀 NeuroForge - Roadmap Completo
+# Roadmap NeuroForge
 
-## 🎯 Visão Geral
+Este documento consolida o **roadmap macro** do projeto com os **roadmaps técnicos detalhados** que estavam espalhados em arquivos separados (raiz, `docs/`, `docs/roadmaps/`).
 
-**Nome:** NeuroForge (antigo Wokwi Clone)  
-**Objetivo:** Simulador universal de microcontroladores para makers E indústria  
-**Diferencial:** Componentes industriais (PLC/SCADA) + UI domática + **QEMU Real** + **NeuroForge Time**  
+- Roadmap macro do produto (fases, semanas, features) – migrado do `ROOT/ROADMAP.md`.
+- Roadmaps técnicos específicos (GPIO, QEMU, etc.) – mantidos em `docs/roadmaps/` e referenciados daqui.
+
+---
+
+## Índice rápido
+
+- [Visão geral e fases macro](#visão-geral-e-fases-macro)
+- [Roadmaps técnicos por área](#roadmaps-técnicos-por-área)
+  - [GPIO via Serial (AVR/ESP32/RP2040)](#gpio-via-serial-avresp32rp2040)
+  - (futuros) Tempo NeuroForge, UI Builder, PLC/SCADA, etc.
+
+---
+
+## Visão geral e fases macro
+
+> Conteúdo migrado do `ROADMAP.md` na raiz do repositório. Este é o plano de alto nível de produto.
+
+### Visão Geral do Projeto
+
+**Nome:** NeuroForge  
+**Objetivo:** Simulador universal de microcontroladores para makers E indústria com capacidade de criar dashboards IoT  
+**Diferencial:** Motor de simulação robusto (QEMU) + Componentes industriais + PLC + SCADA + UI doméstica estilo Home Assistant  
 **Mercado:** B2C (Makers) + B2B (Industrial)
 
 ---
 
-## ✅ CONCLUÍDO - Janeiro 2026
+### FASE 0: FUNDAÇÃO
 
-### ✓ Semana -1: Setup Inicial (22/01/2026)
-- [x] Frontend React + TypeScript + Vite
-- [x] Backend Node.js estruturado
-- [x] WebSocket communication base
-- [x] Editor de código Monaco
-- [x] UI Builder com React Flow
-- [x] Parser de componentes custom
+**STATUS: CONCLUÍDA**
 
-### ✓ Semana 0: Core Simulator Engine (23-29/01/2026)
-- [x] **SimulationEngine**: Interpreta Arduino C++/MicroPython
-- [x] **CodeParser**: Extrai `setup()` e `loop()` de código
-- [x] Event-driven architecture (pinMode, digitalWrite, delay)
-- [x] Pin State Machine (INPUT/OUTPUT/INPUT_PULLUP)
-- [x] Serial Monitor funcional
-- [x] Suporte a variáveis globais (`const int ledPin = 13`)
+#### Infraestrutura Base
+- Setup inicial do projeto (Frontend React + TypeScript)
+- Estrutura de pastas organizada
+- Editor de código com Monaco Editor
+- UI Builder inicial com React Flow
+- Sistema de componentes visual
 
-### ✓ Dia 1-2: Componentes Visuais Básicos (CONCLUÍDO)
-- [x] **LED Component**: On/Off visual animado com PWM
-- [x] **RGB LED**: 3 canais com animação de cores
-- [x] **Button**: Push button com pullup/pulldown
-- [x] **MCU Node**: Arduino Uno, ESP32, Raspberry Pi Pico
-- [x] **Drag & Drop**: Arrastar componentes para canvas
-- [x] **Wiring System**: Conexões visuais entre componentes
+#### Motor de Simulação V1 (Custom)
+- CodeParser com suporte a variáveis e funções complexas
+- SimulationEngine event-driven
+- Sistema de pinos e GPIO básico
+- Suporte a pinMode, digitalWrite, analogWrite
+- Event bus para comunicação componente-código
 
-### ✓ Dia 3-4: Sensores e Atuadores (CONCLUÍDO)
-- [x] **Potentiometer**: Slider 0-1023 com output analógico
-- [x] **Servo Motor**: Animação de ângulo 0-180°
-- [x] Properties Panel dinâmico (LED/Button/Servo/Potentiometer)
+#### Componentes Implementados
+- LED simples com controle de brilho
+- LED RGB com 3 canais PWM
+- Button com debounce
+- Servo Motor com controle PWM
+- Potentiometer com saída analógica
+- MCU como componente draggable (Arduino Uno, ESP32, Raspberry Pi Pico)
 
-### ✓ QEMU Integration - POC (30-31/01/2026) 🎉
-- [x] **POC QEMU AVR**: Compilar Arduino sketch com `arduino-cli`
-- [x] **QEMU Execution**: Executar firmware.hex no QEMU real
-- [x] **Serial Output**: Capturar saída serial do QEMU
-- [x] **QEMURunner.ts**: Gerenciador de processo QEMU no Node.js
-- [x] **QEMUSimulationEngine.ts**: API de controle do simulador
-- [x] Backend servidor separado em `server/`
-- [x] Scripts de instalação automática (PowerShell + Bash)
-- [x] Frontend compilando e funcional (LED piscando)
-- [x] 40+ dependências instaladas e configuradas
+#### Sistemas de UI
+- Floating Windows com drag e persist
+- Multi-File Code Editor com tabs
+- Libraries Management System
+- Component Properties System para todos os componentes
+- Manhattan routing para fios
+- Snap-to-grid no canvas
 
-### ✓ FASE 1: Integração QEMU Real - COMPLETA (31/01/2026) 🚀
-- [x] **Backend API REST completa**:
-  - [x] `POST /api/compile` - Compila código Arduino com arduino-cli
-  - [x] `POST /api/simulate/start` - Inicia simulação QEMU
-  - [x] `POST /api/simulate/stop` - Para simulação
-  - [x] `GET /api/simulate/status` - Status da simulação
-  - [x] `GET /api/simulate/pins/:pin` - Lê estado de pino
-  - [x] `POST /api/simulate/pins/:pin` - Escreve estado de pino
-  - [x] `GET /api/simulate/serial` - Obtém buffer serial
-  - [x] `DELETE /api/simulate/serial` - Limpa buffer serial
-- [x] **WebSocket real-time** (Socket.IO):
-  - [x] Evento `serial` - Linha de saída serial
-  - [x] Evento `pinChange` - Mudança de estado de pino
-  - [x] Evento `simulationStarted/Stopped/Paused/Resumed`
-  - [x] Auto-reconnect implementado
-- [x] **Frontend Integration**:
-  - [x] `useQEMUStore` - Estado global QEMU (Zustand)
-  - [x] `SimulationModeToggle` - Toggle Fake/QEMU
-  - [x] `QEMUApiClient` - Cliente REST API
-  - [x] `QEMUWebSocket` - Cliente Socket.IO
-  - [x] `useQEMUSimulation` - Hook de lifecycle
-  - [x] TopToolbar com botão "Compile & Run"
-  - [x] Badges de status: Backend Connected, QEMU Connected
-  - [x] Serial Monitor conectado ao WebSocket real
-- [x] **Dependências instaladas**:
-  - [x] Frontend: framer-motion, vaul, react-hook-form, next-themes
-  - [x] Backend: express, cors, socket.io, tsx
-- [x] **Testes realizados**:
-  - [x] LED blink funciona em modo Interpreter (fake)
-  - [x] LED blink funciona em modo QEMU Real
-  - [x] Compilação arduino-cli operacional
-  - [x] QEMU AVR rodando firmware.hex com sucesso
-  - [x] Serial Monitor exibindo output em tempo real
-  - [x] WebSocket connection estável
-- [x] **QEMU Monitor TCP/Unix Socket**:
-  - [x] QEMURunner detecta Windows e usa TCP (127.0.0.1:4444)
-  - [x] QEMUMonitorService conecta via TCP ou Unix socket
-  - [x] Auto-stop QEMU antes de nova simulação (hot-reload)
-  - [x] Logs limpos (sem spam de Command timeout)
+#### Correções Críticas (FIX 1.1 - 1.10)
+- Language Selector funcional
+- Code Parser robusto (brace counting)
+- LED State Management com tracking de pinos
+- Event Listener Persistence entre runs
+- Variable resolution (const int ledPin = 13)
+- Loop Re-entrancy Prevention
 
 ---
 
-## ✅ FASE 2: NeuroForge Time - COMPLETA (31/01/2026) 🎉
+### FASE 1: MIGRAÇÃO PARA QEMU
 
-### 🎯 Objetivo Alcançado
+_(Descrição original mantida; detalhes de implementação atuais podem divergir – ver roadmaps técnicos.)_
 
-✅ **Problema resolvido:** QEMU não emulava Timer0/Timer1 corretamente  
-✅ **Solução implementada:** Clock virtual unificado, independente do hardware  
-✅ **Resultado:** `delay()` e `millis()` funcionando perfeitamente no QEMU!
+#### Semana 1: QEMU Integration e POC
+- Compilar ou configurar QEMU para rodar firmwares Arduino/ESP32/Pico
+- Proof of Concept com `blink.ino`
+- Verificar GPIO output via memory mapping ou Serial
+- Medir performance básica
 
-### ✅ Implementação Completa
+#### Semana 2: Backend de Compilação e QEMUSimulationEngine
+- API/CLI de compilação para C++/MicroPython
+- `QEMUSimulationEngine` substituindo SimulationEngine custom
+- Carregamento de binário no QEMU
+- UART redirection para Serial Monitor
+- Timer configuration para simulação real-time (ou abstração via NeuroForge Time)
 
-#### ✅ NeuroForge Time v0 - Firmware-based
-
-**Arquivos criados:**
-```
-server/cores/neuroforge_qemu/
-├── nf_time.h                  ✅ API comum
-├── nf_time.cpp                ✅ Clock virtual com multiplicador ajustável
-├── nf_arduino_time.cpp        ✅ Override delay/millis/micros
-├── boards.txt                 ✅ Board unoqemu registrado
-├── README.md                  ✅ Documentação completa
-├── install-core.ps1           ✅ Instalador Windows
-├── install-core.sh            ✅ Instalador Linux/macOS
-├── patch-wiring.ps1           ✅ Patch automático wiring.c
-└── update-nf-time.ps1         ✅ Atualizador rápido
-```
-
-**Características implementadas:**
-- ✅ Clock virtual baseado em busy-wait (`_delay_ms()`)
-- ✅ Funciona sem modificar QEMU ou backend
-- ✅ Multiplicador de timing ajustável (`QEMU_TIMING_MULTIPLIER`)
-- ✅ Override completo de `delay()`, `millis()`, `micros()`
-- ✅ Patch automático de `wiring.c` para evitar conflitos
-- ✅ Board `arduino:avr:unoqemu` registrado no arduino-cli
-
-**Backend Integration:**
-- ✅ `CompilerService.ts` usa board `unoqemu` em modo QEMU
-- ✅ Parâmetro `mode: 'qemu' | 'interpreter'` na API
-- ✅ `QEMURunner.ts` com throttling real-time (`-icount shift=auto`)
-
-**Frontend Integration:**
-- ✅ `QEMUApiClient.compile()` passa modo de simulação
-- ✅ Compilação automática com board correto
-
-**Testing realizados:**
-- ✅ LED blink com `delay(500)` funcionando
-- ✅ Serial Monitor mostrando timing correto
-- ✅ Timing ajustável via `QEMU_TIMING_MULTIPLIER`
-- ✅ Sketch complexo (múltiplos delays) funcional
+#### Semana 3: Multi-Board Support
+- Arduino Uno (AVR)
+- ESP32 (Xtensa)
+- RP2040 / STM32 (ARM)
+- Board Selector unificado no app
 
 ---
 
-## 🚧 PRÓXIMA MISSÃO - Fevereiro 2026
+### FASE 2: COMPONENTES AVANÇADOS
 
-### 🎯 Fase 2.5: Botão STOP Funcional (1-2 dias)
+(Displays, sensores, motores, comunicação avançada, ferramentas de debug – conteúdo detalhado mantido no roadmap original, resumido aqui em alto nível.)
 
-**Objetivo:** Implementar funcionalidade do botão STOP no frontend
-
-#### Tarefas
-
-- [ ] **Frontend - TopToolbar.tsx**:
-  - [ ] Adicionar botão "Stop" ao lado de "Compile & Run"
-  - [ ] Chamar `qemuApi.stopSimulation()` ao clicar
-  - [ ] Desabilitar botão quando não há simulação rodando
-  - [ ] Feedback visual (loading state)
-  - [ ] Ícone de stop (Square icon)
-
-- [ ] **Frontend - useQEMUSimulation.ts**:
-  - [ ] Adicionar função `stopSimulation()`
-  - [ ] Limpar Serial Monitor ao parar
-  - [ ] Resetar estados de pinos
-  - [ ] Atualizar `isRunning` no store
-
-- [ ] **Backend - API já existe** ✅:
-  - [x] `POST /api/simulate/stop` já implementado
-  - [x] `QEMUSimulationEngine.stop()` funcional
-  - [x] Cleanup de processo QEMU
-
-- [ ] **Testing**:
-  - [ ] Clicar Stop durante simulação
-  - [ ] Verificar Serial Monitor limpo
-  - [ ] Verificar LEDs resetados
-  - [ ] Testar Compile & Run → Stop → Compile & Run novamente
-
-**Design do botão:**
-```tsx
-<Button 
-  onClick={handleStop}
-  disabled={!isRunning}
-  variant="destructive"
->
-  <Square className="h-4 w-4 mr-2" />
-  Stop
-</Button>
-```
+- Displays: LCD 16x2, OLED 128x64, TFT ST7735.
+- Sensores: DHT22, ultrassom, LDR, etc.
+- Motores: DC + driver, stepper + driver.
+- Comunicação multi-MCU: UART, I2C, SPI.
+- Network (ESP32): WiFi virtual, MQTT, HTTP.
+- Ferramentas: Serial Plotter, Logic Analyzer, Osciloscópio virtual.
 
 ---
 
-### 🔌 Fase 3: GPIO Real via QEMU Monitor (5-7 dias)
+### FASE 3: DASHBOARD BUILDER
 
-#### QEMU Monitor Integration
-- [ ] **QEMU Monitor Protocol**:
-  - [ ] Conectar ao QEMU Monitor via TCP (Windows) / Unix socket (Linux/Mac)
-  - [ ] Implementar comando `info registers` para ler AVR registers
-  - [ ] Implementar leitura de GPIO registers (PORTB, PORTC, PORTD)
-  - [ ] Implementar escrita em GPIO registers (simular botão pressionado)
-- [ ] **Pin State Polling**:
-  - [ ] Polling loop a cada 50ms (20 FPS) para ler estados de pinos
-  - [ ] Detectar mudanças e emitir eventos `pinChange` via WebSocket
-  - [ ] Mapear registradores AVR para números de pinos Arduino
-- [ ] **Pin Write Implementation**:
-  - [ ] Endpoint `POST /api/simulate/pins/:pin` escrever no QEMU
-  - [ ] Simular botões/sensores alterando registradores
-  - [ ] Validar tipo de pino (INPUT/OUTPUT) antes de escrever
-- [ ] **Frontend Pin Interaction**:
-  - [ ] Button component envia pin write ao clicar
-  - [ ] Potentiometer envia analogWrite ao arrastar slider
-  - [ ] LED atualiza estado visual baseado em pinChange real
-
-#### Testing & Validation
-- [ ] Testar circuitos complexos (múltiplos LEDs + buttons)
-- [ ] Validar timing de `delay()` e `millis()`
-- [ ] Testar PWM real (analogWrite em pinos PWM)
-- [ ] Performance profiling (latência pin polling)
+- Grid layout responsivo tipo Home Assistant / Lovelace.
+- Widgets de gauge, switch, botão, texto, gráficos.
+- Binding de widgets a GPIO, Serial, variáveis globais, MQTT, HTTP.
+- Engine de automação (rules, scenes, schedules).
+- Export de dashboards (HTML standalone, apps móveis via Capacitor).
 
 ---
 
-## 🛠️ Melhorias Futuras - NeuroForge Time v1
+### FASE 4: INDUSTRIAL FEATURES
 
-### Implementação v1 - Host-driven (⏳ Futuro)
-
-**Características planejadas:**
-- Clock virtual controlado pelo backend
-- Device virtual QEMU expõe registrador de tempo
-- Firmware lê `nf_now_ms()` de memória mapeada (0x1000)
-- **Controles UI**: pause, step, fast-forward, rewind
-- **Multi-MCU sincronizado**: vários MCUs compartilham o clock
-- **Determinístico**: reprodução de traces, debugging preciso
-
-**Arquitetura v1:**
-```
-Backend (simulationTimeMs)
-       ↓
-QEMU Device Virtual (0x1000)
-       ↓
-Firmware lê nf_now_ms() → [0x1000]
-       ↓
-Arduino delay()/millis()
-```
-
-**Timeline:** Q2 2026 (Abril-Junho)
+- Simulação de PLC (Modbus RTU/TCP, coils, registers).
+- Ladder viewer/editor básico.
+- SCADA dashboard com tema industrial.
+- Componentes industriais (sensores, atuadores, VFD, etc.).
+- Safety systems (E-stop, light curtain, safety PLC).
 
 ---
 
-## 📊 KPIs e Metas
+### FASE 5: POLISH E LANÇAMENTO
 
-### ✅ Mês 1 - Janeiro 2026 (COMPLETO)
-- ✅ **NeuroForge Time v0** funcionando (delay/millis perfeito)
-- ✅ **QEMU Integration** completa
-- ✅ **Backend API REST** completo
-- ✅ **WebSocket real-time** funcional
-- ⏳ **GPIO Real** (próxima fase)
-
-### Mês 2 - Fevereiro 2026
-- 🎯 **Botão STOP** funcional
-- 🎯 **GPIO Real** via QEMU Monitor
-- 🎯 **5 placas**: Arduino, ESP32, RP2040, STM32, ESP8266
-- 🎯 **30 componentes** maker + sensores
-- 🎯 **100 beta testers**
-
-### Mês 3 - Março 2026
-- 🎯 **NeuroForge Time v1** (host-driven)
-- 🎯 **Pause/Step/Fast-forward** controls
-- 🎯 **MicroPython + CircuitPython**
-- 🎯 **1.000 usuários ativos**
+- Testes (unit, integration, performance, security).
+- Documentação maker + industrial.
+- Marketing e lançamento público.
+- Integração de pagamentos e planos.
 
 ---
 
-## 💰 Pricing (Planejado)
+### Métricas de sucesso (KPIs)
 
-| Plano | Preço | Recursos |
-|-------|--------|----------|
-| **Free** | €0/mês | Arduino, 10 componentes, projetos públicos |
-| **Hobby** | €10/mês | Todas as placas, 50 componentes, privados, WiFi |
-| **Maker Pro** | €30/mês | Unlimited, Mobile app, Export PCB, No watermark |
-| **Industrial Starter** | €50/mês | PLC básico, Modbus, 5 usuários, Email support |
-| **Industrial Pro** | €200/mês | SCADA, todos protocolos, 20 usuários, Priority |
-| **Enterprise** | Custom | On-premise, SSO, SLA, Dedicated support |
+- Mês 1: QEMU + Arduino Uno rodando blink real, 10 componentes compatíveis.
+- Mês 3: 5+ placas, 30+ componentes, dashboard builder funcional.
+- Mês 6: PLC + SCADA, 50+ componentes, 1k usuários ativos.
+- Ano 1: 100+ componentes, 10k usuários, €15k MRR.
 
 ---
 
-## 🛠️ Tech Stack
+## Roadmaps técnicos por área
 
-### Frontend
-- **React 19** + **TypeScript**
-- **Vite** (build tool)
-- **React Flow** (canvas drag & drop)
-- **Monaco Editor** (code editor)
-- **Radix UI** + **Tailwind CSS** (components)
-- **Zustand** (state management)
-- **Socket.IO Client** (WebSocket)
+Aqui ficam os **roadmaps técnicos detalhados**, cada um focado numa feature/stack específica.
 
-### Backend
-- **Node.js 20** + **TypeScript**
-- **Express** (REST API)
-- **Socket.IO** (WebSocket)
-- **QEMU 8.2+** (AVR emulation)
-- **arduino-cli** (compilation)
-- **NeuroForge Time** (clock virtual unificado) ✅
+### GPIO via Serial (AVR/ESP32/RP2040)
 
-### Development
-- **Docker** + **Docker Compose** (local development)
-- **GitHub Actions** (CI/CD)
-- Desenvolvimento local prioritário
-- Deployment será configurado quando necessário
+Arquivo: [`docs/roadmaps/gpio-serial-protocol.md`](./roadmaps/gpio-serial-protocol.md)
 
----
+- Protocolo `G:...` para reportar GPIO via Serial.
+- Backend `SerialGPIOService` com interface compatível com `QEMUGPIOService`.
+- Helper firmware `NeuroForgeGPIO` (AVR) e futuros helpers ESP32/RP2040.
+- Roadmap de expansão multiplataforma e otimizações (rate limiting, checksum, modo binário).
 
-## 🚀 FASE 8: Production Deployment (⏳ FUTURO - Quando abrir o site)
+### Outros roadmaps técnicos
 
-**Nota:** Esta fase será implementada quando o projeto estiver pronto para produção. Foco atual: desenvolvimento local e features core.
+- QEMU + memória mapeada de GPIO (AVR/ESP32) – planejado/postergado, manter em `docs/roadmaps/`.
+- NeuroForge Time (clock virtual e timeline de eventos).
+- UI Builder & Dashboard Builder.
+- PLC/SCADA & integrações industriais.
 
-### Frontend Deployment
-- [ ] **Opções de hosting**:
-  - [ ] Vercel (recomendado para React)
-  - [ ] Netlify
-  - [ ] Cloudflare Pages
-- [ ] **Configurações**:
-  - [ ] Environment variables production
-  - [ ] Build optimization
-  - [ ] CDN setup
-  - [ ] Custom domain
-
-### Backend Deployment
-- [ ] **Opções de hosting**:
-  - [ ] Railway (Node.js + QEMU)
-  - [ ] AWS Lambda + API Gateway (serverless)
-  - [ ] Cloudflare Workers (edge computing)
-  - [ ] Google Cloud Run (containers)
-  - [ ] DigitalOcean App Platform
-- [ ] **Infraestrutura**:
-  - [ ] Database (PostgreSQL ou MongoDB)
-  - [ ] Redis (caching + sessions)
-  - [ ] File storage (S3 ou similar)
-  - [ ] Load balancer
-
-### DevOps & Monitoring
-- [ ] **CI/CD Pipeline**:
-  - [ ] GitHub Actions deploy automático
-  - [ ] Preview deployments (PRs)
-  - [ ] Rollback strategy
-- [ ] **Monitoring**:
-  - [ ] Error tracking (Sentry)
-  - [ ] Performance monitoring (New Relic/Datadog)
-  - [ ] Uptime monitoring
-  - [ ] Log aggregation
-- [ ] **Security**:
-  - [ ] SSL/TLS certificates
-  - [ ] API rate limiting
-  - [ ] DDoS protection
-  - [ ] Firewall rules
-
-### Scaling Strategy
-- [ ] **Horizontal scaling**:
-  - [ ] Multiple backend instances
-  - [ ] Session persistence (Redis)
-  - [ ] WebSocket sticky sessions
-- [ ] **Performance**:
-  - [ ] CDN for static assets
-  - [ ] Database read replicas
-  - [ ] Caching layer
-  - [ ] Code splitting
-
-**Timeline:** Q4 2026 (quando houver 100+ usuários ativos)
-
----
-
-## 📝 Documentação
-
-- [x] README.md detalhado
-- [x] Server README.md (installation guide)
-- [x] NeuroForge Time documentation (NEUROFORGE_TIME_IMPLEMENTATION.md)
-- [x] Core installation scripts (PowerShell + Bash)
-- [ ] API Documentation (OpenAPI/Swagger)
-- [ ] Component SDK docs
-- [ ] User Guide (20 tutorials)
-- [ ] Video Tutorials (YouTube)
-
----
-
-## ✨ Contribuidores
-
-**Core Team:**
-- @caiojordao84 - Full-stack Developer & Project Lead
-
-**Agradecimentos:**
-- Perplexity AI - Pair programming assistant 🤖
-- Wokwi - Inspiração para UI/UX 💚
-- QEMU Team - Emulation engine 🚀
-
----
-
-**Última atualização:** 01/02/2026 09:42 AM WET  
-**Status:** 🎯 **FASE 2.5 (Botão STOP)** - Próxima missão!
+Conforme novos roadmaps forem criados em `docs/roadmaps/*.md`, devem ser **linkados nesta seção**, mantendo este arquivo como fonte única de verdade do roadmap geral do projeto.

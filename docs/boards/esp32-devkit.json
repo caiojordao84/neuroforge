@@ -1,0 +1,332 @@
+{
+    "id": "esp32-devkit",
+    "name": "ESP32 DevKit V1",
+    "manufacturer": "Espressif",
+    "mcu": "ESP32-WROOM-32",
+    "category": "maker",
+    "image": "/boards/esp32-devkit.svg",
+    "url": "https://www.espressif.com/en/products/devkits/esp32-devkitc",
+    "specs": {
+        "flashMemory": 4194304,
+        "sram": 520000,
+        "eeprom": 0,
+        "clockSpeed": 240000000,
+        "voltage": 3.3,
+        "wireless": [
+            "wifi",
+            "bluetooth",
+            "ble"
+        ]
+    },
+    "dimensions": {
+        "width": 27.9,
+        "height": 48.3,
+        "thickness": 1.6
+    },
+    "powerPins": [
+        {
+            "name": "VIN",
+            "direction": "input"
+        },
+        {
+            "name": "3V3",
+            "voltage": 3.3,
+            "direction": "output"
+        },
+        {
+            "name": "GND"
+        },
+        {
+            "name": "RESET",
+            "direction": "input"
+        }
+    ],
+    "gpio": [
+        {
+            "pin": 0,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "label": "GPIO0 BOOT"
+        },
+        {
+            "pin": 1,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "label": "GPIO1 TX"
+        },
+        {
+            "pin": 2,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "adc": true,
+            "touch": true,
+            "label": "GPIO2"
+        },
+        {
+            "pin": 3,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "label": "GPIO3 RX"
+        },
+        {
+            "pin": 4,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "adc": true,
+            "touch": true,
+            "label": "GPIO4"
+        },
+        {
+            "pin": 5,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "label": "GPIO5"
+        },
+        {
+            "pin": 12,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "adc": true,
+            "touch": true,
+            "label": "GPIO12"
+        },
+        {
+            "pin": 13,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "adc": true,
+            "touch": true,
+            "label": "GPIO13"
+        },
+        {
+            "pin": 14,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "adc": true,
+            "touch": true,
+            "label": "GPIO14"
+        },
+        {
+            "pin": 15,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "adc": true,
+            "touch": true,
+            "label": "GPIO15"
+        },
+        {
+            "pin": 16,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "label": "GPIO16"
+        },
+        {
+            "pin": 17,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "label": "GPIO17"
+        },
+        {
+            "pin": 18,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "label": "GPIO18 SCK"
+        },
+        {
+            "pin": 19,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "label": "GPIO19 MISO"
+        },
+        {
+            "pin": 21,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "label": "GPIO21 SDA"
+        },
+        {
+            "pin": 22,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "label": "GPIO22 SCL"
+        },
+        {
+            "pin": 23,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "label": "GPIO23 MOSI"
+        },
+        {
+            "pin": 25,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "adc": true,
+            "dac": true,
+            "label": "GPIO25 DAC1"
+        },
+        {
+            "pin": 26,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "adc": true,
+            "dac": true,
+            "label": "GPIO26 DAC2"
+        },
+        {
+            "pin": 27,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "adc": true,
+            "touch": true,
+            "label": "GPIO27"
+        },
+        {
+            "pin": 32,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "adc": true,
+            "touch": true,
+            "label": "GPIO32"
+        },
+        {
+            "pin": 33,
+            "type": "digital",
+            "pwm": true,
+            "interrupt": true,
+            "adc": true,
+            "touch": true,
+            "label": "GPIO33"
+        },
+        {
+            "pin": 34,
+            "type": "analog",
+            "pwm": false,
+            "adc": true,
+            "inputOnly": true,
+            "label": "GPIO34 (Input only)"
+        },
+        {
+            "pin": 35,
+            "type": "analog",
+            "pwm": false,
+            "adc": true,
+            "inputOnly": true,
+            "label": "GPIO35 (Input only)"
+        },
+        {
+            "pin": 36,
+            "type": "analog",
+            "pwm": false,
+            "adc": true,
+            "inputOnly": true,
+            "label": "GPIO36 SVP (Input only)"
+        },
+        {
+            "pin": 39,
+            "type": "analog",
+            "pwm": false,
+            "adc": true,
+            "inputOnly": true,
+            "label": "GPIO39 SVN (Input only)"
+        }
+    ],
+    "peripherals": {
+        "serial": {
+            "uarts": 3
+        },
+        "i2c": {
+            "channels": 2,
+            "sda": 21,
+            "scl": 22
+        },
+        "spi": {
+            "channels": 4,
+            "miso": 19,
+            "mosi": 23,
+            "sck": 18
+        },
+        "wifi": {
+            "protocols": [
+                "802.11b",
+                "802.11g",
+                "802.11n"
+            ],
+            "modes": [
+                "sta",
+                "ap",
+                "sta+ap"
+            ]
+        },
+        "bluetooth": {
+            "classic": true,
+            "ble": true
+        }
+    },
+    "usb": {
+        "type": "micro-USB",
+        "chipset": "CP2102",
+        "vid": "0x10C4",
+        "pid": "0xEA60"
+    },
+    "restrictions": {
+        "strappingPins": [
+            0,
+            2,
+            5,
+            12,
+            15
+        ],
+        "reservedPins": [
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+        ],
+        "outputCurrent": 40,
+        "warnings": [
+            "GPIO 6-11 are connected to the integrated SPI flash (DO NOT USE)",
+            "GPIO 0, 2, 5, 12, 15 are strapping pins - use with caution",
+            "GPIO 34-39 are INPUT ONLY (no internal pull-up/pull-down)",
+            "GPIO 1 and 3 are used for Serial debugging (USB)",
+            "Total current from all GPIO pins should not exceed 1200mA"
+        ]
+    },
+    "compatibility": {
+        "arduinoCore": "2.0.14",
+        "platformio": "espressif32",
+        "frameworks": [
+            "arduino",
+            "espidf"
+        ]
+    },
+    "languages": [
+        "arduino-cpp",
+        "micropython",
+        "circuitpython",
+        "esp-idf"
+    ],
+    "bootloader": "esp32-bootloader"
+}
