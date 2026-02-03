@@ -1,13 +1,14 @@
-// blink.ino - LED no pino 13 (PORTB bit 5)
-// Teste básico para validar QEMU Arduino Uno
-
 void setup() {
-  pinMode(13, OUTPUT);
+  pinMode(13, OUTPUT); // ou LED_BUILTIN se preferir
+  Serial.begin(9600);  // importante para habilitar a Serial
 }
 
 void loop() {
   digitalWrite(13, HIGH);
-  delay(1000);
+  Serial.println("G:pin=13,v=1"); // frame GPIO para o backend
+  delay(500);
+
   digitalWrite(13, LOW);
-  delay(1000);
+  Serial.println("G:pin=13,v=0"); // frame GPIO para o backend
+  delay(500);
 }
