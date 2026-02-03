@@ -153,8 +153,17 @@ export class SerialGPIOService extends EventEmitter {
   }
 
   private diffStates(prev: GPIOState | null, next: GPIOState): PinChange[] {
+    // Se nao havia estado anterior, consideramos que todos os pinos
+    // com valor diferente de 0 mudaram de 0 -> valor_atual.
     if (!prev) {
-      return [];
+      const initialChanges: PinChange[] = [];
+      next.pins.forEach((value, pin) => {
+        const to = (value ?? 0) as 0 | 1;
+        if (to !== 0) {
+          initialChanges.push({ pin, from: 0, to });
+        }
+      });
+      return initialChanges;
     }
 
     const changes: PinChange[] = [];
