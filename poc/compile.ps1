@@ -69,7 +69,7 @@ foreach ($sketch in $sketches) {
         New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
     }
 
-    arduino-cli compile --fqbn arduino:avr:uno (Resolve-Path $sketch) --output-dir (Resolve-Path $outputDir)
+    arduino-cli compile --fqbn arduino:avr:uno (Resolve-Path $sketch) --output-dir (Resolve-Path $outputDir) --libraries .\libraries
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[OK] $sketchName compilado com sucesso" -ForegroundColor Green
