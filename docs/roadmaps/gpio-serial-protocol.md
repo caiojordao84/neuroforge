@@ -27,20 +27,24 @@ G:B=0x20,C=0x00\n   # PORTB = 0x20, PORTC = 0x00
 
 ---
 
-### PR 1.2 – Implementar `SerialGPIOService` no backend
-**Status**: Em progresso  
-**Arquivo**: `server/SerialGPIOService.ts`
+### PR 1.2 – Implementar `SerialGPIOService` no backend ✅
+**Status**: Completo  
+**Arquivos**: `server/SerialGPIOService.ts`, `server/QEMUSimulationEngine.ts`
 
-**Responsabilidades**:
-- Escuta linhas do Serial via `QEMURunner`
-- Parseia frames `G:...` segundo o protocolo
-- Mantém estado interno (`PortValues` e `Map<pin, 0|1>`)
-- Emite eventos `gpio-snapshot` e `gpio-changes` com mesma interface do `QEMUGPIOService`
+**Implementado**:
+- Parser de frames `G:...` (ports e pins)
+- Manutenção de estado interno (`PortValues` e `Map<pin, 0|1>`)
+- Emissão de eventos `gpio-snapshot` e `gpio-changes` com mesma interface do `QEMUGPIOService`
+- Integração com `QEMUSimulationEngine` via `NF_GPIO_MODE=serial`
+
+**Observações**:
+- Primeiro frame gera mudanças assumindo estado inicial 0 para todos os pinos
+- `example-gpio.ts` já exibe `[GPIO] Pin 13 changed to 1` e snapshots corretos
 
 **Interface pública**:
 ```typescript
 class SerialGPIOService extends EventEmitter {
-  constructor(runner: QEMURunner, pollIntervalMs?: number);
+  constructor(runner: QEMURunner);
   
   processLine(line: string): void;
   startPolling(): void;
@@ -49,10 +53,6 @@ class SerialGPIOService extends EventEmitter {
   getPinState(pin: number): 0 | 1;
 }
 ```
-
-**Eventos emitidos**:
-- `gpio-snapshot` – Estado completo a cada polling
-- `gpio-changes` – Array de mudanças de pin desde último snapshot
 
 ---
 
@@ -108,42 +108,12 @@ void loop() {
 ---
 
 ### PR 1.4 – Integrar `SerialGPIOService` no `QEMUSimulationEngine`
-**Status**: Planejado  
-**Mudanças**:
+**Status**: Completo  
 
-1. Em `QEMURunner.ts`, emitir evento `serial-line` para cada linha recebida:
-```typescript
-private processSerialBuffer(data: string): void {
-  const lines = data.split('\n');
-  for (const line of lines) {
-    if (line.trim()) {
-      this.emit('serial-line', line.trim());
-    }
-  }
-}
-```
-
-2. Em `example-gpio.ts` (ou engine):
-```typescript
-import { SerialGPIOService } from './SerialGPIOService';
-
-const gpioService = new SerialGPIOService(runner);
-
-runner.on('serial-line', (line) => {
-  gpioService.processLine(line);
-});
-
-gpioService.on('gpio-changes', (changes) => {
-  console.log('[GPIO]', changes);
-});
-
-gpioService.startPolling();
-```
-
-**Teste end-to-end**:
-- Compilar `poc/gpio_test` com helper `NeuroForgeGPIO`
-- Rodar `npx tsx example-gpio.ts`
-- Verificar logs: `[GPIO] Pin 13 changed to 1`, `[Snapshot] D13 = 1`
+**Implementado**:
+- Engine escolhe backend de GPIO via `NF_GPIO_MODE` (`serial` por default)
+- Conecta evento `runner.on('serial')` ao `gpioService.processLine(line)` quando disponível
+- Mantém lógica existente de `gpio-changes` → `pin-change` + `cycleCount++`
 
 ---
 
@@ -233,9 +203,9 @@ G:B=0xFF*A3\n    # *A3 = CRC8
 | PR | Descrição | Status |
 |----|-----------|--------|
 | 1.1 | Protocolo definido | ✅ Completo |
-| 1.2 | SerialGPIOService | 🚧 Em progresso |
+| 1.2 | SerialGPIOService | ✅ Completo |
 | 1.3 | Helper firmware AVR | 📝 Planejado |
-| 1.4 | Integração engine | 📝 Planejado |
+| 1.4 | Integração engine | ✅ Completo |
 | 2.1 | Helper ESP32 | 📝 Planejado |
 | 2.2 | Helper RP2040 | 📝 Planejado |
 | 2.3 | Testes multiplataforma | 📝 Planejado |
