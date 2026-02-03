@@ -1,6 +1,7 @@
 import { QEMURunner } from './QEMURunner';
 import { EventEmitter } from 'events';
 import { QEMUGPIOService, PinChange } from './QEMUGPIOService';
+import { SerialGPIOService } from './SerialGPIOService';
 
 export interface SimulationState {
   isRunning: boolean;
@@ -14,7 +15,7 @@ export interface SimulationState {
 
 export class QEMUSimulationEngine extends EventEmitter {
   private runner: QEMURunner | null = null;
-  private gpioService: QEMUGPIOService | null = null;
+  private gpioService: QEMUGPIOService | SerialGPIOService | null = null;
   private state: SimulationState;
 
   constructor() {
@@ -50,11 +51,23 @@ export class QEMUSimulationEngine extends EventEmitter {
     }
 
     this.runner = new QEMURunner(this.state.firmwarePath, this.state.board);
-    this.gpioService = new QEMUGPIOService(this.runner);
+
+    // Escolha do backend de GPIO: por default usamos o SerialGPIOService
+    const gpioMode = process.env.NF_GPIO_MODE || 'serial';
+    if (gpioMode === 'serial') {
+      this.gpioService = new SerialGPIOService(this.runner);
+    } else {
+      this.gpioService = new QEMUGPIOService(this.runner);
+    }
 
     this.runner.on('serial', (line: string) => {
       this.state.serialOutput.push(line);
       this.emit('serial', line);
+
+      // Se o serviço de GPIO suportar processLine (SerialGPIOService), alimentamos com a linha
+      if (this.gpioService && (this.gpioService as any).processLine) {
+        (this.gpioService as any).processLine(line);
+      }
     });
 
     this.runner.on('started', () => {
