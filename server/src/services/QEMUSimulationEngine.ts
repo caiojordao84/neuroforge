@@ -1,7 +1,9 @@
 import { EventEmitter } from 'events';
 import { QEMURunner } from './QEMURunner';
 import { QEMUMonitorService } from './QEMUMonitorService';
+import { Esp32Backend } from './Esp32Backend';
 import type { BoardType } from './CompilerService';
+import type { Esp32BackendConfig } from '../types/esp32.types';
 
 export interface PinState {
   mode: 'INPUT' | 'OUTPUT' | 'INPUT_PULLUP' | 'UNKNOWN';
@@ -10,10 +12,13 @@ export interface PinState {
 
 /**
  * High-level API for QEMU simulation
+ * Supports both AVR (Arduino Uno) and ESP32 backends
  */
 export class QEMUSimulationEngine extends EventEmitter {
   private runner: QEMURunner;
   private monitor: QEMUMonitorService;
+  private esp32Backend: Esp32Backend | null = null;
+  private backendType: 'avr' | 'esp32' | null = null;
   private pinStates: Map<number, PinState>;
   private serialBuffer: string[];
   private pollInterval: NodeJS.Timeout | null = null;
@@ -35,44 +40,48 @@ export class QEMUSimulationEngine extends EventEmitter {
   /**
    * Load firmware into QEMU
    */
-  async loadFirmware(firmwarePath: string, board: BoardType = 'arduino-uno'): Promise<void> {
+  async loadFirmware(
+    firmwarePath: string, 
+    board: BoardType = 'arduino-uno'
+  ): Promise<void> {
     this._firmwarePath = firmwarePath;
     this._board = board;
-    console.log(`📦 Firmware loaded: ${firmwarePath} (${board})`);
+
+    // Detectar tipo de backend baseado na placa
+    if (board === 'esp32' || board.includes('esp32')) {
+      this.backendType = 'esp32';
+      console.log(`📦 ESP32 Firmware loaded: ${firmwarePath}`);
+    } else {
+      this.backendType = 'avr';
+      console.log(`📦 AVR Firmware loaded: ${firmwarePath} (${board})`);
+    }
+
     this.emit('firmware-loaded', firmwarePath, board);
   }
 
   /**
    * Start QEMU simulation
    */
-  async start(): Promise<void> {
+  async start(esp32Config?: Esp32BackendConfig): Promise<void> {
     if (!this._firmwarePath) {
       throw new Error('No firmware loaded. Call loadFirmware() first.');
     }
 
     try {
-      // Reset GPIO error flag
       this.gpioErrorShown = false;
 
-      // Start QEMU with firmware
-      await this.runner.start(this._firmwarePath, this._board as any);
+      // Rotear para o backend correto
+      if (this.backendType === 'esp32') {
+        if (!esp32Config) {
+          throw new Error('ESP32 config required for ESP32 board');
+        }
+        await this.startEsp32Backend(esp32Config);
+      } else {
+        await this.startAvrBackend();
+      }
+
       this._isRunning = true;
       this._isPaused = false;
-
-      // Connect to QEMU monitor
-      const monitorInfo = this.runner.getMonitorInfo();
-      if (monitorInfo) {
-        try {
-          await this.monitor.connect(monitorInfo.address);
-          console.log(`✅ QEMU Monitor connected (${monitorInfo.type}), starting GPIO polling...`);
-          this.startGPIOPolling();
-        } catch (error) {
-          console.error('⚠️ Failed to connect QEMU monitor:', error);
-          console.log('⚠️ Continuing without GPIO monitoring...');
-        }
-      } else {
-        console.warn('⚠️ No monitor available, GPIO polling disabled');
-      }
     } catch (error) {
       this._isRunning = false;
       throw error;
@@ -80,7 +89,57 @@ export class QEMUSimulationEngine extends EventEmitter {
   }
 
   /**
-   * Setup event forwarding from QEMURunner
+   * Inicia backend AVR (original)
+   */
+  private async startAvrBackend(): Promise<void> {
+    await this.runner.start(this._firmwarePath!, this._board as any);
+
+    const monitorInfo = this.runner.getMonitorInfo();
+    if (monitorInfo) {
+      try {
+        await this.monitor.connect(monitorInfo.address);
+        console.log(`✅ QEMU Monitor connected (${monitorInfo.type}), starting GPIO polling...`);
+        this.startGPIOPolling();
+      } catch (error) {
+        console.error('⚠️ Failed to connect QEMU monitor:', error);
+        console.log('⚠️ Continuing without GPIO monitoring...');
+      }
+    } else {
+      console.warn('⚠️ No monitor available, GPIO polling disabled');
+    }
+  }
+
+  /**
+   * Inicia backend ESP32 (novo)
+   */
+  private async startEsp32Backend(config: Esp32BackendConfig): Promise<void> {
+    this.esp32Backend = new Esp32Backend();
+
+    // Forward eventos de serial para o buffer
+    this.esp32Backend.on('serial', (line: string) => {
+      this.serialBuffer.push(line);
+      this.emit('serial', line);
+    });
+
+    this.esp32Backend.on('started', () => {
+      this._isRunning = true;
+      this.emit('started');
+    });
+
+    this.esp32Backend.on('stopped', (code) => {
+      this._isRunning = false;
+      this.emit('stopped', code);
+    });
+
+    this.esp32Backend.on('error', (error) => {
+      this.emit('error', error);
+    });
+
+    await this.esp32Backend.start(config);
+  }
+
+  /**
+   * Setup event forwarding from QEMURunner (AVR)
    */
   private setupRunnerEvents(): void {
     // Forward serial output
@@ -108,11 +167,19 @@ export class QEMUSimulationEngine extends EventEmitter {
    */
   stop(): void {
     this.stopGPIOPolling();
-    this.monitor.disconnect();
-    this.runner.stop();
+    
+    if (this.backendType === 'esp32' && this.esp32Backend) {
+      this.esp32Backend.stop();
+      this.esp32Backend = null;
+    } else {
+      this.monitor.disconnect();
+      this.runner.stop();
+    }
+
     this._isRunning = false;
     this._isPaused = false;
     this.gpioErrorShown = false;
+    this.backendType = null;
   }
 
   /**
@@ -148,8 +215,10 @@ export class QEMUSimulationEngine extends EventEmitter {
    */
   async setPinState(pin: number, value: number): Promise<void> {
     try {
-      // Write to QEMU via monitor
-      await this.monitor.setGPIOPin(pin, value === 1 ? 'HIGH' : 'LOW');
+      // Write to QEMU via monitor (AVR only for now)
+      if (this.backendType === 'avr') {
+        await this.monitor.setGPIOPin(pin, value === 1 ? 'HIGH' : 'LOW');
+      }
       
       // Update local cache
       const currentState = this.pinStates.get(pin) || { mode: 'INPUT', value: 0 };
@@ -165,8 +234,14 @@ export class QEMUSimulationEngine extends EventEmitter {
 
   /**
    * Start polling GPIO pins from QEMU (20 FPS)
+   * Currently only supported for AVR backend
    */
   private startGPIOPolling(): void {
+    // GPIO polling apenas para backend AVR
+    if (this.backendType !== 'avr') {
+      return;
+    }
+
     if (this.pollInterval) return;
 
     console.log('🔄 Starting GPIO polling at 20 FPS...');
@@ -243,5 +318,12 @@ export class QEMUSimulationEngine extends EventEmitter {
    */
   isPaused(): boolean {
     return this._isPaused;
+  }
+
+  /**
+   * Get current backend type
+   */
+  getBackendType(): 'avr' | 'esp32' | null {
+    return this.backendType;
   }
 }
