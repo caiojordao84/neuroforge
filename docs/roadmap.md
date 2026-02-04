@@ -206,18 +206,110 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 - [ ] RP2040 / STM32 (ARM) - planeado
 - [ ] Board Selector unificado no app
 
+#### 1.1.1. Backend AVR (QEMU) - Concluído
+
+- [x] JSONs de boards AVR em `docs/boards/`
+- [x] QEMU AVR configurado e funcional
+- [x] Pipeline de compilação AVR (Arduino CLI / avr-gcc)
+- [x] `GPIOService` com parser de linhas `G:pin=...,v=...`
+- [x] Exemplo `example-gpio.ts` com Arduino Uno
+
+#### 1.1.2. Backend ESP32 (QEMU) - Em Integração
+
+- [x] Toolchain ESP‑IDF v6.1 no Windows
+- [x] QEMU ESP32 oficial da Espressif instalado
+- [x] Projeto `hello_world` compilado e executado em QEMU
+- [x] Binários `qemu_flash.bin` e `qemu_efuse.bin` gerados
+- [x] Linha de comando QEMU validada
+- [ ] `Esp32Backend` com suporte a `boardType: 'esp32-devkit'`
+- [ ] Cliente de serial TCP para UART
+- [ ] Integração com `GPIOService`
+- [ ] Exemplo `example-gpio-esp32.ts`
+
+#### 1.1.3. Backend RP2040 (QEMU) - Planeado
+
+- [ ] Avaliar e integrar QEMU ou emulador RP2040
+- [ ] Adicionar `Rp2040Backend`
+- [ ] Definir JSONs de boards RP2040
+- [ ] Integração com `GPIOService`
+- [ ] Exemplo `example-gpio-rp2040.ts`
+
+#### 1.1.4. Backend STM32 (QEMU) - Planeado
+
+- [ ] Avaliar e integrar QEMU ou emulador STM32
+- [ ] Adicionar `Stm32Backend`
+- [ ] Definir JSONs de boards STM32
+- [ ] Integração com `GPIOService`
+- [ ] Exemplo `example-gpio-stm32.ts`
+
+#### 1.1.5. Perfis de Placas & Modelos
+
+##### Perfis de Placas Pré‑Configurados
+
+  A aplicação inclui perfis detalhados para placas de desenvolvimento populares:
+
+  #### Família ESP32:
+
+  - ESP32‑DevKitC: mapeamento de 38 pinos com avisos de strapping pins
+
+  - ESP32‑S3: suporte USB OTG, dupla interface USB‑Serial
+
+  - ESP32‑C3: notas sobre arquitetura RISC‑V, pinos limitados
+
+  - ESP32 WROOM‑32: variante padrão de 30 pinos
+
+  Inclui assistentes de configuração WiFi/Bluetooth
+
+  #### Raspberry Pi Pico:
+
+  - Pico (RP2040): mapeamento GPIO padrão, capacidades PIO
+
+  - Pico W: configuração WiFi e funcionalidades de rede
+
+  - Funções alternativas de pinos (I2C, SPI, UART)
+
+  #### Placas Arduino:
+
+  - Arduino Uno R3: ATmega328P com pinout padrão para shields
+
+  - Arduino Nano: mapeamento em formato compacto
+
+  - Arduino Mega 2560: I/O expandido com múltiplas portas seriais
+
+  - Arduino Nano 33 IoT: WiFi integrado e IMU
+
+  ##### Cada perfil inclui:
+
+  - Diagrama de pinagem preciso com funções alternativas
+
+  - Especificações de níveis de tensão
+
+  - Corrente máxima por pino e total
+
+  - Periféricos integrados (LED, localização de botões)
+
+  - Erratas de hardware conhecidas e workarounds
+
 ---
 
-### FASE 2: COMPONENTES AVANÇADOS
-
+### FASE 2: COMPONENT LIBRARY & PERIFÉRICOS
 **STATUS: PLANEADO**
 
-- Displays: LCD 16x2, OLED 128x64, TFT ST7735.
-- Sensores: DHT22, ultrasom, LDR, etc.
-- Motores: DC + driver, stepper + driver.
-- Comunicação multi-MCU: UART, I2C, SPI.
-- Network (ESP32): WiFi virtual, MQTT, HTTP.
-- Ferramentas: Serial Plotter, Logic Analyzer, Osciloscópio virtual.
+- **Digital Outputs**: **Single LED** (Cores editáveis, Brilho via PWM, Editor de blink, Mapping); **RGB LED** (Picker Hex/RGB/HSV, Presets, Brilho, Efeitos); **WS2812/NeoPixel** (Pixel count, Pattern editor, Animações, Controlo individual); **LED Matrices** (8x8 mono, 16x16 RGB, Scrolling text, Custom sprites).
+- **Digital Inputs**: **Push Button** (Momentary/Toggle, Debounce, Pull-up/down, Active logic); **Toggle Switch** (Switches visuais, Labeling, Callbacks); **Sensores Digitais** (Limit switch, Reed, Hall effect, PIR, IR Protocol decoder).
+- **Analog Inputs**: **Potentiometer** (Slider horizontal/vertical, Ranges, PWM mapping); **Gauge** (Radial/Linear, Zonas de aviso, Escala de voltagem); **Sensores Analógicos** (LDR/Lux, Audio level, Humidade solo, Battery monitor).
+- **Motor Control**: **DC Motor** (Speed/Direction, Current monitoring, Driver presets); **Stepper** (Step count, Speed, Acceleration, Microstepping); **Servo** (Angle slider, Trim, Continuous mode); **ESC** (Throttle, Safety arming, Telemetria); **Fan** (PWM speed, Tachometer).
+- **Power Switching**: **Relays** (Single/Multi-channel, Timed activation, Interlock); **MOSFET/SSR** (High-current, Zero-crossing, PWM dimming); **Actuadores** (Solenoids, Bombas de água, Linear actuators).
+- **Rotary & Encoders**: **Rotary Encoder** (Visual wheel, Tracking, Detents, Botão integrado); **Joystick** (X/Y visualization, Deadzone, Calibração).
+- **Sensórica**: **Ambiente** (Temp/ Humidade Gauge, Pressão/Altitude, Air Quality, Trend charts); **Proximidade** (Ultrassom HC-SR04, Time-of-Flight VL53L0X, PIR Motion, IMU/Giroscópio/Acelerómetro 3D).
+- **Time & Location**: **Real-Time** (Relógio RTC, Alarmes, NTP Sync); **GPS** (Coordendas, Map preview, Altitude, Sat count); **Uptime** (Sistema/Boot counter).
+- **Display Emulators**: **Segmented** (7-Segment multi-digit, Alphanumeric); **LCD/OLED** (Character LCD 16x2/20x4 com custom chars, SSD1306/SH1106 canvas render accurate); **TFT/E-Paper** (Resoluções variadas, Touch simulation, Partial update).
+- **LED Displays**: **Bar Graph** (VU meter, Level gradients); **Dot Matrix** (Pixel control, Scrolling text, Animation preview).
+- **Indicators**: **Status Label** (Labels dinâmicos, Icon library, Badges); **Progress & Chart** (Linear/Circular bars, Real-time charts multi-series, Export CSV).
+- **Communication**: **Connectivity** (WiFi Status, RSSI, MQTT Monitor/Topic subscribe, I2C Scanner, SPI Config); **Serial & Logging** (UART Terminal, Send command, Log filtering DEBUG/INFO/ERR, CSV export).
+- **Storage & Media** (SD Card browser, File upload/download, ESP32-CAM MJPEG stream preview).
+- **UX/UI Layout**: **Organization** (Tabs/Pages, Cards/Sections colapsáveis, Grid layout responsive); **Alerts** (Toasts, Dismiss timing, Severity levels).
+- **Advanced Inputs**: **Color Picker** (Full spectrum, Hex/Sliders); **Keypads** (Numeric keypad touch-friendly, Text input com histórico e validação).
 
 ---
 
@@ -259,9 +351,9 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 ### Métricas de sucesso (KPIs)
 
 - Mês 1: QEMU + Arduino Uno rodando blink real, 10 componentes compatíveis.
-- Mês 3: 5+ placas, 30+ componentes, dashboard builder funcional.
-- Mês 6: PLC + SCADA, 50+ componentes, 1k usuários ativos.
-- Ano 1: 100+ componentes, 10k usuários, €15k MRR.
+- Mês 3: Placas Maker, 30+ componentes maker, Dashboard Builder funcional.
+- Mês 6: PLC + SCADA, 50+ componentes maker 30+ industriais, 1k usuários ativos.
+- Ano 1: 100+ componentes maker 50+ industriais, 10k usuários, €15k MRR.
 
 ---
 
