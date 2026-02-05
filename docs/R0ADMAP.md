@@ -143,6 +143,21 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 - [ ] **Coordinated Stepping**: Debug síncrono de múltiplos devices
 - [ ] **Resource Arbitration**: Gerenciamento de recursos compartilhados entre instâncias
 
+### 7. Multi-Language Toolchain (planeado)
+- [ ] **MicroPython Setup**: Scripts de instalação de firmware e tools (mpy-cross)
+- [ ] **CircuitPython Integration**: Suporte a UF2 workflow e bibliotecas
+- [ ] **Rust Embedded**: Setup de toolchain (cargo, avr-hal, esp-hal, rp-hal)
+- [ ] **TinyGo Support**: Configuração de compilador para AVR/ESP32/RP2040
+- [ ] **JavaScript Runtimes**: Integração com Moddable/Kaluma (se viável)
+
+### 8. NeuroForge Transpiler & Visual Programming (planeado)
+- [ ] **Unified AST**: Parser universal para blocos, flowcharts e código
+- [ ] **Transpiler Core**: Engine de transformação (ex: TypeScript -> C++, Blocos -> Python)
+- [ ] **Visual Blocks**: Interface estilo Scratch/Blockly integrada
+- [ ] **Flowchart-to-Code**: Conversão de diagramas React Flow para código executável
+- [ ] **Custom Syntax DSL**: Suporte a sintaxe simplificada do NeuroForge
+- [ ] **Binary Generation**: Integração com compiladores nativos para gerar .hex/.bin finais
+
 ---
 
 ## Roadmap Macro do Produto
@@ -152,7 +167,10 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 **Nome:** NeuroForge  
 **Objetivo:** Simulador universal de microcontroladores para makers E indústria com capacidade de criar dashboards IoT  
 **Diferencial:** Motor de simulação robusto (QEMU) + Componentes industriais + PLC + SCADA + UI doméstica estilo Home Assistant  
-**Mercado:** B2C (Makers) + B2B (Industrial)
+**Público Alvo:**
+- **Makers (B2M)**: UX simples, MCUs Makers, componentes visuais, dashboards
+- **Indústria (B2B)**: PLC/SCADA, Modbus, Ladder, logs estruturados, CI/CD
+- **Doméstico/Comercial(B2C)**: Dashboards IoT estilo Home Assistant
 
 ---
 

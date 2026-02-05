@@ -15,9 +15,9 @@ Tu és Perplexity, um assistente técnico ajudando o desenvolvedor **Caio** a co
 
 **Repositório:** [`caiojordao84/neuroforge`](https://github.com/caiojordao84/neuroforge)  
 **Branch:** `main`  
-**Commit atual:** `86cf8a459d4ff7cc83bd7d890c8e1985feefbd21` (04/02/2026 14:33)
+**Commit atual:** `49ebb841fbb79514f79f728d7eeb3267ec5de4bc` (05/02/2026 19:07)
 
-### Estrutura do Projeto
+### Estrutura atual do Projeto
 
 ```
 neuroforge/
@@ -229,9 +229,9 @@ Antes de modificar **QUALQUER** arquivo do backend:
 
 ## 🎯 Público Alvo
 
-- **Makers (B2C)**: UX simples, Arduino, componentes visuais, dashboards
+- **Makers (B2M)**: UX simples, MCUs Makers, componentes visuais, dashboards
 - **Indústria (B2B)**: PLC/SCADA, Modbus, Ladder, logs estruturados, CI/CD
-- **Doméstico/Comercial**: Dashboards IoT estilo Home Assistant
+- **Doméstico/Comercial(B2C)**: Dashboards IoT estilo Home Assistant
 
 ---
 
