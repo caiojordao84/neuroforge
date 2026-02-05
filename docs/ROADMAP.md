@@ -265,6 +265,10 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 
 #### 1.1.5. Perfis de Placas & Modelos
 
+- [ ] Formato JSON para perfis de placas
+- [ ] Implementar suporte a perfis de placas
+- [ ] Implementar suporte a perfis de modelos
+- [ ] Documentação de perfis de placas
 ##### Perfis de Placas Pré‑Configurados
 
   A aplicação inclui perfis detalhados para placas de desenvolvimento populares:
