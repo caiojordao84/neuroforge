@@ -126,6 +126,23 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 - [x] Documentar a arquitetura multi‑backend em `docs/architecture/backends.md`.
 - [x] Atualizar este ROADMAP à medida que a integração ESP32 evolui.
 
+### 5. Enhanced QEMU Orchestration (planeado)
+- [ ] **Unified Backend Manager**: Melhorar `QEMUSimulationEngine` com API unificada
+- [ ] **Shared Event System**: Agregação de eventos de múltiplas instâncias QEMU
+- [ ] **Multiplexed Serial Monitor**: Console única para AVR + ESP32 + outros backends
+- [ ] **Unified Configuration**: Sistema de configuração centralizado para todas arquiteturas
+- [ ] **Better Lifecycle Management**: Start/stop/restart coordenado entre backends
+- [ ] **Resource Pooling**: Gerenciamento inteligente de portas TCP/Monitor
+- [ ] **Error Handling**: Sistema unificado de tratamento de erros e recovery
+
+### 6. Multi-Device Orchestration (planeado)
+- [ ] **Simultaneous Multi-MCU**: Rodar AVR + ESP32 + RP2040 simultaneamente
+- [ ] **Shared NeuroForge Clock**: Clock virtual sincronizado entre todos os devices
+- [ ] **Inter-Device Communication**: GPIO/I2C/SPI bus compartilhado entre MCUs
+- [ ] **QEMU Network Bridge**: Conectar instâncias QEMU via networking features
+- [ ] **Coordinated Stepping**: Debug síncrono de múltiplos devices
+- [ ] **Resource Arbitration**: Gerenciamento de recursos compartilhados entre instâncias
+
 ---
 
 ## Roadmap Macro do Produto
@@ -228,11 +245,15 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 
 #### 1.1.3. Backend RP2040 (QEMU) - Planeado
 
-- [ ] Avaliar e integrar QEMU ou emulador RP2040
-- [ ] Adicionar `Rp2040Backend`
-- [ ] Definir JSONs de boards RP2040
-- [ ] Integração com `GPIOService`
-- [ ] Exemplo `example-gpio-rp2040.ts`
+- [ ] **RaspberryPiBackend**: Implementar backend dedicado para QEMU ARM
+- [ ] **qemu-system-arm** integration: Suporte completo para RP2040 (Cortex-M0+)
+- [ ] **RP2040 GPIO Service**: Adaptador específico para GPIO do Pico
+- [ ] **PIO Emulation**: State machine simulation (se viável com QEMU)
+- [ ] **NeuroForge Time para ARM**: Port do nf_time.h/cpp para Pico SDK
+- [ ] **Multi-Core Sync**: Coordenação dual-core do RP2040
+- [ ] **Documentação**: Setup guide estilo ESP32 para Pico
+- [ ] Definir JSONs de boards RP2040 em `docs/boards/`
+- [ ] Exemplo `example-gpio-rp2040.ts` funcional
 
 #### 1.1.4. Backend STM32 (QEMU) - Planeado
 
