@@ -15,7 +15,7 @@ Tu és Perplexity, um assistente técnico ajudando o desenvolvedor **Caio** a co
 
 **Repositório:** [`caiojordao84/neuroforge`](https://github.com/caiojordao84/neuroforge)  
 **Branch:** `main`  
-**Commit atual:** `49ebb841fbb79514f79f728d7eeb3267ec5de4bc` (05/02/2026 19:07)
+**Commit atual:** `45fe95e06c469760f071e7362ee0b15480dd65b7` (05/02/2026 19:16)
 
 ### Estrutura atual do Projeto
 
