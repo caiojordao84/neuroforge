@@ -15,9 +15,24 @@ rp2040/
 │   ├── pico_sdk_import.cmake  # SDK import
 │   ├── test-blink.resc        # Script Renode
 │   ├── monitor-serial.ps1     # Monitor serial TCP
+│   ├── platforms/             # Custom RP2040 platform
+│   │   ├── rp2040.repl        # RP2040 MCU description
+│   │   └── raspberry-pico.repl # Pico board config
 │   └── build/                 # Output (gerado)
 └── .gitignore
 ```
+
+## 🔧 Platform Files
+
+**IMPORTANTE:** Renode 1.15.3 não inclui RP2040 por padrão. Usamos arquivos `.repl` customizados na pasta `platforms/`.
+
+Esses arquivos definem:
+- Cortex-M0+ CPU
+- Memória (SRAM, Flash, ROM)
+- UART0/UART1 (PL011 compatible)
+- Timers
+
+**Não é necessário instalar nada extra!** Os arquivos já estão no repositório.
 
 ## 🔨 Compilação
 
@@ -72,6 +87,20 @@ cd blink
 renode test-blink.resc
 ```
 
+**Saída esperada:**
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🚀 NeuroForge RP2040 Blink Test
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Board:    Raspberry Pi Pico
+  Firmware: build/blink.elf (Pico SDK)
+  UART TCP: localhost:1234
+  Platform: Custom RP2040 .repl
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Emulação iniciada!
+```
+
 ## 📡 Serial Output
 
 O firmware emite eventos GPIO via UART:
@@ -110,6 +139,15 @@ LED OFF
 
 ## 🛠️ Troubleshooting
 
+### Erro: "Could not find file 'platforms/cpus/rp2040.repl'"
+
+✅ **RESOLVIDO!** Agora usamos `platforms/raspberry-pico.repl` local (já está no repo).
+
+O script `test-blink.resc` foi atualizado para usar:
+```
+machine LoadPlatformDescription @platforms/raspberry-pico.repl
+```
+
 ### Erro: "PICO_SDK_PATH not defined"
 
 ```powershell
@@ -136,3 +174,4 @@ winget install Ninja-build.Ninja
 - [rp2040-setup.md](../../docs/firmware/rp2040-setup.md) - Setup completo
 - [Pico SDK](https://github.com/raspberrypi/pico-sdk)
 - [Renode](https://renode.readthedocs.io/)
+- [Custom RP2040 Platform](https://github.com/matgla/Renode_RP2040) - Referência
