@@ -14,7 +14,7 @@ server/test-firmware/esp32/: Pasta onde você deve colocar as imagens de firmwar
 server/src/services/Esp32Backend.ts: O serviço que gerencia a execução do QEMU específico para ESP32.
 No PC:
 Binário: C:\qemu-project\builds\esp32\bin\qemu-system-xtensa.exe
-Configuração: O arquivo server/.env define o binário em ESP32_QEMU_PATH=qemu-system-xtensa.
+Configuração: O arquivo server/.env define `ESP32_QEMU_PATH` e `ESP32_QEMU_DATA_PATH=C:\qemu-project\builds\esp32\share\qemu`.
 
     ##### Componentes do QEMU no Projeto
 No Projeto (NeuroForge):
@@ -48,6 +48,6 @@ docs\boards\board-schema.json (Board Schema Genérico)
 - **Diferença Chave:** Enquanto o AVR usa `stdio` para serial, o ESP32 usa **Sockets TCP**, o que permite simular comunicações mais complexas no futuro.
 
     ##### Próximos Passos (Resumo)
-1. Completar a lógica de start/stop no `Esp32Backend.ts`.
-2. Habilitar o `Esp32SerialClient.ts` para converter o stream TCP em eventos GPIO.
-3. Conectar esses serviços no `QEMUSimulationEngine.ts` quando a board detectada for ESP32.
+1. Completar a lógica de start/stop no `Esp32Backend.ts`. (✅ CONCLUÍDO)
+2. Habilitar o `Esp32SerialClient.ts` para converter o stream TCP em eventos GPIO. (✅ CONCLUÍDO)
+3. Conectar esses serviços no `QEMUSimulationEngine.ts` quando a board detectada for ESP32. (🔜 PRÓXIMO PASSO)

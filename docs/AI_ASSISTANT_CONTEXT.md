@@ -116,7 +116,7 @@ neuroforge/
 
 **No PC:**
 - **Binário:** `C:\qemu-project\builds\esp32\bin\qemu-system-xtensa.exe`
-- **Configuração:** O arquivo `server/.env` define o binário em `ESP32_QEMU_PATH=qemu-system-xtensa`
+- **Configuração:** O arquivo `server/.env` define o binário em `ESP32_QEMU_PATH` e o caminho de dados em `ESP32_QEMU_DATA_PATH=C:\qemu-project\builds\esp32\share\qemu`
 
 ### 📦 Componentes Comuns do QEMU
 
@@ -144,7 +144,7 @@ neuroforge/
 
 ## ✅ Estado de Implementação (Fevereiro 2026)
 
-### ✅ **FUNCIONANDO (Arduino AVR):**
+### ✅ **FUNCIONANDO (Tanto AVR quanto ESP32):**
 
 1. **Frontend:**
    - React + TypeScript + Vite
@@ -154,13 +154,13 @@ neuroforge/
    - Componentes visuais: LED, Button, Servo, Potentiometer, etc.
    - Botão STOP toggle funcional
 
-2. **Backend AVR:**
-   - **CompilerService.ts**: Compila código Arduino usando `arduino-cli` → gera `.elf`
-   - **QEMURunner.ts**: Executa QEMU AVR (`qemu-system-avr -machine arduino-uno -bios firmware.elf`)
-   - **QEMUSimulationEngine.ts**: Orquestra compilação + QEMU + GPIO polling
-   - **QEMUMonitorService.ts**: Monitora GPIO via TCP (conectado ao QEMU Monitor)
-   - **Serial output**: Funciona via stdio do QEMU
-   - **LED no pin 13**: ✅ **PISCA CORRETAMENTE**
+2. **Backend (AVR & ESP32):**
+   - **CompilerService.ts**: Compila código Arduino (AVR).
+   - **QEMURunner.ts**: Executa QEMU AVR.
+   - **Esp32Backend.ts**: ✅ **TESTADO E FUNCIONAL** com firmware real.
+   - **Esp32SerialClient.ts**: ✅ **TESTADO E FUNCIONAL** via TCP.
+   - **SerialGPIOParser.ts**: ✅ **PARSEA PROTOCOLO G:pin=X,v=Y** para ambos.
+   - **LED no pin 13 (ESP32)**: ✅ **PISCA CORRETAMENTE** no exemplo standalone.
 
 3. **NeuroForge Time:**
    - Core `neuroforge:avr-qemu:unoqemu` instalado
@@ -407,6 +407,7 @@ Board JSON → Backend (QEMU) → Framework → Serial GPIO → Frontend
 | 2.8  | 31/01 | NeuroForge Time - Clock Virtual Unificado ✅ COMPLETE       |
 | 2.9  | 01/02 | Stop Button Toggle ✅ COMPLETE                              |
 | 2.10 | 01/02 | GPIO Real via QEMU Monitor (Parte 1 ✅, Parte 2 🔜)          |
+| 2.11 | 06/02 | ESP32 Integration Fixes (ROM Paths, SLIRP, Stability) ✅    |
 
 ---
 

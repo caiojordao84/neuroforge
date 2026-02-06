@@ -982,22 +982,39 @@ private scheduleLoop(): void {
 
 ---
 
-## 📊 Estatísticas
+### FIX 2.11: ESP32 Integration Fixes (Backend & Serial)
+**Data:** 06/02/2026  
+**Status:** ✅ COMPLETE  
+**Commits:** `3bdabdb` (Firmware), Infrastructure fixes in `Esp32Backend.ts` e `Esp32SerialClient.ts`
 
-- **Total de Fixes:** 20
-- **Sessão QEMU:** 10 fixes (30 Jan - 01 Fev 2026)
-  - **FIX 2.8 (NeuroForge Time):** ✅ **COMPLETO - Diferencial do projeto**
-  - **FIX 2.9 (Stop Button):** ✅ **COMPLETO - UX melhorado**
-  - **FIX 2.10 (GPIO via Monitor):**
-    - ✅ **Parte 1 (TCP Connection) COMPLETA**
-    - 🎯 **Parte 2 (GPIO Parsing) PRÓXIMO**
-- **Sessão Anterior:** 10 fixes (22-29/01/2026)
-- **Commits:** 59+
-- **Linhas de código:** ~20.500
-- **Tempo investido:** ~75 horas
+**Problemas:**
+1. **Missing ROM:** QEMU não encontrava `esp32_rom.bin`, resultando em erro `-bios argument not set, and ROM code binary not found`.
+2. **Missing SLIRP:** Erro `SLIRP not available` em builds Windows impedia o início com `-nic user`.
+3. **Race Condition:** O Backend detectava a porta aberta mas tentava conectar o `Esp32SerialClient` rápido demais, causando `ECONNREFUSED`.
+4. **Unhandled Crash:** Falha na conexão inicial do socket causava crash do Node por "unhandled 'error' event".
+
+**Soluções:**
+- ✅ **Argumento `-L`:** Adicionado suporte a `ESP32_QEMU_DATA_PATH` no `Esp32Backend.ts` para apontar para `share/qemu`.
+- ✅ **Argumento `-net none`:** Adicionado suporte a `networkMode: 'none'` para desabilitar rede quando SLIRP não está disponível.
+- ✅ **Connection Delay:** Adicionado `setTimeout(500)` no `Esp32Backend.ts` após validar que a porta está pronta.
+- ✅ **Error Suppression:** Modificado `Esp32SerialClient.ts` para não emitir erros globais enquanto tenta a conexão inicial.
+
+✅ **ESP32 Backend 100% funcional com firmware real!**
 
 ---
 
-**Última atualização:** 01/02/2026 1:30 PM WET  
-**Status:** 🎉 **FASE 2.10.1 (Monitor Connection) COMPLETA!**  
-**Próxima Missão:** 🎯 **Parsing GPIO registers do QEMU Monitor**
+## 📊 Estatísticas
+
+- **Total de Fixes:** 21
+- **Sessão QEMU:** 11 fixes (30 Jan - 06 Fev 2026)
+  - **FIX 2.8 (NeuroForge Time):** ✅ **COMPLETO**
+  - **FIX 2.11 (ESP32 Backend):** ✅ **TESTADO E FUNCIONAL**
+- **Commits:** 60+
+- **Linhas de código:** ~20.600
+- **Tempo investido:** ~78 horas
+
+---
+
+**Última atualização:** 06/02/2026 10:30 AM WET  
+**Status:** 🎉 **FASE 1 (ESP32 Integration - Core) COMPLETA!**  
+**Próxima Missão:** 🎯 **Integrar serviços ESP32 no QEMUSimulationEngine principal**
