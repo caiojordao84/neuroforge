@@ -17,10 +17,11 @@ import { Play, RotateCcw, Languages } from 'lucide-react';
 
 export const CodeEditor: React.FC = () => {
   const { 
-    code, 
-    setCode, 
-    language, 
-    setLanguage, 
+    getAllMCUs,
+    activeMCUId,
+    updateMCUCode,
+    updateMCULanguage,
+    language,
     status,
     startSimulation,
     stopSimulation,
@@ -31,43 +32,60 @@ export const CodeEditor: React.FC = () => {
   const [showTranspileConfirm, setShowTranspileConfirm] = useState(false);
   const [pendingLanguage, setPendingLanguage] = useState<Language | null>(null);
 
+  // Get active MCU
+  const getActiveMCU = useCallback(() => {
+    const allMCUs = getAllMCUs();
+    if (allMCUs.length === 0) return null;
+    
+    if (activeMCUId) {
+      const mcu = allMCUs.find(m => m.id === activeMCUId);
+      if (mcu) return mcu;
+    }
+    
+    return allMCUs[0];
+  }, [getAllMCUs, activeMCUId]);
+
+  const activeMCU = getActiveMCU();
+  const code = activeMCU?.code || '';
+  const activeLanguage = activeMCU?.language || language;
+
   // Handle code change
   const handleCodeChange = useCallback(
     (value: string | undefined) => {
-      if (value !== undefined) {
-        setCode(value);
+      if (value !== undefined && activeMCU) {
+        updateMCUCode(activeMCU.id, value);
       }
     },
-    [setCode]
+    [activeMCU, updateMCUCode]
   );
 
   // Handle language change
   const handleLanguageChange = useCallback(
     (newLanguage: Language) => {
-      if (newLanguage === language) return;
+      if (newLanguage === activeLanguage) return;
 
       setPendingLanguage(newLanguage);
       setShowTranspileConfirm(true);
     },
-    [language]
+    [activeLanguage]
   );
 
   // Confirm transpilation
   const confirmTranspile = useCallback(() => {
-    if (!pendingLanguage) return;
+    if (!pendingLanguage || !activeMCU) return;
 
-    const newCode = transpiler.transpile(code, language, pendingLanguage);
-    setCode(newCode);
-    setLanguage(pendingLanguage);
+    const newCode = transpiler.transpile(code, activeLanguage, pendingLanguage);
+    updateMCUCode(activeMCU.id, newCode);
+    updateMCULanguage(activeMCU.id, pendingLanguage);
     
     addTerminalLine(
-      `🔄 Code transpiled from ${language.toUpperCase()} to ${pendingLanguage.toUpperCase()}`,
+      `🔄 Code transpiled from ${activeLanguage.toUpperCase()} to ${pendingLanguage.toUpperCase()}`,
       'info'
     );
 
     setShowTranspileConfirm(false);
     setPendingLanguage(null);
-  }, [code, language, pendingLanguage, setCode, setLanguage, addTerminalLine]);
+  }, [code, activeLanguage, pendingLanguage, activeMCU, updateMCUCode, updateMCULanguage, addTerminalLine]);
 
   // Cancel transpilation
   const cancelTranspile = useCallback(() => {
@@ -106,7 +124,7 @@ export const CodeEditor: React.FC = () => {
     }
   };
 
-  const editorLanguage = getEditorLanguage(language);
+  const editorLanguage = getEditorLanguage(activeLanguage);
 
   // Editor theme options
   const editorOptions = {
@@ -116,7 +134,7 @@ export const CodeEditor: React.FC = () => {
     lineNumbers: 'on' as const,
     roundedSelection: false,
     scrollBeyondLastLine: false,
-    readOnly: status === 'running',
+    readOnly: status === 'running' || !activeMCU,
     automaticLayout: true,
     padding: { top: 16 },
     folding: true,
@@ -139,7 +157,7 @@ export const CodeEditor: React.FC = () => {
         {/* Language selector */}
         <div className="flex items-center gap-2">
           <Languages className="w-4 h-4 text-[#9ca3af]" />
-          <Select value={language} onValueChange={handleLanguageChange}>
+          <Select value={activeLanguage} onValueChange={handleLanguageChange} disabled={!activeMCU}>
             <SelectTrigger className="w-[160px] h-8 bg-[#0a0e14] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm">
               <SelectValue />
             </SelectTrigger>
@@ -187,6 +205,7 @@ export const CodeEditor: React.FC = () => {
           <Button
             size="sm"
             onClick={handleRun}
+            disabled={!activeMCU}
             className={cn(
               'h-8 px-4',
               status === 'running'
@@ -210,7 +229,7 @@ export const CodeEditor: React.FC = () => {
           )}
         >
           <p className="text-[#e6e6e6] text-sm mb-3">
-            Transpile code from {language.toUpperCase()} to {pendingLanguage?.toUpperCase()}?
+            Transpile code from {activeLanguage.toUpperCase()} to {pendingLanguage?.toUpperCase()}?
           </p>
           <div className="flex justify-end gap-2">
             <Button
@@ -234,19 +253,25 @@ export const CodeEditor: React.FC = () => {
 
       {/* Editor */}
       <div className="flex-1 overflow-hidden">
-        <Editor
-          height="100%"
-          language={editorLanguage}
-          value={code}
-          onChange={handleCodeChange}
-          options={editorOptions}
-          theme="vs-dark"
-          loading={
-            <div className="flex items-center justify-center h-full text-[#9ca3af]">
-              Loading editor...
-            </div>
-          }
-        />
+        {activeMCU ? (
+          <Editor
+            height="100%"
+            language={editorLanguage}
+            value={code}
+            onChange={handleCodeChange}
+            options={editorOptions}
+            theme="vs-dark"
+            loading={
+              <div className="flex items-center justify-center h-full text-[#9ca3af]">
+                Loading editor...
+              </div>
+            }
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full text-[#9ca3af]">
+            No MCU on canvas. Drag an MCU from Components Library.
+          </div>
+        )}
       </div>
 
       {/* Status bar */}
@@ -259,12 +284,15 @@ export const CodeEditor: React.FC = () => {
       >
         <div className="flex items-center gap-4">
           <span>
-            {language === 'cpp' && 'C++ (Arduino)'}
-            {language === 'micropython' && 'MicroPython'}
-            {language === 'circuitpython' && 'CircuitPython'}
-            {language === 'assembly' && 'Assembly (AVR)'}
+            {activeLanguage === 'cpp' && 'C++ (Arduino)'}
+            {activeLanguage === 'micropython' && 'MicroPython'}
+            {activeLanguage === 'circuitpython' && 'CircuitPython'}
+            {activeLanguage === 'assembly' && 'Assembly (AVR)'}
           </span>
           <span>UTF-8</span>
+          {activeMCU && (
+            <span className="text-[#00d9ff]">{activeMCU.label}</span>
+          )}
         </div>
         <div className="flex items-center gap-4">
           <span
