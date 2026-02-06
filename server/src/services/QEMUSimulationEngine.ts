@@ -54,10 +54,10 @@ export class QEMUSimulationEngine extends EventEmitter {
     // Detectar tipo de backend baseado na placa
     if (board === 'esp32' || board.includes('esp32')) {
       this.backendType = 'esp32';
-      console.log(`📦 [QEMUSimulationEngine] ESP32 Firmware loaded: ${firmwarePath}`);
+      console.log(`📦 ESP32 Firmware loaded: ${firmwarePath}`);
     } else {
       this.backendType = 'avr';
-      console.log(`📦 [QEMUSimulationEngine] AVR Firmware loaded: ${firmwarePath} (${board})`);
+      console.log(`📦 AVR Firmware loaded: ${firmwarePath} (${board})`);
     }
 
     this.emit('firmware-loaded', firmwarePath, board);
@@ -70,14 +70,6 @@ export class QEMUSimulationEngine extends EventEmitter {
     if (!this._firmwarePath) {
       throw new Error('No firmware loaded. Call loadFirmware() first.');
     }
-
-    // ⭐ DEBUG: Log firmware being started
-    console.log('\n' + '='.repeat(80));
-    console.log('🚀 [QEMUSimulationEngine] Starting simulation');
-    console.log('Backend Type:', this.backendType);
-    console.log('Board:', this._board);
-    console.log('Firmware Path:', this._firmwarePath);
-    console.log('='.repeat(80) + '\n');
 
     try {
       this.gpioErrorShown = false;
@@ -104,9 +96,6 @@ export class QEMUSimulationEngine extends EventEmitter {
    * Inicia backend AVR (original)
    */
   private async startAvrBackend(): Promise<void> {
-    // ⭐ DEBUG: Confirm firmware path before passing to runner
-    console.log(`🔍 [QEMUSimulationEngine] Passing firmware to QEMURunner: ${this._firmwarePath}`);
-    
     await this.runner.start(this._firmwarePath!, this._board as any);
 
     const monitorInfo = this.runner.getMonitorInfo();
