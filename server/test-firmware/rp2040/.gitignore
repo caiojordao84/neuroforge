@@ -1,0 +1,34 @@
+# Build directories
+build/
+cmake-build-*/
+**/build/
+
+# Compiled binaries
+*.elf
+*.bin
+*.hex
+*.uf2
+*.map
+*.dis
+*.lst
+
+# Object files
+*.o
+*.obj
+*.a
+*.lib
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+uart_output.log
+
+# OS
+.DS_Store
+Thumbs.db
