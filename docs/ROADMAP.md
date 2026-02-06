@@ -17,52 +17,53 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 
 ## Estado Atual
 
-### Boards AVR (Arduino clássico)
+### Boards AVR (Arduino clássico) ✅ COMPLETO
 - JSONs de boards em `docs/boards/` para UNO, Nano, etc.
 - Backend AVR integrado:
   - QEMU AVR configurado e funcional.
   - Pipeline de compilação AVR (Arduino CLI / avr-gcc) a gerar ELF executado no QEMU.
+  - Board custom `arduino:avr:unoqemu` com NeuroForge Time.
 - Serviços:
   - Serial/monitor integrado.
-  - `GPIOService` a interpretar linhas `G:pin=...,v=...` e atualizar o estado da simulação.
+  - `SerialGPIOParser` com regex não-gananciosa para detectar frames `G:pin=...,v=...`.
+  - Filtro de logs de controle (frames `G:` e `M:` não aparecem no Serial Monitor).
+  - Multi-pin GPIO sincronizado.
 
-### Backend ESP32 (primeira versão)
+### Backend ESP32 ✅ COMPLETO
 - Toolchain ESP‑IDF v6.1 configurado no Windows com Python 3.12.
 - QEMU ESP32 oficial da Espressif instalado (`qemu-system-xtensa -M esp32 ...`).
-- Projeto `hello_world` do ESP‑IDF compilado e executado em QEMU, gerando:
-  - `qemu_flash.bin`
-  - `qemu_efuse.bin`
-- Linha de comando de QEMU validada e estável para uso pelo `Esp32Backend`.
+- **Compilação Real**: Sistema agora compila código do usuário com `arduino-cli --export-binaries`.
+- **Shim de GPIO** (`esp32-shim.cpp`):
+  - Sobrescreve `digitalWrite` e `pinMode` usando weak symbols.
+  - Injeta automaticamente durante compilação.
+  - Reporta estados via `ets_printf("G:pin=%d,v=%d\n", ...)` para UART0.
+- **Suporte a eFuse**: `qemu_efuse.bin` passado corretamente para QEMU.
+- **Protocolo Serial GPIO** funcionando:
+  - Frames `G:` e `M:` filtrados do Serial Monitor.
+  - Multi-pin GPIO sincronizado.
+  - LED pisca no canvas em tempo real.
 
 ### Documentação de Arquitetura
 - [`docs/architecture/backends.md`](./architecture/backends.md) descreve a arquitetura multi-backend (AVR, ESP32, RP2040) com separação entre board, backend de execução e framework.
+- [`docs/ledPisca.md`](./ledPisca.md) documenta todas as correções implementadas para Arduino e ESP32.
 
 ---
 
 ## Em Progresso
 
-### Integração do backend ESP32 na plataforma
-- [ ] Estender `QEMURunner` (ou equivalente) com:
-  - `boardType: 'esp32-devkit'` (nome a definir).
-  - Suporte a `flashImagePath` e `efuseImagePath`.
-  - Parametrização da porta TCP da UART (ex.: 5555).
-- [ ] Implementar `Esp32Backend` que:
-  - Resolve o caminho do `qemu-system-xtensa`.
-  - Constrói e lança o comando QEMU ESP32.
-  - Expõe um stream de serial (TCP) consumível pela camada de simulação.
-- [ ] Criar um cliente de serial TCP (ex.: `Esp32SerialClient`) que:
-  - Liga a `tcp://localhost:<porta>`.
-  - Reutiliza o parser de linhas `G:` já usado no AVR para GPIO.
+### Suporte a RP2040 (Raspberry Pi Pico)
+- [ ] Avaliar e integrar QEMU ou emulador com suporte RP2040.
+- [ ] Adicionar `Rp2040Backend` com interface idêntica a AVR/ESP32.
+- [ ] Definir JSONs de boards RP2040 em `docs/boards/`.
+- [ ] Criar shim de GPIO para RP2040 (similar ao ESP32).
 
-### Projeto mínimo ESP‑IDF para integração
-- [ ] Clonar `examples/get-started/hello_world` para um projeto `firmware/esp32/neuroforge-gpio` (nome provisório).
-- [ ] Integrar uma pequena "cola" (`NeuroForgeGPIO_ESP32`) que:
-  - Intercepta operações de GPIO.
-  - Emite linhas `G:pin=...,v=...` na UART padrão.
-- [ ] Documentar no `docs/firmware/esp32.md`:
-  - Como compilar esse projeto.
-  - Onde os binários `qemu_flash.bin`/`qemu_efuse.bin` são gerados.
-  - Como apontar o `Esp32Backend` para esses ficheiros.
+### Unificação da camada de simulação
+- [ ] Extrair um `SimulationProtocol`:
+  - Sintaxe e semântica de mensagens (GPIO, ADC, rede, sensores).
+- [x] Garantir que tanto AVR quanto ESP32 seguem o mesmo contrato de log.
+- [ ] Expor esse protocolo via:
+  - WebSocket (UI em tempo real).
+  - API para automação de testes e uso industrial.
 
 ---
 
@@ -72,14 +73,13 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 - [ ] Avaliar e integrar QEMU ou emulador com suporte RP2040.
 - [ ] Adicionar `Rp2040Backend` com interface idêntica a AVR/ESP32.
 - [ ] Definir JSONs de boards RP2040 em `docs/boards/`.
+- [ ] Criar shim de GPIO para RP2040.
 
-### Unificação da camada de simulação
-- [ ] Extrair um `SimulationProtocol`:
-  - Sintaxe e semântica de mensagens (GPIO, ADC, rede, sensores).
-- [ ] Garantir que tanto AVR quanto ESP32 seguem o mesmo contrato de log.
-- [ ] Expor esse protocolo via:
-  - WebSocket (UI em tempo real).
-  - API para automação de testes e uso industrial.
+### Componentes Avançados
+- [ ] Sensores analógicos (LDR, potenciômetro já funciona).
+- [ ] Displays (LCD 16x2, OLED SSD1306).
+- [ ] Motores (DC, Servo, Stepper).
+- [ ] Sensores digitais (DHT22, HC-SR04).
 
 ---
 
@@ -105,26 +105,33 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 
 ## Mini ROADMAP deste Job (ESP32 QEMU no Windows)
 
-### 1. Infraestrutura de ferramentas (concluído)
+### 1. Infraestrutura de ferramentas ✅ CONCLUÍDO
 - [x] Instalar ESP‑IDF v6.1 no Windows com Python 3.12.
 - [x] Corrigir conflitos de `windows-curses` com Python 3.14 via venv dedicada.
 - [x] Instalar toolchain `xtensa-esp-elf` e colocar no PATH.
 - [x] Instalar QEMU ESP32 via `idf_tools.py` e garantir que `qemu-system-xtensa -M esp32` funciona.
 
-### 2. Prova de conceito com hello_world (concluído)
+### 2. Prova de conceito com hello_world ✅ CONCLUÍDO
 - [x] Compilar `examples/get-started/hello_world` para target `esp32`.
 - [x] Gerar `qemu_flash.bin` e `qemu_efuse.bin`.
 - [x] Rodar QEMU manualmente e através de `idf.py qemu monitor`.
 - [x] Verificar que o monitor (via socket TCP 5555) recebe output.
 
-### 3. Integração com a plataforma NeuroForge (em andamento)
-- [ ] Adicionar `Esp32Backend` / `boardType: 'esp32-devkit'` ao `QEMURunner`.
-- [ ] Implementar cliente TCP de serial e integrar com `GPIOService`.
-- [ ] Criar `example-gpio-esp32.ts` espelhando `example-gpio.ts` (AVR), mas usando QEMU ESP32.
+### 3. Integração com a plataforma NeuroForge ✅ CONCLUÍDO
+- [x] Adicionar `Esp32Backend` / `boardType: 'esp32-devkit'` ao `QEMURunner`.
+- [x] Implementar cliente TCP de serial e integrar com `SerialGPIOParser`.
+- [x] Criar shim de GPIO (`esp32-shim.cpp`) com weak symbol override.
+- [x] Injeção automática do shim durante compilação.
+- [x] Compilação real com `arduino-cli --export-binaries`.
+- [x] Suporte a `efusePath` em toda a stack (Frontend -> API -> Backend).
+- [x] Filtro de logs de controle (`G:`, `M:`) no Serial Monitor.
+- [x] Multi-pin GPIO sincronizado.
+- [x] Documentação em `docs/ledPisca.md`.
 
-### 4. Generalização e limpeza (planeado)
+### 4. Generalização e limpeza ✅ CONCLUÍDO
 - [x] Documentar a arquitetura multi‑backend em `docs/architecture/backends.md`.
 - [x] Atualizar este ROADMAP à medida que a integração ESP32 evolui.
+- [x] Criar `docs/ledPisca.md` com relatório técnico completo.
 
 ### 5. Enhanced QEMU Orchestration (planeado)
 - [ ] **Unified Backend Manager**: Melhorar `QEMUSimulationEngine` com API unificada
@@ -220,46 +227,59 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 
 ### FASE 1: MIGRAÇÃO PARA QEMU
 
-**STATUS: EM ANDAMENTO** (AVR concluído, ESP32 em integração)
+**STATUS: AVR & ESP32 COMPLETO ✅ | RP2040 & STM32 PLANEADO**
 
-#### Semana 1: QEMU Integration e POC
+#### Semana 1: QEMU Integration e POC ✅ CONCLUÍDO
 - [x] Compilar ou configurar QEMU para rodar firmwares Arduino/ESP32/Pico
 - [x] Proof of Concept com `blink.ino`
 - [x] Verificar GPIO output via Serial
 - [x] Medir performance básica
 
-#### Semana 2: Backend de Compilação e QEMUSimulationEngine
+#### Semana 2: Backend de Compilação e QEMUSimulationEngine ✅ CONCLUÍDO
 - [x] API/CLI de compilação para AVR
+- [x] API/CLI de compilação para ESP32
 - [x] `QEMURunner` substituindo SimulationEngine custom (AVR)
 - [x] Carregamento de binário no QEMU
 - [x] UART redirection para Serial Monitor
-- [ ] ESP32 backend integration (em progresso)
+- [x] ESP32 backend integration
 
 #### Semana 3: Multi-Board Support
 - [x] Arduino Uno (AVR)
-- [ ] ESP32 (Xtensa) - em integração
+- [x] ESP32 (Xtensa)
 - [ ] RP2040 / STM32 (ARM) - planeado
-- [ ] Board Selector unificado no app
+- [x] Board Selector unificado no app
 
-#### 1.1.1. Backend AVR (QEMU) - Concluído
+#### 1.1.1. Backend AVR (QEMU) ✅ COMPLETO
 
 - [x] JSONs de boards AVR em `docs/boards/`
 - [x] QEMU AVR configurado e funcional
 - [x] Pipeline de compilação AVR (Arduino CLI / avr-gcc)
-- [x] `GPIOService` com parser de linhas `G:pin=...,v=...`
+- [x] Board custom `arduino:avr:unoqemu` com NeuroForge Time
+- [x] `SerialGPIOParser` com parser de linhas `G:pin=...,v=...`
+- [x] Regex não-gananciosa para detecção robusta
+- [x] Filtro de logs de controle no `QEMUSimulationEngine`
+- [x] Multi-pin GPIO sincronizado
 - [x] Exemplo `example-gpio.ts` com Arduino Uno
 
-#### 1.1.2. Backend ESP32 (QEMU) - Em Integração
+#### 1.1.2. Backend ESP32 (QEMU) ✅ COMPLETO
 
 - [x] Toolchain ESP‑IDF v6.1 no Windows
 - [x] QEMU ESP32 oficial da Espressif instalado
 - [x] Projeto `hello_world` compilado e executado em QEMU
 - [x] Binários `qemu_flash.bin` e `qemu_efuse.bin` gerados
 - [x] Linha de comando QEMU validada
-- [ ] `Esp32Backend` com suporte a `boardType: 'esp32-devkit'`
-- [ ] Cliente de serial TCP para UART
-- [ ] Integração com `GPIOService`
-- [ ] Exemplo `example-gpio-esp32.ts`
+- [x] `Esp32Backend` com suporte a `boardType: 'esp32-devkit'`
+- [x] Cliente de serial TCP para UART
+- [x] Integração com `SerialGPIOParser`
+- [x] **Compilação Real**: Sistema compila código do usuário com `arduino-cli --export-binaries`
+- [x] **Shim de GPIO** (`esp32-shim.cpp`):
+  - [x] Sobrescreve `digitalWrite` e `pinMode` com weak symbols
+  - [x] Injeção automática durante compilação
+  - [x] Reporta via `ets_printf("G:pin=%d,v=%d\n", ...)`
+- [x] **Suporte a eFuse**: `efusePath` passado em toda a stack
+- [x] **Filtro de Logs**: Frames `G:` e `M:` não aparecem no Serial Monitor
+- [x] **Multi-pin GPIO**: Todos os pinos digitais funcionando em sincronia
+- [x] **Documentação**: `docs/ledPisca.md` com relatório técnico completo
 
 #### 1.1.3. Backend RP2040 (QEMU) - Planeado
 
@@ -269,6 +289,7 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 - [ ] **PIO Emulation**: State machine simulation (se viável com QEMU)
 - [ ] **NeuroForge Time para ARM**: Port do nf_time.h/cpp para Pico SDK
 - [ ] **Multi-Core Sync**: Coordenação dual-core do RP2040
+- [ ] **Shim de GPIO**: Similar ao ESP32 para reportar estados
 - [ ] **Documentação**: Setup guide estilo ESP32 para Pico
 - [ ] Definir JSONs de boards RP2040 em `docs/boards/`
 - [ ] Exemplo `example-gpio-rp2040.ts` funcional
@@ -278,7 +299,8 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 - [ ] Avaliar e integrar QEMU ou emulador STM32
 - [ ] Adicionar `Stm32Backend`
 - [ ] Definir JSONs de boards STM32
-- [ ] Integração com `GPIOService`
+- [ ] Integração com `SerialGPIOParser`
+- [ ] Shim de GPIO para STM32
 - [ ] Exemplo `example-gpio-stm32.ts`
 
 #### 1.1.5. Perfis de Placas & Modelos
@@ -393,7 +415,8 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 
 ### Métricas de sucesso (KPIs)
 
-- Mês 1: QEMU + Arduino Uno rodando blink real, 10 componentes compatíveis.
+- Mês 1: QEMU + Arduino Uno rodando blink real, 10 componentes compatíveis. ✅ **COMPLETO**
+- Mês 2: ESP32 QEMU + GPIO sincronizado + Serial Monitor. ✅ **COMPLETO**
 - Mês 3: Placas Maker, 30+ componentes maker, Dashboard Builder funcional.
 - Mês 6: PLC + SCADA, 50+ componentes maker 30+ industriais, 1k usuários ativos.
 - Ano 1: 100+ componentes maker 50+ industriais, 10k usuários, €15k MRR.
@@ -409,8 +432,8 @@ Aqui ficam os **roadmaps técnicos detalhados**, cada um focado numa feature/sta
 Arquivo: [`docs/roadmaps/gpio-serial-protocol.md`](./roadmaps/gpio-serial-protocol.md)
 
 - Protocolo `G:...` para reportar GPIO via Serial.
-- Backend `SerialGPIOService` com interface compatível com `QEMUGPIOService`.
-- Helper firmware `NeuroForgeGPIO` (AVR) e futuros helpers ESP32/RP2040.
+- Backend `SerialGPIOParser` com regex não-gananciosa.
+- Helper firmware `NeuroForgeGPIO` (AVR) e shim ESP32 com weak symbols.
 - Roadmap de expansão multiplataforma e otimizações (rate limiting, checksum, modo binário).
 
 ### Arquitetura Multi-Backend
@@ -420,6 +443,15 @@ Arquivo: [`docs/architecture/backends.md`](./architecture/backends.md)
 - Descrição completa da arquitetura em três camadas: Board/Device, Backend de Execução, Framework/Runtime.
 - Detalhes do backend ESP32 (QEMU) e visão de expansão para RP2040, STM32, etc.
 - Protocolo de simulação unificado para makers e uso industrial.
+
+### Correções do LED Pisca (Arduino & ESP32)
+
+Arquivo: [`docs/ledPisca.md`](./ledPisca.md)
+
+- Relatório técnico completo das correções implementadas.
+- Detalhes do shim de GPIO do ESP32.
+- Explicação da compilação real vs binário estático.
+- Parser de GPIO e filtro de logs.
 
 ### Outros roadmaps técnicos
 
