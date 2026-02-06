@@ -9,6 +9,7 @@ export type SimulationMode = 'interpreter' | 'qemu';
 export interface CompileResult {
   success: boolean;
   firmwarePath?: string;
+  efusePath?: string;  // ⭐ NOVO: Caminho do eFuse para ESP32
   error?: string;
   stdout?: string;
   stderr?: string;
@@ -172,11 +173,13 @@ export class CompilerService {
     }
 
     console.log(`✅ Using pre-built ESP32 firmware: ${flashPath}`);
+    console.log(`✅ Using pre-built ESP32 eFuse: ${efusePath}`);
     console.log(`ℹ️  Note: Custom code compilation for ESP32 requires ESP-IDF integration`);
 
     return {
       success: true,
       firmwarePath: flashPath,
+      efusePath: efusePath,
       stdout: 'Using pre-compiled ESP32 firmware from test-firmware/esp32/',
       stderr: ''
     };
