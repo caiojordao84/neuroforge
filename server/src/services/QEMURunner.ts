@@ -50,11 +50,6 @@ export class QEMURunner extends EventEmitter {
     
     const ext = path.extname(firmware).toLowerCase();
     console.log('Firmware format:', ext === '.elf' ? 'ELF (executable)' : ext === '.hex' ? 'Intel HEX' : 'unknown');
-    
-    if (ext === '.hex') {
-      console.warn('⚠️ WARNING: Firmware is in HEX format. QEMU expects ELF format!');
-      console.warn('⚠️ HEX files may not load correctly. arduino-cli should generate .elf files.');
-    }
     console.log('='.repeat(80) + '\n');
 
     // Setup monitor socket
@@ -184,15 +179,14 @@ export class QEMURunner extends EventEmitter {
   getMonitorSocket(): string | null {
     return this.monitorSocket;
   }
+
   /**
    * Build QEMU command line arguments
    */
   private buildQemuArgs(board: string): string[] {
     const args = [
       '-machine', 'arduino-uno',
-      // ❗ CRITICAL FIX: Use -kernel for ELF firmware, NOT -bios!
-      // -bios is for bootloaders, -kernel loads ELF binaries directly
-      '-kernel', this.firmwarePath!,
+      '-bios', this.firmwarePath!,  // ✅ RESTORED: Board unoqemu requires -bios
       '-nographic',
       '-serial', 'stdio',
       // ⏱️ NEUROFORGE TIME: Enable real-time execution
