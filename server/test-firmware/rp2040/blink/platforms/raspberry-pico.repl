@@ -1,0 +1,8 @@
+// Raspberry Pi Pico Board - Simplified
+// Based on RP2040 MCU
+
+using "rp2040.repl"
+
+// Board-specific configuration
+// Flash: 2MB W25Q16JV (already defined in rp2040.repl as 2MB)
+// Onboard LED: GP25 (handled by GPIO peripheral)
