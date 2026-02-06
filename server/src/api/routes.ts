@@ -34,6 +34,7 @@ router.post('/compile', async (req: Request, res: Response) => {
       res.json({
         success: true,
         firmwarePath: result.firmwarePath,
+        efusePath: result.efusePath,
         stdout: result.stdout
       });
     } else {
@@ -58,7 +59,7 @@ router.post('/compile', async (req: Request, res: Response) => {
  */
 router.post('/simulate/start', async (req: Request, res: Response) => {
   try {
-    const { firmwarePath, board } = req.body;
+    const { firmwarePath, efusePath, board } = req.body;
 
     if (!firmwarePath) {
       return res.status(400).json({
@@ -83,11 +84,26 @@ router.post('/simulate/start', async (req: Request, res: Response) => {
     if (boardType === 'esp32' || boardType.includes('esp32')) {
       console.log('🔧 Starting ESP32 backend with QEMU config...');
       
+      // ⭐ CORREÇÃO: Usar efusePath do parâmetro ou fallback inteligente
+      let efuseImagePath: string;
+      
+      if (efusePath) {
+        // Se efusePath foi fornecido, usar ele
+        efuseImagePath = efusePath;
+        console.log(`✅ Using provided eFuse path: ${efuseImagePath}`);
+      } else {
+        // Fallback: tentar qemu_efuse.bin na mesma pasta
+        const path = require('path');
+        const firmwareDir = path.dirname(firmwarePath);
+        efuseImagePath = path.join(firmwareDir, 'qemu_efuse.bin');
+        console.log(`⚠️ No efusePath provided, trying fallback: ${efuseImagePath}`);
+      }
+      
       // Build ESP32 config
       const esp32Config: Esp32BackendConfig = {
         flash: {
           flashImagePath: firmwarePath,
-          efuseImagePath: firmwarePath.replace('.bin', '_efuse.bin'),
+          efuseImagePath: efuseImagePath,
           serialPort: parseInt(process.env.ESP32_SERIAL_PORT || '5555')
         },
         qemuOptions: {
