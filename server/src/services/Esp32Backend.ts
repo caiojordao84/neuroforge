@@ -2,6 +2,7 @@ import { ChildProcess, spawn } from 'child_process';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as path from 'path';
+import { execSync } from 'child_process';
 import { Esp32BackendConfig, Esp32RunnerHandle } from '../types/esp32.types';
 import { Esp32SerialClient } from './Esp32SerialClient';
 
@@ -25,8 +26,144 @@ export class Esp32Backend extends EventEmitter {
         : 'qemu-system-xtensa');
   }
 
+  /**
+   * Tenta detectar automaticamente o caminho de dados do QEMU ESP32
+   * Estratégias (em ordem de prioridade):
+   * 1. Variável de ambiente ESP32_QEMU_DATA_PATH
+   * 2. Caminho relativo ao binário qemu-system-xtensa
+   * 3. Paths comuns por plataforma (Windows/Linux/Mac)
+   * 4. Retorna null (QEMU tentará usar paths internos)
+   */
   private getQemuDataPath(): string | null {
-    return process.env.ESP32_QEMU_DATA_PATH || null;
+    // 1. Variável de ambiente (highest priority)
+    if (process.env.ESP32_QEMU_DATA_PATH) {
+      const envPath = process.env.ESP32_QEMU_DATA_PATH;
+      if (fs.existsSync(envPath)) {
+        console.log(`📂 QEMU Data Path: ${envPath} (from ENV)`);
+        return envPath;
+      } else {
+        console.warn(`⚠️ ESP32_QEMU_DATA_PATH set but not found: ${envPath}`);
+      }
+    }
+
+    // 2. Tentar detectar relativo ao binário QEMU
+    const detectedPath = this.detectQemuDataPathFromBinary();
+    if (detectedPath) {
+      console.log(`📂 QEMU Data Path: ${detectedPath} (auto-detected from binary)`);
+      return detectedPath;
+    }
+
+    // 3. Tentar paths comuns por plataforma
+    const commonPath = this.tryCommonPaths();
+    if (commonPath) {
+      console.log(`📂 QEMU Data Path: ${commonPath} (common location)`);
+      return commonPath;
+    }
+
+    // 4. Fallback: null (QEMU usará paths internos)
+    console.log('📂 QEMU Data Path: using internal paths (no -L flag)');
+    return null;
+  }
+
+  /**
+   * Detecta path relativo ao binário qemu-system-xtensa
+   */
+  private detectQemuDataPathFromBinary(): string | null {
+    try {
+      // Tentar encontrar o caminho completo do executável
+      let qemuFullPath: string | null = null;
+
+      if (process.platform === 'win32') {
+        // Windows: usar 'where' command
+        try {
+          const result = execSync(`where ${this.qemuPath}`, { encoding: 'utf-8' }).trim();
+          qemuFullPath = result.split('\n')[0]; // Primeira linha
+        } catch {
+          // Fallback: se qemuPath já é absoluto
+          if (path.isAbsolute(this.qemuPath) && fs.existsSync(this.qemuPath)) {
+            qemuFullPath = this.qemuPath;
+          }
+        }
+      } else {
+        // Linux/Mac: usar 'which' command
+        try {
+          qemuFullPath = execSync(`which ${this.qemuPath}`, { encoding: 'utf-8' }).trim();
+        } catch {
+          if (path.isAbsolute(this.qemuPath) && fs.existsSync(this.qemuPath)) {
+            qemuFullPath = this.qemuPath;
+          }
+        }
+      }
+
+      if (!qemuFullPath) return null;
+
+      // Tentar estruturas comuns de instalação:
+      // 1. <install>/bin/qemu-system-xtensa -> <install>/share/qemu
+      // 2. <install>/qemu/bin/qemu-system-xtensa -> <install>/qemu/share/qemu
+      const binDir = path.dirname(qemuFullPath);
+      const installRoot = path.dirname(binDir);
+
+      const candidates = [
+        path.join(installRoot, 'share', 'qemu'),           // Estrutura padrão
+        path.join(installRoot, 'qemu', 'share', 'qemu'),   // ESP-IDF structure
+        path.join(installRoot, '..', 'share', 'qemu'),     // Variação
+      ];
+
+      for (const candidate of candidates) {
+        if (fs.existsSync(candidate)) {
+          // Verificar se contém arquivos esperados (ex: esp32_rom.bin)
+          const romFile = path.join(candidate, 'esp32_rom.bin');
+          if (fs.existsSync(romFile)) {
+            return candidate;
+          }
+        }
+      }
+    } catch (error) {
+      // Silenciar erros de detecção
+    }
+
+    return null;
+  }
+
+  /**
+   * Tenta paths comuns por plataforma
+   */
+  private tryCommonPaths(): string | null {
+    const commonPaths: string[] = [];
+
+    if (process.platform === 'win32') {
+      commonPaths.push(
+        'C:\\qemu-project\\builds\\esp32\\share\\qemu',
+        'C:\\Program Files\\qemu\\share\\qemu',
+        'C:\\esp-idf\\qemu\\share\\qemu',
+      );
+    } else if (process.platform === 'darwin') {
+      // macOS
+      commonPaths.push(
+        '/usr/local/share/qemu',
+        '/opt/homebrew/share/qemu',
+        '/opt/esp-idf/qemu/share/qemu',
+      );
+    } else {
+      // Linux
+      commonPaths.push(
+        '/usr/share/qemu',
+        '/usr/local/share/qemu',
+        '/opt/qemu/share/qemu',
+        '/opt/esp-idf/qemu/share/qemu',
+      );
+    }
+
+    for (const candidate of commonPaths) {
+      if (fs.existsSync(candidate)) {
+        const romFile = path.join(candidate, 'esp32_rom.bin');
+        if (fs.existsSync(romFile)) {
+          return candidate;
+        }
+      }
+    }
+
+    return null;
   }
 
   /**
