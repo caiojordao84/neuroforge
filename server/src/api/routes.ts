@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { CompilerService, SimulationMode } from '../services/CompilerService';
 import { QEMUSimulationEngine } from '../services/QEMUSimulationEngine';
 import { BoardType } from '../services/CompilerService';
+import type { Esp32BackendConfig } from '../types/esp32.types';
 
 const router = Router();
 const compiler = new CompilerService();
@@ -77,7 +78,30 @@ router.post('/simulate/start', async (req: Request, res: Response) => {
     }
 
     await engine.loadFirmware(firmwarePath, boardType);
-    await engine.start();
+
+    // ✅ NOVA LÓGICA: Detectar ESP32 e passar config apropriado
+    if (boardType === 'esp32' || boardType.includes('esp32')) {
+      console.log('🔧 Starting ESP32 backend with QEMU config...');
+      
+      // Build ESP32 config
+      const esp32Config: Esp32BackendConfig = {
+        flash: {
+          flashImagePath: firmwarePath,
+          efuseImagePath: firmwarePath.replace('.bin', '_efuse.bin'),
+          serialPort: parseInt(process.env.ESP32_SERIAL_PORT || '5555')
+        },
+        qemuOptions: {
+          memory: process.env.ESP32_DEFAULT_MEMORY || '4M',
+          networkMode: 'none', // Workaround for SLIRP not available
+          wdtDisable: true
+        }
+      };
+
+      await engine.start(esp32Config);
+    } else {
+      // AVR (Arduino Uno, etc)
+      await engine.start();
+    }
 
     res.json({
       success: true,
@@ -120,11 +144,13 @@ router.get('/simulate/status', (req: Request, res: Response) => {
   try {
     const isRunning = engine.isRunning();
     const isPaused = engine.isPaused();
+    const backendType = engine.getBackendType();
 
     res.json({
       success: true,
       running: isRunning,
-      paused: isPaused
+      paused: isPaused,
+      backend: backendType
     });
   } catch (error) {
     console.error('Get status error:', error);
