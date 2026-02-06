@@ -1,0 +1,17 @@
+using sysbus
+$name?="RP2040"
+mach create $name
+
+machine LoadPlatformDescription @platforms/cpus/rp2040.repl
+
+$bin?=@blink/build/blink.elf
+
+showAnalyzer sysbus.uart0
+
+macro reset
+"""
+    sysbus LoadELF $bin
+"""
+
+runMacro $reset
+start
