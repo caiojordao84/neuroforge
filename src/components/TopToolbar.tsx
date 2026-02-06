@@ -30,10 +30,9 @@ export const TopToolbar: React.FC = () => {
     status,
     speed,
     setSpeed,
-    code,
     language,
-    selectedBoard,
-    setSelectedBoard,
+    getAllMCUs,
+    activeMCUId,
     startSimulation,
     stopSimulation,
     resetSimulation,
@@ -59,66 +58,91 @@ export const TopToolbar: React.FC = () => {
     }
   }, [compilationError, addTerminalLine]);
 
-  // Clear compilation error when code changes
+  // Clear compilation error when MCUs change
   useEffect(() => {
     setCompilationError(null);
-  }, [code, setCompilationError]);
+  }, [setCompilationError]);
+
+  /**
+   * Get active MCU from canvas
+   */
+  const getActiveMCU = useCallback(() => {
+    const allMCUs = getAllMCUs();
+    
+    if (allMCUs.length === 0) {
+      return null;
+    }
+
+    // If there's an active MCU selected, use it
+    if (activeMCUId) {
+      const activeMCU = allMCUs.find(m => m.id === activeMCUId);
+      if (activeMCU) return activeMCU;
+    }
+
+    // Otherwise, use the first MCU
+    return allMCUs[0];
+  }, [getAllMCUs, activeMCUId]);
 
   /**
    * Handle START simulation
    */
   const handleStart = useCallback(async () => {
     if (mode === 'qemu') {
-      // QEMU Mode: Compile and run on real QEMU
+      // QEMU Mode with auto-detection
       if (!isBackendConnected) {
         addTerminalLine('❌ QEMU Backend is not connected. Start server: cd server && npm run dev', 'error');
         return;
       }
 
-      addTerminalLine('🔨 Compiling sketch for QEMU...', 'info');
-      await compileAndStart(code, selectedBoard);
+      const activeMCU = getActiveMCU();
+      
+      if (!activeMCU) {
+        addTerminalLine('❌ No MCU found on canvas. Drag an MCU from Components Library.', 'error');
+        return;
+      }
+
+      addTerminalLine(`🔨 Compiling ${activeMCU.label} (${activeMCU.type})...`, 'info');
+      await compileAndStart(activeMCU.code, activeMCU.type);
+      
     } else {
-      // Fake Mode: Use JavaScript interpreter
-      codeParser.setLanguage(language);
+      // Fake Mode with MCU detection
+      const activeMCU = getActiveMCU();
+      
+      if (!activeMCU) {
+        addTerminalLine('❌ No MCU found on canvas. Drag an MCU from Components Library.', 'error');
+        return;
+      }
+
+      codeParser.setLanguage(activeMCU.language);
 
       // Preprocess code to inject libraries
-      const processedCode = simulationEngine.preprocess(code, language);
+      const processedCode = simulationEngine.preprocess(activeMCU.code, activeMCU.language);
       const parsed = codeParser.parse(processedCode);
 
       if (parsed) {
         startSimulation();
         simulationEngine.start(parsed.setup, parsed.loop, speed);
-        addTerminalLine('▶️ Simulation started', 'info');
+        addTerminalLine(`▶️ Simulation started on ${activeMCU.label}`, 'info');
       } else {
         addTerminalLine('❌ Failed to parse code', 'error');
       }
     }
-  }, [mode, code, language, speed, selectedBoard, isBackendConnected, startSimulation, compileAndStart, addTerminalLine]);
+  }, [mode, speed, isBackendConnected, getActiveMCU, startSimulation, compileAndStart, addTerminalLine]);
 
   /**
    * Handle STOP simulation
-   * - Stops QEMU/fake engine
-   * - Clears Serial Monitor
-   * - Clears Terminal (optional)
-   * - Resets pin states
    */
   const handleStop = useCallback(async () => {
     if (mode === 'qemu') {
-      // Stop QEMU simulation
       await stopQEMU();
       addTerminalLine('⏹️ QEMU simulation stopped', 'info');
     } else {
-      // Stop fake simulation
       simulationEngine.stop();
       addTerminalLine('⏹️ Simulation stopped', 'info');
     }
 
-    // Always clean up UI state
     stopSimulation();
-    // clearSerial(); // NeuroForge: Preserve logs on STOP
-    // Optional: clear terminal logs
-    // clearTerminal();
-  }, [mode, stopQEMU, stopSimulation, clearSerial, addTerminalLine]);
+  }, [mode, stopQEMU, stopSimulation, addTerminalLine]);
 
   /**
    * Handle Run/Stop toggle
@@ -155,6 +179,10 @@ export const TopToolbar: React.FC = () => {
     }
   }, [mode, setSpeed]);
 
+  // Get active MCU info for display
+  const activeMCU = getActiveMCU();
+  const mcuCount = getAllMCUs().length;
+
   return (
     <div
       className={cn(
@@ -164,7 +192,7 @@ export const TopToolbar: React.FC = () => {
         'shadow-lg shadow-black/20'
       )}
     >
-      {/* Left section - Logo & Board */}
+      {/* Left section - Logo & MCU Info */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <div
@@ -181,34 +209,22 @@ export const TopToolbar: React.FC = () => {
 
         <div className="w-px h-6 bg-[rgba(0,217,255,0.2)]" />
 
-        {/* Board selector */}
+        {/* MCU Info Display */}
         <div className="flex items-center gap-2">
-          <Cpu className="w-4 h-4 text-[#9ca3af]" />
-          <Select value={selectedBoard} onValueChange={(v) => setSelectedBoard(v as typeof selectedBoard)}>
-            <SelectTrigger className="w-[160px] h-9 bg-[#151b24] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-[#151b24] border-[rgba(0,217,255,0.3)]">
-              <SelectItem
-                value="arduino-uno"
-                className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)]"
-              >
-                Arduino Uno R3
-              </SelectItem>
-              <SelectItem
-                value="esp32-devkit"
-                className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)]"
-              >
-                ESP32 DevKit V1
-              </SelectItem>
-              <SelectItem
-                value="raspberry-pi-pico"
-                className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)]"
-              >
-                Raspberry Pi Pico
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          <Cpu className={cn(
+            'w-4 h-4',
+            activeMCU ? 'text-[#00d9ff]' : 'text-[#9ca3af]'
+          )} />
+          <div className="flex flex-col">
+            <span className="text-[#e6e6e6] text-sm font-medium">
+              {activeMCU ? activeMCU.label : 'No MCU'}
+            </span>
+            {mcuCount > 0 && (
+              <span className="text-[#9ca3af] text-xs">
+                {mcuCount} MCU{mcuCount > 1 ? 's' : ''} on canvas
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="w-px h-6 bg-[rgba(0,217,255,0.2)]" />
@@ -260,6 +276,7 @@ export const TopToolbar: React.FC = () => {
           onClick={handleRunStop}
           disabled={
             isCompiling ||
+            !activeMCU ||
             (mode === 'qemu' && !isBackendConnected && !isRunning)
           }
           className={cn(
