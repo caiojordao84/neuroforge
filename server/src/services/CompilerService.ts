@@ -65,6 +65,16 @@ export class CompilerService {
     board: BoardType = 'arduino-uno',
     mode: SimulationMode = 'interpreter'
   ): Promise<CompileResult> {
+    // ⭐ DEBUG: Log code received
+    console.log('\n' + '='.repeat(80));
+    console.log('📥 [CompilerService] Received compilation request');
+    console.log('Board:', board);
+    console.log('Mode:', mode);
+    console.log('Code length:', code.length, 'chars');
+    console.log('Code preview (first 200 chars):');
+    console.log(code.substring(0, 200));
+    console.log('='.repeat(80) + '\n');
+
     // ✅ NOVA LÓGICA: ESP32 usa firmware pré-compilado (por enquanto)
     if (board === 'esp32' || board === 'esp32-devkit') {
       return this.compileESP32(code, board);
@@ -82,11 +92,18 @@ export class CompilerService {
 
       // Write sketch file
       fs.writeFileSync(sketchFile, code, 'utf-8');
-      console.log(`✅ Created sketch: ${sketchFile}`);
+      console.log(`✅ [CompilerService] Created sketch: ${sketchFile}`);
+      
+      // ⭐ DEBUG: Verify file was written correctly
+      const writtenCode = fs.readFileSync(sketchFile, 'utf-8');
+      console.log(`🔍 [CompilerService] Verifying written file:`);
+      console.log(`   File size: ${writtenCode.length} chars`);
+      console.log(`   First 200 chars of written file:`);
+      console.log(`   ${writtenCode.substring(0, 200)}`);
 
       // Get FQBN for the board and mode
       const fqbn = this.getFQBN(board, mode);
-      console.log(`🔧 Compiling with arduino-cli: ${fqbn} (mode: ${mode})`);
+      console.log(`🔧 [CompilerService] Compiling with arduino-cli: ${fqbn} (mode: ${mode})`);
 
       // Compile using arduino-cli
       const result = await this.runArduinoCli([
@@ -97,6 +114,9 @@ export class CompilerService {
       ]);
 
       if (result.exitCode !== 0) {
+        console.error(`❌ [CompilerService] Compilation failed:`);
+        console.error(`   Exit code: ${result.exitCode}`);
+        console.error(`   Stderr: ${result.stderr}`);
         return {
           success: false,
           error: result.stderr || 'Compilation failed',
@@ -113,11 +133,13 @@ export class CompilerService {
       let firmwarePath: string;
       if (fs.existsSync(elfFile)) {
         firmwarePath = elfFile;
-        console.log(`✅ ELF firmware created: ${elfFile}`);
+        console.log(`✅ [CompilerService] ELF firmware created: ${elfFile}`);
       } else if (fs.existsSync(hexFile)) {
         firmwarePath = hexFile;
-        console.log(`✅ HEX firmware created: ${hexFile}`);
+        console.log(`✅ [CompilerService] HEX firmware created: ${hexFile}`);
       } else {
+        console.error(`❌ [CompilerService] Firmware file not found after compilation`);
+        console.error(`   Expected: ${elfFile} or ${hexFile}`);
         return {
           success: false,
           error: 'Firmware file not found after compilation',
@@ -125,6 +147,8 @@ export class CompilerService {
           stderr: result.stderr
         };
       }
+
+      console.log(`✅ [CompilerService] Compilation successful: ${firmwarePath}\n`);
 
       return {
         success: true,
@@ -134,6 +158,7 @@ export class CompilerService {
       };
 
     } catch (error) {
+      console.error(`❌ [CompilerService] Exception during compilation:`, error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -146,7 +171,7 @@ export class CompilerService {
    * TODO: Integrate with ESP-IDF build system for actual compilation
    */
   private async compileESP32(code: string, board: BoardType): Promise<CompileResult> {
-    console.log('🔧 ESP32 compilation requested - using pre-built firmware');
+    console.log('🔧 [CompilerService] ESP32 compilation requested - using pre-built firmware');
     
     // Path to pre-compiled ESP32 firmware
     const serverRoot = path.resolve(__dirname, '..', '..');
@@ -172,9 +197,9 @@ export class CompilerService {
       };
     }
 
-    console.log(`✅ Using pre-built ESP32 firmware: ${flashPath}`);
-    console.log(`✅ Using pre-built ESP32 eFuse: ${efusePath}`);
-    console.log(`ℹ️  Note: Custom code compilation for ESP32 requires ESP-IDF integration`);
+    console.log(`✅ [CompilerService] Using pre-built ESP32 firmware: ${flashPath}`);
+    console.log(`✅ [CompilerService] Using pre-built ESP32 eFuse: ${efusePath}`);
+    console.log(`ℹ️  [CompilerService] Note: Custom code compilation for ESP32 requires ESP-IDF integration\n`);
 
     return {
       success: true,
