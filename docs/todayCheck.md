@@ -25,8 +25,14 @@ server/QEMUMonitorService.ts: O serviço que monitora os registradores do QEMU p
 server/test-firmware/esp32/: Pasta onde você deve colocar as imagens de firmware (qemu_flash.bin e qemu_efuse.bin) para testar a simulação do ESP32.
 server/src/services/Esp32Backend.ts: O serviço que gerencia a execução do QEMU específico para ESP32.
 
+    ##### JSON Schema
+docs\boards
+docs\boards\arduino-uno.json
+docs\boards\esp32-devkitc.json
+docs\boards\board-schema.json (Board Schema Genérico)
+
     ##### NEUROFORGE_TIME
-- **Localização:** `server/src/services/NeuroForgeTime.ts` (ou similar, ver `server/src/`)
+- **Localização:** `server\cores\neuroforge_qemu\nf_time.cpp`
 - **Propósito:** Implementação de clock virtual compartilhado para garantir sincronia entre diferentes arquiteturas (AVR, ESP32) e o frontend.
 - **Dica:** É o único código (junto com o protocolo Serial GPIO) que é compartilhado diretamente entre os backends.
 
