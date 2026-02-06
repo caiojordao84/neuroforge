@@ -39,19 +39,6 @@ export class QEMURunner extends EventEmitter {
 
     this.firmwarePath = firmware;
 
-    // ⭐ DEBUG: Log firmware being loaded
-    console.log('\n' + '='.repeat(80));
-    console.log('📦 [QEMURunner] Loading firmware into QEMU');
-    console.log('Firmware path:', firmware);
-    console.log('Firmware exists:', fs.existsSync(firmware));
-    
-    const stats = fs.statSync(firmware);
-    console.log('Firmware size:', stats.size, 'bytes');
-    
-    const ext = path.extname(firmware).toLowerCase();
-    console.log('Firmware format:', ext === '.elf' ? 'ELF (executable)' : ext === '.hex' ? 'Intel HEX' : 'unknown');
-    console.log('='.repeat(80) + '\n');
-
     // Setup monitor socket
     // Windows doesn't support Unix sockets, use TCP instead
     if (process.platform === 'win32') {
@@ -64,19 +51,19 @@ export class QEMURunner extends EventEmitter {
 
     const args = this.buildQemuArgs(board);
 
-    console.log('🚀 [QEMURunner] Starting QEMU with args:', args.join(' '));
+    console.log('🚀 Starting QEMU with args:', args.join(' '));
 
     this.process = spawn(this.qemuPath, args, {
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
     this.process.on('error', (error) => {
-      console.error('❌ [QEMURunner] QEMU process error:', error);
+      console.error('QEMU process error:', error);
       this.emit('error', error);
     });
 
     this.process.on('exit', (code) => {
-      console.log(`⏹️ [QEMURunner] QEMU process exited with code: ${code}`);
+      console.log('QEMU process exited with code:', code);
       this.process = null;
       this.emit('stopped', code);
     });
@@ -85,21 +72,10 @@ export class QEMURunner extends EventEmitter {
       this.captureSerial(this.process.stdout);
     }
 
-    // Also capture stderr for debugging
-    if (this.process.stderr) {
-      this.process.stderr.on('data', (chunk: Buffer) => {
-        const msg = chunk.toString().trim();
-        if (msg) {
-          console.log(`🔍 [QEMU stderr]:`, msg);
-        }
-      });
-    }
-
     // Wait for monitor socket/port to be ready
     await this.waitForMonitor();
 
     this.emit('started');
-    console.log('✅ [QEMURunner] QEMU started successfully\n');
   }
 
   /**
@@ -186,7 +162,7 @@ export class QEMURunner extends EventEmitter {
   private buildQemuArgs(board: string): string[] {
     const args = [
       '-machine', 'arduino-uno',
-      '-bios', this.firmwarePath!,  // ✅ RESTORED: Board unoqemu requires -bios
+      '-bios', this.firmwarePath!,
       '-nographic',
       '-serial', 'stdio',
       // ⏱️ NEUROFORGE TIME: Enable real-time execution
