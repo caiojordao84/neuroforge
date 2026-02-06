@@ -39,12 +39,11 @@ export class CompilerService {
    * @param mode - Simulation mode (qemu uses custom core with NeuroForge Time)
    */
   private getFQBN(board: BoardType, mode: SimulationMode = 'interpreter'): string {
-    // NeuroForge Time: Use unoqemu board (registered in arduino:avr platform)
-    if (mode === 'qemu' && board === 'arduino-uno') {
-      return 'arduino:avr:unoqemu';  // ✅ Board unoqemu dentro da plataforma arduino:avr
-    }
-
-    // Default boards for interpreter mode
+    // ✅ FIX: Use standard Arduino Uno board for QEMU
+    // Board arduino:avr:unoqemu doesn't exist in arduino-cli
+    // QEMU can run standard Arduino Uno firmware with -machine arduino-uno
+    
+    // Default boards for all modes
     const fqbnMap: Record<BoardType, string> = {
       'arduino-uno': 'arduino:avr:uno',
       'esp32': 'esp32:esp32:esp32',
