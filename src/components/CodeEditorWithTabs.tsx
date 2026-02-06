@@ -64,10 +64,11 @@ export const CodeEditorWithTabs: React.FC = () => {
 
   const {
     status,
+    getAllMCUs,
+    updateMCUCode,
     startSimulation,
     stopSimulation,
     resetSimulation,
-    setCodeForMcu,
   } = useSimulationStore();
 
   const { addTerminalLine } = useSerialStore();
@@ -82,34 +83,21 @@ export const CodeEditorWithTabs: React.FC = () => {
 
   const activeFile = files.find((f) => f.id === activeFileId);
 
-  // Sync with simulation store when active file changes
+  // Sync file code with MCU store when file is assigned to MCU
   useEffect(() => {
-    if (activeFile) {
-      // Update simulation store with active file's code and language
-      useSimulationStore.setState({
-        code: activeFile.code,
-        language: activeFile.language,
-      });
-
-      // Also update the specific MCU code if assigned
-      if (activeFile.mcuId) {
-        setCodeForMcu(activeFile.mcuId, activeFile.code);
-      }
+    if (activeFile?.mcuId) {
+      updateMCUCode(activeFile.mcuId, activeFile.code);
     }
-  }, [activeFile?.id, activeFile?.code, activeFile?.language, activeFile?.mcuId, setCodeForMcu]);
+  }, [activeFile?.mcuId, activeFile?.code, updateMCUCode]);
 
   // Handle code change
   const handleCodeChange = useCallback(
     (value: string | undefined) => {
       if (value !== undefined && activeFileId) {
         updateFileCode(activeFileId, value);
-        // If file is assigned to an MCU, also update that MCU's code in simulation store
-        if (activeFile?.mcuId) {
-          setCodeForMcu(activeFile.mcuId, value);
-        }
       }
     },
-    [activeFileId, activeFile?.mcuId, updateFileCode, setCodeForMcu]
+    [activeFileId, updateFileCode]
   );
 
   // Handle language change
@@ -196,33 +184,33 @@ export const CodeEditorWithTabs: React.FC = () => {
 
   // Handle run button
   const handleRun = useCallback(() => {
-    const { speed, code, language } = useSimulationStore.getState();
-
     if (status === 'running') {
       stopSimulation();
       simulationEngine.stop();
     } else {
-      // Logic to determine WHICH code to run.
-      // If the active file is assigned to an MCU, we might want to run that- 
-      // BUT currently the engine only runs the "active" global code in the store.
-      // Feature 2.1 synced active file code to store.code.
-      // So checking store.code is correct for now.
+      // Get active MCU
+      const allMCUs = getAllMCUs();
+      if (allMCUs.length === 0) {
+        addTerminalLine('❌ No MCU found. Drag an MCU from Components Library.', 'error');
+        return;
+      }
 
-      codeParser.setLanguage(language);
+      const activeMCU = allMCUs[0];
+      codeParser.setLanguage(activeMCU.language);
 
       // Preprocess code to inject libraries
-      const processedCode = simulationEngine.preprocess(code, language);
+      const processedCode = simulationEngine.preprocess(activeMCU.code, activeMCU.language);
       const parsed = codeParser.parse(processedCode);
 
       if (parsed) {
         startSimulation();
         addTerminalLine('▶️ Starting simulation...', 'success');
-        simulationEngine.start(parsed.setup, parsed.loop, speed);
+        simulationEngine.start(parsed.setup, parsed.loop, useSimulationStore.getState().speed);
       } else {
         addTerminalLine('❌ Failed to parse code', 'error');
       }
     }
-  }, [status, startSimulation, stopSimulation, addTerminalLine]);
+  }, [status, getAllMCUs, startSimulation, stopSimulation, addTerminalLine]);
 
   // Handle reset button
   const handleReset = useCallback(() => {
@@ -378,9 +366,9 @@ export const CodeEditorWithTabs: React.FC = () => {
                     setRenamingFile(null);
                     setRenameValue('');
                   }
-                  e.stopPropagation(); // Prevent Reorder drag
+                  e.stopPropagation();
                 }}
-                onPointerDown={(e) => e.stopPropagation()} // Prevent Reorder drag
+                onPointerDown={(e) => e.stopPropagation()}
                 className="h-5 px-1 py-0 text-xs bg-[#0a0e14] border-[rgba(0,217,255,0.3)]"
                 autoFocus
                 onClick={(e) => e.stopPropagation()}
@@ -399,7 +387,7 @@ export const CodeEditorWithTabs: React.FC = () => {
               <DropdownMenuTrigger asChild>
                 <button
                   onClick={(e) => e.stopPropagation()}
-                  onPointerDown={(e) => e.stopPropagation()} // Prevent drag start
+                  onPointerDown={(e) => e.stopPropagation()}
                   className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-[rgba(0,217,255,0.2)] rounded transition-opacity"
                 >
                   <MoreVertical className="w-3 h-3" />
@@ -567,7 +555,7 @@ export const CodeEditorWithTabs: React.FC = () => {
       <div className="flex-1 overflow-hidden">
         {activeFile ? (
           <Editor
-            key={activeFile.id} // Force re-mount when file changes
+            key={activeFile.id}
             height="100%"
             language={editorLanguage}
             value={activeFile.code}
