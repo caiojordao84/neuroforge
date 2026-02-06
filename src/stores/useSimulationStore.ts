@@ -39,6 +39,8 @@ interface SimulationStore {
   getMCU: (id: string) => MCUConfig | undefined;
   getAllMCUs: () => MCUConfig[];
   setActiveMCU: (id: string | null) => void;
+  syncMCUsWithCanvas: (canvasNodeIds: string[]) => void;
+  clearAllMCUs: () => void;
 
   // Pin operations
   setPinMode: (pin: number, mode: PinState['mode']) => void;
@@ -230,6 +232,7 @@ export const useSimulationStore = create<SimulationStore>()(
         set((state) => {
           const newMCUs = new Map(state.mcus);
           newMCUs.set(id, { id, ...config });
+          console.log(`✅ [Store] Added MCU: ${id} (${config.type})`);
           return {
             mcus: newMCUs,
             activeMCUId: state.activeMCUId || id
@@ -241,6 +244,7 @@ export const useSimulationStore = create<SimulationStore>()(
         set((state) => {
           const newMCUs = new Map(state.mcus);
           newMCUs.delete(id);
+          console.log(`🗑️ [Store] Removed MCU: ${id}`);
           return {
             mcus: newMCUs,
             activeMCUId: state.activeMCUId === id
@@ -299,6 +303,43 @@ export const useSimulationStore = create<SimulationStore>()(
       getAllMCUs: () => Array.from(get().mcus.values()),
 
       setActiveMCU: (id) => set({ activeMCUId: id }),
+
+      // Sync MCUs with canvas - remove phantom MCUs
+      syncMCUsWithCanvas: (canvasNodeIds: string[]) => {
+        set((state) => {
+          const newMCUs = new Map(state.mcus);
+          let changed = false;
+
+          // Remove MCUs that are no longer on canvas
+          for (const mcuId of newMCUs.keys()) {
+            if (!canvasNodeIds.includes(mcuId)) {
+              console.log(`🧹 [Store] Cleaning phantom MCU: ${mcuId}`);
+              newMCUs.delete(mcuId);
+              changed = true;
+            }
+          }
+
+          if (!changed) return state;
+
+          // Update activeMCUId if it was removed
+          const newActiveMCUId = newMCUs.has(state.activeMCUId!)
+            ? state.activeMCUId
+            : (newMCUs.size > 0 ? Array.from(newMCUs.keys())[0] : null);
+
+          console.log(`✅ [Store] Synced ${newMCUs.size} MCUs with canvas`);
+
+          return {
+            mcus: newMCUs,
+            activeMCUId: newActiveMCUId
+          };
+        });
+      },
+
+      // Clear all MCUs
+      clearAllMCUs: () => {
+        console.log('🧹 [Store] Clearing all MCUs');
+        set({ mcus: new Map(), activeMCUId: null });
+      },
 
       setPinMode: (pin, mode) => {
         set((state) => {
