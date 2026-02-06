@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
-export type BoardType = 'arduino-uno' | 'esp32' | 'raspberry-pi-pico';
+export type BoardType = 'arduino-uno' | 'esp32' | 'esp32-devkit' | 'raspberry-pi-pico';
 export type SimulationMode = 'interpreter' | 'qemu';
 
 export interface CompileResult {
@@ -47,6 +47,7 @@ export class CompilerService {
     const fqbnMap: Record<BoardType, string> = {
       'arduino-uno': 'arduino:avr:uno',
       'esp32': 'esp32:esp32:esp32',
+      'esp32-devkit': 'esp32:esp32:esp32',
       'raspberry-pi-pico': 'rp2040:rp2040:rpipico'
     };
     return fqbnMap[board] || fqbnMap['arduino-uno'];
@@ -63,6 +64,12 @@ export class CompilerService {
     board: BoardType = 'arduino-uno',
     mode: SimulationMode = 'interpreter'
   ): Promise<CompileResult> {
+    // ✅ NOVA LÓGICA: ESP32 usa firmware pré-compilado (por enquanto)
+    if (board === 'esp32' || board === 'esp32-devkit') {
+      return this.compileESP32(code, board);
+    }
+
+    // Compilação padrão para AVR/Arduino
     const sketchName = `sketch_${Date.now()}`;
     const sketchDir = path.join(this.tempDir, sketchName);
     // IMPORTANT: .ino file MUST have same name as folder (arduino-cli requirement)
@@ -131,6 +138,48 @@ export class CompilerService {
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
+  }
+
+  /**
+   * Compile ESP32 firmware (uses pre-built binaries for now)
+   * TODO: Integrate with ESP-IDF build system for actual compilation
+   */
+  private async compileESP32(code: string, board: BoardType): Promise<CompileResult> {
+    console.log('🔧 ESP32 compilation requested - using pre-built firmware');
+    
+    // Path to pre-compiled ESP32 firmware
+    const serverRoot = path.resolve(__dirname, '..', '..');
+    const flashPath = path.join(serverRoot, 'test-firmware', 'esp32', 'qemu_flash.bin');
+    const efusePath = path.join(serverRoot, 'test-firmware', 'esp32', 'qemu_efuse.bin');
+
+    // Verify files exist
+    if (!fs.existsSync(flashPath)) {
+      return {
+        success: false,
+        error: `ESP32 firmware not found: ${flashPath}. Please build ESP32 firmware first using: idf.py build && idf.py qemu-flash`,
+        stdout: '',
+        stderr: 'Firmware files missing'
+      };
+    }
+
+    if (!fs.existsSync(efusePath)) {
+      return {
+        success: false,
+        error: `ESP32 eFuse image not found: ${efusePath}`,
+        stdout: '',
+        stderr: 'eFuse file missing'
+      };
+    }
+
+    console.log(`✅ Using pre-built ESP32 firmware: ${flashPath}`);
+    console.log(`ℹ️  Note: Custom code compilation for ESP32 requires ESP-IDF integration`);
+
+    return {
+      success: true,
+      firmwarePath: flashPath,
+      stdout: 'Using pre-compiled ESP32 firmware from test-firmware/esp32/',
+      stderr: ''
+    };
   }
 
   /**
