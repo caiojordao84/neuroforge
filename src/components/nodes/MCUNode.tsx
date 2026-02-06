@@ -98,15 +98,15 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
               id="5V"
               style={{
                 position: 'absolute',
-                left: -8,
+                left: '50%',
                 top: '50%',
-                transform: 'translateY(-50%)',
-                width: 10,
-                height: 10,
-                background: '#ff4444',
-                border: '2px solid #0a0e14',
-                opacity: 0.8,
-                zIndex: 10,
+                transform: 'translate(-50%, -50%)',
+                width: 12,
+                height: 12,
+                background: 'transparent',
+                border: 'none',
+                opacity: 0,
+                zIndex: 20,
               }}
             />
           </div>
@@ -135,15 +135,15 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
               id="GND"
               style={{
                 position: 'absolute',
-                left: -8,
+                left: '50%',
                 top: '50%',
-                transform: 'translateY(-50%)',
-                width: 10,
-                height: 10,
-                background: '#444444',
-                border: '2px solid #0a0e14',
-                opacity: 0.8,
-                zIndex: 10,
+                transform: 'translate(-50%, -50%)',
+                width: 12,
+                height: 12,
+                background: 'transparent',
+                border: 'none',
+                opacity: 0,
+                zIndex: 20,
               }}
             />
           </div>
@@ -172,15 +172,15 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
               id="VIN"
               style={{
                 position: 'absolute',
-                left: -8,
+                left: '50%',
                 top: '50%',
-                transform: 'translateY(-50%)',
-                width: 10,
-                height: 10,
-                background: '#ffd700',
-                border: '2px solid #0a0e14',
-                opacity: 0.8,
-                zIndex: 10,
+                transform: 'translate(-50%, -50%)',
+                width: 12,
+                height: 12,
+                background: 'transparent',
+                border: 'none',
+                opacity: 0,
+                zIndex: 20,
               }}
             />
           </div>
@@ -212,15 +212,15 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
                 id={`D${pin}`}
                 style={{
                   position: 'absolute',
-                  right: -8,
+                  right: '50%',
                   top: '50%',
-                  transform: 'translateY(-50%)',
-                  width: 10,
-                  height: 10,
-                  background: selectedPin === pin ? '#00d9ff' : '#00d9ff',
-                  border: '2px solid #0a0e14',
-                  opacity: 0.8,
-                  zIndex: 10,
+                  transform: 'translate(50%, -50%)',
+                  width: 12,
+                  height: 12,
+                  background: 'transparent',
+                  border: 'none',
+                  opacity: 0,
+                  zIndex: 20,
                 }}
               />
             </div>
@@ -253,15 +253,15 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
                 id={`A${i}`}
                 style={{
                   position: 'absolute',
-                  bottom: -8,
+                  bottom: '50%',
                   left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: 10,
-                  height: 10,
-                  background: '#ffd600',
-                  border: '2px solid #0a0e14',
-                  opacity: 0.8,
-                  zIndex: 10,
+                  transform: 'translate(-50%, 50%)',
+                  width: 12,
+                  height: 12,
+                  background: 'transparent',
+                  border: 'none',
+                  opacity: 0,
+                  zIndex: 20,
                 }}
               />
             </div>

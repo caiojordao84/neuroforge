@@ -1,9 +1,141 @@
 # 🤖 AI Assistant Context - NeuroForge Project
 
-> **Data de Atualização:** 06/02/2026 09:25 WET  
+> **Data de Atualização:** 06/02/2026 15:45 WET  
 > **Commit Base Anterior:** `45fe95e06c` - (05/02/2026)
+> **Foco Atual:** FASE RP2040 (Raspberry Pi Pico)
 
 ---
+
+## 📋 Instruções para Assistentes de IA
+
+Tu és um assistente técnico ajudando o desenvolvedor **Caio** a construir o projeto **NeuroForge**, um simulador de microcontroladores voltado tanto para makers quanto para uso doméstico e industrial (PLC/SCADA, dashboards, etc.). O objetivo é ter uma plataforma capaz de rodar firmwares reais de vários MCUs (Arduino AVR, ESP32, e agora RP2040), orquestrados via QEMU ou outros emuladores, com uma camada de simulação unificada para GPIO, rede, sensores e integrações.
+
+---
+
+## 🚨 REGRA CRÍTICA DE INTEGRAÇÃO (RP2040)
+
+> [!CAUTION]
+> **O SUPORTE A ARDUINO (AVR) E ESP32 ESTÁ ESTÁVEL E FUNCIONAL. NÃO QUEBRE!!**
+> 
+> Ao implementar o suporte para RP2040, siga estas regras estritas:
+> 1.  **NUNCA altere** a lógica existente em `CompilerService.ts` para AVR ou ESP32. Adicione `compileRP2040` separado ou use `switch` seguro.
+> 2.  **NUNCA altere** o `QEMUSimulationEngine.ts` de forma a afetar os backends existentes. Use condicionais `if (backendType === 'rp2040')`.
+> 3.  **SHIM STRATEGY**: O sucesso do ESP32 veio do uso de **Shims** (`esp32-shim.cpp`) + **Weak Symbols** (`__digitalWrite`). Use a mesma estratégia para o RP2040 se o SDK permitir.
+> 4.  **SERIAL GPIO**: O protocolo `G:pin=X,v=Y` é o padrão ouro. O backend RP2040 DEVE emitir esses eventos via Serial (USB-CDC ou UART0).
+
+---
+
+## 📁 Contexto do Repositório
+
+**Repositório:** [`caiojordao84/neuroforge`](https://github.com/caiojordao84/neuroforge)  
+**Branch:** `main`
+
+### Estrutura Completa do Projeto
+
+```
+neuroforge/
+├── README.md                      # Visão geral do projeto
+├── docs/                          # Documentação completa
+│   ├── AI_ASSISTANT_CONTEXT.md    # Este arquivo (contexto para IAs)
+│   ├── ROADMAP.md                 # Roadmap macro (fonte única de verdade)
+│   ├── ledPisca.md                # ✅ Relatório técnico das correções AVR/ESP32
+│   ├── fixes.md                   # Histórico de correções
+│   ├── QEMU_SETUP.md              # Guia de instalação QEMU
+│   ├── serial-gpio-protocol.md   # Protocolo Serial GPIO v1.0
+│   └── boards/                    # Especificações de placas (JSON)
+├── src/                           # Frontend React + TypeScript
+│   ├── components/                # Componentes UI e simulação
+│   ├── services/                  # Clientes API/WebSocket (QEMUApiClient.ts)
+│   └── hooks/                     # Custom hooks (useQEMUSimulation.ts)
+├── server/                        # Backend Node.js + TypeScript
+│   ├── src/
+│   │   ├── services/
+│   │   │   ├── CompilerService.ts        # ✅ Arduino CLI (AVR/ESP32)
+│   │   │   ├── QEMURunner.ts             # ✅ QEMU AVR runner
+│   │   │   ├── QEMUSimulationEngine.ts   # ✅ Engine principal
+│   │   │   ├── SerialGPIOParser.ts       # ✅ Parser G:pin=X
+│   │   │   ├── Esp32Backend.ts           # ✅ ESP32 Driver
+│   │   │   └── Esp32SerialClient.ts      # ✅ ESP32 TCP Serial
+│   │   └── server.ts
+│   ├── cores/
+│   │   └── neuroforge_qemu/              # ✅ Core Arduino-QEMU (AVR)
+│   └── src/shims/
+│       └── esp32-shim.cpp                # ✅ GPIO Shim para ESP32
+```
+
+---
+
+## ✅ Estado de Implementação (Fevereiro 2026)
+
+### ✅ **ESTÁVEL (AVR & ESP32):**
+
+1.  **Arduino Uno (AVR)**:
+    *   Compilação real com `arduino-cli`.
+    *   Simulação QEMU `avr` via `std-io`.
+    *   GPIO via Serial (Patch no Core `wiring_digital.c`).
+    *   Logs filtrados (usuário vê serial limpo).
+
+2.  **ESP32 (DevKit V1)**:
+    *   Compilação real com `arduino-cli --export-binaries` (gera merged bin).
+    *   Simulação QEMU `xtensa` via TCP `:5555`.
+    *   GPIO via Serial (Shim injetado `esp32-shim.cpp`).
+    *   Suporte a `efuse` e `flash` automatizado.
+    *   Logs filtrados.
+
+---
+
+## 🎯 PRÓXIMA FASE: Suporte a RP2040 (Raspberry Pi Pico)
+
+**Objetivo:** Permitir que usuários compilem e simulem código Arduino para Raspberry Pi Pico.
+
+### Guia de Implementação RP2040 (Draft)
+
+1.  **Pesquisa Inicial (QEMU ARM):**
+    *   O QEMU suporta a máquina `raspi3` e outras, mas o suporte a RP2040 (Cortex-M0+) é mais recente/limitado.
+    *   **Investigar:** Qual binário QEMU usar? `qemu-system-arm`?
+    *   **Investigar:** Qual máquina (`-M`)? `raspi-pico` existe nas versões novas?
+
+2.  **Core Arduino (Pico SDK):**
+    *   Usaremos o core oficial `arduino:mbed_rp2040` ou `earlephilhower/arduino-pico`?
+    *   *Recomendação:* `earlephilhower` é mais popular e completo, mas verificar compatibilidade com QEMU.
+
+3.  **Estratégia de GPIO (Shim):**
+    *   Verificar se o core RP2040 usa `weak symbols` para `digitalWrite`.
+    *   Se sim: Criar `rp2040-shim.cpp`.
+    *   Se não: Será necessário patching (mais arriscado) ou wrapper.
+
+4.  **Backend Class (`Rp2040Backend.ts`):**
+    *   Criar classe dedicada implementando a interface `start/stop/serial`.
+    *   Não misturar com lógica AVR ou ESP32.
+
+### Checklist (Não quebre o resto!)
+*   [ ] Ao editar `CompilerService.ts`, adicione `compileRP2040()` separado.
+*   [ ] Ao editar `QEMUSimulationEngine.ts`, use `if (board === 'rp2040')`.
+*   [ ] Teste o "blink" no Arduino UNO antes de finalizar a task do RP2040.
+
+---
+
+## 💡 Como Responder no Novo Chat
+
+### **Arquitetura Mental:**
+```
+Board JSON → Backend (QEMU) → Framework → Serial GPIO → Frontend
+```
+
+### **Regras de Ouro:**
+
+1.  **RP2040 é um novo Cidadão:**
+    *   Trate-o como uma nova entidade, sem herança forçada do AVR ou ESP32.
+    *   Copie padrões de sucesso (Shim, Serial Parser), mas adapte ao hardware.
+
+2.  **Manter a Estabilidade:**
+    *   O usuário confia que o AVR e ESP32 funcionam.
+    *   Qualquer regressão nesses dois é inaceitável.
+
+3.  **Documente Tudo:**
+    *   Crie `docs/rp2040-setup.md` se necessário.
+    *   Atualize `fixes.md` ao resolver barreiras do RP2040.
+
 
 ## 📋 Instruções para Assistentes de IA
 

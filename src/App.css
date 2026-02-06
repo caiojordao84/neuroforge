@@ -8,7 +8,8 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -91,7 +92,6 @@ body {
 }
 
 .react-flow__handle:hover {
-  transform: scale(1.2);
   box-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
 }
 
@@ -139,18 +139,24 @@ body {
    ============================================ */
 
 @keyframes pulse-glow {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 5px rgba(0, 217, 255, 0.5);
   }
+
   50% {
     box-shadow: 0 0 20px rgba(0, 217, 255, 0.8);
   }
 }
 
 @keyframes led-blink {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.3;
   }
@@ -160,6 +166,7 @@ body {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(180deg);
   }
@@ -221,11 +228,11 @@ body {
     max-width: 100vw;
     max-height: 100vh;
   }
-  
+
   .left-sidebar {
     width: 50px;
   }
-  
+
   .main-content {
     left: 50px;
   }
