@@ -1,9 +1,9 @@
-// RP2040 MCU - Extended Platform for Renode 1.15.3
-// Includes RESETS, CLOCKS, XIP_CTRL for Pico SDK compatibility
+// RP2040 MCU - Minimal Working Platform for Renode 1.15.3
+// Uses only MappedMemory for peripherals to avoid warnings
 
-// ═══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 // CPU & NVIC
-// ═══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 
 // CPU0 (Cortex-M0+)
 cpu0: CPU.CortexM @ sysbus
@@ -16,9 +16,9 @@ nvic: IRQControllers.NVIC @ sysbus 0xE000E000
     systickFrequency: 125000000
     IRQ -> cpu0@0
 
-// ═══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 // MEMORY
-// ═══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 
 // SRAM (264 KB)
 sram: Memory.MappedMemory @ sysbus 0x20000000
@@ -32,65 +32,69 @@ flash: Memory.MappedMemory @ sysbus 0x10000000
 rom: Memory.MappedMemory @ sysbus 0x00000000
     size: 0x4000
 
-// ═══════════════════════════════════════════════════════════
-// PERIPHERALS - RESETS, CLOCKS, XIP
-// ═══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+// PERIPHERALS - Mapped as Memory (no warnings)
+// ══════════════════════════════════════════════════════════
 
 // RESETS Controller (0x4000C000)
-resets: Miscellaneous.SilencePeripheralBackend @ sysbus 0x4000C000
+resets: Memory.MappedMemory @ sysbus 0x4000C000
     size: 0x1000
 
 // CLOCKS (0x40008000)
-clocks: Miscellaneous.SilencePeripheralBackend @ sysbus 0x40008000
+clocks: Memory.MappedMemory @ sysbus 0x40008000
     size: 0x1000
 
 // XOSC (Crystal Oscillator - 0x40024000)
-xosc: Miscellaneous.SilencePeripheralBackend @ sysbus 0x40024000
+xosc: Memory.MappedMemory @ sysbus 0x40024000
     size: 0x1000
 
 // PLL_SYS (0x40028000)
-pll_sys: Miscellaneous.SilencePeripheralBackend @ sysbus 0x40028000
+pll_sys: Memory.MappedMemory @ sysbus 0x40028000
     size: 0x1000
 
 // PLL_USB (0x4002C000)
-pll_usb: Miscellaneous.SilencePeripheralBackend @ sysbus 0x4002C000
+pll_usb: Memory.MappedMemory @ sysbus 0x4002C000
     size: 0x1000
 
 // XIP_CTRL (0x14000000 - Execute-in-Place control)
-xip_ctrl: Miscellaneous.SilencePeripheralBackend @ sysbus 0x14000000
+xip_ctrl: Memory.MappedMemory @ sysbus 0x14000000
     size: 0x1000
 
 // XIP_SSI (0x18000000 - Flash SPI)
-xip_ssi: Miscellaneous.SilencePeripheralBackend @ sysbus 0x18000000
+xip_ssi: Memory.MappedMemory @ sysbus 0x18000000
     size: 0x1000
 
 // BUSCTRL (0x40030000)
-busctrl: Miscellaneous.SilencePeripheralBackend @ sysbus 0x40030000
+busctrl: Memory.MappedMemory @ sysbus 0x40030000
     size: 0x1000
 
 // PADS_BANK0 (0x4001C000)
-pads_bank0: Miscellaneous.SilencePeripheralBackend @ sysbus 0x4001C000
+pads_bank0: Memory.MappedMemory @ sysbus 0x4001C000
     size: 0x1000
 
 // IO_BANK0 (GPIO config - 0x40014000)
-io_bank0: Miscellaneous.SilencePeripheralBackend @ sysbus 0x40014000
+io_bank0: Memory.MappedMemory @ sysbus 0x40014000
     size: 0x1000
 
 // SIO (Single-cycle IO - 0xD0000000)
-sio: Miscellaneous.SilencePeripheralBackend @ sysbus 0xD0000000
+sio: Memory.MappedMemory @ sysbus 0xD0000000
     size: 0x1000
 
 // PSM (Power-on State Machine - 0x40010000)
-psm: Miscellaneous.SilencePeripheralBackend @ sysbus 0x40010000
+psm: Memory.MappedMemory @ sysbus 0x40010000
     size: 0x1000
 
 // WATCHDOG (0x40058000)
-watchdog: Miscellaneous.SilencePeripheralBackend @ sysbus 0x40058000
+watchdog: Memory.MappedMemory @ sysbus 0x40058000
     size: 0x1000
 
-// ═══════════════════════════════════════════════════════════
+// VREG_AND_CHIP_RESET (0x40064000)
+vreg: Memory.MappedMemory @ sysbus 0x40064000
+    size: 0x1000
+
+// ══════════════════════════════════════════════════════════
 // UART
-// ═══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 
 // UART0 (PL011 compatible)
 uart0: UART.PL011 @ sysbus 0x40034000
