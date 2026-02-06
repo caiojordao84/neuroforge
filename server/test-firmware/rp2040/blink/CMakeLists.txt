@@ -26,9 +26,11 @@ target_link_libraries(blink
     pico_time            # Timer API
 )
 
-# Habilitar stdio via UART e USB (para hardware real)
-pico_enable_stdio_usb(blink 1)
-pico_enable_stdio_uart(blink 1)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# IMPORTANTE: Para Renode, usar APENAS UART (sem USB)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+pico_enable_stdio_usb(blink 0)   # USB desabilitado (Renode não emula USB)
+pico_enable_stdio_uart(blink 1)  # UART habilitado (saída via UART0)
 
 # Criar arquivos de saída (.uf2, .bin, .hex)
 pico_add_extra_outputs(blink)
