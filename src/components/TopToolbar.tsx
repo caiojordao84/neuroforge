@@ -101,7 +101,19 @@ export const TopToolbar: React.FC = () => {
         return;
       }
 
+      // ⭐ DEBUG: Log code being sent
+      console.log('\n' + '='.repeat(80));
+      console.log('📝 [TopToolbar] Code being sent to compilation:');
+      console.log('Board:', activeMCU.type);
+      console.log('MCU ID:', activeMCU.id);
+      console.log('Code length:', activeMCU.code.length, 'chars');
+      console.log('Code preview (first 200 chars):');
+      console.log(activeMCU.code.substring(0, 200));
+      console.log('='.repeat(80) + '\n');
+
       addTerminalLine(`🔨 Compiling ${activeMCU.label} (${activeMCU.type})...`, 'info');
+      addTerminalLine(`📝 Code: ${activeMCU.code.length} chars`, 'info');
+      
       await compileAndStart(activeMCU.code, activeMCU.type);
       
     } else {
