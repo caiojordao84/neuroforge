@@ -33,7 +33,7 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
       const anodeConnection = connections.find(
         (c) => c.source === `${id}:anode` || c.target === `${id}:anode`
       );
-      
+
       // Find connection to cathode
       const cathodeConnection = connections.find(
         (c) => c.source === `${id}:cathode` || c.target === `${id}:cathode`
@@ -49,7 +49,7 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
         const otherEnd = anodeConnection.source === `${id}:anode`
           ? anodeConnection.target
           : anodeConnection.source;
-        
+
         // Match patterns like "mcu_123:D13" or "board:D13"
         const pinMatch = otherEnd.match(/D(\d+)/);
         if (pinMatch) {
@@ -68,6 +68,8 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
   useEffect(() => {
     const unsubscribe = simulationEngine.on('pinChange', (event) => {
       const pinEvent = event as { pin: number; value: 'HIGH' | 'LOW' | number };
+
+      console.log(`💡 [LED-${id}] Event: pin=${pinEvent.pin}, value=${pinEvent.value} (Connected to: ${connectedPin})`);
 
       // Only react if this LED is connected to the changed pin
       if (connectedPin !== null && connectedPin === pinEvent.pin) {

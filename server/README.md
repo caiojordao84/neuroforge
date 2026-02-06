@@ -87,7 +87,7 @@ cp .env.example .env
 
 **`.env` padrão:**
 ```bash
-PORT=3001
+PORT=3000
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
 ARDUINO_CLI_PATH=arduino-cli
@@ -111,9 +111,9 @@ npm start
 
 **Output esperado:**
 ```
-✅ NeuroForge Backend running on http://localhost:3001
+✅ NeuroForge Backend running on http://localhost:3000
 📡 WebSocket server ready
-🔧 API available at http://localhost:3001/api
+🔧 API available at http://localhost:3000/api
 ```
 
 ---
@@ -122,17 +122,17 @@ npm start
 
 ### REST API
 
-| Método | Endpoint | Descrição |
-|--------|----------|------------|
-| `GET` | `/health` | Health check |
-| `POST` | `/api/compile` | Compilar código Arduino |
-| `POST` | `/api/simulate/start` | Iniciar simulação QEMU |
-| `POST` | `/api/simulate/stop` | Parar simulação |
-| `GET` | `/api/simulate/status` | Status da simulação |
-| `GET` | `/api/simulate/pins/:pin` | Ler estado de pino |
-| `POST` | `/api/simulate/pins/:pin` | Escrever estado de pino |
-| `GET` | `/api/simulate/serial` | Obter buffer serial |
-| `DELETE` | `/api/simulate/serial` | Limpar buffer serial |
+| Método   | Endpoint                  | Descrição               |
+| -------- | ------------------------- | ----------------------- |
+| `GET`    | `/health`                 | Health check            |
+| `POST`   | `/api/compile`            | Compilar código Arduino |
+| `POST`   | `/api/simulate/start`     | Iniciar simulação QEMU  |
+| `POST`   | `/api/simulate/stop`      | Parar simulação         |
+| `GET`    | `/api/simulate/status`    | Status da simulação     |
+| `GET`    | `/api/simulate/pins/:pin` | Ler estado de pino      |
+| `POST`   | `/api/simulate/pins/:pin` | Escrever estado de pino |
+| `GET`    | `/api/simulate/serial`    | Obter buffer serial     |
+| `DELETE` | `/api/simulate/serial`    | Limpar buffer serial    |
 
 ### WebSocket Events
 
@@ -152,7 +152,7 @@ npm start
 ### 1. Compilar Sketch
 
 ```bash
-curl -X POST http://localhost:3001/api/compile \
+curl -X POST http://localhost:3000/api/compile \
   -H "Content-Type: application/json" \
   -d '{
     "code": "void setup() { pinMode(13, OUTPUT); } void loop() { digitalWrite(13, HIGH); delay(1000); digitalWrite(13, LOW); delay(1000); }",
@@ -172,7 +172,7 @@ curl -X POST http://localhost:3001/api/compile \
 ### 2. Iniciar Simulação
 
 ```bash
-curl -X POST http://localhost:3001/api/simulate/start \
+curl -X POST http://localhost:3000/api/simulate/start \
   -H "Content-Type: application/json" \
   -d '{
     "firmwarePath": "/tmp/neuroforge-compile/sketch_1234567890/sketch.ino.hex",
@@ -191,7 +191,7 @@ curl -X POST http://localhost:3001/api/simulate/start \
 ### 3. Ler Estado de Pino
 
 ```bash
-curl http://localhost:3001/api/simulate/pins/13
+curl http://localhost:3000/api/simulate/pins/13
 ```
 
 **Response:**
@@ -209,7 +209,7 @@ curl http://localhost:3001/api/simulate/pins/13
 ```javascript
 import { io } from 'socket.io-client';
 
-const socket = io('http://localhost:3001');
+const socket = io('http://localhost:3000');
 
 // Listen to serial output
 socket.on('serial', (line) => {
@@ -326,7 +326,7 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-EXPOSE 3001
+EXPOSE 3000
 CMD ["npm", "start"]
 ```
 
@@ -337,7 +337,7 @@ services:
   backend:
     build: ./server
     ports:
-      - "3001:3001"
+      - "3000:3000"
     environment:
       - FRONTEND_URL=http://localhost:5173
     volumes:

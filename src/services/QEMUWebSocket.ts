@@ -20,7 +20,7 @@ export class QEMUWebSocket {
   private maxReconnectAttempts = 5;
   private listeners: Map<string, Set<Function>> = new Map();
 
-  constructor(private url: string = 'http://localhost:3001') {}
+  constructor(private url: string = 'http://localhost:3000') { }
 
   /**
    * Connect to WebSocket server
@@ -53,7 +53,7 @@ export class QEMUWebSocket {
     this.socket.on('connect_error', (error) => {
       console.error('WebSocket connection error:', error);
       this.reconnectAttempts++;
-      
+
       if (this.reconnectAttempts >= this.maxReconnectAttempts) {
         console.error('Max reconnection attempts reached');
         this.emit('error', 'Failed to connect to backend');
@@ -107,7 +107,7 @@ export class QEMUWebSocket {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
-    
+
     this.listeners.get(event)!.add(callback);
 
     // Return unsubscribe function

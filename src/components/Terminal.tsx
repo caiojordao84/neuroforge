@@ -75,7 +75,7 @@ export const Terminal: React.FC = () => {
         ref={scrollRef}
         className={cn(
           'flex-1 overflow-auto p-3',
-          'bg-[#0a0e14] font-mono text-sm',
+          'bg-[#0a0e14] font-mono text-sm cursor-text select-text',
           'scrollbar-thin scrollbar-thumb-[rgba(0,217,255,0.3)] scrollbar-track-transparent'
         )}
       >

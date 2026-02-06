@@ -537,7 +537,7 @@ FUNCTIONAL REQUIREMENTS:
 TECHNICAL IMPLEMENTATION:
 
 **Backend API (server/):**
-- Express server on port 3001
+- Express server on port 3000
 - REST API endpoints:
   - POST /api/compile - Compile Arduino code with arduino-cli
   - POST /api/simulate/start - Start QEMU simulation
@@ -576,7 +576,7 @@ TECHNICAL IMPLEMENTATION:
 - Node.js 20+
 
 STATUS: ✅ FULLY IMPLEMENTED AND TESTED
-- Backend server runs on port 3001 with all endpoints functional
+- Backend server runs on port 3000 with all endpoints functional
 - Frontend connects to backend via REST API and WebSocket
 - Compilation with arduino-cli successful
 - QEMU AVR execution working with firmware.hex

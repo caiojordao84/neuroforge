@@ -2,6 +2,7 @@ import { EventEmitter } from 'events';
 import { QEMURunner } from './QEMURunner';
 import { QEMUMonitorService } from './QEMUMonitorService';
 import { Esp32Backend } from './Esp32Backend';
+import { SerialGPIOParser, PinStateUpdate } from './SerialGPIOParser';
 import type { BoardType } from './CompilerService';
 import type { Esp32BackendConfig } from '../types/esp32.types';
 
@@ -18,6 +19,7 @@ export class QEMUSimulationEngine extends EventEmitter {
   private runner: QEMURunner;
   private monitor: QEMUMonitorService;
   private esp32Backend: Esp32Backend | null = null;
+  private gpioParser: SerialGPIOParser;
   private backendType: 'avr' | 'esp32' | null = null;
   private pinStates: Map<number, PinState>;
   private serialBuffer: string[];
@@ -32,16 +34,18 @@ export class QEMUSimulationEngine extends EventEmitter {
     super();
     this.runner = new QEMURunner();
     this.monitor = new QEMUMonitorService();
+    this.gpioParser = new SerialGPIOParser();
     this.pinStates = new Map();
     this.serialBuffer = [];
     this.setupRunnerEvents();
+    this.setupGpioParserEvents();
   }
 
   /**
    * Load firmware into QEMU
    */
   async loadFirmware(
-    firmwarePath: string, 
+    firmwarePath: string,
     board: BoardType = 'arduino-uno'
   ): Promise<void> {
     this._firmwarePath = firmwarePath;
@@ -98,8 +102,9 @@ export class QEMUSimulationEngine extends EventEmitter {
     if (monitorInfo) {
       try {
         await this.monitor.connect(monitorInfo.address);
-        console.log(`✅ QEMU Monitor connected (${monitorInfo.type}), starting GPIO polling...`);
-        this.startGPIOPolling();
+        console.log(`✅ QEMU Monitor connected (${monitorInfo.type})`);
+        // Desativado: Entra em conflito com o protocolo Serial customizado
+        // this.startGPIOPolling(); 
       } catch (error) {
         console.error('⚠️ Failed to connect QEMU monitor:', error);
         console.log('⚠️ Continuing without GPIO monitoring...');
@@ -119,6 +124,7 @@ export class QEMUSimulationEngine extends EventEmitter {
     this.esp32Backend.on('serial', (line: string) => {
       this.serialBuffer.push(line);
       this.emit('serial', line);
+      this.gpioParser.processLine(line);
     });
 
     this.esp32Backend.on('started', () => {
@@ -146,6 +152,7 @@ export class QEMUSimulationEngine extends EventEmitter {
     this.runner.on('serial', (line: string) => {
       this.serialBuffer.push(line);
       this.emit('serial', line);
+      this.gpioParser.processLine(line);
     });
 
     // Forward started event
@@ -163,11 +170,27 @@ export class QEMUSimulationEngine extends EventEmitter {
   }
 
   /**
+   * Listen for GPIO events from Serial protocol
+   */
+  private setupGpioParserEvents(): void {
+    this.gpioParser.on('pin-change', (update: PinStateUpdate) => {
+      const { pin, value, mode } = update;
+      const state: PinState = {
+        mode: mode || 'OUTPUT',
+        value
+      };
+
+      this.pinStates.set(pin, state);
+      this.emit('pin-change', pin, state);
+    });
+  }
+
+  /**
    * Stop QEMU simulation
    */
   stop(): void {
     this.stopGPIOPolling();
-    
+
     if (this.backendType === 'esp32' && this.esp32Backend) {
       this.esp32Backend.stop();
       this.esp32Backend = null;
@@ -219,12 +242,12 @@ export class QEMUSimulationEngine extends EventEmitter {
       if (this.backendType === 'avr') {
         await this.monitor.setGPIOPin(pin, value === 1 ? 'HIGH' : 'LOW');
       }
-      
+
       // Update local cache
       const currentState = this.pinStates.get(pin) || { mode: 'INPUT', value: 0 };
       currentState.value = value;
       this.pinStates.set(pin, currentState);
-      
+
       this.emit('pin-change', pin, currentState);
     } catch (error) {
       console.error('Error setting pin state:', error);

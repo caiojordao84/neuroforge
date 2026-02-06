@@ -40,12 +40,12 @@ export const TopToolbar: React.FC = () => {
   } = useSimulationStore();
 
   const { addTerminalLine, clearSerial, clearTerminal } = useSerialStore();
-  const { 
-    mode, 
-    isCompiling, 
+  const {
+    mode,
+    isCompiling,
     isSimulationRunning,
-    compilationError, 
-    setCompilationError 
+    compilationError,
+    setCompilationError
   } = useQEMUStore();
   const { compileAndStart, stopQEMU, isBackendConnected } = useQEMUSimulation();
 
@@ -115,7 +115,7 @@ export const TopToolbar: React.FC = () => {
 
     // Always clean up UI state
     stopSimulation();
-    clearSerial();
+    // clearSerial(); // NeuroForge: Preserve logs on STOP
     // Optional: clear terminal logs
     // clearTerminal();
   }, [mode, stopQEMU, stopSimulation, clearSerial, addTerminalLine]);
@@ -259,7 +259,7 @@ export const TopToolbar: React.FC = () => {
           size="sm"
           onClick={handleRunStop}
           disabled={
-            isCompiling || 
+            isCompiling ||
             (mode === 'qemu' && !isBackendConnected && !isRunning)
           }
           className={cn(

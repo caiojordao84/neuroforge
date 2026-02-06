@@ -6,7 +6,7 @@ import { setupWebSocket } from './api/websocket';
 
 const app = express();
 const httpServer = createServer(app);
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors({

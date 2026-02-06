@@ -29,7 +29,7 @@ export interface PinState {
 export class QEMUApiClient {
   private baseUrl: string;
 
-  constructor(baseUrl: string = 'http://localhost:3001') {
+  constructor(baseUrl: string = 'http://localhost:3000') {
     this.baseUrl = baseUrl;
   }
 

@@ -61,8 +61,10 @@ $REPO_CORE = "$PSScriptRoot\neuroforge_qemu"
 Copy-Item -Path "$REPO_CORE\nf_time.h" -Destination $NF_CORE_DIR -Force
 Copy-Item -Path "$REPO_CORE\nf_time.cpp" -Destination $NF_CORE_DIR -Force
 Copy-Item -Path "$REPO_CORE\nf_arduino_time.cpp" -Destination $NF_CORE_DIR -Force
+Copy-Item -Path "$REPO_CORE\nf_gpio.h" -Destination $NF_CORE_DIR -Force
+Copy-Item -Path "$REPO_CORE\nf_gpio.cpp" -Destination $NF_CORE_DIR -Force
 
-Write-Host "[OK] NeuroForge Time adicionado" -ForegroundColor Green
+Write-Host "[OK] NeuroForge Time e GPIO adicionados" -ForegroundColor Green
 
 # 6. Registrar board no boards.txt
 Write-Host "[...] Registrando board unoqemu..." -ForegroundColor Cyan
@@ -73,7 +75,8 @@ $NF_BOARD_DEF = Get-Content "$REPO_CORE\boards.txt" -Raw
 # Verificar se ja existe
 if ((Get-Content $BOARDS_FILE -Raw) -match "unoqemu.name") {
     Write-Host "[!] Board unoqemu ja registrado, ignorando..." -ForegroundColor Yellow
-} else {
+}
+else {
     Add-Content -Path $BOARDS_FILE -Value ""
     Add-Content -Path $BOARDS_FILE -Value "# NeuroForge QEMU Boards"
     Add-Content -Path $BOARDS_FILE -Value $NF_BOARD_DEF
@@ -95,11 +98,12 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host ""
 Write-Host "[...] Verificando instalacao..." -ForegroundColor Cyan
 
-$files = @("nf_time.h", "nf_time.cpp", "nf_arduino_time.cpp")
+$files = @("nf_time.h", "nf_time.cpp", "nf_arduino_time.cpp", "nf_gpio.h", "nf_gpio.cpp")
 foreach ($file in $files) {
     if (Test-Path "$NF_CORE_DIR\$file") {
         Write-Host "  [OK] $file" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "  [X] $file" -ForegroundColor Red
     }
 }
@@ -113,7 +117,8 @@ $boards = arduino-cli board listall | Select-String "unoqemu"
 if ($boards) {
     Write-Host "[OK] Board unoqemu disponivel no arduino-cli!" -ForegroundColor Green
     Write-Host "$boards" -ForegroundColor Gray
-} else {
+}
+else {
     Write-Host "[!] Board unoqemu nao detectado" -ForegroundColor Yellow
     Write-Host "[!] Tente: arduino-cli core update-index" -ForegroundColor Yellow
 }

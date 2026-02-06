@@ -23,6 +23,7 @@ export function setupWebSocket(httpServer: HTTPServer): SocketIOServer {
 
     // Forward pin changes to client
     const pinChangeHandler = (pin: number, state: any) => {
+      console.log(`📡 [WebSocket] Forwarding pin-change: pin=${pin}, state=`, state);
       socket.emit('pinChange', { pin, ...state });
     };
 
@@ -54,7 +55,7 @@ export function setupWebSocket(httpServer: HTTPServer): SocketIOServer {
     // Handle client disconnect
     socket.on('disconnect', () => {
       console.log('Client disconnected:', socket.id);
-      
+
       // Unsubscribe from engine events
       engine.off('serial', serialHandler);
       engine.off('pin-change', pinChangeHandler);

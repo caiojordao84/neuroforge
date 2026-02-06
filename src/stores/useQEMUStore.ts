@@ -60,7 +60,7 @@ export const useQEMUStore = create<QEMUState>()(
       compilationError: null,
       setCompilationError: (error) => set({ compilationError: error }),
 
-      backendUrl: 'http://localhost:3001',
+      backendUrl: 'http://localhost:3000',
       setBackendUrl: (url) => set({ backendUrl: url })
     }),
     {

@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useDragControls } from 'framer-motion';
 import { X, Minus, Maximize2 } from 'lucide-react';
 import { useUIStore, type WindowId } from '@/stores/useUIStore';
 import { cn } from '@/lib/utils';
@@ -36,6 +36,7 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
   const windowState = windows[windowId];
   const windowRef = useRef<HTMLDivElement>(null);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
+  const dragControls = useDragControls();
 
   // Guard: if window state doesn't exist (e.g. new window type added but not in persisted storage), return null
   if (!windowState) return null;
@@ -154,6 +155,8 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
     <motion.div
       ref={windowRef}
       drag
+      dragControls={dragControls}
+      dragListener={false}
       dragMomentum={false}
       dragElastic={0}
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
@@ -185,6 +188,7 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
     >
       {/* Header */}
       <div
+        onPointerDown={(e) => dragControls.start(e)}
         className={cn(
           'flex items-center justify-between px-3 py-2',
           'bg-[#0a0e14] border-b border-[rgba(0,217,255,0.2)]',

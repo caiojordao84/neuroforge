@@ -2,16 +2,16 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useSerialStore } from '@/stores/useSerialStore';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { 
-  Trash2, 
-  Download, 
+import {
+  Trash2,
+  Download,
   ScrollText,
   Send
 } from 'lucide-react';
@@ -19,16 +19,16 @@ import {
 const baudRates = [300, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200];
 
 export const SerialMonitor: React.FC = () => {
-  const { 
-    serialLines, 
-    baudRate, 
-    autoScroll, 
-    setBaudRate, 
-    setAutoScroll, 
+  const {
+    serialLines,
+    baudRate,
+    autoScroll,
+    setBaudRate,
+    setAutoScroll,
     clearSerial,
-    exportSerial 
+    exportSerial
   } = useSerialStore();
-  
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const [inputText, setInputText] = useState('');
 
@@ -79,8 +79,8 @@ export const SerialMonitor: React.FC = () => {
             </SelectTrigger>
             <SelectContent className="bg-[#151b24] border-[rgba(0,217,255,0.3)]">
               {baudRates.map((rate) => (
-                <SelectItem 
-                  key={rate} 
+                <SelectItem
+                  key={rate}
                   value={rate.toString()}
                   className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)] text-xs"
                 >
@@ -137,7 +137,7 @@ export const SerialMonitor: React.FC = () => {
         ref={scrollRef}
         className={cn(
           'flex-1 overflow-auto p-3',
-          'bg-[#0a0e14] font-mono text-sm',
+          'bg-[#0a0e14] font-mono text-sm cursor-text select-text',
           'scrollbar-thin scrollbar-thumb-[rgba(0,217,255,0.3)] scrollbar-track-transparent'
         )}
       >
@@ -150,7 +150,7 @@ export const SerialMonitor: React.FC = () => {
             {serialLines.map((line) => (
               <div key={line.id} className="flex gap-2">
                 <span className="text-[#666] text-xs shrink-0">[{line.timestamp}]</span>
-                <span 
+                <span
                   className={cn(
                     'break-all',
                     line.type === 'output' && 'text-[#e6e6e6]',

@@ -115,7 +115,7 @@ npm run dev  # Reinicia backend
 ### ✅ **Fase 1: QEMU Integration - COMPLETE** (31/01/2026)
 
 **Backend:**
-- ✅ Express REST API (porta 3001)
+- ✅ Express REST API (porta 3000)
 - ✅ Socket.IO WebSocket server
 - ✅ `CompilerService`: arduino-cli wrapper
 - ✅ `QEMURunner`: qemu-system-avr process manager
@@ -264,7 +264,7 @@ Veja [docs/firmware/esp32-idf-setup.md](docs/firmware/esp32-idf-setup.md) para i
 ```bash
 cd server
 npm run dev
-# Backend listening on http://localhost:3001
+# Backend listening on http://localhost:3000
 ```
 
 ### Frontend (Interface Visual)
@@ -446,19 +446,19 @@ cd server
 npm run dev
 
 # Em outro terminal:
-curl -X POST http://localhost:3001/api/compile \
+curl -X POST http://localhost:3000/api/compile \
   -H "Content-Type: application/json" \
   -d '{"code":"void setup() { pinMode(13, OUTPUT); Serial.begin(9600); Serial.println(\"LED Blink started!\"); } void loop() { digitalWrite(13, HIGH); Serial.println(\"LED ON\"); delay(500); digitalWrite(13, LOW); Serial.println(\"LED OFF\"); delay(500); }","board":"arduino-uno","mode":"qemu"}'
 
-curl -X POST http://localhost:3001/api/simulate/start \
+curl -X POST http://localhost:3000/api/simulate/start \
   -H "Content-Type: application/json" \
   -d '{"firmwarePath":"/path/to/firmware.elf","board":"arduino-uno"}'
 
 # Ver serial output
-curl http://localhost:3001/api/simulate/serial
+curl http://localhost:3000/api/simulate/serial
 
 # Parar simulação
-curl -X POST http://localhost:3001/api/simulate/stop
+curl -X POST http://localhost:3000/api/simulate/stop
 ```
 
 ### Standalone ESP32 Backend
