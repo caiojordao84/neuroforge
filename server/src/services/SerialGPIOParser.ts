@@ -11,8 +11,8 @@ export interface PinStateUpdate {
  * Protocol v1.0: G:pin=13,v=1
  */
 export class SerialGPIOParser extends EventEmitter {
-    private static readonly GPIO_REGEX = /G:.*pin=(\d+),v=([01])/;
-    private static readonly MODE_REGEX = /M:.*pin=(\d+),m=([0-2])/;
+    private static readonly GPIO_REGEX = /G:.*?pin=(\d+),v=([01])/;
+    private static readonly MODE_REGEX = /M:.*?pin=(\d+),m=([0-2])/;
 
     /**
      * Processes a line of serial output

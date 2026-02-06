@@ -5,6 +5,7 @@ export type SimulationMode = 'interpreter' | 'qemu';
 export interface CompileResponse {
   success: boolean;
   firmwarePath?: string;
+  efusePath?: string;
   error?: string;
   stdout?: string;
   stderr?: string;

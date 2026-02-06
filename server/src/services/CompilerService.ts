@@ -26,7 +26,7 @@ export class CompilerService {
     // Try to find arduino-cli in PATH
     this.arduinoCliPath = process.platform === 'win32' ? 'arduino-cli.exe' : 'arduino-cli';
     this.tempDir = path.join(os.tmpdir(), 'neuroforge-compile');
-    
+
     // Ensure temp directory exists
     if (!fs.existsSync(this.tempDir)) {
       fs.mkdirSync(this.tempDir, { recursive: true });
@@ -97,6 +97,9 @@ export class CompilerService {
       ]);
 
       if (result.exitCode !== 0) {
+        console.error('❌ Compilation failed with status:', result.exitCode);
+        console.error('STDOUT:', result.stdout);
+        console.error('STDERR:', result.stderr);
         return {
           success: false,
           error: result.stderr || 'Compilation failed',
@@ -108,7 +111,7 @@ export class CompilerService {
       // Find the hex/elf file (arduino-cli names it after the sketch)
       const hexFile = path.join(sketchDir, `${sketchName}.ino.hex`);
       const elfFile = path.join(sketchDir, `${sketchName}.ino.elf`);
-      
+
       // Prefer .elf for QEMU, fallback to .hex
       let firmwarePath: string;
       if (fs.existsSync(elfFile)) {
@@ -142,47 +145,90 @@ export class CompilerService {
   }
 
   /**
-   * Compile ESP32 firmware (uses pre-built binaries for now)
-   * TODO: Integrate with ESP-IDF build system for actual compilation
+   * ESP32 Compilation Logic
    */
   private async compileESP32(code: string, board: BoardType): Promise<CompileResult> {
-    console.log('🔧 ESP32 compilation requested - using pre-built firmware');
-    
-    // Path to pre-compiled ESP32 firmware
-    const serverRoot = path.resolve(__dirname, '..', '..');
-    const flashPath = path.join(serverRoot, 'test-firmware', 'esp32', 'qemu_flash.bin');
-    const efusePath = path.join(serverRoot, 'test-firmware', 'esp32', 'qemu_efuse.bin');
+    console.log('🔧 ESP32 compilation requested');
 
-    // Verify files exist
-    if (!fs.existsSync(flashPath)) {
+    const sketchName = `sketch_${Date.now()}`;
+    const sketchDir = path.join(this.tempDir, sketchName);
+    const sketchFile = path.join(sketchDir, `${sketchName}.ino`);
+
+    try {
+      // 1. Create sketch directory
+      fs.mkdirSync(sketchDir, { recursive: true });
+
+      // 2. Write User Code
+      fs.writeFileSync(sketchFile, code, 'utf-8');
+
+      // 3. Inject Shim for GPIO Reporting
+      // Matches the "weak symbol override" strategy
+      const shimSource = path.join(__dirname, '..', 'shims', 'esp32-shim.cpp');
+      if (fs.existsSync(shimSource)) {
+        const shimDest = path.join(sketchDir, 'neuroforge_shim.cpp');
+        fs.copyFileSync(shimSource, shimDest);
+        console.log(`✅ Injected ESP32 Shim: ${shimDest}`);
+      } else {
+        console.warn(`⚠️ ESP32 Shim not found at ${shimSource}`);
+      }
+
+      // 4. Get FQBN
+      // TODO: Make this configurable per board variant. For now using generic DevKit V1
+      const fqbn = 'esp32:esp32:esp32doit-devkit-v1';
+      console.log(`🔧 Compiling ESP32 with arduino-cli: ${fqbn}`);
+
+      // 5. Compile with --export-binaries to get the merged bin
+      const result = await this.runArduinoCli([
+        'compile',
+        '--fqbn', fqbn,
+        '--export-binaries', // Important for QEMU: generates merged bin
+        '--output-dir', sketchDir,
+        sketchDir
+      ]);
+
+      if (result.exitCode !== 0) {
+        console.error('❌ ESP32 Compilation failed:', result.exitCode);
+        return {
+          success: false,
+          error: result.stderr || 'ESP32 Compilation failed',
+          stdout: result.stdout,
+          stderr: result.stderr
+        };
+      }
+
+      // 6. Locate the merged binary
+      // arduino-cli with --export-binaries usually produces sketchName.ino.merged.bin
+      const mergedBin = path.join(sketchDir, `${sketchName}.ino.merged.bin`);
+
+      if (!fs.existsSync(mergedBin)) {
+        return {
+          success: false,
+          error: 'Merged firmware binary not found. Compilation might have succeeded but binary export failed.',
+          stdout: result.stdout,
+          stderr: result.stderr
+        };
+      }
+
+      console.log(`✅ ESP32 Firmware created: ${mergedBin}`);
+
+      // 7. Locate eFuse (reuse static one for now)
+      const serverRoot = path.resolve(__dirname, '..', '..');
+      const efusePath = path.join(serverRoot, 'test-firmware', 'esp32', 'qemu_efuse.bin');
+
+      return {
+        success: true,
+        firmwarePath: mergedBin,
+        efusePath: fs.existsSync(efusePath) ? efusePath : undefined,
+        stdout: result.stdout,
+        stderr: result.stderr
+      };
+
+    } catch (error) {
       return {
         success: false,
-        error: `ESP32 firmware not found: ${flashPath}. Please build ESP32 firmware first using: idf.py build && idf.py qemu-flash`,
-        stdout: '',
-        stderr: 'Firmware files missing'
+        error: error instanceof Error ? error.message : 'Unknown compilation error'
       };
     }
-
-    if (!fs.existsSync(efusePath)) {
-      return {
-        success: false,
-        error: `ESP32 eFuse image not found: ${efusePath}`,
-        stdout: '',
-        stderr: 'eFuse file missing'
-      };
-    }
-
-    console.log(`✅ Using pre-built ESP32 firmware: ${flashPath}`);
-    console.log(`✅ Using pre-built ESP32 eFuse: ${efusePath}`);
-    console.log(`ℹ️  Note: Custom code compilation for ESP32 requires ESP-IDF integration`);
-
-    return {
-      success: true,
-      firmwarePath: flashPath,
-      efusePath: efusePath,
-      stdout: 'Using pre-compiled ESP32 firmware from test-firmware/esp32/',
-      stderr: ''
-    };
   }
 
   /**

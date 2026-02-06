@@ -64,12 +64,14 @@ export const CodeEditorWithTabs: React.FC = () => {
 
   const {
     status,
-    getAllMCUs,
+    mcus,
     updateMCUCode,
     startSimulation,
     stopSimulation,
     resetSimulation,
   } = useSimulationStore();
+
+  const getAllMCUs = useCallback(() => Array.from(mcus.values()), [mcus]);
 
   const { addTerminalLine } = useSerialStore();
 
@@ -83,12 +85,30 @@ export const CodeEditorWithTabs: React.FC = () => {
 
   const activeFile = files.find((f) => f.id === activeFileId);
 
-  // Sync file code with MCU store when file is assigned to MCU
+  // Sync file code with MCU store
   useEffect(() => {
+    // 1. If file is explicitly assigned to an MCU, sync it
     if (activeFile?.mcuId) {
       updateMCUCode(activeFile.mcuId, activeFile.code);
+      return;
     }
-  }, [activeFile?.mcuId, activeFile?.code, updateMCUCode]);
+
+    // 2. Auto-assignment logic: If there's only one MCU on canvas and it's not assigned elsewhere,
+    // sync the active file's code to it. This makes it "just work" for simple sketches.
+    const allMCUsFromStore = getAllMCUs();
+    if (allMCUsFromStore.length === 1 && activeFile) {
+      const singleMCU = allMCUsFromStore[0];
+
+      // Check if ANY other file is assigned to this MCU
+      const otherFileAssigned = files.some(f => f.id !== activeFile.id && f.mcuId === singleMCU.id);
+
+      if (!otherFileAssigned) {
+        if (singleMCU.code !== activeFile.code) {
+          updateMCUCode(singleMCU.id, activeFile.code);
+        }
+      }
+    }
+  }, [activeFile?.id, activeFile?.mcuId, activeFile?.code, updateMCUCode, getAllMCUs, files]);
 
   // Handle code change
   const handleCodeChange = useCallback(

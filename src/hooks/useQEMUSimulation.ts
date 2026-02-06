@@ -122,7 +122,11 @@ export function useQEMUSimulation() {
       setFirmwarePath(compileResult.firmwarePath!);
 
       // Step 2: Start simulation
-      const startResult = await qemuApi.startSimulation(compileResult.firmwarePath!, board as any);
+      const startResult = await qemuApi.startSimulation(
+        compileResult.firmwarePath!,
+        board as any,
+        compileResult.efusePath // Pass efusePath if available (ESP32)
+      );
 
       if (!startResult.success) {
         setCompilationError(startResult.error || 'Failed to start simulation');

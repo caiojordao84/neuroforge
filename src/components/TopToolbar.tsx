@@ -68,7 +68,7 @@ export const TopToolbar: React.FC = () => {
    */
   const getActiveMCU = useCallback(() => {
     const allMCUs = getAllMCUs();
-    
+
     if (allMCUs.length === 0) {
       return null;
     }
@@ -95,31 +95,41 @@ export const TopToolbar: React.FC = () => {
       }
 
       const activeMCU = getActiveMCU();
-      
+
       if (!activeMCU) {
         addTerminalLine('❌ No MCU found on canvas. Drag an MCU from Components Library.', 'error');
         return;
       }
 
-      // ⭐ DEBUG: Log code being sent
-      console.log('\n' + '='.repeat(80));
-      console.log('📝 [TopToolbar] Code being sent to compilation:');
-      console.log('Board:', activeMCU.type);
-      console.log('MCU ID:', activeMCU.id);
-      console.log('Code length:', activeMCU.code.length, 'chars');
-      console.log('Code preview (first 200 chars):');
-      console.log(activeMCU.code.substring(0, 200));
-      console.log('='.repeat(80) + '\n');
+      // Proactive Sync: Try to get latest code from FileStore
+      // This is a safety measure in case the background sync in CodeEditorWithTabs missed an update
+      const { files, activeFileId } = (await import('@/stores/useFileStore')).useFileStore.getState();
+      const activeFile = files.find(f => f.id === activeFileId);
+
+      let codeToCompile = activeMCU.code;
+      let source = 'SimulationStore (MCU)';
+
+      if (activeFile) {
+        // Use active file if it's explicitly assigned to this MCU 
+        // OR if there's only one MCU and the file isn't assigned elsewhere
+        const isAssignedToThis = activeFile.mcuId === activeMCU.id;
+        const isAutoEligible = !activeFile.mcuId && getAllMCUs().length === 1;
+
+        if (isAssignedToThis || isAutoEligible) {
+          codeToCompile = activeFile.code;
+          source = `FileStore (Active Tab: ${activeFile.name})`;
+        }
+      }
 
       addTerminalLine(`🔨 Compiling ${activeMCU.label} (${activeMCU.type})...`, 'info');
-      addTerminalLine(`📝 Code: ${activeMCU.code.length} chars`, 'info');
-      
-      await compileAndStart(activeMCU.code, activeMCU.type);
-      
+      addTerminalLine(`📄 Source: ${source}`, 'info');
+
+      await compileAndStart(codeToCompile, activeMCU.type);
+
     } else {
       // Fake Mode with MCU detection
       const activeMCU = getActiveMCU();
-      
+
       if (!activeMCU) {
         addTerminalLine('❌ No MCU found on canvas. Drag an MCU from Components Library.', 'error');
         return;

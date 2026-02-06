@@ -122,9 +122,14 @@ export class QEMUSimulationEngine extends EventEmitter {
 
     // Forward eventos de serial para o buffer
     this.esp32Backend.on('serial', (line: string) => {
-      this.serialBuffer.push(line);
-      this.emit('serial', line);
-      this.gpioParser.processLine(line);
+      // NeuroForge: Process line for GPIO first.
+      // If it's a GPIO frame, it returns true and we DON'T echo it to serial monitor.
+      const isGPIO = this.gpioParser.processLine(line);
+
+      if (!isGPIO) {
+        this.serialBuffer.push(line);
+        this.emit('serial', line);
+      }
     });
 
     this.esp32Backend.on('started', () => {
@@ -150,9 +155,16 @@ export class QEMUSimulationEngine extends EventEmitter {
   private setupRunnerEvents(): void {
     // Forward serial output
     this.runner.on('serial', (line: string) => {
-      this.serialBuffer.push(line);
-      this.emit('serial', line);
-      this.gpioParser.processLine(line);
+      // NeuroForge: Process line for GPIO first. 
+      // If it's a GPIO frame, it returns true and we DON'T echo it to serial monitor.
+      const isGPIO = this.gpioParser.processLine(line);
+
+      if (!isGPIO) {
+        this.serialBuffer.push(line);
+        this.emit('serial', line);
+      } else {
+        // console.log('🛡️ [QEMU] Filtered GPIO frame from serial:', line);
+      }
     });
 
     // Forward started event
