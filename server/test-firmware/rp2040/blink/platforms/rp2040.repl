@@ -1,17 +1,12 @@
-// RP2040 MCU - Minimal Platform for Renode 1.15.3
-// Only uses peripherals available in standard Renode distribution
+// RP2040 MCU - Single Core Configuration for Renode 1.15.3
+// Minimal working platform - only CPU0 active
 
 // CPU0 (Cortex-M0+)
 cpu0: CPU.CortexM @ sysbus
     cpuType: "cortex-m0+"
     nvic: nvic
 
-// CPU1 (Cortex-M0+ - second core, not used)
-cpu1: CPU.CortexM @ sysbus
-    cpuType: "cortex-m0+"
-    nvic: nvic
-
-// NVIC (includes built-in SysTick)
+// NVIC (Nested Vectored Interrupt Controller)
 nvic: IRQControllers.NVIC @ sysbus 0xE000E000
     priorityMask: 0xC0
     systickFrequency: 125000000
