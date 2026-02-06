@@ -5,7 +5,8 @@ import type {
   Language,
   BoardType,
   BoardConfig,
-  PinState
+  PinState,
+  MCUConfig
 } from '@/types';
 
 interface SimulationStore {
@@ -13,12 +14,11 @@ interface SimulationStore {
   status: SimulationStatus;
   language: Language;
   speed: number;
-  code: string;
-  codeByMcu: Record<string, string>; // Map of MCU ID to code
   isLoopRunning: boolean;
 
-  // Board selection
-  selectedBoard: BoardType;
+  // Multi-MCU Support (NEW)
+  mcus: Map<string, MCUConfig>;
+  activeMCUId: string | null;
 
   // Pin states
   pins: Map<number, PinState>;
@@ -27,10 +27,18 @@ interface SimulationStore {
   setStatus: (status: SimulationStatus) => void;
   setLanguage: (language: Language) => void;
   setSpeed: (speed: number) => void;
-  setCode: (code: string) => void;
-  setCodeForMcu: (mcuId: string, code: string) => void;
   setIsLoopRunning: (isRunning: boolean) => void;
-  setSelectedBoard: (board: BoardType) => void;
+
+  // MCU Management (NEW)
+  addMCU: (id: string, config: Omit<MCUConfig, 'id'>) => void;
+  removeMCU: (id: string) => void;
+  updateMCUCode: (id: string, code: string) => void;
+  updateMCULanguage: (id: string, language: Language) => void;
+  setMCUFirmware: (id: string, firmwarePath: string) => void;
+  setMCURunning: (id: string, isRunning: boolean) => void;
+  getMCU: (id: string) => MCUConfig | undefined;
+  getAllMCUs: () => MCUConfig[];
+  setActiveMCU: (id: string | null) => void;
 
   // Pin operations
   setPinMode: (pin: number, mode: PinState['mode']) => void;
@@ -161,7 +169,7 @@ delay_off:
     
     rjmp main_loop`;
 
-const defaultCodeMap: Record<Language, string> = {
+export const defaultCodeMap: Record<Language, string> = {
   'cpp': defaultCppCode,
   'micropython': defaultMicroPythonCode,
   'circuitpython': defaultCircuitPythonCode,
@@ -207,31 +215,90 @@ export const useSimulationStore = create<SimulationStore>()(
       status: 'idle',
       language: 'cpp',
       speed: 1,
-      code: defaultCppCode,
-      codeByMcu: {},
       isLoopRunning: false,
-      selectedBoard: 'arduino-uno',
+      mcus: new Map(),
+      activeMCUId: null,
       pins: new Map(),
 
       setStatus: (status) => set({ status }),
-      setLanguage: (language) => {
-        const currentLang = get().language;
-
-        // If switching languages, update the default code
-        if (language !== currentLang) {
-          const newCode = defaultCodeMap[language];
-          set({ language, code: newCode });
-        } else {
-          set({ language });
-        }
-      },
+      setLanguage: (language) => set({ language }),
       setSpeed: (speed) => set({ speed }),
-      setCode: (code) => set({ code }),
-      setCodeForMcu: (mcuId, code) => set((state) => ({
-        codeByMcu: { ...state.codeByMcu, [mcuId]: code }
-      })),
       setIsLoopRunning: (isLoopRunning) => set({ isLoopRunning }),
-      setSelectedBoard: (selectedBoard) => set({ selectedBoard }),
+
+      // MCU Management
+      addMCU: (id, config) => {
+        set((state) => {
+          const newMCUs = new Map(state.mcus);
+          newMCUs.set(id, { id, ...config });
+          return { 
+            mcus: newMCUs,
+            activeMCUId: state.activeMCUId || id
+          };
+        });
+      },
+
+      removeMCU: (id) => {
+        set((state) => {
+          const newMCUs = new Map(state.mcus);
+          newMCUs.delete(id);
+          return { 
+            mcus: newMCUs,
+            activeMCUId: state.activeMCUId === id 
+              ? (newMCUs.size > 0 ? Array.from(newMCUs.keys())[0] : null)
+              : state.activeMCUId
+          };
+        });
+      },
+
+      updateMCUCode: (id, code) => {
+        set((state) => {
+          const mcu = state.mcus.get(id);
+          if (!mcu) return state;
+          
+          const newMCUs = new Map(state.mcus);
+          newMCUs.set(id, { ...mcu, code });
+          return { mcus: newMCUs };
+        });
+      },
+
+      updateMCULanguage: (id, language) => {
+        set((state) => {
+          const mcu = state.mcus.get(id);
+          if (!mcu) return state;
+          
+          const newMCUs = new Map(state.mcus);
+          newMCUs.set(id, { ...mcu, language });
+          return { mcus: newMCUs };
+        });
+      },
+
+      setMCUFirmware: (id, firmwarePath) => {
+        set((state) => {
+          const mcu = state.mcus.get(id);
+          if (!mcu) return state;
+          
+          const newMCUs = new Map(state.mcus);
+          newMCUs.set(id, { ...mcu, firmwarePath });
+          return { mcus: newMCUs };
+        });
+      },
+
+      setMCURunning: (id, isRunning) => {
+        set((state) => {
+          const mcu = state.mcus.get(id);
+          if (!mcu) return state;
+          
+          const newMCUs = new Map(state.mcus);
+          newMCUs.set(id, { ...mcu, isRunning });
+          return { mcus: newMCUs };
+        });
+      },
+
+      getMCU: (id) => get().mcus.get(id),
+
+      getAllMCUs: () => Array.from(get().mcus.values()),
+
+      setActiveMCU: (id) => set({ activeMCUId: id }),
 
       setPinMode: (pin, mode) => {
         set((state) => {
@@ -286,7 +353,6 @@ export const useSimulationStore = create<SimulationStore>()(
         const pinState = get().pins.get(pin);
         if (!pinState) return 0;
         if (typeof pinState.value === 'number') {
-          // Convert PWM (0-255) to analog (0-1023)
           return Math.round((pinState.value / 255) * 1023);
         }
         return pinState.value === 'HIGH' ? 1023 : 0;
@@ -318,10 +384,15 @@ export const useSimulationStore = create<SimulationStore>()(
       name: 'neuroforge-simulation-store',
       partialize: (state) => ({
         language: state.language,
-        code: state.code,
-        selectedBoard: state.selectedBoard,
         speed: state.speed,
+        mcus: Array.from(state.mcus.entries()),
+        activeMCUId: state.activeMCUId,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state && Array.isArray((state as any).mcus)) {
+          (state as any).mcus = new Map((state as any).mcus);
+        }
+      },
     }
   )
 );
