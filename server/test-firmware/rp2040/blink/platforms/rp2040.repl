@@ -23,15 +23,37 @@ flash: Memory.MappedMemory @ sysbus 0x10000000
 rom: Memory.MappedMemory @ sysbus 0x00000000
     size: 0x4000
 
-// UART0 (PL011 compatible)
+// --- RP2040 HARDWARE PERIPHERALS ---
+
+// UARTs
 uart0: UART.PL011 @ sysbus 0x40034000
     -> nvic@20
-
-// UART1
 uart1: UART.PL011 @ sysbus 0x40038000
     -> nvic@21
 
-// Timer (simplified - using ARM SysTick)
-timer: Timers.ARM_SysTick @ nvic
-    frequency: 125000000
-    -> nvic@15
+// Real Timer (Required for sleep_ms)
+// Note: Using SP804 as a generic substitute
+timer: Timers.ARM_SP804_Timer @ sysbus 0x40054000
+    frequency: 1000000
+
+// Placeholder stubs for SDK stability
+syscfg: Memory.MappedMemory @ sysbus 0x40004000
+    size: 0x1000
+watchdog: Memory.MappedMemory @ sysbus 0x40058000
+    size: 0x1000
+resets: Memory.MappedMemory @ sysbus 0x4000c000
+    size: 0x1000
+clocks: Memory.MappedMemory @ sysbus 0x40008000
+    size: 0x1000
+xosc: Memory.MappedMemory @ sysbus 0x40024000
+    size: 0x1000
+pll_sys: Memory.MappedMemory @ sysbus 0x40028000
+    size: 0x1000
+pll_usb: Memory.MappedMemory @ sysbus 0x4002c000
+    size: 0x1000
+io_bank0: Memory.MappedMemory @ sysbus 0x40014000
+    size: 0x1000
+pads_bank0: Memory.MappedMemory @ sysbus 0x4001c000
+    size: 0x1000
+sio: Memory.MappedMemory @ sysbus 0xd0000000
+    size: 0x1000

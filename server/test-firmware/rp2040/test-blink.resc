@@ -2,9 +2,9 @@ using sysbus
 $name?="RP2040"
 mach create $name
 
-machine LoadPlatformDescription @platforms/cpus/rp2040.repl
+machine LoadPlatformDescription "D:/Documents/NeuroForge/server/test-firmware/rp2040/blink/platforms/raspberry-pico.repl"
 
-$bin?=@blink/build/blink.elf
+$bin?="D:/Documents/NeuroForge/server/test-firmware/rp2040/blink/build/blink.elf"
 
 showAnalyzer sysbus.uart0
 

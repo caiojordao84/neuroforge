@@ -1,7 +1,7 @@
 // Raspberry Pi Pico Board - Simplified
 // Based on RP2040 MCU
 
-using "rp2040.repl"
+using "D:/Documents/NeuroForge/server/test-firmware/rp2040/blink/platforms/rp2040.repl"
 
 // Board-specific configuration
 // Flash: 2MB W25Q16JV (already defined in rp2040.repl as 2MB)
