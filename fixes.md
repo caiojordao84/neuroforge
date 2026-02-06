@@ -839,4 +839,43 @@ Organize response into clearly labeled sections with file paths and complete sou
 
 ---
 
-**Última atualização:** 31/01/2026 11:06 AM WET
+**Última atualização:** 06/02/2026 15:40 PM WET
+
+---
+
+**PART 4: URGENT FIXES - SIMULATION STABILITY (06/02/2026)**
+
+**FIX 4.1: Code Editor Synchronization Bug**
+CURRENT STATE: Code editor content was not syncing with the simulation engine for the active file unless explicitly assigned to an MCU. This caused the simulation to run outdated code or the default template.
+REQUIRED BEHAVIOR:
+- Active file code must always be sent to the compiler when "Compile & Run" is clicked.
+- Auto-assignment of active file to MCU if only one MCU exists on canvas.
+
+STATUS: IMPLEMENTED
+- Modified `TopToolbar.tsx` to proactively fetch code from `startSimulation`.
+- Updated `CodeEditorWithTabs.tsx` to auto-assign active file to single MCU.
+- Fixed `useSimulationStore` to properly update code map.
+
+**FIX 4.2: ESP32 Real Compilation & Simulation**
+CURRENT STATE: ESP32 simulation was using a hardcoded, static binary. User code changes were ignored.
+REQUIRED BEHAVIOR:
+- Compile actual user code for ESP32 using `arduino-cli`.
+- Generate valid flash image compatible with QEMU.
+- Inject GPIO reporting hooks to visualize pin changes on canvas.
+
+STATUS: IMPLEMENTED
+- Refactored `CompilerService.ts` to use `arduino-cli compile --export-binaries`.
+- Implemented `esp32-shim.cpp` to intercept `digitalWrite`/`pinMode` and report via UART0.
+- Updated `QEMUApiClient.ts` and `hooks` to pass eFuse image path to QEMU.
+- QEMU backend now runs the user's compiled code with blink support.
+
+**FIX 4.3: Serial Log Cleanup**
+CURRENT STATE: internally used `G:` and `M:` frames were polluting the Serial Monitor.
+REQUIRED BEHAVIOR:
+- Filter out control frames from the user-facing Serial Monitor.
+- Keep control frames for the internal engine to drive the canvas.
+
+STATUS: IMPLEMENTED
+- Updated `QEMUSimulationEngine.ts` to intercept and drop `G:`/`M:` lines.
+- Applied regex fix in `SerialGPIOParser.ts` for robust frame detection.
+
