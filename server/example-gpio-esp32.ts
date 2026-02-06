@@ -1,119 +1,201 @@
 /**
- * Exemplo completo de integração ESP32 + QEMU + SerialGPIO
+ * Exemplo standalone para testar ESP32 Backend
  * 
- * PASSO 1: Compilar firmware ESP-IDF:
- *   cd /path/to/esp-idf/examples/get-started/hello_world
- *   idf.py set-target esp32
- *   idf.py build
- *   idf.py qemu --no-monitor
+ * Este script testa o Esp32Backend e Esp32SerialClient isoladamente,
+ * sem depender do QEMUSimulationEngine (que já tem AVR funcionando).
  * 
- * PASSO 2: Copiar qemu_flash.bin e qemu_efuse.bin para server/test-firmware/esp32/
+ * PRÉ-REQUISITOS:
+ * 1. QEMU ESP32 instalado (qemu-system-xtensa)
+ * 2. Firmware compilado em server/test-firmware/esp32/
+ *    - qemu_flash.bin
+ *    - qemu_efuse.bin
  * 
- * PASSO 3: Rodar este exemplo:
+ * USO:
  *   cd server
- *   tsx example-gpio-esp32.ts
+ *   npx tsx example-gpio-esp32.ts
+ * 
+ * O que este exemplo faz:
+ * - Inicia o QEMU ESP32 com firmware de teste
+ * - Conecta ao serial TCP (porta 5555)
+ * - Parseia linhas do protocolo GPIO (G:pin=X,v=Y)
+ * - Exibe eventos de mudança de pinos no console
+ * - Mantém rodando até Ctrl+C
  */
 
-import { QEMUSimulationEngine } from './src/services/QEMUSimulationEngine';
-import { SerialGPIOService } from './SerialGPIOService';
 import * as path from 'path';
 import * as fs from 'fs';
+import { Esp32Backend } from './src/services/Esp32Backend';
+import { SerialGPIOParser } from './src/services/SerialGPIOParser';
+import type { Esp32BackendConfig } from './src/types/esp32.types';
+
+// ============================================================================
+// CONFIGURAÇÃO
+// ============================================================================
+
+const FIRMWARE_DIR = path.join(__dirname, 'test-firmware', 'esp32');
+const FLASH_IMAGE = path.join(FIRMWARE_DIR, 'qemu_flash.bin');
+const EFUSE_IMAGE = path.join(FIRMWARE_DIR, 'qemu_efuse.bin');
+const SERIAL_PORT = 5555;
+
+// ============================================================================
+// VALIDAÇÃO DE PRÉ-REQUISITOS
+// ============================================================================
+
+function validatePrerequisites(): void {
+  console.log('🔍 Validating prerequisites...\n');
+
+  // 1. Verificar se diretório de firmware existe
+  if (!fs.existsSync(FIRMWARE_DIR)) {
+    console.error(`❌ Firmware directory not found: ${FIRMWARE_DIR}`);
+    console.log('\n📝 Create it with:');
+    console.log(`   mkdir -p ${FIRMWARE_DIR}`);
+    process.exit(1);
+  }
+
+  // 2. Verificar imagens de firmware
+  const missingFiles: string[] = [];
+  
+  if (!fs.existsSync(FLASH_IMAGE)) {
+    missingFiles.push('qemu_flash.bin');
+  }
+  
+  if (!fs.existsSync(EFUSE_IMAGE)) {
+    missingFiles.push('qemu_efuse.bin');
+  }
+
+  if (missingFiles.length > 0) {
+    console.error(`❌ Missing firmware files in ${FIRMWARE_DIR}:`);
+    missingFiles.forEach(file => console.error(`   - ${file}`));
+    console.log('\n📝 Build ESP32 firmware with:');
+    console.log('   idf.py build');
+    console.log('   idf.py qemu-flash');
+    console.log(`\n   Then copy the files to ${FIRMWARE_DIR}`);
+    process.exit(1);
+  }
+
+  console.log(`✅ Flash image: ${FLASH_IMAGE}`);
+  console.log(`✅ eFuse image: ${EFUSE_IMAGE}`);
+  console.log(`✅ Serial port: TCP ${SERIAL_PORT}\n`);
+}
+
+// ============================================================================
+// EXEMPLO PRINCIPAL
+// ============================================================================
 
 async function main() {
-  console.log('🚀 ESP32 + QEMU + SerialGPIO Example\n');
+  console.log('╔════════════════════════════════════════════════════════╗');
+  console.log('║   ESP32 Backend Test - NeuroForge QEMU Simulation     ║');
+  console.log('╚════════════════════════════════════════════════════════╝\n');
 
-  // Configurar caminhos (ajustar para o seu ambiente)
-  const flashPath = path.join(__dirname, 'test-firmware', 'esp32', 'qemu_flash.bin');
-  const efusePath = path.join(__dirname, 'test-firmware', 'esp32', 'qemu_efuse.bin');
+  // Validar pré-requisitos
+  validatePrerequisites();
 
-  // Validar existência dos arquivos
-  if (!fs.existsSync(flashPath)) {
-    console.error(`❌ Flash image not found: ${flashPath}`);
-    console.log('\n📄 Please follow these steps:');
-    console.log('1. Compile an ESP-IDF project with: idf.py build');
-    console.log('2. Generate QEMU images with: idf.py qemu --no-monitor');
-    console.log('3. Copy build/qemu_flash.bin and build/qemu_efuse.bin to server/test-firmware/esp32/');
-    process.exit(1);
-  }
+  // Criar instâncias
+  const backend = new Esp32Backend();
+  const gpioParser = new SerialGPIOParser();
 
-  if (!fs.existsSync(efusePath)) {
-    console.error(`❌ eFuse image not found: ${efusePath}`);
-    process.exit(1);
-  }
+  // ====================================
+  // Event Handlers: Backend
+  // ====================================
 
-  const engine = new QEMUSimulationEngine();
-
-  // Integrar SerialGPIOService
-  const gpioService = new SerialGPIOService(engine as any); // Cast temporário
-
-  // Eventos de GPIO
-  gpioService.on('gpio-snapshot', (state) => {
-    console.log('📊 [GPIO Snapshot]', {
-      ports: state.ports,
-      pins: Array.from(state.pins.entries()).slice(0, 5) // Mostrar apenas primeiros 5 pins
-    });
+  backend.on('started', () => {
+    console.log('\n✅ ESP32 Backend started successfully\n');
+    console.log('📡 Listening for serial output...');
+    console.log('🔌 Watching for GPIO events (G:pin=X,v=Y)...');
+    console.log('⏹️  Press Ctrl+C to stop\n');
+    console.log('─'.repeat(60));
   });
 
-  gpioService.on('gpio-changes', (changes) => {
-    for (const change of changes) {
-      console.log(`🔄 [GPIO] Pin ${change.pin} changed: ${change.from} → ${change.to}`);
-    }
+  backend.on('stopped', (code) => {
+    console.log(`\n⏹️  ESP32 Backend stopped (exit code: ${code})`);
+    process.exit(code || 0);
   });
 
-  // Eventos de serial
-  engine.on('serial', (line) => {
-    console.log(`📡 [Serial] ${line}`);
+  backend.on('error', (error) => {
+    console.error('\n❌ Backend error:', error);
+    process.exit(1);
+  });
+
+  backend.on('serial', (line: string) => {
+    // Exibir todas as linhas serial (incluindo debug do ESP32)
+    console.log(`[Serial]: ${line}`);
     
-    // Processar protocolo GPIO
-    gpioService.processLine(line);
+    // Enviar para parser GPIO
+    gpioParser.processLine(line);
   });
 
-  engine.on('started', () => {
-    console.log('✅ ESP32 simulation started!\n');
+  // ====================================
+  // Event Handlers: GPIO Parser
+  // ====================================
+
+  gpioParser.on('pin-change', (update) => {
+    const { pin, value, mode } = update;
+    const emoji = value === 1 ? '🟢' : '🔴';
+    const state = value === 1 ? 'HIGH' : 'LOW';
+    
+    console.log(`${emoji} GPIO Pin ${pin} = ${state}${mode ? ` (${mode})` : ''}`);
   });
 
-  engine.on('stopped', () => {
-    console.log('\n⏹️ ESP32 simulation stopped');
-  });
+  // ====================================
+  // Configuração do Backend
+  // ====================================
 
-  engine.on('error', (error) => {
-    console.error('❌ Error:', error);
-  });
-
-  // Carregar firmware ESP32
-  await engine.loadFirmware('dummy-path', 'esp32');
-
-  // Configuração ESP32
-  const esp32Config = {
+  const config: Esp32BackendConfig = {
     flash: {
-      flashImagePath: flashPath,
-      efuseImagePath: efusePath,
-      serialPort: 5555
+      flashImagePath: FLASH_IMAGE,
+      efuseImagePath: EFUSE_IMAGE,
+      serialPort: SERIAL_PORT
     },
     qemuOptions: {
       memory: '4M',
-      wdtDisable: true,
-      networkMode: 'user' as const
+      networkMode: 'user',
+      wdtDisable: true
     }
   };
 
-  // Iniciar simulação
-  console.log('⚙️ Starting ESP32 backend...\n');
-  await engine.start(esp32Config);
+  // ====================================
+  // Graceful Shutdown
+  // ====================================
 
-  // Aguardar 30 segundos
-  console.log('⏳ Simulation running for 30 seconds...\n');
-  await new Promise(resolve => setTimeout(resolve, 30000));
+  const shutdown = () => {
+    console.log('\n\n🛑 Shutting down...');
+    backend.stop();
+    process.exit(0);
+  };
 
-  // Parar
-  console.log('\n🛭 Stopping simulation...');
-  engine.stop();
-  
-  console.log('✅ Example completed successfully!');
-  process.exit(0);
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+
+  // ====================================
+  // Iniciar Backend
+  // ====================================
+
+  try {
+    console.log('🚀 Starting ESP32 Backend...\n');
+    await backend.start(config);
+  } catch (error) {
+    console.error('\n❌ Failed to start ESP32 Backend:', error);
+    
+    if (error instanceof Error) {
+      if (error.message.includes('ENOENT')) {
+        console.log('\n💡 Tip: Make sure qemu-system-xtensa is in your PATH');
+        console.log('   Or set ESP32_QEMU_PATH in your .env file');
+      } else if (error.message.includes('not found')) {
+        console.log('\n💡 Tip: Check if firmware files exist:');
+        console.log(`   ${FLASH_IMAGE}`);
+        console.log(`   ${EFUSE_IMAGE}`);
+      }
+    }
+    
+    process.exit(1);
+  }
 }
 
+// ============================================================================
+// EXECUTAR
+// ============================================================================
+
 main().catch((error) => {
-  console.error('❌ Error:', error);
+  console.error('💥 Unhandled error:', error);
   process.exit(1);
 });
