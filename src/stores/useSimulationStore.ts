@@ -230,7 +230,7 @@ export const useSimulationStore = create<SimulationStore>()(
         set((state) => {
           const newMCUs = new Map(state.mcus);
           newMCUs.set(id, { id, ...config });
-          return { 
+          return {
             mcus: newMCUs,
             activeMCUId: state.activeMCUId || id
           };
@@ -241,9 +241,9 @@ export const useSimulationStore = create<SimulationStore>()(
         set((state) => {
           const newMCUs = new Map(state.mcus);
           newMCUs.delete(id);
-          return { 
+          return {
             mcus: newMCUs,
-            activeMCUId: state.activeMCUId === id 
+            activeMCUId: state.activeMCUId === id
               ? (newMCUs.size > 0 ? Array.from(newMCUs.keys())[0] : null)
               : state.activeMCUId
           };
@@ -254,7 +254,7 @@ export const useSimulationStore = create<SimulationStore>()(
         set((state) => {
           const mcu = state.mcus.get(id);
           if (!mcu) return state;
-          
+
           const newMCUs = new Map(state.mcus);
           newMCUs.set(id, { ...mcu, code });
           return { mcus: newMCUs };
@@ -265,7 +265,7 @@ export const useSimulationStore = create<SimulationStore>()(
         set((state) => {
           const mcu = state.mcus.get(id);
           if (!mcu) return state;
-          
+
           const newMCUs = new Map(state.mcus);
           newMCUs.set(id, { ...mcu, language });
           return { mcus: newMCUs };
@@ -276,7 +276,7 @@ export const useSimulationStore = create<SimulationStore>()(
         set((state) => {
           const mcu = state.mcus.get(id);
           if (!mcu) return state;
-          
+
           const newMCUs = new Map(state.mcus);
           newMCUs.set(id, { ...mcu, firmwarePath });
           return { mcus: newMCUs };
@@ -287,7 +287,7 @@ export const useSimulationStore = create<SimulationStore>()(
         set((state) => {
           const mcu = state.mcus.get(id);
           if (!mcu) return state;
-          
+
           const newMCUs = new Map(state.mcus);
           newMCUs.set(id, { ...mcu, isRunning });
           return { mcus: newMCUs };
@@ -316,12 +316,14 @@ export const useSimulationStore = create<SimulationStore>()(
       digitalWrite: (pin, value) => {
         set((state) => {
           const pinState = state.pins.get(pin);
-          if (!pinState || pinState.mode !== 'OUTPUT') {
-            console.warn(`Pin ${pin} is not set to OUTPUT mode`);
-            return state;
-          }
+          // NeuroForge: allow writing even if mode is unknown for QEMU sync
+          // if (!pinState || pinState.mode !== 'OUTPUT') { ... }
           const newPins = new Map(state.pins);
-          newPins.set(pin, { ...pinState, value });
+          newPins.set(pin, {
+            pin,
+            mode: pinState?.mode ?? 'OUTPUT',
+            value
+          });
           return { pins: newPins };
         });
       },
@@ -329,13 +331,14 @@ export const useSimulationStore = create<SimulationStore>()(
       analogWrite: (pin, value) => {
         set((state) => {
           const pinState = state.pins.get(pin);
-          if (!pinState || pinState.mode !== 'OUTPUT') {
-            console.warn(`Pin ${pin} is not set to OUTPUT mode`);
-            return state;
-          }
+          // NeuroForge: allow writing even if mode is unknown for QEMU sync
           const clampedValue = Math.max(0, Math.min(255, value));
           const newPins = new Map(state.pins);
-          newPins.set(pin, { ...pinState, value: clampedValue });
+          newPins.set(pin, {
+            pin,
+            mode: pinState?.mode ?? 'OUTPUT',
+            value: clampedValue
+          });
           return { pins: newPins };
         });
       },

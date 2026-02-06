@@ -11,24 +11,42 @@ export interface PinStateUpdate {
  * Protocol v1.0: G:pin=13,v=1
  */
 export class SerialGPIOParser extends EventEmitter {
-    private static readonly GPIO_FRAME_REGEX = /^G:.*pin=(\d+),v=([01])/;
+    private static readonly GPIO_REGEX = /G:.*pin=(\d+),v=([01])/;
+    private static readonly MODE_REGEX = /M:.*pin=(\d+),m=([0-2])/;
 
     /**
      * Processes a line of serial output
      * If it matches a GPIO frame, emits 'pin-change'
      */
     processLine(line: string): boolean {
-        const trimmed = line.trim();
-        const match = trimmed.match(SerialGPIOParser.GPIO_FRAME_REGEX);
-
-        if (match) {
-            const pin = parseInt(match[1], 10);
-            const value = parseInt(match[2], 10);
+        // 1. Detect Value Changes (G:pin=13,v=1)
+        const gMatch = line.match(SerialGPIOParser.GPIO_REGEX);
+        if (gMatch) {
+            const pin = parseInt(gMatch[1], 10);
+            const value = parseInt(gMatch[2], 10);
 
             this.emit('pin-change', {
                 pin,
                 value,
-                mode: 'OUTPUT' // Default for Serial protocol triggers
+                // mode: 'OUTPUT' // Keep current mode if known, otherwise default to OUTPUT
+            } as PinStateUpdate);
+
+            return true;
+        }
+
+        // 2. Detect Mode Changes (M:pin=13,m=1)
+        const mMatch = line.match(SerialGPIOParser.MODE_REGEX);
+        if (mMatch) {
+            const pin = parseInt(mMatch[1], 10);
+            const m = parseInt(mMatch[2], 10);
+
+            // Mapping: 0=INPUT, 1=OUTPUT, 2=INPUT_PULLUP
+            const modes: ('INPUT' | 'OUTPUT' | 'INPUT_PULLUP')[] = ['INPUT', 'OUTPUT', 'INPUT_PULLUP'];
+            const mode = modes[m] || 'OUTPUT';
+
+            this.emit('pin-change', {
+                pin,
+                mode
             } as PinStateUpdate);
 
             return true;
