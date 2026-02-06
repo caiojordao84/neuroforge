@@ -37,8 +37,8 @@ sysbus.cpu PC 0x100001f7
 # ─────────────────────────────────────────────────────────
 # 3. Configurar UART0 TCP
 # ─────────────────────────────────────────────────────────
-emulation CreateServerSocketTerminal 1234 "uart0" false
-connector Connect sysbus.uart0 uart0
+emulation CreateServerSocketTerminal 1234 "uart0-terminal" false
+connector Connect sysbus.uart0 uart0-terminal
 
 # ─────────────────────────────────────────────────────────
 # 4. Configurar Clock
