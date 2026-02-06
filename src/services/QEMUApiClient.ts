@@ -65,15 +65,26 @@ export class QEMUApiClient {
 
   /**
    * Start QEMU simulation
+   * @param firmwarePath - Path to firmware binary
+   * @param board - Target board type
+   * @param efusePath - Optional path to eFuse image (ESP32 only)
    */
-  async startSimulation(firmwarePath: string, board: BoardType = 'arduino-uno'): Promise<CompileResponse> {
+  async startSimulation(
+    firmwarePath: string,
+    board: BoardType = 'arduino-uno',
+    efusePath?: string
+  ): Promise<CompileResponse> {
     try {
       const response = await fetch(`${this.baseUrl}/api/simulate/start`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ firmwarePath, board })
+        body: JSON.stringify({
+          firmwarePath,
+          board,
+          ...(efusePath && { efusePath })
+        })
       });
 
       const data = await response.json();
