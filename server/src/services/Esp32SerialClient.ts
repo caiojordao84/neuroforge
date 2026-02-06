@@ -79,6 +79,10 @@ export class Esp32SerialClient extends EventEmitter {
     });
 
     this.client.on('error', (error) => {
+      // Se ainda não estiver conectado, deixamos o handler do connect() cuidar do erro/retry
+      if (!this.isConnected()) {
+        return;
+      }
       console.error('ESP32 serial error:', error);
       this.emit('error', error);
     });

@@ -24,6 +24,11 @@
 
 import * as path from 'path';
 import * as fs from 'fs';
+import * as dotenv from 'dotenv';
+
+// Carregar variáveis de ambiente do .env
+dotenv.config();
+
 import { Esp32Backend } from './src/services/Esp32Backend';
 import { SerialGPIOParser } from './src/services/SerialGPIOParser';
 import type { Esp32BackendConfig } from './src/types/esp32.types';
@@ -54,11 +59,11 @@ function validatePrerequisites(): void {
 
   // 2. Verificar imagens de firmware
   const missingFiles: string[] = [];
-  
+
   if (!fs.existsSync(FLASH_IMAGE)) {
     missingFiles.push('qemu_flash.bin');
   }
-  
+
   if (!fs.existsSync(EFUSE_IMAGE)) {
     missingFiles.push('qemu_efuse.bin');
   }
@@ -119,7 +124,7 @@ async function main() {
   backend.on('serial', (line: string) => {
     // Exibir todas as linhas serial (incluindo debug do ESP32)
     console.log(`[Serial]: ${line}`);
-    
+
     // Enviar para parser GPIO
     gpioParser.processLine(line);
   });
@@ -132,7 +137,7 @@ async function main() {
     const { pin, value, mode } = update;
     const emoji = value === 1 ? '🟢' : '🔴';
     const state = value === 1 ? 'HIGH' : 'LOW';
-    
+
     console.log(`${emoji} GPIO Pin ${pin} = ${state}${mode ? ` (${mode})` : ''}`);
   });
 
@@ -148,7 +153,7 @@ async function main() {
     },
     qemuOptions: {
       memory: '4M',
-      networkMode: 'user',
+      networkMode: 'none',
       wdtDisable: true
     }
   };
@@ -175,7 +180,7 @@ async function main() {
     await backend.start(config);
   } catch (error) {
     console.error('\n❌ Failed to start ESP32 Backend:', error);
-    
+
     if (error instanceof Error) {
       if (error.message.includes('ENOENT')) {
         console.log('\n💡 Tip: Make sure qemu-system-xtensa is in your PATH');
@@ -186,7 +191,7 @@ async function main() {
         console.log(`   ${EFUSE_IMAGE}`);
       }
     }
-    
+
     process.exit(1);
   }
 }

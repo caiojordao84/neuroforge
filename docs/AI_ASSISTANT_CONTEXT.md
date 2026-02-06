@@ -363,7 +363,7 @@ Board JSON → Backend (QEMU) → Framework → Serial GPIO → Frontend
 3. **Nunca quebrar Arduino:**
    - Antes de mexer, perguntar
    - Testar AVR após cada mudança
-   - LED pin 13 deve piscar sempre
+   - LED deve piscar sempre com frequência correcta.
 
 ### **Próximos Passos (se perguntado):**
 1. Completar integração ESP32 (backend + serial + exemplo)

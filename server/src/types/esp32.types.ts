@@ -13,7 +13,7 @@ export interface Esp32FlashConfig {
 export interface Esp32QemuOptions {
   qemuPath?: string;            // Caminho para qemu-system-xtensa
   memory?: string;              // Tamanho da RAM (default: '4M')
-  networkMode?: 'user' | 'tap'; // Modo de rede (default: 'user')
+  networkMode?: 'user' | 'tap' | 'none'; // Modo de rede (default: 'user')
   wdtDisable?: boolean;         // Desabilitar watchdog (default: true)
 }
 

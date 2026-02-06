@@ -18,11 +18,15 @@ export class Esp32Backend extends EventEmitter {
   constructor(qemuPath?: string) {
     super();
     // Default: buscar no PATH ou usar variável de ambiente
-    this.qemuPath = qemuPath 
-      || process.env.ESP32_QEMU_PATH 
-      || (process.platform === 'win32' 
-        ? 'qemu-system-xtensa.exe' 
+    this.qemuPath = qemuPath
+      || process.env.ESP32_QEMU_PATH
+      || (process.platform === 'win32'
+        ? 'qemu-system-xtensa.exe'
         : 'qemu-system-xtensa');
+  }
+
+  private getQemuDataPath(): string | null {
+    return process.env.ESP32_QEMU_DATA_PATH || null;
   }
 
   /**
@@ -58,6 +62,9 @@ export class Esp32Backend extends EventEmitter {
 
     // Aguardar QEMU inicializar e abrir o socket TCP
     await this.waitForSerialPort(serialPort);
+
+    // Pequeno delay para garantir que o QEMU liberou o socket após o teste
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Conectar ao socket serial
     this.serialClient = new Esp32SerialClient(serialPort);
@@ -116,18 +123,27 @@ export class Esp32Backend extends EventEmitter {
     const memory = config.qemuOptions?.memory || process.env.ESP32_DEFAULT_MEMORY || '4M';
     const wdtDisable = config.qemuOptions?.wdtDisable !== false; // Default true
     const networkMode = config.qemuOptions?.networkMode || 'user';
+    const dataPath = this.getQemuDataPath();
 
-    return [
+    const args = [
+      ...(dataPath ? ['-L', dataPath] : []),
       '-M', 'esp32',
       '-m', memory,
       '-drive', `file=${config.flash.flashImagePath},if=mtd,format=raw`,
       '-drive', `file=${config.flash.efuseImagePath},if=none,format=raw,id=efuse`,
       '-global', 'driver=nvram.esp32.efuse,property=drive,value=efuse',
       ...(wdtDisable ? ['-global', 'driver=timer.esp32.timg,property=wdt_disable,value=true'] : []),
-      '-nic', `${networkMode},model=open_eth`,
       '-nographic',
       '-serial', `tcp::${serialPort},server,nowait`
     ];
+
+    if (networkMode !== 'none') {
+      args.push('-nic', `${networkMode},model=open_eth`);
+    } else {
+      args.push('-net', 'none');
+    }
+
+    return args;
   }
 
   /**
@@ -165,7 +181,7 @@ export class Esp32Backend extends EventEmitter {
    */
   stop(): void {
     console.log('⏹️ Stopping ESP32 Backend...');
-    
+
     if (this.serialClient) {
       this.serialClient.disconnect();
       this.serialClient = null;
