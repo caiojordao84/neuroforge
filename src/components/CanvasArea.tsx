@@ -17,13 +17,14 @@ import '@xyflow/react/dist/style.css';
 
 import { nodeTypes } from './nodes';
 import { edgeTypes } from './edges';
-import { useSimulationStore } from '@/stores/useSimulationStore';
+import { useSimulationStore, boardConfigs, defaultCodeMap } from '@/stores/useSimulationStore';
 import { useSerialStore } from '@/stores/useSerialStore';
 import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { simulationEngine } from '@/engine/SimulationEngine';
 import { codeParser } from '@/engine/CodeParser';
 import { cn } from '@/lib/utils';
+import type { BoardType, Language } from '@/types';
 import {
   Select,
   SelectContent,
@@ -33,9 +34,6 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Play, Square, RotateCcw, FastForward, Cpu } from 'lucide-react';
-
-// MCU components are now draggable nodes from Components Library
-// See MCUNode.tsx for the new implementation
 
 // Inner canvas component with React Flow hooks
 const CanvasInner: React.FC = () => {
@@ -48,8 +46,10 @@ const CanvasInner: React.FC = () => {
     status,
     speed,
     setSpeed,
-    code,
     language,
+    getAllMCUs,
+    addMCU,
+    removeMCU,
     startSimulation,
     stopSimulation,
     resetSimulation,
@@ -72,10 +72,8 @@ const CanvasInner: React.FC = () => {
     openWindow('properties');
   }, [openWindow]);
 
-  // Initialize with empty canvas - MCU components are draggable from Components Library
-  // No hardcoded board component - users should drag MCUs from the library
+  // Initialize with empty canvas
   useEffect(() => {
-    // Canvas starts empty, ready for user to drag components
     setNodes([]);
   }, [setNodes]);
 
@@ -88,14 +86,21 @@ const CanvasInner: React.FC = () => {
     setStoreEdges(edges);
   }, [edges, setStoreEdges]);
 
+  // Get default code template for board type
+  const getDefaultCodeForBoard = useCallback((boardType: BoardType, lang: Language): string => {
+    const baseCode = defaultCodeMap[lang];
+    const boardName = boardConfigs[boardType].name;
+    
+    // Add board-specific comment
+    return `// ${boardName}\n${baseCode}`;
+  }, []);
+
   // Validate connection before creating edge
   const isValidConnection = useCallback((connection: Connection): boolean => {
-    // Don't allow connecting to same node
     if (connection.source === connection.target) {
       return false;
     }
 
-    // Don't allow duplicate connections
     const existingEdge = edges.find(
       (e) => e.source === connection.source && e.target === connection.target &&
         e.sourceHandle === connection.sourceHandle && e.targetHandle === connection.targetHandle
@@ -114,7 +119,6 @@ const CanvasInner: React.FC = () => {
         return;
       }
 
-      // Determine wire color based on handles
       const sourceHandle = params.sourceHandle || '';
       const targetHandle = params.targetHandle || '';
 
@@ -142,10 +146,8 @@ const CanvasInner: React.FC = () => {
         },
       };
 
-      // Add edge to React Flow state
       setEdges((eds) => addEdge(newEdge, eds));
 
-      // Add connection to the store for components to detect
       const connection = {
         id: newEdge.id,
         source: `${params.source}:${params.sourceHandle || 'default'}`,
@@ -163,6 +165,16 @@ const CanvasInner: React.FC = () => {
       removeConnection(edge.id);
     });
   }, [removeConnection]);
+
+  // Handle node deletion - remove MCU from store
+  const onNodesDelete = useCallback((deletedNodes: Node[]) => {
+    deletedNodes.forEach((node) => {
+      if (node.type === 'mcu') {
+        removeMCU(node.id);
+        addTerminalLine(`🗑️ Removed MCU: ${node.data.label || node.id}`, 'info');
+      }
+    });
+  }, [removeMCU, addTerminalLine]);
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
@@ -193,9 +205,27 @@ const CanvasInner: React.FC = () => {
       };
 
       setNodes((nds) => [...nds, newNode]);
-      addTerminalLine(`➕ Added ${type} component`, 'info');
+
+      // If MCU, add to simulation store
+      if (type === 'mcu') {
+        const mcuType = (componentData.mcuType as BoardType) || 'arduino-uno';
+        const defaultCode = getDefaultCodeForBoard(mcuType, language);
+        const boardName = boardConfigs[mcuType].name;
+        
+        addMCU(newNode.id, {
+          type: mcuType,
+          code: defaultCode,
+          language: language,
+          isRunning: false,
+          label: componentData.label || boardName
+        });
+
+        addTerminalLine(`➕ Added ${boardName} (${newNode.id})`, 'info');
+      } else {
+        addTerminalLine(`➕ Added ${type} component`, 'info');
+      }
     },
-    [screenToFlowPosition, setNodes, addTerminalLine]
+    [screenToFlowPosition, setNodes, addTerminalLine, language, addMCU, getDefaultCodeForBoard]
   );
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -208,8 +238,16 @@ const CanvasInner: React.FC = () => {
       stopSimulation();
       simulationEngine.stop();
     } else {
-      codeParser.setLanguage(language);
-      const parsed = codeParser.parse(code);
+      // Get first MCU for legacy fake mode support
+      const allMCUs = getAllMCUs();
+      if (allMCUs.length === 0) {
+        addTerminalLine('❌ No MCU found. Drag an MCU from Components Library.', 'error');
+        return;
+      }
+
+      const activeMCU = allMCUs[0];
+      codeParser.setLanguage(activeMCU.language);
+      const parsed = codeParser.parse(activeMCU.code);
 
       if (parsed) {
         startSimulation();
@@ -218,7 +256,7 @@ const CanvasInner: React.FC = () => {
         addTerminalLine('❌ Failed to parse code', 'error');
       }
     }
-  }, [status, code, language, speed, startSimulation, stopSimulation, addTerminalLine]);
+  }, [status, speed, getAllMCUs, startSimulation, stopSimulation, addTerminalLine]);
 
   const handleReset = useCallback(() => {
     resetSimulation();
@@ -230,6 +268,8 @@ const CanvasInner: React.FC = () => {
     simulationEngine.setSpeed(newSpeed);
   }, [setSpeed]);
 
+  const mcuCount = getAllMCUs().length;
+
   return (
     <div ref={reactFlowWrapper} className="w-full h-full">
       <ReactFlow
@@ -239,6 +279,7 @@ const CanvasInner: React.FC = () => {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onEdgesDelete={onEdgesDelete}
+        onNodesDelete={onNodesDelete}
         onDrop={onDrop}
         onDragOver={onDragOver}
         onNodeClick={onNodeClick}
@@ -249,10 +290,8 @@ const CanvasInner: React.FC = () => {
         attributionPosition="bottom-right"
         deleteKeyCode={['Backspace', 'Delete']}
         className="bg-[#0a0e14]"
-        // Snap to grid for precise wiring
         snapToGrid={true}
         snapGrid={[10, 10]}
-        // Connection line styling
         connectionLineStyle={{
           stroke: '#00d9ff',
           strokeWidth: 2,
@@ -338,8 +377,6 @@ const CanvasInner: React.FC = () => {
           </div>
         </Panel>
 
-        {/* MCU components are now draggable from Components Library */}
-
         <Panel position="bottom-left" className="m-4 ml-16">
           <div
             className={cn(
@@ -358,7 +395,8 @@ const CanvasInner: React.FC = () => {
               <span className={cn(
                 status === 'running' ? 'text-green-400' : 'text-[#9ca3af]'
               )}>
-                {status === 'idle' && 'Ready - Drag MCU from library'}
+                {status === 'idle' && mcuCount === 0 && 'Ready - Drag MCU from library'}
+                {status === 'idle' && mcuCount > 0 && `${mcuCount} MCU${mcuCount > 1 ? 's' : ''} on canvas`}
                 {status === 'running' && 'Simulation running'}
                 {status === 'paused' && 'Simulation paused'}
                 {status === 'error' && 'Simulation error'}
@@ -371,7 +409,7 @@ const CanvasInner: React.FC = () => {
   );
 };
 
-// Main canvas component - no provider needed here as App.tsx provides it
+// Main canvas component
 export const CanvasArea: React.FC = () => {
   return (
     <div className="w-full h-full">
