@@ -26,13 +26,13 @@ machine LoadPlatformDescription "D:/Documents/NeuroForge/server/test-firmware/rp
 sysbus LoadELF "D:/Documents/NeuroForge/server/test-firmware/rp2040/blink/build/blink.elf"
 
 # Setup do Vector Table (Ajustado para o offset do Pico SDK)
-sysbus.cpu VectorTableOffset 0x10000000
+sysbus.cpu0 VectorTableOffset 0x10000000
 
 # Valores extraídos do ELF (nm/readelf)
 # Reset Handler: 0x100001f6 (+1 para Thumb = 0x100001f7)
 # Stack Top:     0x20042000
-sysbus.cpu SP 0x20042000
-sysbus.cpu PC 0x100001f7
+sysbus.cpu0 SP 0x20042000
+sysbus.cpu0 PC 0x100001f7
 
 # ─────────────────────────────────────────────────────────
 # 3. Configurar UART0 TCP
@@ -43,7 +43,7 @@ connector Connect sysbus.uart0 uart0-terminal
 # ─────────────────────────────────────────────────────────
 # 4. Configurar Clock
 # ─────────────────────────────────────────────────────────
-sysbus.cpu PerformanceInMips 125
+sysbus.cpu0 PerformanceInMips 125
 
 # ─────────────────────────────────────────────────────────
 # 5. Mensagens
