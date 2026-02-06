@@ -23,7 +23,7 @@ export function useQEMUSimulation() {
   } = useQEMUStore();
 
   const { status } = useSimulationStore();
-  const { addSerialLine, addTerminalLine } = useSerialStore();
+  const { addSerialLine } = useSerialStore();
 
   /**
    * Check backend health on mount
@@ -107,38 +107,12 @@ export function useQEMUSimulation() {
   const compileAndStart = useCallback(async (code: string, board: string) => {
     if (mode !== 'qemu') return;
 
-    // Validation and logging
-    console.log(`🔨 [QEMU] Compiling for board: "${board}"`);
-    console.log(`📝 [QEMU] Code length: ${code.length} chars`);
-
-    // Validate board type
-    const validBoards = ['arduino-uno', 'esp32-devkit', 'raspberry-pi-pico'];
-    if (!validBoards.includes(board)) {
-      console.error(`❌ [QEMU] Invalid board type: "${board}"`);
-      setCompilationError(`Invalid board type: ${board}`);
-      return;
-    }
-
-    // Warning for ESP32 with custom code
-    if (board === 'esp32-devkit') {
-      console.warn('⚠️ [QEMU] ESP32 detected - using pre-compiled firmware (custom code not supported yet)');
-      addTerminalLine('⚠️ ESP32: Using pre-compiled firmware. Custom code compilation coming soon!', 'warning');
-    }
-
     setCompiling(true);
     setCompilationError(null);
 
     try {
       // Step 1: Compile
-      console.log(`📤 [QEMU] Sending compilation request...`);
       const compileResult = await qemuApi.compile(code, board as any);
-
-      console.log(`📥 [QEMU] Compilation result:`, {
-        success: compileResult.success,
-        firmwarePath: compileResult.firmwarePath,
-        efusePath: (compileResult as any).efusePath,
-        error: compileResult.error
-      });
 
       if (!compileResult.success) {
         setCompilationError(compileResult.error || 'Compilation failed');
@@ -148,14 +122,7 @@ export function useQEMUSimulation() {
       setFirmwarePath(compileResult.firmwarePath!);
 
       // Step 2: Start simulation
-      console.log(`🚀 [QEMU] Starting simulation with board: "${board}"`);
-      const startResult = await qemuApi.startSimulation(
-        compileResult.firmwarePath!,
-        board as any,
-        (compileResult as any).efusePath
-      );
-
-      console.log(`📥 [QEMU] Start result:`, startResult);
+      const startResult = await qemuApi.startSimulation(compileResult.firmwarePath!, board as any);
 
       if (!startResult.success) {
         setCompilationError(startResult.error || 'Failed to start simulation');
@@ -163,14 +130,12 @@ export function useQEMUSimulation() {
       }
 
       setSimulationRunning(true);
-      console.log(`✅ [QEMU] Simulation started successfully`);
     } catch (error) {
-      console.error('❌ [QEMU] Compilation/Start error:', error);
       setCompilationError(error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setCompiling(false);
     }
-  }, [mode, setCompiling, setCompilationError, setFirmwarePath, setSimulationRunning, addTerminalLine]);
+  }, [mode, setCompiling, setCompilationError, setFirmwarePath, setSimulationRunning]);
 
   /**
    * Stop QEMU simulation
@@ -178,11 +143,9 @@ export function useQEMUSimulation() {
   const stopQEMU = useCallback(async () => {
     if (mode !== 'qemu') return;
 
-    console.log('⏹️ [QEMU] Stopping simulation...');
     const result = await qemuApi.stopSimulation();
     if (result.success) {
       setSimulationRunning(false);
-      console.log('✅ [QEMU] Simulation stopped');
     }
   }, [mode, setSimulationRunning]);
 
