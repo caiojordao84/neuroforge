@@ -50,6 +50,7 @@ const CanvasInner: React.FC = () => {
     getAllMCUs,
     addMCU,
     removeMCU,
+    syncMCUsWithCanvas,
     startSimulation,
     stopSimulation,
     resetSimulation,
@@ -85,6 +86,29 @@ const CanvasInner: React.FC = () => {
   useEffect(() => {
     setStoreEdges(edges);
   }, [edges, setStoreEdges]);
+
+  // Sync MCUs with canvas on initialization
+  useEffect(() => {
+    console.log('🔄 [Canvas] Initializing - syncing MCUs with canvas');
+    const mcuNodeIds = nodes.filter(n => n.type === 'mcu').map(n => n.id);
+    syncMCUsWithCanvas(mcuNodeIds);
+  }, []); // Run only on mount
+
+  // Sync MCUs when nodes change
+  useEffect(() => {
+    const mcuNodeIds = nodes.filter(n => n.type === 'mcu').map(n => n.id);
+    const storeMCUs = getAllMCUs();
+    const storeMCUIds = storeMCUs.map(m => m.id);
+
+    // Check if there's a difference
+    const added = mcuNodeIds.filter(id => !storeMCUIds.includes(id));
+    const removed = storeMCUIds.filter(id => !mcuNodeIds.includes(id));
+
+    if (added.length > 0 || removed.length > 0) {
+      console.log(`🔄 [Canvas] MCUs changed - Added: ${added.length}, Removed: ${removed.length}`);
+      syncMCUsWithCanvas(mcuNodeIds);
+    }
+  }, [nodes, syncMCUsWithCanvas, getAllMCUs]);
 
   // Get default code template for board type
   const getDefaultCodeForBoard = useCallback((boardType: BoardType, lang: Language): string => {
