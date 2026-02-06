@@ -1,24 +1,23 @@
-// RP2040 MCU - Standalone Platform for Renode
-// Does NOT depend on external .repl files
-// Compatible with Renode 1.15.3+
+// RP2040 MCU - Minimal Platform for Renode 1.15.3
+// Only uses peripherals available in standard Renode distribution
 
 // CPU0 (Cortex-M0+)
 cpu0: CPU.CortexM @ sysbus
     cpuType: "cortex-m0+"
     nvic: nvic
 
-// CPU1 (Cortex-M0+ - second core, not used for now)
+// CPU1 (Cortex-M0+ - second core, not used)
 cpu1: CPU.CortexM @ sysbus
     cpuType: "cortex-m0+"
     nvic: nvic
 
-// NVIC (Nested Vectored Interrupt Controller)
+// NVIC (includes built-in SysTick)
 nvic: IRQControllers.NVIC @ sysbus 0xE000E000
     priorityMask: 0xC0
     systickFrequency: 125000000
     IRQ -> cpu0@0
 
-// SRAM (264 KB total - 256KB + 4x2KB striped)
+// SRAM (264 KB)
 sram: Memory.MappedMemory @ sysbus 0x20000000
     size: 0x42000
 
@@ -37,8 +36,3 @@ uart0: UART.PL011 @ sysbus 0x40034000
 // UART1 (PL011 compatible)
 uart1: UART.PL011 @ sysbus 0x40038000
     -> nvic@21
-
-// SysTick Timer (built into Cortex-M)
-timer: Timers.ARM_SysTick @ nvic
-    frequency: 125000000
-    -> nvic@15
