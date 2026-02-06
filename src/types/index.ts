@@ -14,7 +14,7 @@ export interface WindowState {
   title: string;
 }
 
-export type WindowId = 'codeEditor' | 'componentsLibrary' | 'serialMonitor' | 'terminal';
+export type WindowId = 'codeEditor' | 'componentsLibrary' | 'serialMonitor' | 'terminal' | 'properties';
 
 // ============================================
 // Pin State Machine Types
@@ -46,6 +46,20 @@ export interface BoardConfig {
   hasWiFi: boolean;
   hasBluetooth: boolean;
   description: string;
+}
+
+// ============================================
+// MCU Configuration (NEW - Multi-MCU Support)
+// ============================================
+
+export interface MCUConfig {
+  id: string;                    // Node ID único (igual ao canvas node)
+  type: BoardType;               // Tipo da placa
+  code: string;                  // Código específico desta MCU
+  language: Language;            // Linguagem de programação
+  firmwarePath?: string;         // Path do firmware compilado (QEMU)
+  isRunning: boolean;            // Status de execução
+  label: string;                 // Nome customizado (e.g., "Main Controller")
 }
 
 // ============================================
