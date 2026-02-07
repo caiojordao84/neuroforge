@@ -1,0 +1,199 @@
+Archive member included to satisfy reference by file (symbol)
+
+C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_udivsi3.o)
+                              main.o (__aeabi_uidivmod)
+C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_dvmd_tls.o)
+                              C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_udivsi3.o) (__aeabi_idiv0)
+
+Discarded input sections
+
+ .text          0x00000000        0x0 main.o
+ .data          0x00000000        0x0 main.o
+ .bss           0x00000000        0x0 main.o
+ .text.uart_putc
+                0x00000000       0x18 main.o
+ .text.delay    0x00000000       0x20 main.o
+ .text.gpio_init
+                0x00000000       0x14 main.o
+ .text.gpio_set_dir_out
+                0x00000000       0x10 main.o
+ .text.gpio_put
+                0x00000000       0x1c main.o
+ .text.gpio_toggle
+                0x00000000       0x10 main.o
+ .data          0x00000000        0x0 startup.o
+ .bss           0x00000000        0x0 startup.o
+ .data          0x00000000        0x0 C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_udivsi3.o)
+ .bss           0x00000000        0x0 C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_udivsi3.o)
+ .data          0x00000000        0x0 C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_dvmd_tls.o)
+ .bss           0x00000000        0x0 C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_dvmd_tls.o)
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+FLASH            0x10000000         0x00200000         xr
+RAM              0x20000000         0x00042000         xrw
+*default*        0x00000000         0xffffffff
+
+Linker script and memory map
+
+LOAD main.o
+LOAD startup.o
+START GROUP
+LOAD C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a
+LOAD C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/../../../../arm-none-eabi/lib/thumb/v6-m/nofp\libc.a
+END GROUP
+                0x00002000                        _stack_size = 0x2000
+
+.text           0x10000000      0x334
+ *(.vectors)
+ .vectors       0x10000000       0x40 startup.o
+                0x10000000                _vectors
+ *(.text*)
+ .text.uart_puts
+                0x10000040       0x3c main.o
+                0x10000040                uart_puts
+ .text.startup.main
+                0x1000007c      0x124 main.o
+                0x1000007c                main
+ .text          0x100001a0       0x4c startup.o
+                0x100001a0                Reset_Handler
+                0x100001cc                NMI_Handler
+                0x100001ce                HardFault_Handler
+                0x100001d0                SVC_Handler
+                0x100001d2                PendSV_Handler
+                0x100001d4                SysTick_Handler
+ .text          0x100001ec       0x8c C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_udivsi3.o)
+                0x100001ec                __aeabi_uidiv
+                0x100001ec                __udivsi3
+                0x10000264                __aeabi_uidivmod
+ .text          0x10000278        0x4 C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_dvmd_tls.o)
+                0x10000278                __aeabi_idiv0
+                0x10000278                __aeabi_ldiv0
+ *(.rodata*)
+ .rodata.main.str1.4
+                0x1000027c       0xb7 main.o
+                0x10000334                        . = ALIGN (0x4)
+ *fill*         0x10000333        0x1 
+                0x10000334                        _etext = .
+                0x10000334                        _sidata = LOADADDR (.data)
+
+.glue_7         0x10000334        0x0
+ .glue_7        0x10000334        0x0 linker stubs
+
+.glue_7t        0x10000334        0x0
+ .glue_7t       0x10000334        0x0 linker stubs
+
+.vfp11_veneer   0x10000334        0x0
+ .vfp11_veneer  0x10000334        0x0 linker stubs
+
+.v4_bx          0x10000334        0x0
+ .v4_bx         0x10000334        0x0 linker stubs
+
+.iplt           0x10000334        0x0
+ .iplt          0x10000334        0x0 main.o
+
+.rel.dyn        0x10000334        0x0
+ .rel.iplt      0x10000334        0x0 main.o
+
+.data           0x20000000        0x0 load address 0x10000334
+                0x20000000                        _sdata = .
+ *(.data*)
+                0x20000000                        . = ALIGN (0x4)
+                0x20000000                        _edata = .
+
+.igot.plt       0x20000000        0x0 load address 0x10000334
+ .igot.plt      0x20000000        0x0 main.o
+
+.bss            0x20000000        0x0 load address 0x10000334
+                0x20000000                        _sbss = .
+ *(.bss*)
+ *(COMMON)
+                0x20000000                        . = ALIGN (0x4)
+                0x20000000                        _ebss = .
+
+.stack          0x20000000     0x2000 load address 0x10000338
+                0x20002000                        . = (. + _stack_size)
+ *fill*         0x20000000     0x2000 
+                0x20002000                        _stack_top = .
+
+/DISCARD/
+ *(.ARM.exidx*)
+ *(.ARM.extab*)
+OUTPUT(blink.elf elf32-littlearm)
+LOAD linker stubs
+
+.debug_info     0x00000000      0x5a1
+ .debug_info    0x00000000      0x502 main.o
+ .debug_info    0x00000502       0x26 startup.o
+ .debug_info    0x00000528       0x3d C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_udivsi3.o)
+ .debug_info    0x00000565       0x3c C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_dvmd_tls.o)
+
+.debug_abbrev   0x00000000      0x245
+ .debug_abbrev  0x00000000      0x1e3 main.o
+ .debug_abbrev  0x000001e3       0x14 startup.o
+ .debug_abbrev  0x000001f7       0x28 C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_udivsi3.o)
+ .debug_abbrev  0x0000021f       0x26 C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_dvmd_tls.o)
+
+.debug_loclists
+                0x00000000      0x123
+ .debug_loclists
+                0x00000000      0x123 main.o
+
+.debug_aranges  0x00000000       0xb8
+ .debug_aranges
+                0x00000000       0x58 main.o
+ .debug_aranges
+                0x00000058       0x20 startup.o
+ .debug_aranges
+                0x00000078       0x20 C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_udivsi3.o)
+ .debug_aranges
+                0x00000098       0x20 C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_dvmd_tls.o)
+
+.debug_rnglists
+                0x00000000       0xaa
+ .debug_rnglists
+                0x00000000       0xaa main.o
+
+.debug_line     0x00000000      0x563
+ .debug_line    0x00000000      0x460 main.o
+ .debug_line    0x00000460       0x58 startup.o
+ .debug_line    0x000004b8       0x61 C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_udivsi3.o)
+ .debug_line    0x00000519       0x4a C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_dvmd_tls.o)
+
+.debug_str      0x00000000      0x23c
+ .debug_str     0x00000000      0x23c main.o
+                                0x1c4 (size before relaxing)
+ .debug_str     0x0000023c        0x0 startup.o
+                                 0x4d (size before relaxing)
+ .debug_str     0x0000023c        0x0 C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_udivsi3.o)
+                                 0x99 (size before relaxing)
+ .debug_str     0x0000023c        0x0 C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_dvmd_tls.o)
+                                 0x9a (size before relaxing)
+
+.comment        0x00000000       0x12
+ .comment       0x00000000       0x12 main.o
+                                 0x13 (size before relaxing)
+
+.ARM.attributes
+                0x00000000       0x2a
+ .ARM.attributes
+                0x00000000       0x2c main.o
+ .ARM.attributes
+                0x0000002c       0x22 startup.o
+ .ARM.attributes
+                0x0000004e       0x1e C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_udivsi3.o)
+ .ARM.attributes
+                0x0000006c       0x1e C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_dvmd_tls.o)
+
+.debug_frame    0x00000000       0xdc
+ .debug_frame   0x00000000       0xbc main.o
+ .debug_frame   0x000000bc       0x20 C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_udivsi3.o)
+
+.debug_line_str
+                0x00000000       0x72
+ .debug_line_str
+                0x00000000       0x72 C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_udivsi3.o)
+ .debug_line_str
+                0x00000072        0x0 C:/msys64/mingw64/bin/../lib/gcc/arm-none-eabi/13.3.0/thumb/v6-m/nofp\libgcc.a(_dvmd_tls.o)
+                                 0x72 (size before relaxing)
