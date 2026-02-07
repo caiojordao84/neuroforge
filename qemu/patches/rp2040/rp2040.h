@@ -14,6 +14,7 @@
 #include "hw/arm/armv7m.h"
 #include "hw/char/pl011.h"
 #include "hw/misc/unimp.h"
+#include "hw/qdev-clock.h"
 #include "qom/object.h"
 
 #define RP2040_NUM_CORES 2
@@ -48,6 +49,9 @@ typedef struct RP2040State {
     uint32_t gpio_oe;         /* GPIO output enable */
     uint32_t gpio_in;         /* GPIO input values (external state) */
     uint32_t gpio_ctrl[30];   /* GPIO control registers */
+
+    /* Clock */
+    Clock *sysclk;
 
     /* Properties */
     uint32_t sysclk_freq;
