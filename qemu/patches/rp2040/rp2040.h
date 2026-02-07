@@ -10,7 +10,6 @@
 #ifndef HW_ARM_RP2040_H
 #define HW_ARM_RP2040_H
 
-#include "hw/arm/armv7m.h"
 #include "hw/sysbus.h"
 #include "qom/object.h"
 
@@ -19,10 +18,7 @@
 /* RP2040 SoC Type */
 #define TYPE_RP2040_SOC "rp2040-soc"
 
-/* Forward declaration for RP2040State */
+/* Forward declaration - full definition in rp2040_soc.c */
 typedef struct RP2040State RP2040State;
-
-/* Declare the RP2040 SoC type */
-OBJECT_DECLARE_SIMPLE_TYPE(RP2040State, RP2040_SOC)
 
 #endif /* HW_ARM_RP2040_H */
