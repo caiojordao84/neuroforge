@@ -6,6 +6,7 @@
  */
 
 #include <stdint.h>
+#include <stdbool.h>
 
 /* ========== RP2040 Register Definitions ========== */
 
