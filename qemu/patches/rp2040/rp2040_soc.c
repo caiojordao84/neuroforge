@@ -17,6 +17,7 @@
 #include "hw/arm/rp2040.h"
 #include "hw/boards.h"
 #include "hw/qdev-properties.h"
+#include "hw/qdev-clock.h"
 #include "hw/sysbus.h"
 #include "hw/intc/armv7m_nvic.h"
 #include "target/arm/cpu.h"
@@ -185,6 +186,9 @@ static void rp2040_soc_init(Object *obj)
 {
     RP2040State *s = RP2040_SOC(obj);
 
+    /* Create system clock */
+    s->sysclk = qdev_init_clock_in(DEVICE(obj), "sysclk", NULL, NULL, 0);
+
     /* Create Cortex-M0+ cores (dual-core) */
     for (int i = 0; i < RP2040_NUM_CORES; i++) {
         object_initialize_child(obj, "armv7m[*]", &s->armv7m[i],
@@ -204,6 +208,11 @@ static void rp2040_soc_realize(DeviceState *dev, Error **errp)
 {
     RP2040State *s = RP2040_SOC(dev);
     MemoryRegion *system_memory = get_system_memory();
+
+    /* Set up system clock (133 MHz default) */
+    if (!clock_has_source(s->sysclk)) {
+        clock_set_hz(s->sysclk, s->sysclk_freq);
+    }
 
     /* ========== Initialize GPIO State ========== */
     s->gpio_out = 0;
@@ -249,6 +258,9 @@ static void rp2040_soc_realize(DeviceState *dev, Error **errp)
     qdev_prop_set_uint32(armv7m, "num-prio-bits", 2);  /* M0+ has 2-bit priority */
     object_property_set_link(OBJECT(&s->armv7m[0]), "memory",
                              OBJECT(system_memory), &error_abort);
+    
+    /* Connect system clock to CPU */
+    qdev_connect_clock_in(armv7m, "cpuclk", s->sysclk);
     
     if (!sysbus_realize(SYS_BUS_DEVICE(&s->armv7m[0]), errp)) {
         return;
