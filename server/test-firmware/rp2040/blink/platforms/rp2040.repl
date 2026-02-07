@@ -1,16 +1,23 @@
-// RP2040 MCU - Minimal Working Platform for Renode 1.15.3
-// Uses only MappedMemory for peripherals to avoid warnings
+// RP2040 MCU - Stable Configuration for Renode 1.16
+// Uses MappedMemory to ensure loading, with Tags/Hooks for functionality
 
 // ══════════════════════════════════════════════════════════
 // CPU & NVIC
 // ══════════════════════════════════════════════════════════
-
 // CPU0 (Cortex-M0+)
 cpu0: CPU.CortexM @ sysbus
     cpuType: "cortex-m0+"
     nvic: nvic
+    id: 0
 
-// NVIC (includes built-in SysTick)
+// CPU1 (Cortex-M0+) - Halted by default
+cpu1: CPU.CortexM @ sysbus
+    cpuType: "cortex-m0+"
+    nvic: nvic
+    id: 1
+    init:
+        IsHalted true
+
 nvic: IRQControllers.NVIC @ sysbus 0xE000E000
     priorityMask: 0xC0
     systickFrequency: 125000000
@@ -20,86 +27,62 @@ nvic: IRQControllers.NVIC @ sysbus 0xE000E000
 // MEMORY
 // ══════════════════════════════════════════════════════════
 
-// SRAM (264 KB)
 sram: Memory.MappedMemory @ sysbus 0x20000000
     size: 0x42000
 
-// Flash (2 MB - XIP mapped)
 flash: Memory.MappedMemory @ sysbus 0x10000000
     size: 0x200000
 
-// Bootrom (16 KB)
 rom: Memory.MappedMemory @ sysbus 0x00000000
     size: 0x4000
 
 // ══════════════════════════════════════════════════════════
-// PERIPHERALS - Mapped as Memory (no warnings)
+// PERIPHERALS (MappedMemory for stability)
 // ══════════════════════════════════════════════════════════
 
-// RESETS Controller (0x4000C000)
 resets: Memory.MappedMemory @ sysbus 0x4000C000
     size: 0x1000
 
-// CLOCKS (0x40008000)
 clocks: Memory.MappedMemory @ sysbus 0x40008000
     size: 0x1000
 
-// XOSC (Crystal Oscillator - 0x40024000)
-xosc: Memory.MappedMemory @ sysbus 0x40024000
+timer: Memory.MappedMemory @ sysbus 0x40054000
     size: 0x1000
 
-// PLL_SYS (0x40028000)
-pll_sys: Memory.MappedMemory @ sysbus 0x40028000
-    size: 0x1000
-
-// PLL_USB (0x4002C000)
-pll_usb: Memory.MappedMemory @ sysbus 0x4002C000
-    size: 0x1000
-
-// XIP_CTRL (0x14000000 - Execute-in-Place control)
-xip_ctrl: Memory.MappedMemory @ sysbus 0x14000000
-    size: 0x1000
-
-// XIP_SSI (0x18000000 - Flash SPI)
-xip_ssi: Memory.MappedMemory @ sysbus 0x18000000
-    size: 0x1000
-
-// BUSCTRL (0x40030000)
-busctrl: Memory.MappedMemory @ sysbus 0x40030000
-    size: 0x1000
-
-// PADS_BANK0 (0x4001C000)
-pads_bank0: Memory.MappedMemory @ sysbus 0x4001C000
-    size: 0x1000
-
-// IO_BANK0 (GPIO config - 0x40014000)
-io_bank0: Memory.MappedMemory @ sysbus 0x40014000
-    size: 0x1000
-
-// SIO (Single-cycle IO - 0xD0000000)
 sio: Memory.MappedMemory @ sysbus 0xD0000000
     size: 0x1000
 
-// PSM (Power-on State Machine - 0x40010000)
-psm: Memory.MappedMemory @ sysbus 0x40010000
+io_bank0: Memory.MappedMemory @ sysbus 0x40014000
     size: 0x1000
 
-// WATCHDOG (0x40058000)
 watchdog: Memory.MappedMemory @ sysbus 0x40058000
     size: 0x1000
 
-// VREG_AND_CHIP_RESET (0x40064000)
-vreg: Memory.MappedMemory @ sysbus 0x40064000
-    size: 0x1000
-
-// ══════════════════════════════════════════════════════════
-// UART
-// ══════════════════════════════════════════════════════════
-
-// UART0 (PL011 compatible)
+// UARTs (Using PL011 which is built-in and compatible)
 uart0: UART.PL011 @ sysbus 0x40034000
     -> nvic@20
 
-// UART1 (PL011 compatible)
 uart1: UART.PL011 @ sysbus 0x40038000
     -> nvic@21
+
+// Other support peripherals
+xosc: Memory.MappedMemory @ sysbus 0x40024000
+    size: 0x1000
+
+pll_sys: Memory.MappedMemory @ sysbus 0x40028000
+    size: 0x1000
+
+pll_usb: Memory.MappedMemory @ sysbus 0x4002C000
+    size: 0x1000
+
+syscfg: Memory.MappedMemory @ sysbus 0x4000E000
+    size: 0x1000
+
+tbman: Memory.MappedMemory @ sysbus 0x4000F000
+    size: 0x1000
+
+psm: Memory.MappedMemory @ sysbus 0x40010000
+    size: 0x1000
+
+vreg: Memory.MappedMemory @ sysbus 0x40064000
+    size: 0x1000

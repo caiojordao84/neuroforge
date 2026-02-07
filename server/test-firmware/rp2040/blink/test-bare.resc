@@ -1,0 +1,26 @@
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# NeuroForge RP2040 Bare Metal Test
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+using sysbus
+
+mach create "pico"
+
+machine LoadPlatformDescription "D:/Documents/NeuroForge/server/test-firmware/rp2040/blink/platforms/raspberry-pico.repl"
+
+# Carregar firmware Bare Metal
+sysbus LoadELF "D:/Documents/NeuroForge/server/test-firmware/rp2040/blink/build/blink_bare.elf"
+
+# Setup manual para garantir o estado inicial
+sysbus.cpu0 VectorTableOffset 0x10000000
+sysbus.cpu0 SP 0x20042000
+sysbus.cpu0 PC 0x10000001
+
+# UART0 TCP
+emulation CreateServerSocketTerminal 1234 "uart0-terminal" false
+connector Connect sysbus.uart0 uart0-terminal
+
+# Iniciar
+start
+
+echo "✅ Emulação Bare-Metal iniciada!"

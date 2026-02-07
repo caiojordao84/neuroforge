@@ -1,0 +1,18 @@
+02:06:20.6985 [INFO] Loaded monitor commands from: D:\Tools\Renode\scripts/monitor.py
+[0mRenode, version 1.16.0 (20ad06d9-202508030343)
+
+
+[31;1m(monitor) [0mmach create;  sysbus LoadELF 'D:/Documents/NeuroForge/server/test-firmware/rp2040/blink/build/blink.elf';  sysbus.cpu0 Disassemble 0x100001e8 20
+
+02:06:20.7843 [INFO] System bus created.
+02:06:21.0987 [INFO] sysbus: Loading block of 18512 bytes length at 0x10000000.
+02:06:21.1135 [WARNING] sysbus: Tried to access bytes at non-existing peripheral in range <0x10000000, 0x1000484F>.
+02:06:21.1141 [INFO] sysbus: Loading block of 1404 bytes length at 0x10004850.
+02:06:21.1141 [WARNING] sysbus: Tried to access bytes at non-existing peripheral in range <0x10004850, 0x10004DCB>.
+02:06:21.1141 [INFO] sysbus: Loading block of 2048 bytes length at 0x100049D0.
+02:06:21.1141 [WARNING] sysbus: Tried to access bytes at non-existing peripheral in range <0x100049D0, 0x100051CF>.
+02:06:21.1141 [INFO] sysbus: Loading block of 192 bytes length at 0x20000000.
+02:06:21.1141 [WARNING] sysbus: Tried to access bytes at non-existing peripheral in range <0x20000000, 0x200000BF>.
+02:06:21.1141 [INFO] sysbus: Loading block of 2048 bytes length at 0x20041000.
+02:06:21.1141 [WARNING] sysbus: Tried to access bytes at non-existing peripheral in range <0x20041000, 0x200417FF>.
+[;031mNo such command or device: sysbus.cpu0
