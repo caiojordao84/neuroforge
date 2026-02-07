@@ -11,6 +11,9 @@
 #define HW_ARM_RP2040_H
 
 #include "hw/sysbus.h"
+#include "hw/arm/armv7m.h"
+#include "hw/char/pl011.h"
+#include "hw/misc/unimp.h"
 #include "qom/object.h"
 
 #define RP2040_NUM_CORES 2
@@ -18,7 +21,39 @@
 /* RP2040 SoC Type */
 #define TYPE_RP2040_SOC "rp2040-soc"
 
-/* Forward declaration - full definition in rp2040_soc.c */
-typedef struct RP2040State RP2040State;
+/* RP2040 SoC State */
+typedef struct RP2040State {
+    /*< private >*/
+    SysBusDevice parent_obj;
+
+    /*< public >*/
+    ARMv7MState armv7m[RP2040_NUM_CORES];
+    MemoryRegion rom;
+    MemoryRegion sram;
+    MemoryRegion sio;
+    MemoryRegion io_bank0;
+    MemoryRegion flash;
+    MemoryRegion flash_alias;
+    
+    /* Peripherals */
+    PL011State uart0;
+    PL011State uart1;
+    
+    /* Unimplemented devices (for now) */
+    UnimplementedDeviceState timer;
+    UnimplementedDeviceState usb;
+
+    /* GPIO State (30 pins) */
+    uint32_t gpio_out;        /* GPIO output values */
+    uint32_t gpio_oe;         /* GPIO output enable */
+    uint32_t gpio_in;         /* GPIO input values (external state) */
+    uint32_t gpio_ctrl[30];   /* GPIO control registers */
+
+    /* Properties */
+    uint32_t sysclk_freq;
+} RP2040State;
+
+/* Declare RP2040State type */
+OBJECT_DECLARE_SIMPLE_TYPE(RP2040State, RP2040_SOC)
 
 #endif /* HW_ARM_RP2040_H */
