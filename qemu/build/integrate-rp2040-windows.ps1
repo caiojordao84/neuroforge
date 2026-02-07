@@ -30,20 +30,20 @@ if (-Not (Test-Path $QEMU_PATH)) {
     Write-Host "Please update QEMU_PATH variable in this script." -ForegroundColor Red
     exit 1
 }
-Write-Host "  ✓ QEMU installation found" -ForegroundColor Green
+Write-Host "  [OK] QEMU installation found" -ForegroundColor Green
 
 if (-Not (Test-Path "$QEMU_PATH\hw\arm")) {
     Write-Host "ERROR: hw/arm directory not found" -ForegroundColor Red
     exit 1
 }
-Write-Host "  ✓ hw/arm directory exists" -ForegroundColor Green
+Write-Host "  [OK] hw/arm directory exists" -ForegroundColor Green
 
 if (-Not (Test-Path "$QEMU_PATH\build\build.ninja")) {
     Write-Host "ERROR: QEMU build directory not found" -ForegroundColor Red
     Write-Host "Please build QEMU first." -ForegroundColor Red
     exit 1
 }
-Write-Host "  ✓ QEMU build system ready" -ForegroundColor Green
+Write-Host "  [OK] QEMU build system ready" -ForegroundColor Green
 Write-Host ""
 
 # ========== Copy RP2040 Files ==========
@@ -61,9 +61,9 @@ foreach ($file in $files) {
     
     if (Test-Path $src) {
         Copy-Item $src $dst -Force
-        Write-Host "  ✓ Copied $file" -ForegroundColor Green
+        Write-Host "  [OK] Copied $file" -ForegroundColor Green
     } else {
-        Write-Host "  ✗ Missing $file" -ForegroundColor Red
+        Write-Host "  [FAIL] Missing $file" -ForegroundColor Red
         exit 1
     }
 }
@@ -82,9 +82,9 @@ if ($mesonContent -notmatch "rp2040_soc.c") {
     $mesonContent = $mesonContent -replace "(arm_ss\.add\(when: 'CONFIG_ARM_VIRT'.*?\]\))", "`$1`narm_ss.add(files('rp2040_soc.c', 'raspberrypi_pico.c'))"
     
     Set-Content $mesonFile -Value $mesonContent
-    Write-Host "  ✓ meson.build updated" -ForegroundColor Green
+    Write-Host "  [OK] meson.build updated" -ForegroundColor Green
 } else {
-    Write-Host "  ✓ RP2040 already in meson.build" -ForegroundColor Green
+    Write-Host "  [OK] RP2040 already in meson.build" -ForegroundColor Green
 }
 Write-Host ""
 
@@ -109,9 +109,9 @@ config RP2040
 "@
     
     Add-Content $kconfigFile -Value $rp2040Config
-    Write-Host "  ✓ Kconfig updated" -ForegroundColor Green
+    Write-Host "  [OK] Kconfig updated" -ForegroundColor Green
 } else {
-    Write-Host "  ✓ RP2040 already in Kconfig" -ForegroundColor Green
+    Write-Host "  [OK] RP2040 already in Kconfig" -ForegroundColor Green
 }
 Write-Host ""
 
@@ -135,10 +135,10 @@ try {
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host ""
-        Write-Host "  ✓ Build completed successfully" -ForegroundColor Green
+        Write-Host "  [OK] Build completed successfully" -ForegroundColor Green
     } else {
         Write-Host ""
-        Write-Host "  ✗ Build failed (exit code: $LASTEXITCODE)" -ForegroundColor Red
+        Write-Host "  [FAIL] Build failed (exit code: $LASTEXITCODE)" -ForegroundColor Red
         exit 1
     }
 } finally {
@@ -159,11 +159,11 @@ $qemuExe = "$QEMU_PATH\build\qemu-system-arm.exe"
 $helpOutput = & $qemuExe -M help 2>&1 | Select-String "raspberrypi-pico"
 
 if ($helpOutput) {
-    Write-Host "  ✓ raspberrypi-pico board available!" -ForegroundColor Green
+    Write-Host "  [OK] raspberrypi-pico board available!" -ForegroundColor Green
     Write-Host ""
     Write-Host "$helpOutput" -ForegroundColor Cyan
 } else {
-    Write-Host "  ✗ raspberrypi-pico board not found" -ForegroundColor Red
+    Write-Host "  [FAIL] raspberrypi-pico board not found" -ForegroundColor Red
     Write-Host ""
     Write-Host "Available ARM boards:" -ForegroundColor Yellow
     & $qemuExe -M help | Select-String "ARM"
@@ -180,10 +180,7 @@ Write-Host "   cd firmware\rp2040\examples\blink" -ForegroundColor Gray
 Write-Host "   make" -ForegroundColor Gray
 Write-Host ""
 Write-Host "2. Run on QEMU:" -ForegroundColor Yellow
-Write-Host "   $qemuExe ```" -ForegroundColor Gray
-Write-Host "     -M raspberrypi-pico ```" -ForegroundColor Gray
-Write-Host "     -kernel firmware\rp2040\examples\blink\blink.elf ```" -ForegroundColor Gray
-Write-Host "     -nographic" -ForegroundColor Gray
+Write-Host "   $qemuExe -M raspberrypi-pico -kernel firmware\rp2040\examples\blink\blink.elf -nographic" -ForegroundColor Gray
 Write-Host ""
-Write-Host "3. Exit QEMU: Ctrl+A, X" -ForegroundColor Yellow
+Write-Host "3. Exit QEMU: Press Ctrl+A then X" -ForegroundColor Yellow
 Write-Host ""
