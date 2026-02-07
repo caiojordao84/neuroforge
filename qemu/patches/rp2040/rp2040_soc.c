@@ -254,7 +254,7 @@ static void rp2040_soc_realize(DeviceState *dev, Error **errp)
     /* Initialize only Core 0 (MVP - single core) */
     DeviceState *armv7m = DEVICE(&s->armv7m[0]);
     qdev_prop_set_uint32(armv7m, "num-irq", 32);
-    qdev_prop_set_string(armv7m, "cpu-type", ARM_CPU_TYPE_NAME("cortex-m0plus"));
+    qdev_prop_set_string(armv7m, "cpu-type", ARM_CPU_TYPE_NAME("cortex-m0p"));
     qdev_prop_set_uint32(armv7m, "num-prio-bits", 2);  /* M0+ has 2-bit priority */
     object_property_set_link(OBJECT(&s->armv7m[0]), "memory",
                              OBJECT(system_memory), &error_abort);
