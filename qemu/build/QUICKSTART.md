@@ -2,28 +2,24 @@
 
 ## 👉 **SINGLE COMMAND SOLUTION**
 
-### **Step 1: Open MSYS2 MINGW64**
+### **Open MSYS2 MINGW64**
 
 1. Launch: `C:\msys64\mingw64.exe`
-2. Navigate to NeuroForge:
+2. Run:
 
 ```bash
 cd /d/Documents/NeuroForge
-```
-
-### **Step 2: Run Integration Script**
-
-```bash
-bash qemu/build/integrate-rp2040-msys2.sh
+bash qemu/build/build-rp2040.sh
 ```
 
 **That's it!** The script will:
-- ✅ Validate environment
-- ✅ Copy RP2040 source files
-- ✅ Update meson.build
-- ✅ Update Kconfig
-- ✅ Rebuild QEMU (~1-2 minutes)
+- ✅ Auto-reset Git conflicts
+- ✅ Pull latest changes
+- ✅ Copy RP2040 files
+- ✅ Update build configuration
+- ✅ Rebuild QEMU (~2-5 minutes)
 - ✅ Verify board availability
+- ✅ Show full error details if build fails
 
 ---
 
@@ -31,44 +27,45 @@ bash qemu/build/integrate-rp2040-msys2.sh
 
 ```
 ================================================
-  RP2040 Integration for Existing QEMU
+  RP2040 QEMU Complete Build Script
 ================================================
 
-[INFO] Configuration:
-  QEMU Path: /c/qemu-project/qemu-arm
+[CONFIG]
+  QEMU: /c/qemu-project/qemu-arm
   NeuroForge: /d/Documents/NeuroForge
   Patches: /d/Documents/NeuroForge/qemu/patches/rp2040
 
-[STEP 1/5] Validating environment...
-  [OK] QEMU installation found
-  [OK] hw/arm directory exists
-  [OK] QEMU build system ready
+[STEP 1/6] Cleaning Git repository...
+  [OK] Git up to date
 
-[STEP 2/5] Copying RP2040 source files...
-  [OK] Copied rp2040.h
-  [OK] Copied rp2040_soc.c
-  [OK] Copied raspberrypi_pico.c
+[STEP 2/6] Validating QEMU environment...
+  [OK] QEMU found
+  [OK] hw/arm exists
+  [OK] Build system ready
 
-[STEP 3/5] Updating meson.build...
-  [OK] meson.build updated
+[STEP 3/6] Copying RP2040 source files...
+  [OK] rp2040.h
+  [OK] rp2040_soc.c
+  [OK] raspberrypi_pico.c
 
-[STEP 4/5] Updating Kconfig...
-  [OK] Kconfig updated
+[STEP 4/6] Updating meson.build and Kconfig...
+  [OK] meson.build already has RP2040
+  [OK] Kconfig already has RP2040
 
-[STEP 5/5] Rebuilding QEMU...
-  This may take 1-5 minutes (incremental build)...
+[STEP 5/6] Reconfiguring Meson...
+  [OK] Meson reconfigured
 
-  Reconfiguring Meson...
-  Building with Ninja...
-  [458/458] Linking target qemu-system-arm.exe
+[STEP 6/6] Building QEMU (this may take 2-5 minutes)...
+  Full output will be shown...
 
-  [OK] Build completed successfully
+[1/450] Generating qemu-version.h
+[2/450] Compiling C object...
+...
+[450/450] Linking target qemu-system-arm.exe
 
 ================================================
-  RP2040 Integration Complete!
+  BUILD SUCCESSFUL!
 ================================================
-
-[VERIFICATION] Testing RP2040 board...
 
   [OK] raspberrypi-pico board available!
 
@@ -85,46 +82,53 @@ raspberrypi-pico     Raspberry Pi Pico (RP2040)
 2. Run on QEMU:
    /c/qemu-project/qemu-arm/build/qemu-system-arm.exe -M raspberrypi-pico -kernel blink.elf -nographic
 
-3. Exit QEMU: Press Ctrl+A then X
+3. Exit QEMU: Ctrl+A then X
 ```
 
 ---
 
-## 🐛 **Troubleshooting**
+## 🐛 **If Build Fails**
 
-### "QEMU not found at /c/qemu-project/qemu-arm"
+The script will:
+1. Show full error output
+2. Analyze common problems
+3. Provide specific fix instructions
+4. Save logs to `/tmp/ninja-build.log`
 
-**Edit script line 13:**
+**Common Errors:**
+
+### "implicit declaration of get_system_memory"
+
+**Fix:**
 ```bash
-nano qemu/build/integrate-rp2040-msys2.sh
-# Change QEMU_PATH to your actual path
+nano /c/qemu-project/qemu-arm/hw/arm/rp2040_soc.c
+# Add: #include "exec/memory.h"
+bash qemu/build/build-rp2040.sh  # Re-run
 ```
 
-### "Build failed"
+### "unknown type name 'RP2040State'"
 
-**Check compilation errors:**
+**Fix:**
 ```bash
-cd /c/qemu-project/qemu-arm/build
-ninja 2>&1 | less
+nano /c/qemu-project/qemu-arm/hw/arm/raspberrypi_pico.c
+# Verify: #include "hw/arm/rp2040.h"
+bash qemu/build/build-rp2040.sh  # Re-run
 ```
 
-### "raspberrypi-pico board not found"
+### "qemu_log_mask undeclared"
 
-**Verify files copied:**
+**Fix:**
 ```bash
-ls -la /c/qemu-project/qemu-arm/hw/arm/rp2040*
-```
-
-**Check meson.build:**
-```bash
-grep rp2040 /c/qemu-project/qemu-arm/hw/arm/meson.build
+nano /c/qemu-project/qemu-arm/hw/arm/rp2040_soc.c
+# Add: #include "qemu/log.h"
+bash qemu/build/build-rp2040.sh  # Re-run
 ```
 
 ---
 
-## 🚀 **Next: Build and Run Firmware**
+## 🚀 **After Successful Build**
 
-### **Build Blink Example**
+### **Build Blink Firmware**
 
 ```bash
 cd /d/Documents/NeuroForge/firmware/rp2040/examples/blink
@@ -144,21 +148,29 @@ make
 
 ---
 
-## 🧪 **Run Tests**
+## 📝 **Manual Build (If Script Fails)**
 
 ```bash
-# From NeuroForge root
-python tests/test_rp2040.py --qemu-path "/c/qemu-project/qemu-arm/build/qemu-system-arm.exe"
+cd /c/qemu-project/qemu-arm
+
+# Reconfigure
+meson setup --reconfigure build
+
+# Build with full output
+cd build
+ninja
+
+# Check for errors
+# Fix and repeat
 ```
 
 ---
 
-## 🎉 **Success Criteria**
+## 🎉 **Success!**
 
-- ✅ Script completes without errors
-- ✅ `qemu-system-arm -M help` shows `raspberrypi-pico`
-- ✅ Firmware compiles without errors
-- ✅ QEMU runs firmware successfully
-- ✅ All tests pass
+When you see:
+```
+raspberrypi-pico     Raspberry Pi Pico (RP2040)
+```
 
-**Congratulations! RP2040 QEMU is ready!** 🌟
+**RP2040 QEMU is ready to use!** 🌟
