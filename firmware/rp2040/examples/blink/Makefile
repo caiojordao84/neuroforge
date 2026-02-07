@@ -1,57 +1,91 @@
-# Makefile for RP2040 Blink Example
+# RP2040 Blink Firmware Makefile
 
 # Toolchain
-CC = arm-none-eabi-gcc
-AS = arm-none-eabi-as
-OBJCOPY = arm-none-eabi-objcopy
-OBJDUMP = arm-none-eabi-objdump
-SIZE = arm-none-eabi-size
+PREFIX = arm-none-eabi-
+CC = $(PREFIX)gcc
+AS = $(PREFIX)as
+LD = $(PREFIX)ld
+OBJCOPY = $(PREFIX)objcopy
+SIZE = $(PREFIX)size
 
 # Target
 TARGET = blink
 
-# Sources
-SOURCES = main.c ../../common/startup.s
+# Source files
+C_SOURCES = main.c
+ASM_SOURCES = startup.s
 
-# Compiler flags
-CFLAGS  = -mcpu=cortex-m0plus
-CFLAGS += -mthumb
-CFLAGS += -O2
-CFLAGS += -g
-CFLAGS += -Wall
-CFLAGS += -Wextra
-CFLAGS += -ffunction-sections
-CFLAGS += -fdata-sections
+# Object files
+OBJECTS = $(C_SOURCES:.c=.o) $(ASM_SOURCES:.s=.o)
 
-# Linker flags
-LDFLAGS  = -T ../../common/link.ld
-LDFLAGS += -nostdlib
-LDFLAGS += -nostartfiles
-LDFLAGS += -Wl,--gc-sections
-LDFLAGS += -Wl,-Map=$(TARGET).map
+# Flags
+CPU = -mcpu=cortex-m0plus -mthumb
+CFLAGS = $(CPU) -Wall -Wextra -O2 -g -ffunction-sections -fdata-sections
+LDFLAGS = $(CPU) -T linker.ld -nostartfiles -Wl,--gc-sections -Wl,-Map=$(TARGET).map
 
-# Build targets
-.PHONY: all clean
+# QEMU path (adjust if needed)
+QEMU = qemu-system-arm.exe
+QEMU_MACHINE = raspberrypi-pico
 
-all: $(TARGET).elf $(TARGET).bin $(TARGET).lst
+# ========== Build Rules ==========
 
-$(TARGET).elf: $(SOURCES)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
-	$(SIZE) $@
+.PHONY: all clean run debug size
+
+all: $(TARGET).elf $(TARGET).bin
+	@echo ""
+	@echo "Build complete!"
+	@echo ""
+	@$(SIZE) $(TARGET).elf
+	@echo ""
+	@echo "To run in QEMU:"
+	@echo "  make run"
+	@echo ""
+
+$(TARGET).elf: $(OBJECTS)
+	$(CC) $(LDFLAGS) -o $@ $^
 
 $(TARGET).bin: $(TARGET).elf
 	$(OBJCOPY) -O binary $< $@
 
-$(TARGET).lst: $(TARGET).elf
-	$(OBJDUMP) -h -S $< > $@
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+%.o: %.s
+	$(AS) $(CPU) -g -o $@ $<
+
+size: $(TARGET).elf
+	@$(SIZE) $<
 
 clean:
-	rm -f $(TARGET).elf $(TARGET).bin $(TARGET).map $(TARGET).lst
+	rm -f $(OBJECTS) $(TARGET).elf $(TARGET).bin $(TARGET).map
+	@echo "Clean complete"
 
-# Run on QEMU
+# ========== QEMU Targets ==========
+
 run: $(TARGET).elf
-	qemu-system-arm -M raspberrypi-pico -kernel $< -nographic
+	@echo "Starting QEMU (Ctrl+A X to quit)..."
+	@echo ""
+	$(QEMU) -M $(QEMU_MACHINE) -kernel $< -nographic -serial mon:stdio
 
-# Debug with GDB
 debug: $(TARGET).elf
-	qemu-system-arm -M raspberrypi-pico -kernel $< -s -S -nographic
+	@echo "Starting QEMU in debug mode..."
+	@echo ""
+	@echo "In another terminal, run:"
+	@echo "  gdb-multiarch $(TARGET).elf"
+	@echo "  (gdb) target remote :1234"
+	@echo "  (gdb) continue"
+	@echo ""
+	$(QEMU) -M $(QEMU_MACHINE) -kernel $< -s -S -nographic
+
+# ========== Help ==========
+
+help:
+	@echo "RP2040 Blink Firmware - Make Targets:"
+	@echo ""
+	@echo "  all     - Build firmware (default)"
+	@echo "  clean   - Remove build artifacts"
+	@echo "  run     - Run in QEMU"
+	@echo "  debug   - Start QEMU with GDB server"
+	@echo "  size    - Show binary size"
+	@echo "  help    - Show this help"
+	@echo ""
