@@ -263,8 +263,8 @@ static void rp2040_soc_realize(DeviceState *dev, Error **errp)
     /* Connect system clock to CPU */
     qdev_connect_clock_in(armv7m, "cpuclk", s->sysclk);
     
-    /* Realize the ARMv7M container (use qdev_realize, not sysbus_realize) */
-    if (!qdev_realize(armv7m, NULL, errp)) {
+    /* Realize the ARMv7M container */
+    if (!sysbus_realize(SYS_BUS_DEVICE(&s->armv7m[0]), errp)) {
         return;
     }
 
