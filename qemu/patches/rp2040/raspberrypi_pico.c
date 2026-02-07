@@ -10,6 +10,8 @@
 #include "qemu/osdep.h"
 #include "qemu/units.h"
 #include "qemu/error-report.h"
+#include "qapi/error.h"
+#include "exec/memory.h"
 #include "hw/arm/rp2040.h"
 #include "hw/boards.h"
 #include "hw/qdev-properties.h"
