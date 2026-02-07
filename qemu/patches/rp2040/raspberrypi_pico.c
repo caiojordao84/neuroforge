@@ -14,7 +14,6 @@
 #include "hw/arm/rp2040.h"
 #include "hw/boards.h"
 #include "hw/sysbus.h"
-#include "hw/qdev-properties.h"
 #include "hw/loader.h"
 #include "elf.h"
 
@@ -32,15 +31,15 @@ static void raspberrypi_pico_init(MachineState *machine)
 {
     RaspberryPiPicoState *s = RASPBERRYPI_PICO_MACHINE(machine);
 
-    /* Initialize RP2040 SoC */
+    /* Initialize and realize RP2040 SoC */
+    /* The SoC handles all memory regions (ROM, SRAM, Flash, peripherals) */
     object_initialize_child(OBJECT(machine), "soc", &s->soc, TYPE_RP2040_SOC);
     
-    /* Realize the SoC (it's a SysBusDevice, not a plain Device) */
     if (!sysbus_realize(SYS_BUS_DEVICE(&s->soc), &error_fatal)) {
         return;
     }
 
-    /* Load firmware into Flash (XIP - Execute In Place) */
+    /* Load firmware */
     if (machine->kernel_filename) {
         uint64_t entry_addr;
         int ret;
@@ -51,21 +50,17 @@ static void raspberrypi_pico_init(MachineState *machine)
                        EM_ARM, 1, 0);
 
         if (ret < 0) {
-            /* If ELF fails, try raw binary at Flash base */
+            /* If ELF fails, try raw binary at Flash base (0x10000000) */
             ret = load_image_targphys(machine->kernel_filename,
                                       0x10000000, 16 * MiB);
-            entry_addr = 0x10000000;
         }
 
         if (ret < 0) {
             error_report("Could not load kernel '%s'", machine->kernel_filename);
             exit(1);
         }
-
-        /* Set PC to entry point (for ELF files) */
-        /* Note: For RP2040, the bootloader in ROM typically handles this */
     } else {
-        error_report("No kernel specified (use -kernel)");
+        error_report("No kernel specified (use -kernel <file.elf>)");
         exit(1);
     }
 }
@@ -79,7 +74,7 @@ static void raspberrypi_pico_machine_class_init(ObjectClass *oc, void *data)
     mc->init = raspberrypi_pico_init;
     mc->max_cpus = 1;  /* MVP: single core (Core 0 only) */
     mc->default_cpus = 1;
-    mc->default_ram_size = 264 * KiB;  /* 264KB SRAM */
+    mc->default_ram_size = 264 * KiB;
     mc->default_ram_id = "rp2040.sram";
 }
 
