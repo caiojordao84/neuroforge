@@ -11,9 +11,9 @@
 #include "qemu/units.h"
 #include "qemu/error-report.h"
 #include "qapi/error.h"
-#include "exec/memory.h"
 #include "hw/arm/rp2040.h"
 #include "hw/boards.h"
+#include "hw/sysbus.h"
 #include "hw/qdev-properties.h"
 #include "hw/loader.h"
 #include "elf.h"
@@ -31,13 +31,14 @@ OBJECT_DECLARE_SIMPLE_TYPE(RaspberryPiPicoState, RASPBERRYPI_PICO_MACHINE)
 static void raspberrypi_pico_init(MachineState *machine)
 {
     RaspberryPiPicoState *s = RASPBERRYPI_PICO_MACHINE(machine);
-    MemoryRegion *system_memory = get_system_memory();
-    MemoryRegion *sram = g_new(MemoryRegion, 1);
-    MemoryRegion *flash = g_new(MemoryRegion, 1);
 
     /* Initialize RP2040 SoC */
     object_initialize_child(OBJECT(machine), "soc", &s->soc, TYPE_RP2040_SOC);
-    qdev_realize(DEVICE(&s->soc), NULL, &error_fatal);
+    
+    /* Realize the SoC (it's a SysBusDevice, not a plain Device) */
+    if (!sysbus_realize(SYS_BUS_DEVICE(&s->soc), &error_fatal)) {
+        return;
+    }
 
     /* Load firmware into Flash (XIP - Execute In Place) */
     if (machine->kernel_filename) {
