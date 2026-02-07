@@ -74,8 +74,7 @@ static void raspberrypi_pico_machine_class_init(ObjectClass *oc, void *data)
     mc->init = raspberrypi_pico_init;
     mc->max_cpus = 1;  /* MVP: single core (Core 0 only) */
     mc->default_cpus = 1;
-    mc->default_ram_size = 264 * KiB;
-    mc->default_ram_id = "rp2040.sram";
+    /* Note: Memory is managed by the SoC, not the machine */
 }
 
 static const TypeInfo raspberrypi_pico_machine_type = {
