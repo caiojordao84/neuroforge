@@ -79,6 +79,12 @@ typedef struct RP2040State {
     UnimplementedDeviceState timer;
     UnimplementedDeviceState usb;
 
+    /* GPIO State (30 pins) */
+    uint32_t gpio_out;        /* GPIO output values */
+    uint32_t gpio_oe;         /* GPIO output enable */
+    uint32_t gpio_in;         /* GPIO input values (external state) */
+    uint32_t gpio_ctrl[30];   /* GPIO control registers */
+
     /* Properties */
     uint32_t sysclk_freq;
 } RP2040State;
@@ -86,18 +92,21 @@ typedef struct RP2040State {
 #define TYPE_RP2040_SOC "rp2040-soc"
 OBJECT_DECLARE_SIMPLE_TYPE(RP2040State, RP2040_SOC)
 
-/* ========== GPIO Placeholder ========== */
+/* ========== GPIO Implementation ========== */
 static uint64_t rp2040_sio_read(void *opaque, hwaddr offset, unsigned size)
 {
+    RP2040State *s = RP2040_SOC(opaque);
+    
     switch (offset) {
     case 0x000:  /* CPUID */
         return 0;  /* Core 0 (TODO: support Core 1) */
     case 0x004:  /* GPIO_IN */
-        return 0;  /* All pins low (TODO: implement GPIO state) */
+        /* Return input state (combines output with external inputs) */
+        return s->gpio_in | (s->gpio_out & s->gpio_oe);
     case 0x010:  /* GPIO_OUT */
-        return 0;  /* TODO: return current output state */
+        return s->gpio_out;
     case 0x020:  /* GPIO_OE */
-        return 0;  /* TODO: return output enable state */
+        return s->gpio_oe;
     default:
         qemu_log_mask(LOG_UNIMP, "rp2040_sio: Unimplemented read at 0x%"HWADDR_PRIx"\n", offset);
         return 0;
@@ -106,30 +115,33 @@ static uint64_t rp2040_sio_read(void *opaque, hwaddr offset, unsigned size)
 
 static void rp2040_sio_write(void *opaque, hwaddr offset, uint64_t value, unsigned size)
 {
+    RP2040State *s = RP2040_SOC(opaque);
+    uint32_t val = value & 0x3FFFFFFF;  /* 30 GPIO pins mask */
+    
     switch (offset) {
     case 0x010:  /* GPIO_OUT */
-        /* TODO: implement GPIO output */
+        s->gpio_out = val;
         break;
-    case 0x014:  /* GPIO_OUT_SET */
-        /* TODO: atomic set bits */
+    case 0x014:  /* GPIO_OUT_SET (atomic) */
+        s->gpio_out |= val;
         break;
-    case 0x018:  /* GPIO_OUT_CLR */
-        /* TODO: atomic clear bits */
+    case 0x018:  /* GPIO_OUT_CLR (atomic) */
+        s->gpio_out &= ~val;
         break;
-    case 0x01C:  /* GPIO_OUT_XOR */
-        /* TODO: atomic XOR bits */
+    case 0x01C:  /* GPIO_OUT_XOR (atomic) */
+        s->gpio_out ^= val;
         break;
     case 0x020:  /* GPIO_OE */
-        /* TODO: set output enable */
+        s->gpio_oe = val;
         break;
-    case 0x024:  /* GPIO_OE_SET */
-        /* TODO: atomic set OE */
+    case 0x024:  /* GPIO_OE_SET (atomic) */
+        s->gpio_oe |= val;
         break;
-    case 0x028:  /* GPIO_OE_CLR */
-        /* TODO: atomic clear OE */
+    case 0x028:  /* GPIO_OE_CLR (atomic) */
+        s->gpio_oe &= ~val;
         break;
-    case 0x02C:  /* GPIO_OE_XOR */
-        /* TODO: atomic XOR OE */
+    case 0x02C:  /* GPIO_OE_XOR (atomic) */
+        s->gpio_oe ^= val;
         break;
     default:
         qemu_log_mask(LOG_UNIMP, "rp2040_sio: Unimplemented write at 0x%"HWADDR_PRIx" = 0x%"PRIx64"\n", offset, value);
@@ -149,15 +161,46 @@ static const MemoryRegionOps rp2040_sio_ops = {
 
 static uint64_t rp2040_io_bank0_read(void *opaque, hwaddr offset, unsigned size)
 {
-    /* TODO: implement GPIO control registers */
-    qemu_log_mask(LOG_UNIMP, "rp2040_io_bank0: Unimplemented read at 0x%"HWADDR_PRIx"\n", offset);
-    return 0;
+    RP2040State *s = RP2040_SOC(opaque);
+    
+    /* Each GPIO has 8 bytes: STATUS(4) + CTRL(4) */
+    int gpio_num = offset / 8;
+    int reg = (offset % 8) / 4;  /* 0=STATUS, 1=CTRL */
+    
+    if (gpio_num >= 30) {
+        qemu_log_mask(LOG_GUEST_ERROR, "io_bank0: invalid GPIO %d\n", gpio_num);
+        return 0;
+    }
+    
+    if (reg == 0) {
+        /* GPIO_STATUS - read-only, mostly zero for MVP */
+        return 0;
+    } else {
+        /* GPIO_CTRL */
+        return s->gpio_ctrl[gpio_num];
+    }
 }
 
 static void rp2040_io_bank0_write(void *opaque, hwaddr offset, uint64_t value, unsigned size)
 {
-    /* TODO: implement GPIO control registers */
-    qemu_log_mask(LOG_UNIMP, "rp2040_io_bank0: Unimplemented write at 0x%"HWADDR_PRIx" = 0x%"PRIx64"\n", offset, value);
+    RP2040State *s = RP2040_SOC(opaque);
+    
+    /* Each GPIO has 8 bytes: STATUS(4) + CTRL(4) */
+    int gpio_num = offset / 8;
+    int reg = (offset % 8) / 4;  /* 0=STATUS, 1=CTRL */
+    
+    if (gpio_num >= 30) {
+        qemu_log_mask(LOG_GUEST_ERROR, "io_bank0: invalid GPIO %d\n", gpio_num);
+        return;
+    }
+    
+    if (reg == 0) {
+        /* GPIO_STATUS is read-only */
+        return;
+    } else {
+        /* GPIO_CTRL - store function selection */
+        s->gpio_ctrl[gpio_num] = value & 0x1F;  /* FUNCSEL is bits 0-4 */
+    }
 }
 
 static const MemoryRegionOps rp2040_io_bank0_ops = {
@@ -194,6 +237,14 @@ static void rp2040_soc_realize(DeviceState *dev, Error **errp)
 {
     RP2040State *s = RP2040_SOC(dev);
     MemoryRegion *system_memory = get_system_memory();
+
+    /* ========== Initialize GPIO State ========== */
+    s->gpio_out = 0;
+    s->gpio_oe = 0;
+    s->gpio_in = 0;
+    for (int i = 0; i < 30; i++) {
+        s->gpio_ctrl[i] = 0x1F;  /* Default: NULL function */
+    }
 
     /* ========== Memory Regions ========== */
 
