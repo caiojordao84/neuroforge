@@ -1,6 +1,6 @@
 # ROADMAP da Plataforma NeuroForge
 
-Este documento resume o estado atual da plataforma e os próximos passos planeados, com foco em três camadas: boards, backends de execução (QEMU/outros) e frameworks (Arduino, ESP‑IDF, etc.).
+Este documento resume o estado atual da plataforma e os próximos passos planeados, com foco em três camadas: boards, backends de execução (QEMU/outros) e frameworks (Arduino, ESP-IDF, etc.).
 
 ---
 
@@ -30,7 +30,7 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
   - Multi-pin GPIO sincronizado.
 
 ### Backend ESP32 ✅ COMPLETO
-- Toolchain ESP‑IDF v6.1 configurado no Windows com Python 3.12.
+- Toolchain ESP-IDF v6.1 configurado no Windows com Python 3.12.
 - QEMU ESP32 oficial da Espressif instalado (`qemu-system-xtensa -M esp32 ...`).
 - **Compilação Real**: Sistema agora compila código do usuário com `arduino-cli --export-binaries`.
 - **Shim de GPIO** (`esp32-shim.cpp`):
@@ -46,16 +46,42 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 ### Documentação de Arquitetura
 - [`docs/architecture/backends.md`](./architecture/backends.md) descreve a arquitetura multi-backend (AVR, ESP32, RP2040) com separação entre board, backend de execução e framework.
 - [`docs/ledPisca.md`](./ledPisca.md) documenta todas as correções implementadas para Arduino e ESP32.
+- [`docs/fixes/rp2040-qemu-fixes.md`](./fixes/rp2040-qemu-fixes.md) documenta o processo de integração do RP2040 QEMU.
 
 ---
 
 ## Em Progresso
 
-### Suporte a RP2040 (Raspberry Pi Pico)
-- [ ] Avaliar e integrar QEMU ou emulador com suporte RP2040.
-- [ ] Adicionar `Rp2040Backend` com interface idêntica a AVR/ESP32.
-- [ ] Definir JSONs de boards RP2040 em `docs/boards/`.
-- [ ] Criar shim de GPIO para RP2040 (similar ao ESP32).
+### Suporte a RP2040 (Raspberry Pi Pico) 🚧 EM PROGRESSO
+- [x] **QEMU Build Customizado**: Compilar QEMU com suporte RP2040
+  - [x] Clonar e compilar QEMU ARM no Windows
+  - [x] Criar SoC RP2040 (`rp2040_soc.c`, `rp2040.h`)
+  - [x] Implementar GPIO via SIO e IO_BANK0
+  - [x] Adicionar UARTs (PL011)
+  - [x] Criar machine type `raspberrypi-pico`
+  - [x] Configurar meson build
+- [x] **Firmware Compilation**: Setup de toolchain ARM
+  - [x] Instalar `arm-none-eabi-gcc`
+  - [x] Criar SDK mínimo para bare-metal
+  - [x] Implementar linker script para RP2040
+  - [x] Setup de Makefile para compilação
+- [ ] **QEMU Integration**: Fazer o QEMU inicializar
+  - [ ] Debug e fix de erros de inicialização (assertion failures)
+  - [ ] Validar boot sequence do Cortex-M0
+  - [ ] Testar exemplo blink.elf
+- [ ] **Backend Integration**: Adicionar `Rp2040Backend`
+  - [ ] Criar `Rp2040Backend` com interface idêntica a AVR/ESP32
+  - [ ] Integrar com `QEMURunner`
+  - [ ] Implementar client de serial TCP/UART
+- [ ] **GPIO Protocol**: Shim de GPIO para RP2040
+  - [ ] Criar shim similar ao ESP32 para Pico SDK
+  - [ ] Reportar via `printf("G:pin=%d,v=%d\n", ...)`
+  - [ ] Integrar com `SerialGPIOParser`
+- [ ] **Testing**: Validação end-to-end
+  - [ ] Testar blink LED no canvas
+  - [ ] Validar multi-pin GPIO
+  - [ ] Performance testing
+- [ ] Definir JSONs de boards RP2040 em `docs/boards/`
 
 ### Unificação da camada de simulação
 - [ ] Extrair um `SimulationProtocol`:
@@ -70,7 +96,8 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 ## Próximos Passos (Curto Prazo)
 
 ### Suporte a RP2040 (Raspberry Pi Pico)
-- [ ] Avaliar e integrar QEMU ou emulador com suporte RP2040.
+- [x] Avaliar e integrar QEMU com suporte RP2040 customizado.
+- [ ] Completar debugging de inicialização QEMU.
 - [ ] Adicionar `Rp2040Backend` com interface idêntica a AVR/ESP32.
 - [ ] Definir JSONs de boards RP2040 em `docs/boards/`.
 - [ ] Criar shim de GPIO para RP2040.
@@ -85,10 +112,10 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 
 ## Visão de Médio Prazo
 
-### Multi‑framework no mesmo MCU
+### Multi-framework no mesmo MCU
 - [ ] Suporte paralelo a:
-  - Arduino AVR / Arduino‑ESP32 (experiência maker).
-  - ESP‑IDF puro (experiência industrial).
+  - Arduino AVR / Arduino-ESP32 (experiência maker).
+  - ESP-IDF puro (experiência industrial).
   - Futuro: MicroPython, Rust/TinyGo (educacional e prototipagem rápida).
 - [ ] Permitir que o utilizador escolha framework por projeto/board, mantendo o mesmo backend de simulação.
 
@@ -106,7 +133,7 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 ## Mini ROADMAP deste Job (ESP32 QEMU no Windows)
 
 ### 1. Infraestrutura de ferramentas ✅ CONCLUÍDO
-- [x] Instalar ESP‑IDF v6.1 no Windows com Python 3.12.
+- [x] Instalar ESP-IDF v6.1 no Windows com Python 3.12.
 - [x] Corrigir conflitos de `windows-curses` com Python 3.14 via venv dedicada.
 - [x] Instalar toolchain `xtensa-esp-elf` e colocar no PATH.
 - [x] Instalar QEMU ESP32 via `idf_tools.py` e garantir que `qemu-system-xtensa -M esp32` funciona.
@@ -129,7 +156,7 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 - [x] Documentação em `docs/ledPisca.md`.
 
 ### 4. Generalização e limpeza ✅ CONCLUÍDO
-- [x] Documentar a arquitetura multi‑backend em `docs/architecture/backends.md`.
+- [x] Documentar a arquitetura multi-backend em `docs/architecture/backends.md`.
 - [x] Atualizar este ROADMAP à medida que a integração ESP32 evolui.
 - [x] Criar `docs/ledPisca.md` com relatório técnico completo.
 
@@ -227,7 +254,7 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 
 ### FASE 1: MIGRAÇÃO PARA QEMU
 
-**STATUS: AVR & ESP32 COMPLETO ✅ | RP2040 & STM32 PLANEADO**
+**STATUS: AVR & ESP32 COMPLETO ✅ | RP2040 EM PROGRESSO 🚧 | STM32 PLANEADO**
 
 #### Semana 1: QEMU Integration e POC ✅ CONCLUÍDO
 - [x] Compilar ou configurar QEMU para rodar firmwares Arduino/ESP32/Pico
@@ -246,7 +273,7 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 #### Semana 3: Multi-Board Support
 - [x] Arduino Uno (AVR)
 - [x] ESP32 (Xtensa)
-- [ ] RP2040 / STM32 (ARM) - planeado
+- [🚧] RP2040 / STM32 (ARM) - em progresso
 - [x] Board Selector unificado no app
 
 #### 1.1.1. Backend AVR (QEMU) ✅ COMPLETO
@@ -263,7 +290,7 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 
 #### 1.1.2. Backend ESP32 (QEMU) ✅ COMPLETO
 
-- [x] Toolchain ESP‑IDF v6.1 no Windows
+- [x] Toolchain ESP-IDF v6.1 no Windows
 - [x] QEMU ESP32 oficial da Espressif instalado
 - [x] Projeto `hello_world` compilado e executado em QEMU
 - [x] Binários `qemu_flash.bin` e `qemu_efuse.bin` gerados
@@ -281,18 +308,81 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 - [x] **Multi-pin GPIO**: Todos os pinos digitais funcionando em sincronia
 - [x] **Documentação**: `docs/ledPisca.md` com relatório técnico completo
 
-#### 1.1.3. Backend RP2040 (QEMU) - Planeado
+#### 1.1.3. Backend RP2040 (QEMU) 🚧 EM PROGRESSO
 
-- [ ] **RaspberryPiBackend**: Implementar backend dedicado para QEMU ARM
-- [ ] **qemu-system-arm** integration: Suporte completo para RP2040 (Cortex-M0+)
-- [ ] **RP2040 GPIO Service**: Adaptador específico para GPIO do Pico
-- [ ] **PIO Emulation**: State machine simulation (se viável com QEMU)
-- [ ] **NeuroForge Time para ARM**: Port do nf_time.h/cpp para Pico SDK
-- [ ] **Multi-Core Sync**: Coordenação dual-core do RP2040
-- [ ] **Shim de GPIO**: Similar ao ESP32 para reportar estados
-- [ ] **Documentação**: Setup guide estilo ESP32 para Pico
+##### Infraestrutura Base ✅ COMPLETO
+- [x] **QEMU Build**: Compilar QEMU customizado para RP2040
+  - [x] Setup MSYS2 e dependências no Windows
+  - [x] Clone e build do QEMU ARM
+  - [x] Estrutura de arquivos para RP2040 SoC
+- [x] **RP2040 SoC Implementation**: Criar emulação do chip
+  - [x] Memory map (ROM, SRAM, Flash, periféricos)
+  - [x] GPIO via SIO (Single-cycle I/O)
+  - [x] IO_BANK0 (configuração de pinos)
+  - [x] UARTs (PL011-compatible)
+  - [x] Cortex-M0 CPU setup
+  - [x] System clock configuration
+- [x] **Machine Type**: Raspberry Pi Pico board
+  - [x] Board initialization
+  - [x] ELF loading support
+  - [x] Serial output configuration
+- [x] **Firmware Toolchain**: Setup de compilação
+  - [x] Instalar `arm-none-eabi-gcc`
+  - [x] Criar SDK bare-metal mínimo
+  - [x] Linker script para RP2040 memory layout
+  - [x] Makefile com targets build/clean/run
+  - [x] Startup code e vector table
+
+##### Debug e Correções 🚧 EM PROGRESSO
+- [x] **Memory Issues**: Corrigir duplicação de RAMBlocks
+  - [x] Remover `default_ram_id` conflitante
+  - [x] SoC gerencia suas próprias regiões de memória
+- [x] **CPU Configuration**: Corrigir configuração do CPU
+  - [x] Adicionar system clock (133MHz)
+  - [x] Conectar clock ao ARMv7M container
+  - [x] Usar `cortex-m0` (QEMU não tem `cortex-m0p`)
+- [ ] **Device Realization**: Corrigir inicialização de dispositivos
+  - [ ] Debug assertion failures no qdev
+  - [ ] Validar ordem de realize() calls
+  - [ ] Testar boot sequence completo
+
+##### Backend Integration - PENDENTE
+- [ ] **RaspberryPiBackend**: Implementar backend dedicado
+  - [ ] Classe `Rp2040Backend` similar a AVR/ESP32
+  - [ ] Integração com `QEMURunner`
+  - [ ] Cliente TCP para UART
+  - [ ] Gerenciamento de processo QEMU
+- [ ] **GPIO Protocol**: Shim de reportação
+  - [ ] Port do shim ESP32 para Pico SDK
+  - [ ] Reportar via `printf("G:pin=%d,v=%d\n", ...)`
+  - [ ] Integração com `SerialGPIOParser`
+- [ ] **NeuroForge Time**: Port para ARM
+  - [ ] Adaptar `nf_time.h/cpp` para Pico SDK
+  - [ ] SysTick timer configuration
+  - [ ] Timeline de eventos
+
+##### Testing e Validação - PENDENTE
+- [ ] **Unit Tests**: Validação isolada
+  - [ ] Testar GPIO shim standalone
+  - [ ] Validar compilation pipeline
+  - [ ] Testar QEMU startup sequence
+- [ ] **Integration Tests**: End-to-end
+  - [ ] Blink LED no canvas
+  - [ ] Multi-pin GPIO simultâneo
+  - [ ] Serial Monitor output
+  - [ ] Performance benchmarks
+- [ ] **Documentation**:
+  - [x] Setup guide em `docs/fixes/rp2040-qemu-fixes.md`
+  - [ ] API documentation
+  - [ ] Exemplo `example-gpio-rp2040.ts`
+  - [ ] Troubleshooting guide
+
+##### Board Profiles - PENDENTE
 - [ ] Definir JSONs de boards RP2040 em `docs/boards/`
-- [ ] Exemplo `example-gpio-rp2040.ts` funcional
+  - [ ] Raspberry Pi Pico (RP2040)
+  - [ ] Raspberry Pi Pico W (com WiFi)
+  - [ ] Pinout diagrams
+  - [ ] Peripheral mapping (I2C, SPI, UART, PIO)
 
 #### 1.1.4. Backend STM32 (QEMU) - Planeado
 
@@ -309,19 +399,19 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 - [ ] Implementar suporte a perfis de modelos
 - [ ] Documentação de perfis de placas
 
-##### Perfis de Placas Pré‑Configurados
+##### Perfis de Placas Pré-Configurados
 
   A aplicação inclui perfis detalhados para placas de desenvolvimento populares:
 
   #### Família ESP32:
 
-  - ESP32‑DevKitC: mapeamento de 38 pinos com avisos de strapping pins
+  - ESP32-DevKitC: mapeamento de 38 pinos com avisos de strapping pins
 
-  - ESP32‑S3: suporte USB OTG, dupla interface USB‑Serial
+  - ESP32-S3: suporte USB OTG, dupla interface USB-Serial
 
-  - ESP32‑C3: notas sobre arquitetura RISC‑V, pinos limitados
+  - ESP32-C3: notas sobre arquitetura RISC-V, pinos limitados
 
-  - ESP32 WROOM‑32: variante padrão de 30 pinos
+  - ESP32 WROOM-32: variante padrão de 30 pinos
 
   Inclui assistentes de configuração WiFi/Bluetooth
 
@@ -348,7 +438,6 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
   - Diagrama de pinagem preciso com funções alternativas
 
   - Especificações de níveis de tensão
-
   - Corrente máxima por pino e total
 
   - Periféricos integrados (LED, localização de botões)
@@ -417,7 +506,7 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 
 - Mês 1: QEMU + Arduino Uno rodando blink real, 10 componentes compatíveis. ✅ **COMPLETO**
 - Mês 2: ESP32 QEMU + GPIO sincronizado + Serial Monitor. ✅ **COMPLETO**
-- Mês 3: Placas Maker, 30+ componentes maker, Dashboard Builder funcional.
+- Mês 3: RP2040 QEMU + GPIO, 30+ componentes maker, Dashboard Builder funcional. 🚧 **EM PROGRESSO**
 - Mês 6: PLC + SCADA, 50+ componentes maker 30+ industriais, 1k usuários ativos.
 - Ano 1: 100+ componentes maker 50+ industriais, 10k usuários, €15k MRR.
 
@@ -452,6 +541,15 @@ Arquivo: [`docs/ledPisca.md`](./ledPisca.md)
 - Detalhes do shim de GPIO do ESP32.
 - Explicação da compilação real vs binário estático.
 - Parser de GPIO e filtro de logs.
+
+### Integração RP2040 QEMU
+
+Arquivo: [`docs/fixes/rp2040-qemu-fixes.md`](./fixes/rp2040-qemu-fixes.md)
+
+- Processo completo de build customizado do QEMU
+- Implementação do RP2040 SoC e Raspberry Pi Pico machine
+- Troubleshooting e correções de bugs
+- Setup de firmware toolchain
 
 ### Outros roadmaps técnicos
 
