@@ -1,0 +1,327 @@
+{
+  "board": {
+    "id": "raspberrypi-pico",
+    "name": "Raspberry Pi Pico",
+    "manufacturer": "Raspberry Pi Foundation",
+    "url": "https://www.raspberrypi.com/products/raspberry-pi-pico/",
+    "documentation": "https://datasheets.raspberrypi.com/pico/pico-datasheet.pdf",
+    "image": "https://assets.raspberrypi.com/static/raspberry-pi-pico-28c7f3a7c4f8dddc6e6a6a492e5688d5.png",
+    "description": "Low-cost, high-performance microcontroller board with flexible digital interfaces, designed by Raspberry Pi in the UK.",
+    "mcu": {
+      "model": "RP2040",
+      "manufacturer": "Raspberry Pi",
+      "architecture": "ARM Cortex-M0+",
+      "cores": 2,
+      "clock_speed_mhz": 133,
+      "clock_speed_max_mhz": 133,
+      "flash_size_kb": 2048,
+      "flash_type": "External QSPI (W25Q16JV)",
+      "sram_size_kb": 264,
+      "rom_size_kb": 16,
+      "datasheet": "https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf",
+      "features": [
+        "Dual-core ARM Cortex-M0+ processor",
+        "264KB on-chip SRAM",
+        "2MB on-board QSPI Flash",
+        "Programmable I/O (PIO) state machines",
+        "30 GPIO pins (4 can be used as ADC)",
+        "USB 1.1 controller and PHY",
+        "8 × Programmable I/O (PIO) state machines"
+      ]
+    },
+    "specifications": {
+      "voltage": "3.3V",
+      "input_voltage": "5V (via USB) or 1.8-5.5V (via VSYS)",
+      "dimensions_mm": {
+        "length": 51,
+        "width": 21,
+        "height": 1
+      },
+      "weight_g": 3,
+      "temperature_range": "-20°C to +85°C",
+      "certifications": ["CE", "FCC", "RoHS"]
+    }
+  },
+  "qemu": {
+    "machine": "raspberrypi-pico",
+    "cpu": "cortex-m0plus",
+    "architecture": "arm",
+    "endianness": "little",
+    "executable": "qemu-system-arm",
+    "status": "in-development",
+    "version": "mvp",
+    "memory": {
+      "rom": {
+        "address": "0x00000000",
+        "size": "16K",
+        "description": "Boot ROM (contains bootloader)"
+      },
+      "flash": {
+        "address": "0x10000000",
+        "size": "2M",
+        "description": "External QSPI Flash (XIP - Execute In Place)"
+      },
+      "sram": {
+        "address": "0x20000000",
+        "size": "264K",
+        "description": "On-chip SRAM"
+      },
+      "sio": {
+        "address": "0xD0000000",
+        "size": "256B",
+        "description": "Single-cycle I/O block (fast GPIO access)"
+      }
+    },
+    "peripherals": {
+      "uart": [
+        {
+          "id": 0,
+          "address": "0x40034000",
+          "size": "4KB",
+          "irq": 20,
+          "compatible": "arm,pl011",
+          "description": "UART0 (PL011-compatible)"
+        },
+        {
+          "id": 1,
+          "address": "0x40038000",
+          "size": "4KB",
+          "irq": 21,
+          "compatible": "arm,pl011",
+          "description": "UART1 (PL011-compatible)"
+        }
+      ],
+      "gpio": {
+        "count": 30,
+        "sio_address": "0xD0000000",
+        "io_bank0_address": "0x40014000",
+        "size": "12KB",
+        "irqs": [13, 14, 15, 16],
+        "description": "30 multi-function GPIO pins",
+        "features": [
+          "Atomic set/clear/xor operations",
+          "Programmable pull-up/pull-down",
+          "Edge/level triggered interrupts",
+          "Input/output/high-impedance modes"
+        ]
+      },
+      "timer": {
+        "address": "0x40054000",
+        "size": "4KB",
+        "frequency_hz": 1000000,
+        "bit_width": 64,
+        "alarms": 4,
+        "irqs": [0, 1, 2, 3],
+        "description": "64-bit microsecond timer with 4 independent alarms"
+      },
+      "usb": {
+        "address": "0x50100000",
+        "size": "64KB",
+        "version": "1.1",
+        "speed": "Full-speed (12 Mbps)",
+        "role": "Device",
+        "status": "stub",
+        "description": "USB 1.1 Device controller (basic detection only)"
+      },
+      "dma": {
+        "address": "0x50000000",
+        "size": "4KB",
+        "channels": 12,
+        "status": "not-implemented",
+        "description": "12-channel DMA controller (Phase 2)"
+      },
+      "spi": [
+        {
+          "id": 0,
+          "address": "0x4003C000",
+          "size": "4KB",
+          "status": "not-implemented",
+          "description": "SPI0 (Phase 2)"
+        },
+        {
+          "id": 1,
+          "address": "0x40040000",
+          "size": "4KB",
+          "status": "not-implemented",
+          "description": "SPI1 (Phase 2)"
+        }
+      ],
+      "i2c": [
+        {
+          "id": 0,
+          "address": "0x40044000",
+          "size": "4KB",
+          "status": "not-implemented",
+          "description": "I2C0 (Phase 2)"
+        },
+        {
+          "id": 1,
+          "address": "0x40048000",
+          "size": "4KB",
+          "status": "not-implemented",
+          "description": "I2C1 (Phase 2)"
+        }
+      ],
+      "pio": [
+        {
+          "id": 0,
+          "address": "0x50200000",
+          "size": "4KB",
+          "state_machines": 8,
+          "status": "not-implemented",
+          "description": "PIO0 - Programmable I/O block (Phase 3)"
+        },
+        {
+          "id": 1,
+          "address": "0x50300000",
+          "size": "4KB",
+          "state_machines": 8,
+          "status": "not-implemented",
+          "description": "PIO1 - Programmable I/O block (Phase 3)"
+        }
+      ]
+    },
+    "boot": {
+      "default_entry_point": "0x10000000",
+      "rom_bootloader": true,
+      "flash_xip": true,
+      "description": "Boots from ROM, loads firmware from Flash via XIP"
+    },
+    "debug": {
+      "gdb_port": 1234,
+      "monitor_commands": [
+        "info mtree",
+        "info qtree",
+        "info registers"
+      ]
+    }
+  },
+  "serial_gpio_protocol": {
+    "enabled": true,
+    "version": "1.0",
+    "uart_id": 0,
+    "baud_rate": 115200,
+    "data_bits": 8,
+    "parity": "none",
+    "stop_bits": 1,
+    "description": "Serial communication protocol for GPIO monitoring and control",
+    "commands": {
+      "read_pin": "GP<nn>",
+      "write_pin": "WP<nn><v>",
+      "read_all": "GA",
+      "configure": "CF<nn><mode>"
+    }
+  },
+  "pinout": {
+    "led": {
+      "gpio": 25,
+      "description": "On-board LED (connected to GP25)"
+    },
+    "uart0": {
+      "tx": {
+        "gpio": 0,
+        "description": "UART0 TX (default GPIO0)"
+      },
+      "rx": {
+        "gpio": 1,
+        "description": "UART0 RX (default GPIO1)"
+      }
+    },
+    "uart1": {
+      "tx": {
+        "gpio": 4,
+        "description": "UART1 TX (default GPIO4)"
+      },
+      "rx": {
+        "gpio": 5,
+        "description": "UART1 RX (default GPIO5)"
+      }
+    },
+    "spi0": {
+      "rx": 16,
+      "tx": 19,
+      "sck": 18,
+      "csn": 17
+    },
+    "spi1": {
+      "rx": 12,
+      "tx": 15,
+      "sck": 14,
+      "csn": 13
+    },
+    "i2c0": {
+      "sda": 4,
+      "scl": 5
+    },
+    "i2c1": {
+      "sda": 6,
+      "scl": 7
+    },
+    "adc": [26, 27, 28, 29]
+  },
+  "firmware": {
+    "sdk": {
+      "name": "Pico SDK",
+      "url": "https://github.com/raspberrypi/pico-sdk",
+      "languages": ["C", "C++", "MicroPython"],
+      "documentation": "https://raspberrypi.github.io/pico-sdk-doxygen/"
+    },
+    "examples": [
+      {
+        "name": "blink",
+        "path": "firmware/rp2040/examples/blink",
+        "description": "Simple LED blink example using GPIO25"
+      },
+      {
+        "name": "uart_echo",
+        "path": "firmware/rp2040/examples/uart_echo",
+        "description": "UART echo test (echoes received characters)"
+      },
+      {
+        "name": "gpio_test",
+        "path": "firmware/rp2040/examples/gpio_test",
+        "description": "GPIO read/write test with all operations"
+      }
+    ],
+    "toolchain": {
+      "compiler": "arm-none-eabi-gcc",
+      "linker": "arm-none-eabi-ld",
+      "objcopy": "arm-none-eabi-objcopy",
+      "gdb": "arm-none-eabi-gdb",
+      "required_version": ">=10.3"
+    },
+    "build": {
+      "formats": ["elf", "bin", "uf2"],
+      "default_format": "elf",
+      "entry_point": "_start"
+    }
+  },
+  "usage": {
+    "neuroforge_cli": {
+      "run": "neuroforge run --board raspberrypi-pico --firmware blink.elf",
+      "debug": "neuroforge debug --board raspberrypi-pico --firmware blink.elf",
+      "monitor": "neuroforge run --board raspberrypi-pico --firmware blink.elf --monitor --serial-gpio /dev/ttyUSB0"
+    },
+    "qemu_direct": {
+      "basic": "qemu-system-arm -M raspberrypi-pico -kernel blink.elf -nographic",
+      "with_serial": "qemu-system-arm -M raspberrypi-pico -kernel blink.elf -serial stdio -serial /dev/ttyUSB0 -nographic",
+      "with_gdb": "qemu-system-arm -M raspberrypi-pico -kernel blink.elf -s -S -nographic"
+    }
+  },
+  "resources": {
+    "getting_started": "https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf",
+    "hardware_design": "https://datasheets.raspberrypi.com/pico/pico-datasheet.pdf",
+    "c_sdk_guide": "https://datasheets.raspberrypi.com/pico/raspberry-pi-pico-c-sdk.pdf",
+    "python_sdk": "https://datasheets.raspberrypi.com/pico/raspberry-pi-pico-python-sdk.pdf",
+    "forums": "https://forums.raspberrypi.com/viewforum.php?f=145",
+    "github": "https://github.com/raspberrypi/pico-sdk"
+  },
+  "metadata": {
+    "created": "2026-02-07",
+    "version": "1.0.0-mvp",
+    "status": "in-development",
+    "contributors": ["NeuroForge Team"],
+    "license": "MIT",
+    "tags": ["raspberry-pi", "rp2040", "cortex-m0", "arm", "microcontroller", "educational"]
+  }
+}
