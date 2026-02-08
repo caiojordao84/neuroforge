@@ -23,6 +23,7 @@
 #include "hw/sysbus.h"
 #include "hw/core/cpu.h"
 #include "hw/irq.h"
+#include "qemu/module.h"
 #include "target/arm/cpu.h"
 
 /* ========== Memory Map ========== */
@@ -330,11 +331,17 @@ static void rp2040_soc_realize(DeviceState *dev, Error **errp) {
     qemu_irq uart1_irq = qdev_get_gpio_in(armv7m, RP2040_UART1_IRQ);
     sysbus_connect_irq(SYS_BUS_DEVICE(&s->uart1), 0, uart1_irq);
   }
+
+  /* Registar reset global do SoC (emula a ROM de boot a saltar para flash) */
+  qemu_register_reset(rp2040_soc_reset, dev);
 }
 
 /* ========== SoC Reset (Boot ROM emulation) ========== */
-static void rp2040_soc_reset(DeviceState *dev)
+static void rp2040_soc_reset(void *opaque)
 {
+    DeviceState *dev = DEVICE(opaque);
+    (void)dev;
+
     uint32_t sp_flash = 0;
     uint32_t pc_flash = 0;
 
@@ -369,7 +376,6 @@ static void rp2040_soc_class_init(ObjectClass *oc, void *data) {
   DeviceClass *dc = DEVICE_CLASS(oc);
 
   dc->realize = rp2040_soc_realize;
-  dc->reset   = rp2040_soc_reset;
   device_class_set_props(dc, rp2040_soc_properties);
 }
 
