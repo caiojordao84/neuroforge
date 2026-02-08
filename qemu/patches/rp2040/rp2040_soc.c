@@ -7,6 +7,12 @@
  * See the COPYING file in the top-level directory.
  */
 
+#include "qapi/error.h"
+#include "qemu/error-report.h"
+#include "qemu/log.h"
+#include "qemu/osdep.h"
+#include "qemu/units.h"
+
 #include "exec/address-spaces.h"
 #include "exec/memory.h"
 #include "hw/arm/rp2040.h"
@@ -15,13 +21,7 @@
 #include "hw/qdev-clock.h"
 #include "hw/qdev-properties.h"
 #include "hw/sysbus.h"
-#include "qapi/error.h"
-#include "qemu/error-report.h"
-#include "qemu/log.h"
-#include "qemu/osdep.h"
-#include "qemu/units.h"
 #include "target/arm/cpu.h"
-
 
 /* ========== Memory Map ========== */
 #define RP2040_ROM_BASE 0x00000000
