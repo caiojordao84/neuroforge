@@ -23,7 +23,7 @@
 #include "hw/sysbus.h"
 #include "hw/core/cpu.h"
 #include "hw/irq.h"
-#include "qemu/module.h"
+#include "sysemu/reset.h"
 #include "target/arm/cpu.h"
 
 /* ========== Memory Map ========== */
@@ -72,7 +72,6 @@ static uint64_t rp2040_sio_read(void *opaque, hwaddr offset, unsigned size) {
   case 0x000: /* CPUID */
     return 0; /* Core 0 (TODO: support Core 1) */
   case 0x004: /* GPIO_IN */
-    /* Return input state (combines output with external inputs) */
     return s->gpio_in | (s->gpio_out & s->gpio_oe);
   case 0x010: /* GPIO_OUT */
     return s->gpio_out;
@@ -89,31 +88,31 @@ static uint64_t rp2040_sio_read(void *opaque, hwaddr offset, unsigned size) {
 static void rp2040_sio_write(void *opaque, hwaddr offset, uint64_t value,
                              unsigned size) {
   RP2040State *s = RP2040_SOC(opaque);
-  uint32_t val = value & 0x3FFFFFFF; /* 30 GPIO pins mask */
+  uint32_t val = value & 0x3FFFFFFF;
 
   switch (offset) {
-  case 0x010: /* GPIO_OUT */
+  case 0x010:
     s->gpio_out = val;
     break;
-  case 0x014: /* GPIO_OUT_SET (atomic) */
+  case 0x014:
     s->gpio_out |= val;
     break;
-  case 0x018: /* GPIO_OUT_CLR (atomic) */
+  case 0x018:
     s->gpio_out &= ~val;
     break;
-  case 0x01C: /* GPIO_OUT_XOR (atomic) */
+  case 0x01C:
     s->gpio_out ^= val;
     break;
-  case 0x020: /* GPIO_OE */
+  case 0x020:
     s->gpio_oe = val;
     break;
-  case 0x024: /* GPIO_OE_SET (atomic) */
+  case 0x024:
     s->gpio_oe |= val;
     break;
-  case 0x028: /* GPIO_OE_CLR (atomic) */
+  case 0x028:
     s->gpio_oe &= ~val;
     break;
-  case 0x02C: /* GPIO_OE_XOR (atomic) */
+  case 0x02C:
     s->gpio_oe ^= val;
     break;
   default:
@@ -129,20 +128,18 @@ static const MemoryRegionOps rp2040_sio_ops = {
     .read = rp2040_sio_read,
     .write = rp2040_sio_write,
     .endianness = DEVICE_NATIVE_ENDIAN,
-    .valid =
-        {
-            .min_access_size = 4,
-            .max_access_size = 4,
-        },
+    .valid = {
+        .min_access_size = 4,
+        .max_access_size = 4,
+    },
 };
 
 static uint64_t rp2040_io_bank0_read(void *opaque, hwaddr offset,
                                      unsigned size) {
   RP2040State *s = RP2040_SOC(opaque);
 
-  /* Each GPIO has 8 bytes: STATUS(4) + CTRL(4) */
   int gpio_num = offset / 8;
-  int reg = (offset % 8) / 4; /* 0=STATUS, 1=CTRL */
+  int reg = (offset % 8) / 4;
 
   if (gpio_num >= 30) {
     qemu_log_mask(LOG_GUEST_ERROR, "io_bank0: invalid GPIO %d\n", gpio_num);
@@ -150,10 +147,8 @@ static uint64_t rp2040_io_bank0_read(void *opaque, hwaddr offset,
   }
 
   if (reg == 0) {
-    /* GPIO_STATUS - read-only, mostly zero for MVP */
     return 0;
   } else {
-    /* GPIO_CTRL */
     return s->gpio_ctrl[gpio_num];
   }
 }
@@ -162,21 +157,16 @@ static void rp2040_io_bank0_write(void *opaque, hwaddr offset, uint64_t value,
                                   unsigned size) {
   RP2040State *s = RP2040_SOC(opaque);
 
-  /* Each GPIO has 8 bytes: STATUS(4) + CTRL(4) */
   int gpio_num = offset / 8;
-  int reg = (offset % 8) / 4; /* 0=STATUS, 1=CTRL */
+  int reg = (offset % 8) / 4;
 
   if (gpio_num >= 30) {
     qemu_log_mask(LOG_GUEST_ERROR, "io_bank0: invalid GPIO %d\n", gpio_num);
     return;
   }
 
-  if (reg == 0) {
-    /* GPIO_STATUS is read-only */
-    return;
-  } else {
-    /* GPIO_CTRL - store function selection */
-    s->gpio_ctrl[gpio_num] = value & 0x1F; /* FUNCSEL is bits 0-4 */
+  if (reg == 1) {
+    s->gpio_ctrl[gpio_num] = value & 0x1F;
   }
 }
 
@@ -184,28 +174,28 @@ static const MemoryRegionOps rp2040_io_bank0_ops = {
     .read = rp2040_io_bank0_read,
     .write = rp2040_io_bank0_write,
     .endianness = DEVICE_NATIVE_ENDIAN,
-    .valid =
-        {
-            .min_access_size = 4,
-            .max_access_size = 4,
-        },
+    .valid = {
+        .min_access_size = 4,
+        .max_access_size = 4,
+    },
 };
+
+/* ============================================================
+ *  IMPORTANTE: declaração antecipada da função de reset
+ * ============================================================ */
+static void rp2040_soc_reset(void *opaque);
 
 /* ========== SoC Initialization ========== */
 static void rp2040_soc_init(Object *obj) {
   RP2040State *s = RP2040_SOC(obj);
 
-  /* Create system clock */
   s->sysclk = qdev_init_clock_in(DEVICE(obj), "sysclk", NULL, NULL, 0);
 
-  /* Create Cortex-M0+ core (single-core MVP) */
   object_initialize_child(obj, "armv7m[0]", &s->armv7m[0], TYPE_ARMV7M);
 
-  /* Create UARTs (PL011-compatible) */
   object_initialize_child(obj, "uart0", &s->uart0, TYPE_PL011);
   object_initialize_child(obj, "uart1", &s->uart1, TYPE_PL011);
 
-  /* Create unimplemented devices */
   object_initialize_child(obj, "timer", &s->timer, TYPE_UNIMPLEMENTED_DEVICE);
   object_initialize_child(obj, "usb", &s->usb, TYPE_UNIMPLEMENTED_DEVICE);
 }
@@ -215,40 +205,33 @@ static void rp2040_soc_realize(DeviceState *dev, Error **errp) {
   MemoryRegion *system_memory = get_system_memory();
   Error *local_err = NULL;
 
-  /* Set up system clock (133 MHz default) */
   if (!clock_has_source(s->sysclk)) {
     clock_set_hz(s->sysclk, s->sysclk_freq);
   }
 
-  /* ========== Initialize GPIO State ========== */
   s->gpio_out = 0;
   s->gpio_oe = 0;
   s->gpio_in = 0;
   for (int i = 0; i < 30; i++) {
-    s->gpio_ctrl[i] = 0x1F; /* Default: NULL function */
+    s->gpio_ctrl[i] = 0x1F;
   }
 
-  /* ========== Memory Regions ========== */
-
-  /* ROM (16KB at 0x00000000) */
-  memory_region_init_rom(&s->rom, OBJECT(dev), "rp2040.rom", RP2040_ROM_SIZE,
-                         &local_err);
+  memory_region_init_rom(&s->rom, OBJECT(dev), "rp2040.rom",
+                         RP2040_ROM_SIZE, &local_err);
   if (local_err) {
     error_propagate(errp, local_err);
     return;
   }
   memory_region_add_subregion(system_memory, RP2040_ROM_BASE, &s->rom);
 
-  /* SRAM (264KB at 0x20000000) */
-  memory_region_init_ram(&s->sram, OBJECT(dev), "rp2040.sram", RP2040_SRAM_SIZE,
-                         &local_err);
+  memory_region_init_ram(&s->sram, OBJECT(dev), "rp2040.sram",
+                         RP2040_SRAM_SIZE, &local_err);
   if (local_err) {
     error_propagate(errp, local_err);
     return;
   }
   memory_region_add_subregion(system_memory, RP2040_SRAM_BASE, &s->sram);
 
-  /* Flash (16MB at 0x10000000) */
   memory_region_init_ram(&s->flash, OBJECT(dev), "rp2040.flash",
                          RP2040_FLASH_SIZE, &local_err);
   if (local_err) {
@@ -257,39 +240,28 @@ static void rp2040_soc_realize(DeviceState *dev, Error **errp) {
   }
   memory_region_add_subregion(system_memory, RP2040_FLASH_BASE, &s->flash);
 
-  /* SIO (Single-cycle I/O) */
-  memory_region_init_io(&s->sio, OBJECT(dev), &rp2040_sio_ops, s, "rp2040.sio",
-                        RP2040_SIO_SIZE);
+  memory_region_init_io(&s->sio, OBJECT(dev), &rp2040_sio_ops, s,
+                        "rp2040.sio", RP2040_SIO_SIZE);
   memory_region_add_subregion(system_memory, RP2040_SIO_BASE, &s->sio);
 
-  /* IO_BANK0 (GPIO configuration) */
   memory_region_init_io(&s->io_bank0, OBJECT(dev), &rp2040_io_bank0_ops, s,
                         "rp2040.io_bank0", RP2040_IO_BANK0_SIZE);
   memory_region_add_subregion(system_memory, RP2040_IO_BANK0_BASE,
                               &s->io_bank0);
 
-  /* ========== CPU Cores ========== */
-
-  /* Initialize only Core 0 (MVP - single core) */
-  /* Note: Using cortex-m0 since QEMU doesn't have cortex-m0p */
   DeviceState *armv7m = DEVICE(&s->armv7m[0]);
   qdev_prop_set_uint32(armv7m, "num-irq", 32);
   qdev_prop_set_string(armv7m, "cpu-type", ARM_CPU_TYPE_NAME("cortex-m0"));
-  qdev_prop_set_uint32(armv7m, "num-prio-bits", 2); /* M0+ has 2-bit priority */
+  qdev_prop_set_uint32(armv7m, "num-prio-bits", 2);
   object_property_set_link(OBJECT(&s->armv7m[0]), "memory",
                            OBJECT(system_memory), &error_abort);
 
-  /* Connect system clock to CPU */
   qdev_connect_clock_in(armv7m, "cpuclk", s->sysclk);
 
-  /* Realize the ARMv7M container (includes CPU and NVIC) */
   if (!sysbus_realize(SYS_BUS_DEVICE(&s->armv7m[0]), errp)) {
     return;
   }
 
-  /* ========== Unimplemented Devices ========== */
-
-  /* Timer (stub for now) */
   DeviceState *timer_dev = DEVICE(&s->timer);
   qdev_prop_set_string(timer_dev, "name", "rp2040.timer");
   qdev_prop_set_uint64(timer_dev, "size", RP2040_TIMER_SIZE);
@@ -298,7 +270,6 @@ static void rp2040_soc_realize(DeviceState *dev, Error **errp) {
   }
   sysbus_mmio_map(SYS_BUS_DEVICE(&s->timer), 0, RP2040_TIMER_BASE);
 
-  /* USB (stub for now) */
   DeviceState *usb_dev = DEVICE(&s->usb);
   qdev_prop_set_string(usb_dev, "name", "rp2040.usb");
   qdev_prop_set_uint64(usb_dev, "size", RP2040_USB_SIZE);
@@ -307,32 +278,25 @@ static void rp2040_soc_realize(DeviceState *dev, Error **errp) {
   }
   sysbus_mmio_map(SYS_BUS_DEVICE(&s->usb), 0, RP2040_USB_BASE);
 
-  /* ========== UARTs ========== */
-  /* Realize UARTs AFTER ARMv7M is fully realized to ensure NVIC is ready */
-
-  /* UART0 */
   if (!sysbus_realize(SYS_BUS_DEVICE(&s->uart0), errp)) {
     return;
   }
   sysbus_mmio_map(SYS_BUS_DEVICE(&s->uart0), 0, RP2040_UART0_BASE);
-  /* Connect UART0 IRQ to NVIC after NVIC is realized */
   {
     qemu_irq uart0_irq = qdev_get_gpio_in(armv7m, RP2040_UART0_IRQ);
     sysbus_connect_irq(SYS_BUS_DEVICE(&s->uart0), 0, uart0_irq);
   }
 
-  /* UART1 */
   if (!sysbus_realize(SYS_BUS_DEVICE(&s->uart1), errp)) {
     return;
   }
   sysbus_mmio_map(SYS_BUS_DEVICE(&s->uart1), 0, RP2040_UART1_BASE);
-  /* Connect UART1 IRQ to NVIC after NVIC is realized */
   {
     qemu_irq uart1_irq = qdev_get_gpio_in(armv7m, RP2040_UART1_IRQ);
     sysbus_connect_irq(SYS_BUS_DEVICE(&s->uart1), 0, uart1_irq);
   }
 
-  /* Registar reset global do SoC (emula a ROM de boot a saltar para flash) */
+  /* Registar reset global do SoC */
   qemu_register_reset(rp2040_soc_reset, dev);
 }
 
@@ -345,11 +309,9 @@ static void rp2040_soc_reset(void *opaque)
     uint32_t sp_flash = 0;
     uint32_t pc_flash = 0;
 
-    /* Ler SP e PC iniciais da tabela de vetores na flash */
     cpu_physical_memory_read(RP2040_FLASH_BASE + 0, &sp_flash, sizeof(sp_flash));
     cpu_physical_memory_read(RP2040_FLASH_BASE + 4, &pc_flash, sizeof(pc_flash));
 
-    /* Usar o primeiro CPU registado (único core no MVP) */
     CPUState *cs = NULL;
     ARMCPU *cpu = NULL;
 
@@ -359,10 +321,9 @@ static void rp2040_soc_reset(void *opaque)
     }
 
     if (cs && cpu) {
-        /* Reset limpo do core e injeção de SP/PC a partir da flash */
         cpu_reset(cs);
-        cpu->env.regs[13] = sp_flash; /* SP (R13) */
-        cpu->env.regs[15] = pc_flash; /* PC (R15) */
+        cpu->env.regs[13] = sp_flash;
+        cpu->env.regs[15] = pc_flash;
     }
 }
 
