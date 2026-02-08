@@ -51,11 +51,11 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 
 ## Em Progresso
 
-### Suporte a RP2040 (Raspberry Pi Pico)
-- [ ] Avaliar e integrar QEMU ou emulador com suporte RP2040.
-- [ ] Adicionar `Rp2040Backend` com interface idêntica a AVR/ESP32.
-- [ ] Definir JSONs de boards RP2040 em `docs/boards/`.
-- [ ] Criar shim de GPIO para RP2040 (similar ao ESP32).
+### Suporte a RP2040 (Raspberry Pi Pico) - Simulação JS
+> **⚠️ NOTA:** A emulação backend via QEMU/Renode foi suspensa temporariamente para focar na simulação frontend (JS/WASM).
+- [x] Remover scripts Renode obsoletos do servidor.
+- [x] Definir JSON de board em `docs/boards/raspberry-pi-pico.json`.
+- [ ] Implementar simulação lógica básica (pinos, LED) no frontend.
 
 ### Unificação da camada de simulação
 - [ ] Extrair um `SimulationProtocol`:
@@ -70,10 +70,8 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 ## Próximos Passos (Curto Prazo)
 
 ### Suporte a RP2040 (Raspberry Pi Pico)
-- [ ] Avaliar e integrar QEMU ou emulador com suporte RP2040.
-- [ ] Adicionar `Rp2040Backend` com interface idêntica a AVR/ESP32.
-- [ ] Definir JSONs de boards RP2040 em `docs/boards/`.
-- [ ] Criar shim de GPIO para RP2040.
+- [ ] Validar integração com `board-schema.json`.
+- [ ] Implementar interpretador/simulador JS para RP2040 (sem QEMU no momento).
 
 ### Componentes Avançados
 - [ ] Sensores analógicos (LDR, potenciômetro já funciona).
@@ -84,6 +82,9 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 ---
 
 ## Visão de Médio Prazo
+
+### Backend RP2040 (QEMU/Renode) - ⏸️ POSTERGADO
+- Retornaremos à emulação full-system backend quando o projeto estiver mais maduro.
 
 ### Multi‑framework no mesmo MCU
 - [ ] Suporte paralelo a:
@@ -145,10 +146,7 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 ### 6. Multi-Device Orchestration (planeado)
 - [ ] **Simultaneous Multi-MCU**: Rodar AVR + ESP32 + RP2040 simultaneamente
 - [ ] **Shared NeuroForge Clock**: Clock virtual sincronizado entre todos os devices
-- [ ] **Inter-Device Communication**: GPIO/I2C/SPI bus compartilhado entre MCUs
-- [ ] **QEMU Network Bridge**: Conectar instâncias QEMU via networking features
-- [ ] **Coordinated Stepping**: Debug síncrono de múltiplos devices
-- [ ] **Resource Arbitration**: Gerenciamento de recursos compartilhados entre instâncias
+- [ ] **Inter-Device Communication**: GPIO/I2C/SPI bus compartilhado entre MCUs\n- [ ] **QEMU Network Bridge**: Conectar instâncias QEMU via networking features\n- [ ] **Coordinated Stepping**: Debug síncrono de múltiplos devices\n- [ ] **Resource Arbitration**: Gerenciamento de recursos compartilhados entre instâncias
 
 ### 7. Multi-Language Toolchain (planeado)
 - [ ] **MicroPython Setup**: Scripts de instalação de firmware e tools (mpy-cross)
@@ -227,7 +225,7 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 
 ### FASE 1: MIGRAÇÃO PARA QEMU
 
-**STATUS: AVR & ESP32 COMPLETO ✅ | RP2040 & STM32 PLANEADO**
+**STATUS: AVR & ESP32 COMPLETO ✅ | RP2040 JS SIMULATION ⚡**
 
 #### Semana 1: QEMU Integration e POC ✅ CONCLUÍDO
 - [x] Compilar ou configurar QEMU para rodar firmwares Arduino/ESP32/Pico
@@ -246,7 +244,7 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 #### Semana 3: Multi-Board Support
 - [x] Arduino Uno (AVR)
 - [x] ESP32 (Xtensa)
-- [ ] RP2040 / STM32 (ARM) - planeado
+- [ ] RP2040 (Simulação JS) - em progresso
 - [x] Board Selector unificado no app
 
 #### 1.1.1. Backend AVR (QEMU) ✅ COMPLETO
@@ -281,18 +279,10 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 - [x] **Multi-pin GPIO**: Todos os pinos digitais funcionando em sincronia
 - [x] **Documentação**: `docs/ledPisca.md` com relatório técnico completo
 
-#### 1.1.3. Backend RP2040 (QEMU) - Planeado
+#### 1.1.3. Backend RP2040 (QEMU) - ⏸️ POSTERGADO
 
-- [ ] **RaspberryPiBackend**: Implementar backend dedicado para QEMU ARM
-- [ ] **qemu-system-arm** integration: Suporte completo para RP2040 (Cortex-M0+)
-- [ ] **RP2040 GPIO Service**: Adaptador específico para GPIO do Pico
-- [ ] **PIO Emulation**: State machine simulation (se viável com QEMU)
-- [ ] **NeuroForge Time para ARM**: Port do nf_time.h/cpp para Pico SDK
-- [ ] **Multi-Core Sync**: Coordenação dual-core do RP2040
-- [ ] **Shim de GPIO**: Similar ao ESP32 para reportar estados
-- [ ] **Documentação**: Setup guide estilo ESP32 para Pico
-- [ ] Definir JSONs de boards RP2040 em `docs/boards/`
-- [ ] Exemplo `example-gpio-rp2040.ts` funcional
+- A emulação de backend completa (QEMU/Renode) foi movida para uma fase futura.
+- O foco atual é suportar o Raspberry Pi Pico via **Simulação JS** no frontend.
 
 #### 1.1.4. Backend STM32 (QEMU) - Planeado
 
@@ -370,94 +360,4 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 - **Time & Location**: **Real-Time** (Relógio RTC, Alarmes, NTP Sync); **GPS** (Coordendas, Map preview, Altitude, Sat count); **Uptime** (Sistema/Boot counter).
 - **Display Emulators**: **Segmented** (7-Segment multi-digit, Alphanumeric); **LCD/OLED** (Character LCD 16x2/20x4 com custom chars, SSD1306/SH1106 canvas render accurate); **TFT/E-Paper** (Resoluções variadas, Touch simulation, Partial update).
 - **LED Displays**: **Bar Graph** (VU meter, Level gradients); **Dot Matrix** (Pixel control, Scrolling text, Animation preview).
-- **Indicators**: **Status Label** (Labels dinâmicos, Icon library, Badges); **Progress & Chart** (Linear/Circular bars, Real-time charts multi-series, Export CSV).
-- **Communication**: **Connectivity** (WiFi Status, RSSI, MQTT Monitor/Topic subscribe, I2C Scanner, SPI Config); **Serial & Logging** (UART Terminal, Send command, Log filtering DEBUG/INFO/ERR, CSV export).
-- **Storage & Media** (SD Card browser, File upload/download, ESP32-CAM MJPEG stream preview).
-- **UX/UI Layout**: **Organization** (Tabs/Pages, Cards/Sections colapsáveis, Grid layout responsive); **Alerts** (Toasts, Dismiss timing, Severity levels).
-- **Advanced Inputs**: **Color Picker** (Full spectrum, Hex/Sliders); **Keypads** (Numeric keypad touch-friendly, Text input com histórico e validação).
-
----
-
-### FASE 3: DASHBOARD BUILDER
-
-**STATUS: PLANEADO**
-
-- Grid layout responsivo tipo Home Assistant / Lovelace.
-- Widgets de gauge, switch, botão, texto, gráficos.
-- Binding de widgets a GPIO, Serial, variáveis globais, MQTT, HTTP.
-- Engine de automação (rules, scenes, schedules).
-- Export de dashboards (HTML standalone, apps móveis via Capacitor).
-
----
-
-### FASE 4: INDUSTRIAL FEATURES
-
-**STATUS: PLANEADO**
-
-- Simulação de PLC (Modbus RTU/TCP, coils, registers).
-- Ladder viewer/editor básico.
-- SCADA dashboard com tema industrial.
-- Componentes industriais (sensores, atuadores, VFD, etc.).
-- Safety systems (E-stop, light curtain, safety PLC).
-
----
-
-### FASE 5: POLISH E LANÇAMENTO
-
-**STATUS: PLANEADO**
-
-- Testes (unit, integration, performance, security).
-- Documentação maker + industrial.
-- Marketing e lançamento público.
-- Integração de pagamentos e planos.
-
----
-
-### Métricas de sucesso (KPIs)
-
-- Mês 1: QEMU + Arduino Uno rodando blink real, 10 componentes compatíveis. ✅ **COMPLETO**
-- Mês 2: ESP32 QEMU + GPIO sincronizado + Serial Monitor. ✅ **COMPLETO**
-- Mês 3: Placas Maker, 30+ componentes maker, Dashboard Builder funcional.
-- Mês 6: PLC + SCADA, 50+ componentes maker 30+ industriais, 1k usuários ativos.
-- Ano 1: 100+ componentes maker 50+ industriais, 10k usuários, €15k MRR.
-
----
-
-## Roadmaps Técnicos por Área
-
-Aqui ficam os **roadmaps técnicos detalhados**, cada um focado numa feature/stack específica.
-
-### GPIO via Serial (AVR/ESP32/RP2040)
-
-Arquivo: [`docs/roadmaps/gpio-serial-protocol.md`](./roadmaps/gpio-serial-protocol.md)
-
-- Protocolo `G:...` para reportar GPIO via Serial.
-- Backend `SerialGPIOParser` com regex não-gananciosa.
-- Helper firmware `NeuroForgeGPIO` (AVR) e shim ESP32 com weak symbols.
-- Roadmap de expansão multiplataforma e otimizações (rate limiting, checksum, modo binário).
-
-### Arquitetura Multi-Backend
-
-Arquivo: [`docs/architecture/backends.md`](./architecture/backends.md)
-
-- Descrição completa da arquitetura em três camadas: Board/Device, Backend de Execução, Framework/Runtime.
-- Detalhes do backend ESP32 (QEMU) e visão de expansão para RP2040, STM32, etc.
-- Protocolo de simulação unificado para makers e uso industrial.
-
-### Correções do LED Pisca (Arduino & ESP32)
-
-Arquivo: [`docs/ledPisca.md`](./ledPisca.md)
-
-- Relatório técnico completo das correções implementadas.
-- Detalhes do shim de GPIO do ESP32.
-- Explicação da compilação real vs binário estático.
-- Parser de GPIO e filtro de logs.
-
-### Outros roadmaps técnicos
-
-- QEMU + memória mapeada de GPIO (AVR/ESP32) – planejado/postergado, manter em `docs/roadmaps/`.
-- NeuroForge Time (clock virtual e timeline de eventos).
-- UI Builder & Dashboard Builder.
-- PLC/SCADA & integrações industriais.
-
-Conforme novos roadmaps forem criados em `docs/roadmaps/*.md`, devem ser **linkados nesta seção**, mantendo este arquivo como fonte única de verdade do roadmap geral do projeto.
+- **Indicators**: **Status Label** (Labels dinâmicos, Icon library, Badges); **Progress & Chart** (Linear/Circular bars, Real-time charts multi-series, Export CSV).\n- **Communication**: **Connectivity** (WiFi Status, RSSI, MQTT Monitor/Topic subscribe, I2C Scanner, SPI Config); **Serial & Logging** (UART Terminal, Send command, Log filtering DEBUG/INFO/ERR, CSV export).\n- **Storage & Media** (SD Card browser, File upload/download, ESP32-CAM MJPEG stream preview).\n- **UX/UI Layout**: **Organization** (Tabs/Pages, Cards/Sections colapsáveis, Grid layout responsive); **Alerts** (Toasts, Dismiss timing, Severity levels).\n- **Advanced Inputs**: **Color Picker** (Full spectrum, Hex/Sliders); **Keypads** (Numeric keypad touch-friendly, Text input com histórico e validação).\n\n---\n\n### FASE 3: DASHBOARD BUILDER\n\n**STATUS: PLANEADO**\n\n- Grid layout responsivo tipo Home Assistant / Lovelace.\n- Widgets de gauge, switch, botão, texto, gráficos.\n- Binding de widgets a GPIO, Serial, variáveis globais, MQTT, HTTP.\n- Engine de automação (rules, scenes, schedules).\n- Export de dashboards (HTML standalone, apps móveis via Capacitor).\n\n---\n\n### FASE 4: INDUSTRIAL FEATURES\n\n**STATUS: PLANEADO**\n\n- Simulação de PLC (Modbus RTU/TCP, coils, registers).\n- Ladder viewer/editor básico.\n- SCADA dashboard com tema industrial.\n- Componentes industriais (sensores, atuadores, VFD, etc.).\n- Safety systems (E-stop, light curtain, safety PLC).\n\n---\n\n### FASE 5: POLISH E LANÇAMENTO\n\n**STATUS: PLANEADO**\n\n- Testes (unit, integration, performance, security).\n- Documentação maker + industrial.\n- Marketing e lançamento público.\n- Integração de pagamentos e planos.\n\n---\n\n### Métricas de sucesso (KPIs)\n\n- Mês 1: QEMU + Arduino Uno rodando blink real, 10 componentes compatíveis. ✅ **COMPLETO**\n- Mês 2: ESP32 QEMU + GPIO sincronizado + Serial Monitor. ✅ **COMPLETO**\n- Mês 3: Placas Maker, 30+ componentes maker, Dashboard Builder funcional.\n- Mês 6: PLC + SCADA, 50+ componentes maker 30+ industriais, 1k usuários ativos.\n- Ano 1: 100+ componentes maker 50+ industriais, 10k usuários, €15k MRR.\n\n---\n\n## Roadmaps Técnicos por Área\n\nAqui ficam os **roadmaps técnicos detalhados**, cada um focado numa feature/stack específica.\n\n### GPIO via Serial (AVR/ESP32/RP2040)\n\nArquivo: [`docs/roadmaps/gpio-serial-protocol.md`](./roadmaps/gpio-serial-protocol.md)\n\n- Protocolo `G:...` para reportar GPIO via Serial.\n- Backend `SerialGPIOParser` com regex não-gananciosa.\n- Helper firmware `NeuroForgeGPIO` (AVR) e shim ESP32 com weak symbols.\n- Roadmap de expansão multiplataforma e otimizações (rate limiting, checksum, modo binário).\n\n### Arquitetura Multi-Backend\n\nArquivo: [`docs/architecture/backends.md`](./architecture/backends.md)\n\n- Descrição completa da arquitetura em três camadas: Board/Device, Backend de Execução, Framework/Runtime.\n- Detalhes do backend ESP32 (QEMU) e visão de expansão para RP2040, STM32, etc.\n- Protocolo de simulação unificado para makers e uso industrial.\n\n### Correções do LED Pisca (Arduino & ESP32)\n\nArquivo: [`docs/ledPisca.md`](./ledPisca.md)\n\n- Relatório técnico completo das correções implementadas.\n- Detalhes do shim de GPIO do ESP32.\n- Explicação da compilação real vs binário estático.\n- Parser de GPIO e filtro de logs.\n\n### Outros roadmaps técnicos\n\n- QEMU + memória mapeada de GPIO (AVR/ESP32) – planejado/postergado, manter em `docs/roadmaps/`.\n- NeuroForge Time (clock virtual e timeline de eventos).\n- UI Builder & Dashboard Builder.\n- PLC/SCADA & integrações industriais.\n\nConforme novos roadmaps forem criados em `docs/roadmaps/*.md`, devem ser **linkados nesta seção**, mantendo este arquivo como fonte única de verdade do roadmap geral do projeto.\n
