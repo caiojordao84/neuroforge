@@ -21,6 +21,8 @@
 #include "hw/qdev-clock.h"
 #include "hw/qdev-properties.h"
 #include "hw/sysbus.h"
+#include "hw/core/cpu.h"
+#include "hw/irq.h"
 #include "target/arm/cpu.h"
 
 /* ========== Memory Map ========== */
@@ -195,10 +197,8 @@ static void rp2040_soc_init(Object *obj) {
   /* Create system clock */
   s->sysclk = qdev_init_clock_in(DEVICE(obj), "sysclk", NULL, NULL, 0);
 
-  /* Create Cortex-M0+ cores (dual-core) */
-  for (int i = 0; i < RP2040_NUM_CORES; i++) {
-    object_initialize_child(obj, "armv7m[*]", &s->armv7m[i], TYPE_ARMV7M);
-  }
+  /* Create Cortex-M0+ core (single-core MVP) */
+  object_initialize_child(obj, "armv7m[0]", &s->armv7m[0], TYPE_ARMV7M);
 
   /* Create UARTs (PL011-compatible) */
   object_initialize_child(obj, "uart0", &s->uart0, TYPE_PL011);
@@ -306,29 +306,56 @@ static void rp2040_soc_realize(DeviceState *dev, Error **errp) {
   }
   sysbus_mmio_map(SYS_BUS_DEVICE(&s->usb), 0, RP2040_USB_BASE);
 
-/* ========== UARTs ========== */
-    /* Realize UARTs AFTER ARMv7M is fully realized to ensure NVIC is ready */
+  /* ========== UARTs ========== */
+  /* Realize UARTs AFTER ARMv7M is fully realized to ensure NVIC is ready */
 
-    /* UART0 */
-    if (!sysbus_realize(SYS_BUS_DEVICE(&s->uart0), errp)) {
-        return;
-    }
-    sysbus_mmio_map(SYS_BUS_DEVICE(&s->uart0), 0, RP2040_UART0_BASE);
-    /* Connect UART0 IRQ to NVIC after NVIC is realized */
-    {
-        qemu_irq uart0_irq = qdev_get_gpio_in(armv7m, RP2040_UART0_IRQ);
-        sysbus_connect_irq(SYS_BUS_DEVICE(&s->uart0), 0, uart0_irq);
+  /* UART0 */
+  if (!sysbus_realize(SYS_BUS_DEVICE(&s->uart0), errp)) {
+    return;
+  }
+  sysbus_mmio_map(SYS_BUS_DEVICE(&s->uart0), 0, RP2040_UART0_BASE);
+  /* Connect UART0 IRQ to NVIC after NVIC is realized */
+  {
+    qemu_irq uart0_irq = qdev_get_gpio_in(armv7m, RP2040_UART0_IRQ);
+    sysbus_connect_irq(SYS_BUS_DEVICE(&s->uart0), 0, uart0_irq);
+  }
+
+  /* UART1 */
+  if (!sysbus_realize(SYS_BUS_DEVICE(&s->uart1), errp)) {
+    return;
+  }
+  sysbus_mmio_map(SYS_BUS_DEVICE(&s->uart1), 0, RP2040_UART1_BASE);
+  /* Connect UART1 IRQ to NVIC after NVIC is realized */
+  {
+    qemu_irq uart1_irq = qdev_get_gpio_in(armv7m, RP2040_UART1_IRQ);
+    sysbus_connect_irq(SYS_BUS_DEVICE(&s->uart1), 0, uart1_irq);
+  }
+}
+
+/* ========== SoC Reset (Boot ROM emulation) ========== */
+static void rp2040_soc_reset(DeviceState *dev)
+{
+    uint32_t sp_flash = 0;
+    uint32_t pc_flash = 0;
+
+    /* Ler SP e PC iniciais da tabela de vetores na flash */
+    cpu_physical_memory_read(RP2040_FLASH_BASE + 0, &sp_flash, sizeof(sp_flash));
+    cpu_physical_memory_read(RP2040_FLASH_BASE + 4, &pc_flash, sizeof(pc_flash));
+
+    /* Usar o primeiro CPU registado (único core no MVP) */
+    CPUState *cs = NULL;
+    ARMCPU *cpu = NULL;
+
+    CPU_FOREACH(cs) {
+        cpu = ARM_CPU(cs);
+        break;
     }
 
-    /* UART1 */
-    if (!sysbus_realize(SYS_BUS_DEVICE(&s->uart1), errp)) {
-        return;
-    }
-    sysbus_mmio_map(SYS_BUS_DEVICE(&s->uart1), 0, RP2040_UART1_BASE);
-    /* Connect UART1 IRQ to NVIC after NVIC is realized */
-    {
-        qemu_irq uart1_irq = qdev_get_gpio_in(armv7m, RP2040_UART1_IRQ);
-        sysbus_connect_irq(SYS_BUS_DEVICE(&s->uart1), 0, uart1_irq);
+    if (cs && cpu) {
+        /* Reset limpo do core e injeção de SP/PC a partir da flash */
+        cpu_reset(cs);
+        cpu->env.regs[13] = sp_flash; /* SP (R13) */
+        cpu->env.regs[15] = pc_flash; /* PC (R15) */
     }
 }
 
@@ -342,6 +369,7 @@ static void rp2040_soc_class_init(ObjectClass *oc, void *data) {
   DeviceClass *dc = DEVICE_CLASS(oc);
 
   dc->realize = rp2040_soc_realize;
+  dc->reset   = rp2040_soc_reset;
   device_class_set_props(dc, rp2040_soc_properties);
 }
 
