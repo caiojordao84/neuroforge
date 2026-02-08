@@ -1,0 +1,114 @@
+{
+  "$schema": "./board-schema.json",
+  "id": "raspberry-pi-pico",
+  "name": "Raspberry Pi Pico",
+  "manufacturer": "Raspberry Pi",
+  "mcu": "RP2040",
+  "category": "maker",
+  "image": "/assets/boards/pico.svg",
+  "url": "https://www.raspberrypi.com/products/raspberry-pi-pico/",
+  "specs": {
+    "flashMemory": 2097152,
+    "sram": 270336,
+    "eeprom": 0,
+    "clockSpeed": 133000000,
+    "voltage": 3.3,
+    "wireless": []
+  },
+  "dimensions": {
+    "width": 21,
+    "height": 51,
+    "thickness": 1
+  },
+  "powerPins": [
+    { "name": "VBUS", "voltage": 5, "direction": "input" },
+    { "name": "VSYS", "voltage": 5, "direction": "bidirectional" },
+    { "name": "3V3", "voltage": 3.3, "direction": "output" },
+    { "name": "3V3_EN", "voltage": 3.3, "direction": "input" },
+    { "name": "GND", "voltage": 0, "direction": "bidirectional" },
+    { "name": "GND", "voltage": 0, "direction": "bidirectional" },
+    { "name": "GND", "voltage": 0, "direction": "bidirectional" },
+    { "name": "GND", "voltage": 0, "direction": "bidirectional" },
+    { "name": "GND", "voltage": 0, "direction": "bidirectional" },
+    { "name": "GND", "voltage": 0, "direction": "bidirectional" },
+    { "name": "GND", "voltage": 0, "direction": "bidirectional" },
+    { "name": "GND", "voltage": 0, "direction": "bidirectional" }
+  ],
+  "gpio": [
+    { "pin": 0, "type": "digital", "pwm": true, "interrupt": true, "label": "GP0" },
+    { "pin": 1, "type": "digital", "pwm": true, "interrupt": true, "label": "GP1" },
+    { "pin": 2, "type": "digital", "pwm": true, "interrupt": true, "label": "GP2" },
+    { "pin": 3, "type": "digital", "pwm": true, "interrupt": true, "label": "GP3" },
+    { "pin": 4, "type": "digital", "pwm": true, "interrupt": true, "label": "GP4" },
+    { "pin": 5, "type": "digital", "pwm": true, "interrupt": true, "label": "GP5" },
+    { "pin": 6, "type": "digital", "pwm": true, "interrupt": true, "label": "GP6" },
+    { "pin": 7, "type": "digital", "pwm": true, "interrupt": true, "label": "GP7" },
+    { "pin": 8, "type": "digital", "pwm": true, "interrupt": true, "label": "GP8" },
+    { "pin": 9, "type": "digital", "pwm": true, "interrupt": true, "label": "GP9" },
+    { "pin": 10, "type": "digital", "pwm": true, "interrupt": true, "label": "GP10" },
+    { "pin": 11, "type": "digital", "pwm": true, "interrupt": true, "label": "GP11" },
+    { "pin": 12, "type": "digital", "pwm": true, "interrupt": true, "label": "GP12" },
+    { "pin": 13, "type": "digital", "pwm": true, "interrupt": true, "label": "GP13" },
+    { "pin": 14, "type": "digital", "pwm": true, "interrupt": true, "label": "GP14" },
+    { "pin": 15, "type": "digital", "pwm": true, "interrupt": true, "label": "GP15" },
+    { "pin": 16, "type": "digital", "pwm": true, "interrupt": true, "label": "GP16" },
+    { "pin": 17, "type": "digital", "pwm": true, "interrupt": true, "label": "GP17" },
+    { "pin": 18, "type": "digital", "pwm": true, "interrupt": true, "label": "GP18" },
+    { "pin": 19, "type": "digital", "pwm": true, "interrupt": true, "label": "GP19" },
+    { "pin": 20, "type": "digital", "pwm": true, "interrupt": true, "label": "GP20" },
+    { "pin": 21, "type": "digital", "pwm": true, "interrupt": true, "label": "GP21" },
+    { "pin": 22, "type": "digital", "pwm": true, "interrupt": true, "label": "GP22" },
+    { "pin": 25, "type": "digital", "pwm": true, "interrupt": false, "label": "LED_BUILTIN" },
+    { "pin": 26, "type": "analog", "pwm": true, "interrupt": true, "adc": true, "label": "GP26_A0" },
+    { "pin": 27, "type": "analog", "pwm": true, "interrupt": true, "adc": true, "label": "GP27_A1" },
+    { "pin": 28, "type": "analog", "pwm": true, "interrupt": true, "adc": true, "label": "GP28_A2" }
+  ],
+  "peripherals": {
+    "serial": {
+      "uarts": 2,
+      "pins": [0, 1]
+    },
+    "i2c": {
+      "channels": 2,
+      "sda": 4,
+      "scl": 5
+    },
+    "spi": {
+      "channels": 2,
+      "miso": 16,
+      "mosi": 19,
+      "sck": 18,
+      "ss": 17
+    },
+    "wifi": {
+        "protocols": [],
+        "modes": []
+    },
+    "bluetooth": {
+        "classic": false,
+        "ble": false
+    }
+  },
+  "usb": {
+    "type": "micro-USB",
+    "chipset": "Native USB",
+    "vid": "0x2E8A",
+    "pid": "0x000A"
+  },
+  "restrictions": {
+    "strappingPins": [],
+    "reservedPins": [23, 24, 29],
+    "outputCurrent": 12,
+    "warnings": [
+      "GP25 is connected to onboard LED",
+      "System voltage is 3.3V, not 5V tolerant"
+    ]
+  },
+  "compatibility": {
+    "arduinoCore": "arduino:mbed_rp2040",
+    "platformio": "raspberrypi",
+    "frameworks": ["arduino", "micropython", "circuitpython"]
+  },
+  "languages": ["arduino-cpp", "micropython", "circuitpython"],
+  "bootloader": "UF2"
+}
