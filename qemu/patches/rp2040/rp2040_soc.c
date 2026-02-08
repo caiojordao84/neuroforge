@@ -23,7 +23,6 @@
 #include "hw/sysbus.h"
 #include "hw/core/cpu.h"
 #include "hw/irq.h"
-#include "sysemu/reset.h"
 #include "target/arm/cpu.h"
 
 /* ========== Memory Map ========== */
@@ -296,9 +295,10 @@ static void rp2040_soc_realize(DeviceState *dev, Error **errp) {
     sysbus_connect_irq(SYS_BUS_DEVICE(&s->uart1), 0, uart1_irq);
   }
 
-  /* Registar reset global do SoC */
-  qemu_register_reset(rp2040_soc_reset, dev);
+  /* Emular boot ROM: inicializar SP/PC a partir da flash */
+  rp2040_soc_reset(dev);
 }
+
 
 /* ========== SoC Reset (Boot ROM emulation) ========== */
 static void rp2040_soc_reset(void *opaque)
