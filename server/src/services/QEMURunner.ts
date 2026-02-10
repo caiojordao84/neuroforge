@@ -56,6 +56,10 @@ export class QEMURunner extends EventEmitter {
 
     console.log('🚀 Starting QEMU with args:', args.join(' '));
 
+    // IMPORTANTE: Conectar ao serial TCP ANTES de iniciar o QEMU
+    // Caso contrário, o QEMU aguarda conexão e trava
+    await this.setupSerialTCPServer();
+
     this.process = spawn(this.qemuPath, args, {
       stdio: ['ignore', 'pipe', 'pipe']
     });
@@ -87,56 +91,49 @@ export class QEMURunner extends EventEmitter {
     // Wait for monitor socket/port to be ready
     await this.waitForMonitor();
 
-    // Connect to serial TCP port
-    await this.connectSerialTCP();
-
     this.emit('started');
   }
 
   /**
-   * Connect to QEMU serial via TCP
+   * Setup TCP server to receive serial data from QEMU
+   * MUST be called BEFORE spawning QEMU (without nowait)
    */
-  private async connectSerialTCP(): Promise<void> {
-    console.log(`🔌 [QEMURunner] Connecting to serial TCP port ${this.serialPort}...`);
-
-    // Wait for port to be ready
-    await this.waitForTcpPort(this.serialPort, 3000);
+  private async setupSerialTCPServer(): Promise<void> {
+    console.log(`🏛️ [QEMURunner] Setting up serial TCP server on port ${this.serialPort}...`);
 
     return new Promise((resolve, reject) => {
-      this.serialClient = net.connect({
-        port: this.serialPort,
-        host: '127.0.0.1'
+      const server = net.createServer((socket) => {
+        console.log(`✅ [QEMURunner] QEMU connected to serial TCP server`);
+        this.serialClient = socket;
+
+        socket.setEncoding('utf8');
+
+        socket.on('data', (data: string) => {
+          console.log(`📥 [QEMURunner] Serial TCP data (${data.length} bytes):`, data);
+          this.handleSerialData(data);
+        });
+
+        socket.on('error', (error) => {
+          console.error('❌ [QEMURunner] Serial socket error:', error);
+        });
+
+        socket.on('close', () => {
+          console.log('🔌 [QEMURunner] Serial socket closed');
+          this.serialClient = null;
+        });
       });
 
-      this.serialClient.on('connect', () => {
-        console.log(`✅ [QEMURunner] Connected to serial TCP port ${this.serialPort}`);
+      server.on('error', (error) => {
+        console.error('❌ [QEMURunner] Serial TCP server error:', error);
+        reject(error);
+      });
+
+      server.listen(this.serialPort, '127.0.0.1', () => {
+        console.log(`✅ [QEMURunner] Serial TCP server listening on port ${this.serialPort}`);
+        // Store server reference to close later
+        (this as any).serialServer = server;
         resolve();
       });
-
-      this.serialClient.on('data', (chunk: Buffer) => {
-        const data = chunk.toString('utf8');
-        console.log(`📥 [QEMURunner] Serial TCP data (${chunk.length} bytes):`, data);
-        this.handleSerialData(data);
-      });
-
-      this.serialClient.on('error', (error) => {
-        console.error('❌ [QEMURunner] Serial TCP error:', error);
-        if (!this.serialClient) {
-          reject(error);
-        }
-      });
-
-      this.serialClient.on('close', () => {
-        console.log('🔌 [QEMURunner] Serial TCP connection closed');
-        this.serialClient = null;
-      });
-
-      // Timeout
-      setTimeout(() => {
-        if (this.serialClient && !this.serialClient.connecting) {
-          reject(new Error('Serial TCP connection timeout'));
-        }
-      }, 5000);
     });
   }
 
@@ -147,6 +144,13 @@ export class QEMURunner extends EventEmitter {
     if (this.serialClient) {
       this.serialClient.destroy();
       this.serialClient = null;
+    }
+
+    // Close TCP server
+    if ((this as any).serialServer) {
+      (this as any).serialServer.close();
+      (this as any).serialServer = null;
+      console.log('🔌 [QEMURunner] Serial TCP server closed');
     }
   }
 
@@ -273,18 +277,17 @@ export class QEMURunner extends EventEmitter {
       '-machine', 'arduino-uno',
       '-bios', this.firmwarePath!,
       '-nographic',
-      // 🔧 NEUROFORGE FIX: Use TCP serial instead of stdio (Windows compatibility)
-      '-serial', `tcp:127.0.0.1:${this.serialPort},server,nowait`,
+      // 🔧 NEUROFORGE FIX: TCP serial WITHOUT nowait (QEMU waits for connection)
+      // This ensures we don't lose serial output during startup
+      '-serial', `tcp:127.0.0.1:${this.serialPort},server`,
       // ⏱️ NEUROFORGE TIME: Enable real-time execution
       '-icount', 'shift=auto',
     ];
 
-    // Add monitor
+    // Add monitor (with nowait - monitor is optional)
     if (this.monitorPort) {
-      // TCP socket for Windows
       args.push('-monitor', `tcp:127.0.0.1:${this.monitorPort},server,nowait`);
     } else if (this.monitorSocket) {
-      // Unix socket for Linux/Mac
       args.push('-monitor', `unix:${this.monitorSocket},server,nowait`);
     }
 
