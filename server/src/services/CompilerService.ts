@@ -55,6 +55,39 @@ export class CompilerService {
   }
 
   /**
+   * Inject Serial.begin() into Arduino code if not present
+   * Required for NeuroForge GPIO protocol to work
+   */
+  private injectSerialBegin(code: string): string {
+    // Check if Serial.begin is already present
+    if (/Serial\.begin\s*\(/i.test(code)) {
+      console.log('✅ Serial.begin() already present in code');
+      return code;
+    }
+
+    console.log('🔧 Injecting Serial.begin(115200) for GPIO protocol...');
+
+    // Find setup() function
+    const setupRegex = /void\s+setup\s*\(\s*\)\s*\{/;
+    const match = code.match(setupRegex);
+
+    if (!match) {
+      console.warn('⚠️ Could not find setup() function, cannot inject Serial.begin()');
+      return code;
+    }
+
+    // Insert Serial.begin() right after setup() opening brace
+    const insertPos = match.index! + match[0].length;
+    const modifiedCode = 
+      code.slice(0, insertPos) +
+      '\n  Serial.begin(115200); // NeuroForge: Auto-injected for GPIO protocol' +
+      code.slice(insertPos);
+
+    console.log('✅ Serial.begin(115200) injected into setup()');
+    return modifiedCode;
+  }
+
+  /**
    * Compile Arduino sketch to firmware
    * @param code - Arduino sketch code
    * @param board - Target board type
@@ -70,6 +103,9 @@ export class CompilerService {
       return this.compileESP32(code, board);
     }
 
+    // 🔧 NEUROFORGE: Inject Serial.begin() for Arduino AVR
+    const processedCode = this.injectSerialBegin(code);
+
     // Compilação padrão para AVR/Arduino
     const sketchName = `sketch_${Date.now()}`;
     const sketchDir = path.join(this.tempDir, sketchName);
@@ -80,8 +116,8 @@ export class CompilerService {
       // Create sketch directory
       fs.mkdirSync(sketchDir, { recursive: true });
 
-      // Write sketch file
-      fs.writeFileSync(sketchFile, code, 'utf-8');
+      // Write sketch file with processed code
+      fs.writeFileSync(sketchFile, processedCode, 'utf-8');
       console.log(`✅ Created sketch: ${sketchFile}`);
 
       // Get FQBN for the board and mode
