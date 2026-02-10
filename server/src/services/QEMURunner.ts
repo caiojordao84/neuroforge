@@ -56,8 +56,8 @@ export class QEMURunner extends EventEmitter {
 
     console.log('🚀 Starting QEMU with args:', args.join(' '));
 
-    // IMPORTANTE: Conectar ao serial TCP ANTES de iniciar o QEMU
-    // Caso contrário, o QEMU aguarda conexão e trava
+    // IMPORTANTE: Criar servidor TCP ANTES de iniciar o QEMU
+    // QEMU vai se conectar como cliente
     await this.setupSerialTCPServer();
 
     this.process = spawn(this.qemuPath, args, {
@@ -96,7 +96,7 @@ export class QEMURunner extends EventEmitter {
 
   /**
    * Setup TCP server to receive serial data from QEMU
-   * MUST be called BEFORE spawning QEMU (without nowait)
+   * QEMU will connect as a client
    */
   private async setupSerialTCPServer(): Promise<void> {
     console.log(`🏛️ [QEMURunner] Setting up serial TCP server on port ${this.serialPort}...`);
@@ -277,9 +277,9 @@ export class QEMURunner extends EventEmitter {
       '-machine', 'arduino-uno',
       '-bios', this.firmwarePath!,
       '-nographic',
-      // 🔧 NEUROFORGE FIX: TCP serial WITHOUT nowait (QEMU waits for connection)
-      // This ensures we don't lose serial output during startup
-      '-serial', `tcp:127.0.0.1:${this.serialPort},server`,
+      // 🔧 NEUROFORGE FIX: QEMU connects as CLIENT to backend TCP server
+      // No 'server' flag = QEMU is client, backend is server
+      '-serial', `tcp:127.0.0.1:${this.serialPort}`,
       // ⏱️ NEUROFORGE TIME: Enable real-time execution
       '-icount', 'shift=auto',
     ];
