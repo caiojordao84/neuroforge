@@ -155,9 +155,16 @@ export class QEMUSimulationEngine extends EventEmitter {
   private setupRunnerEvents(): void {
     // Forward serial output
     this.runner.on('serial', (line: string) => {
+      // 🔍 DEBUG: Log every line received from QEMU
+      console.log('🔍 [QEMU Serial]:', line);
+      
       // NeuroForge: Process line for GPIO first. 
       // If it's a GPIO frame, it returns true and we DON'T echo it to serial monitor.
       const isGPIO = this.gpioParser.processLine(line);
+
+      if (isGPIO) {
+        console.log('⚡ [GPIO Detected] Line matched GPIO protocol:', line);
+      }
 
       if (!isGPIO) {
         this.serialBuffer.push(line);
@@ -187,12 +194,19 @@ export class QEMUSimulationEngine extends EventEmitter {
   private setupGpioParserEvents(): void {
     this.gpioParser.on('pin-change', (update: PinStateUpdate) => {
       const { pin, value, mode } = update;
+      
+      // 🔍 DEBUG: Log pin-change event
+      console.log(`⚡ [GPIO pin-change] Pin ${pin} = ${value} (mode: ${mode || 'OUTPUT'})`);
+      
       const state: PinState = {
         mode: mode || 'OUTPUT',
         value
       };
 
       this.pinStates.set(pin, state);
+      
+      // 🔍 DEBUG: About to emit pin-change
+      console.log(`📡 [Engine] Emitting pin-change event to WebSocket...`);
       this.emit('pin-change', pin, state);
     });
   }
