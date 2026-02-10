@@ -14,6 +14,7 @@ export class QEMURunner extends EventEmitter {
   private firmwarePath: string | null = null;
   private monitorSocket: string | null = null;
   private monitorPort: number | null = null;
+  private healthCheckInterval: NodeJS.Timeout | null = null;
 
   constructor() {
     super();
@@ -53,9 +54,21 @@ export class QEMURunner extends EventEmitter {
 
     console.log('🚀 Starting QEMU with args:', args.join(' '));
 
-    this.process = spawn(this.qemuPath, args, {
+    // Force unbuffered output
+    const spawnOptions: any = {
       stdio: ['ignore', 'pipe', 'pipe']
-    });
+    };
+
+    // Windows: Set environment to force unbuffered output
+    if (process.platform === 'win32') {
+      spawnOptions.env = {
+        ...process.env,
+        PYTHONUNBUFFERED: '1',
+        QEMU_AUDIO_DRV: 'none'
+      };
+    }
+
+    this.process = spawn(this.qemuPath, args, spawnOptions);
 
     this.process.on('error', (error) => {
       console.error('QEMU process error:', error);
@@ -64,6 +77,7 @@ export class QEMURunner extends EventEmitter {
 
     this.process.on('exit', (code) => {
       console.log('QEMU process exited with code:', code);
+      this.stopHealthCheck();
       this.process = null;
       this.emit('stopped', code);
     });
@@ -71,6 +85,10 @@ export class QEMURunner extends EventEmitter {
     // 🔍 DEBUG: Check if stdout exists
     if (this.process.stdout) {
       console.log('✅ [QEMURunner] stdout stream exists, setting up capture...');
+      
+      // Set encoding to utf8 to avoid buffering
+      this.process.stdout.setEncoding('utf8');
+      
       this.captureSerial(this.process.stdout);
     } else {
       console.error('❌ [QEMURunner] stdout is NULL! Cannot capture serial output.');
@@ -79,15 +97,51 @@ export class QEMURunner extends EventEmitter {
     // 🔍 DEBUG: Also capture stderr
     if (this.process.stderr) {
       console.log('✅ [QEMURunner] stderr stream exists, setting up capture...');
-      this.process.stderr.on('data', (chunk: Buffer) => {
-        console.error('🔴 [QEMU stderr]:', chunk.toString());
+      this.process.stderr.setEncoding('utf8');
+      this.process.stderr.on('data', (data: string) => {
+        console.error('🔴 [QEMU stderr]:', data);
       });
     }
+
+    // Start health check
+    this.startHealthCheck();
 
     // Wait for monitor socket/port to be ready
     await this.waitForMonitor();
 
     this.emit('started');
+  }
+
+  /**
+   * Start process health check
+   */
+  private startHealthCheck(): void {
+    console.log('🏥 [QEMURunner] Starting health check (5s interval)...');
+    this.healthCheckInterval = setInterval(() => {
+      if (this.process) {
+        const isAlive = this.process.killed === false && this.process.exitCode === null;
+        console.log(`💓 [QEMURunner] Health check: PID=${this.process.pid}, alive=${isAlive}, killed=${this.process.killed}, exitCode=${this.process.exitCode}`);
+        
+        if (!isAlive) {
+          console.error('❌ [QEMURunner] Process is dead but exit event not fired!');
+          this.stopHealthCheck();
+        }
+      } else {
+        console.log('⚠️ [QEMURunner] Process is null in health check');
+        this.stopHealthCheck();
+      }
+    }, 5000);
+  }
+
+  /**
+   * Stop health check
+   */
+  private stopHealthCheck(): void {
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+      this.healthCheckInterval = null;
+      console.log('🛑 [QEMURunner] Health check stopped');
+    }
   }
 
   /**
@@ -199,6 +253,8 @@ export class QEMURunner extends EventEmitter {
    * Stop QEMU
    */
   stop(): void {
+    this.stopHealthCheck();
+    
     if (this.process) {
       this.process.kill('SIGTERM');
       this.process = null;
@@ -223,14 +279,16 @@ export class QEMURunner extends EventEmitter {
    */
   private captureSerial(stream: Readable): void {
     let buffer = '';
+    let dataReceivedCount = 0;
 
     console.log('🎧 [QEMURunner] captureSerial() called, listening for stdout data...');
 
-    stream.on('data', (chunk: Buffer) => {
-      const data = chunk.toString();
-      console.log(`📥 [QEMURunner] Received ${chunk.length} bytes from stdout:`, data);
+    stream.on('data', (chunk: string) => {
+      dataReceivedCount++;
+      console.log(`📥 [QEMURunner] Data event #${dataReceivedCount}: Received ${chunk.length} bytes`);
+      console.log(`📥 [QEMURunner] Raw data:`, JSON.stringify(chunk));
       
-      buffer += data;
+      buffer += chunk;
 
       // Split by newlines
       const lines = buffer.split('\n');
@@ -251,6 +309,17 @@ export class QEMURunner extends EventEmitter {
     stream.on('end', () => {
       console.log('🏁 [QEMURunner] stdout stream ended');
     });
+
+    // Emit a test after 2 seconds to see if stream is working
+    setTimeout(() => {
+      if (dataReceivedCount === 0) {
+        console.error('⚠️ [QEMURunner] NO DATA received from stdout after 2 seconds!');
+        console.error('⚠️ [QEMURunner] QEMU may be frozen or not executing firmware');
+        console.error('⚠️ [QEMURunner] Check if QEMU process is running in Task Manager');
+      } else {
+        console.log(`✅ [QEMURunner] Received ${dataReceivedCount} data events so far`);
+      }
+    }, 2000);
   }
 
   /**
