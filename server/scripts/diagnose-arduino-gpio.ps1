@@ -8,9 +8,9 @@
 # ===========================================================
 
 Write-Host ""
-Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "══════════════════════════════════════════════════════" -ForegroundColor Cyan
 Write-Host "  Arduino GPIO Diagnostic Tool" -ForegroundColor Yellow
-Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "══════════════════════════════════════════════════════" -ForegroundColor Cyan
 Write-Host ""
 
 $CORE_PATH = "$env:LOCALAPPDATA\Arduino15\packages\arduino\hardware\avr\1.8.7\cores"
@@ -23,7 +23,7 @@ $BOARDS_TXT = "$env:LOCALAPPDATA\Arduino15\packages\arduino\hardware\avr\1.8.7\b
 # 1. VERIFICAR CORE NEUROFORGE
 # ===========================================================
 Write-Host "[1/6] Verificando Core NeuroForge..." -ForegroundColor Cyan
-Write-Host "───────────────────────────────────────────────────" -ForegroundColor Gray
+Write-Host "──────────────────────────────────────────────────────" -ForegroundColor Gray
 
 if (Test-Path $NF_CORE) {
     Write-Host "  ✅ Core instalado: $NF_CORE" -ForegroundColor Green
@@ -49,7 +49,7 @@ Write-Host ""
 # 2. VERIFICAR PLACA UNOQEMU
 # ===========================================================
 Write-Host "[2/6] Verificando Placa unoqemu..." -ForegroundColor Cyan
-Write-Host "───────────────────────────────────────────────────" -ForegroundColor Gray
+Write-Host "──────────────────────────────────────────────────────" -ForegroundColor Gray
 
 $boardsContent = Get-Content $BOARDS_TXT -Raw
 
@@ -74,22 +74,22 @@ Write-Host ""
 # 3. VERIFICAR PATCH EM WIRING_DIGITAL.C
 # ===========================================================
 Write-Host "[3/6] Verificando Patch GPIO..." -ForegroundColor Cyan
-Write-Host "───────────────────────────────────────────────────" -ForegroundColor Gray
+Write-Host "──────────────────────────────────────────────────────" -ForegroundColor Gray
 
 if (Test-Path $WIRING_DIGITAL) {
     $wiringContent = Get-Content $WIRING_DIGITAL -Raw
     
     # Verificar include
-    if ($wiringContent -match "#include.*nf_gpio\.h") {
-        Write-Host "  ✅ Header nf_gpio.h incluido" -ForegroundColor Green
+    if ($wiringContent -match "nf_gpio") {
+        Write-Host "  ✅ NeuroForge GPIO integrado" -ForegroundColor Green
     } else {
-        Write-Host "  ❌ Header nf_gpio.h NÃO incluído" -ForegroundColor Red
-        Write-Host "  ⚠️  PROBLEMA ENCONTRADO: digitalWrite() não vai chamar nf_report_gpio()" -ForegroundColor Yellow
+        Write-Host "  ❌ NeuroForge GPIO NÃO integrado" -ForegroundColor Red
+        Write-Host "  ⚠️  PROBLEMA ENCONTRADO: digitalWrite() não vai emitir protocolo GPIO" -ForegroundColor Yellow
     }
     
     # Verificar chamada nf_report_gpio
     if ($wiringContent -match "nf_report_gpio") {
-        Write-Host "  ✅ Função nf_report_gpio() chamada" -ForegroundColor Green
+        Write-Host "  ✅ Função nf_report_gpio() presente" -ForegroundColor Green
     } else {
         Write-Host "  ❌ Função nf_report_gpio() NÃO chamada" -ForegroundColor Red
         Write-Host "  ⚠️  PROBLEMA ENCONTRADO: digitalWrite() não vai emitir protocolo GPIO" -ForegroundColor Yellow
@@ -105,9 +105,10 @@ Write-Host ""
 # 4. COMPILAR FIRMWARE DE TESTE
 # ===========================================================
 Write-Host "[4/6] Compilando Firmware de Teste..." -ForegroundColor Cyan
-Write-Host "───────────────────────────────────────────────────" -ForegroundColor Gray
+Write-Host "──────────────────────────────────────────────────────" -ForegroundColor Gray
 
-$testSketch = @"
+# Usar here-string corretamente
+$testSketch = @'
 void setup() {
   Serial.begin(115200);
   pinMode(13, OUTPUT);
@@ -123,7 +124,7 @@ void loop() {
   Serial.println("LED OFF");
   delay(1000);
 }
-"@
+'@
 
 $tempDir = "$env:TEMP\neuroforge_test"
 New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
@@ -155,7 +156,7 @@ Write-Host ""
 # 5. ANALISAR SÍMBOLOS DO ELF
 # ===========================================================
 Write-Host "[5/6] Analisando Símbolos..." -ForegroundColor Cyan
-Write-Host "───────────────────────────────────────────────────" -ForegroundColor Gray
+Write-Host "──────────────────────────────────────────────────────" -ForegroundColor Gray
 
 $elfPath = "$tempDir\test_gpio.ino.elf"
 
@@ -196,7 +197,7 @@ Write-Host ""
 # 6. TESTE RÁPIDO COM QEMU
 # ===========================================================
 Write-Host "[6/6] Teste Rápido com QEMU..." -ForegroundColor Cyan
-Write-Host "───────────────────────────────────────────────────" -ForegroundColor Gray
+Write-Host "──────────────────────────────────────────────────────" -ForegroundColor Gray
 
 Write-Host "  💡 Para testar manualmente:" -ForegroundColor Cyan
 Write-Host ""
@@ -213,15 +214,15 @@ Write-Host ""
 # ===========================================================
 # RESUMO
 # ===========================================================
-Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "══════════════════════════════════════════════════════" -ForegroundColor Cyan
 Write-Host "  RESUMO DO DIAGNÓSTICO" -ForegroundColor Yellow
-Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "══════════════════════════════════════════════════════" -ForegroundColor Cyan
 Write-Host ""
 
 Write-Host "🔧 Próximos passos se o LED não piscar:" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "1. Se nf_report_gpio() NÃO foi encontrado:" -ForegroundColor Yellow
-Write-Host "   → Execute: .\fix-arduino-gpio.ps1" -ForegroundColor Gray
+Write-Host "   → Execute novamente: install-core.ps1" -ForegroundColor Gray
 Write-Host ""
 Write-Host "2. Se símbolos NeuroForge NÃO aparecem:" -ForegroundColor Yellow
 Write-Host "   → Recompile com: arduino-cli compile --clean" -ForegroundColor Gray
