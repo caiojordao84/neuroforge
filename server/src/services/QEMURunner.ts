@@ -68,8 +68,20 @@ export class QEMURunner extends EventEmitter {
       this.emit('stopped', code);
     });
 
+    // 🔍 DEBUG: Check if stdout exists
     if (this.process.stdout) {
+      console.log('✅ [QEMURunner] stdout stream exists, setting up capture...');
       this.captureSerial(this.process.stdout);
+    } else {
+      console.error('❌ [QEMURunner] stdout is NULL! Cannot capture serial output.');
+    }
+
+    // 🔍 DEBUG: Also capture stderr
+    if (this.process.stderr) {
+      console.log('✅ [QEMURunner] stderr stream exists, setting up capture...');
+      this.process.stderr.on('data', (chunk: Buffer) => {
+        console.error('🔴 [QEMU stderr]:', chunk.toString());
+      });
     }
 
     // Wait for monitor socket/port to be ready
@@ -212,8 +224,13 @@ export class QEMURunner extends EventEmitter {
   private captureSerial(stream: Readable): void {
     let buffer = '';
 
+    console.log('🎧 [QEMURunner] captureSerial() called, listening for stdout data...');
+
     stream.on('data', (chunk: Buffer) => {
-      buffer += chunk.toString();
+      const data = chunk.toString();
+      console.log(`📥 [QEMURunner] Received ${chunk.length} bytes from stdout:`, data);
+      
+      buffer += data;
 
       // Split by newlines
       const lines = buffer.split('\n');
@@ -221,9 +238,18 @@ export class QEMURunner extends EventEmitter {
 
       for (const line of lines) {
         if (line.trim()) {
+          console.log('📤 [QEMURunner] Emitting serial event:', line.trim());
           this.emit('serial', line.trim());
         }
       }
+    });
+
+    stream.on('error', (error) => {
+      console.error('❌ [QEMURunner] stdout error:', error);
+    });
+
+    stream.on('end', () => {
+      console.log('🏁 [QEMURunner] stdout stream ended');
     });
   }
 
