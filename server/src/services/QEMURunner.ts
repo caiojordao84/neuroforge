@@ -16,6 +16,7 @@ export class QEMURunner extends EventEmitter {
   private monitorPort: number | null = null;
   private serialPort: number = 5555;
   private serialClient: net.Socket | null = null;
+  private serialBuffer: string = ''; // Buffer for fragmented TCP data
   private healthCheckInterval: NodeJS.Timeout | null = null;
 
   constructor() {
@@ -41,6 +42,7 @@ export class QEMURunner extends EventEmitter {
     }
 
     this.firmwarePath = firmware;
+    this.serialBuffer = ''; // Reset buffer
 
     // Setup monitor socket
     // Windows doesn't support Unix sockets, use TCP instead
@@ -109,7 +111,8 @@ export class QEMURunner extends EventEmitter {
         socket.setEncoding('utf8');
 
         socket.on('data', (data: string) => {
-          console.log(`📥 [QEMURunner] Serial TCP data (${data.length} bytes):`, data);
+          // Don't log every byte - too verbose
+          // console.log(`📥 [QEMURunner] Serial TCP data (${data.length} bytes):`, data);
           this.handleSerialData(data);
         });
 
@@ -156,10 +159,19 @@ export class QEMURunner extends EventEmitter {
 
   /**
    * Handle serial data from TCP
+   * Buffers fragments and emits complete lines
    */
   private handleSerialData(data: string): void {
-    const lines = data.split('\n');
+    // Append to buffer
+    this.serialBuffer += data;
+
+    // Process complete lines (split by \n or \r\n)
+    const lines = this.serialBuffer.split(/\r?\n/);
     
+    // Keep incomplete line in buffer
+    this.serialBuffer = lines.pop() || '';
+
+    // Emit complete lines
     for (const line of lines) {
       if (line.trim()) {
         console.log('📤 [QEMURunner] Emitting serial event:', line.trim());
@@ -172,13 +184,13 @@ export class QEMURunner extends EventEmitter {
    * Start process health check
    */
   private startHealthCheck(): void {
-    console.log('🏥 [QEMURunner] Starting health check (5s interval)...');
+    console.log('🏥 [QEMURunner] Starting health check (10s interval)...');
     this.healthCheckInterval = setInterval(() => {
       if (this.process) {
         const isAlive = this.process.killed === false && this.process.exitCode === null;
         console.log(`💓 [QEMURunner] Health check: PID=${this.process.pid}, alive=${isAlive}, serialConnected=${this.serialClient !== null}`);
       }
-    }, 5000);
+    }, 10000); // 10s instead of 5s to reduce spam
   }
 
   /**
