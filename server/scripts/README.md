@@ -7,6 +7,8 @@ Scripts de utilitário para manutenção e backup do projeto NeuroForge.
 ## 📋 Índice
 
 - [backup-cores.ps1](#-backup-coresps1) - Backup completo de todos os cores customizados
+- [diagnose-arduino-gpio.ps1](#-diagnose-arduino-gpiops1) - Diagnóstico de problemas GPIO Arduino
+- [fix-arduino-gpio.ps1](#-fix-arduino-gpiops1) - Correção automática de GPIO
 - [Guia de Restauração](#-guia-de-restauração)
 - [FAQ](#-perguntas-frequentes)
 
@@ -32,77 +34,165 @@ Script PowerShell que cria backup completo de **todos os componentes críticos**
    - Arquivo `.env` do servidor
    - Firmwares de teste
 
----
-
 ### Uso
-
-#### Backup Padrão (Recomendado)
 
 ```powershell
 cd D:\Documents\NeuroForge\neuroforge\server\scripts
 .\backup-cores.ps1
 ```
 
-**Resultado:** Cria backup em `D:\Backups\NeuroForge\cores_YYYYMMDD_HHMMSS`
+---
 
-#### Backup em Local Customizado
+## 🔍 diagnose-arduino-gpio.ps1
+
+### Descrição
+
+**Quando usar:** LED não pisca no Arduino QEMU apesar do sketch compilar.
+
+Este script verifica **todo o fluxo GPIO** do Arduino AVR:
+
+1. ✅ Core NeuroForge instalado
+2. ✅ Placa `unoqemu` definida
+3. ✅ Patch em `wiring_digital.c` aplicado
+4. ✅ Firmware compila corretamente
+5. ✅ Símbolos NeuroForge linkados no ELF
+6. ✅ QEMU emite protocolo `G:pin=X,v=Y`
+
+### Uso
 
 ```powershell
-.\backup-cores.ps1 -BackupDir "E:\MeusBackups\NeuroForge_20260210"
+cd D:\Documents\NeuroForge\neuroforge\server\scripts
+.\diagnose-arduino-gpio.ps1
+```
+
+### Saída Esperada
+
+```
+═══════════════════════════════════════════════════
+  Arduino GPIO Diagnostic Tool
+═══════════════════════════════════════════════════
+
+[1/6] Verificando Core NeuroForge...
+───────────────────────────────────────────────────
+  ✅ Core instalado
+  ✅ nf_gpio.cpp
+  ✅ nf_gpio.h
+  ✅ nf_time.cpp
+  ✅ nf_time.h
+
+[2/6] Verificando Placa unoqemu...
+───────────────────────────────────────────────────
+  ✅ Placa unoqemu definida
+  ✅ Core configurado: neuroforge_qemu
+
+[3/6] Verificando Patch GPIO...
+───────────────────────────────────────────────────
+  ❌ Header nf_gpio.h NÃO incluído
+  ❌ Função nf_report_gpio() NÃO chamada
+  ⚠️  PROBLEMA ENCONTRADO!
+
+RESOLUÇÃO:
+  Execute: .\fix-arduino-gpio.ps1
 ```
 
 ---
 
-### Saída do Script
+## 🔧 fix-arduino-gpio.ps1
+
+### Descrição
+
+**Problema resolvido:** `digitalWrite()` não emite protocolo GPIO.
+
+Este script **automaticamente**:
+
+1. 📋 Faz backup de `wiring_digital.c`
+2. ➕ Adiciona `#include "../neuroforge_qemu/nf_gpio.h"`
+3. 🔧 Insere `nf_report_gpio(pin, val)` dentro de `digitalWrite()`
+4. ✅ Verifica se o patch foi aplicado corretamente
+
+### Uso
+
+```powershell
+cd D:\Documents\NeuroForge\neuroforge\server\scripts
+.\fix-arduino-gpio.ps1
+```
+
+### Com Sobrescrita Forçada
+
+```powershell
+.\fix-arduino-gpio.ps1 -Force
+```
+
+### Saída Esperada
 
 ```
-═══════════════════════════════════════════════
-  NeuroForge Core Backup Tool
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
+  Arduino GPIO Fix Tool
+═══════════════════════════════════════════════════
 
-📁 Diretório de backup: D:\Backups\NeuroForge\cores_20260210_095530
+[1/4] Verificando arquivos...
+  ✅ wiring_digital.c encontrado
 
-[1/5] Core NeuroForge AVR (Arduino QEMU)
-─────────────────────────────────────────
-  ✅ Core copiado: D:\Backups\NeuroForge\cores_20260210_095530\neuroforge_avr_core
-  ✅ boards.txt: D:\Backups\NeuroForge\cores_20260210_095530\boards.txt
-  ✅ wiring_digital.c: D:\Backups\NeuroForge\cores_20260210_095530\wiring_digital.c
+[2/4] Criando backup...
+  ✅ Backup criado: wiring_digital.c.neuroforge_backup
 
-[2/5] ESP32 QEMU (Binário + Configurações)
-─────────────────────────────────────────
-  ✅ Binário QEMU: D:\Backups\NeuroForge\cores_20260210_095530\esp32_qemu\qemu-system-xtensa.exe
-  ✅ Data files: D:\Backups\NeuroForge\cores_20260210_095530\esp32_qemu\data
+[3/4] Aplicando patch GPIO...
+  🔧 Modificando wiring_digital.c...
+  ✅ Include adicionado
+  ✅ Patch aplicado em digitalWrite()
+  ✅ Arquivo salvo
 
-═══════════════════════════════════════════════
-  ✅ BACKUP CONCLUÍDO COM SUCESSO!
-═══════════════════════════════════════════════
+[4/4] Verificando patch...
+  ✅ Include presente
+  ✅ Chamada nf_report_gpio() presente
+
+═══════════════════════════════════════════════════
+  ✅ PATCH APLICADO COM SUCESSO!
+═══════════════════════════════════════════════════
+
+Próximos passos:
+  1. Recompilar firmware:
+     arduino-cli compile --clean --fqbn arduino:avr:unoqemu blink.ino
+
+  2. Testar com QEMU:
+     qemu-system-avr -machine arduino-uno -bios blink.elf -serial mon:stdio
+
+  3. Procurar linhas:
+     G:pin=13,v=1  (LED ligado)
+     G:pin=13,v=0  (LED desligado)
 ```
 
 ---
 
-### Estrutura do Backup
+## 🐞 Workflow de Diagnóstico
 
+### Problema: LED não pisca no Arduino QEMU
+
+```powershell
+# 1. Diagnosticar problema
+.\diagnose-arduino-gpio.ps1
+
+# 2. Se detectar problema de GPIO, aplicar correção
+.\fix-arduino-gpio.ps1
+
+# 3. Recompilar firmware
+arduino-cli compile --clean --fqbn arduino:avr:unoqemu blink.ino
+
+# 4. Testar com QEMU manualmente
+qemu-system-avr -machine arduino-uno `
+                -bios build/arduino.avr.unoqemu/blink.ino.elf `
+                -serial mon:stdio -nographic
+
+# 5. Verificar saída (deve aparecer):
+# G:pin=13,v=1
+# G:pin=13,v=0
 ```
-D:\Backups\NeuroForge\cores_20260210_095530\
-├── neuroforge_avr_core\         # Core completo
-│   ├── nf_gpio.cpp
-│   ├── nf_gpio.h
-│   ├── nf_time.cpp
-│   ├── nf_time.h
-│   ├── nf_arduino_time.cpp
-│   └── boards.txt
-├── esp32_qemu\                 # QEMU ESP32
-│   ├── qemu-system-xtensa.exe
-│   └── data\                   # BIOSes, ROMs
-├── esp32_firmware\             # Firmwares de teste
-│   ├── qemu_flash.bin
-│   └── qemu_efuse.bin
-├── boards.txt                  # Definições de placas
-├── wiring_digital.c            # Arduino core com patch
-├── .env                        # Configurações do servidor
-├── README_AVR.txt              # Guia de restauração AVR
-├── README_ESP32.txt            # Guia de restauração ESP32
-└── INVENTARIO.txt              # Índice completo
+
+### Problema: Reverteu atualização e perdeu GPIO
+
+```powershell
+# Core Arduino foi atualizado e perdeu o patch
+.\fix-arduino-gpio.ps1 -Force
 ```
 
 ---
@@ -129,8 +219,8 @@ Copy-Item -Path "$BACKUP\neuroforge_avr_core" -Destination "$CORE_PATH\neuroforg
 $BOARDS_TXT = "$env:LOCALAPPDATA\Arduino15\packages\arduino\hardware\avr\1.8.7\boards.txt"
 Get-Content "$BACKUP\boards.txt" | Add-Content $BOARDS_TXT
 
-# 5. Aplicar patch em wiring_digital.c
-Copy-Item -Path "$BACKUP\wiring_digital.c" -Destination "$CORE_PATH\arduino\wiring_digital.c" -Force
+# 5. Aplicar patch GPIO
+.\fix-arduino-gpio.ps1
 
 # 6. Verificar
 arduino-cli board listall | Select-String "unoqemu"
@@ -150,26 +240,10 @@ Remove-Item -Path "$CORE_PATH\neuroforge_qemu" -Recurse -Force -ErrorAction Sile
 # Restaurar do backup
 Copy-Item -Path "$BACKUP\neuroforge_avr_core" -Destination "$CORE_PATH\neuroforge_qemu" -Recurse -Force
 
+# Reaplicar patch GPIO
+.\fix-arduino-gpio.ps1 -Force
+
 Write-Host "✅ Core restaurado!" -ForegroundColor Green
-```
-
----
-
-### Cenário 3: ESP32 QEMU Não Funciona
-
-```powershell
-$BACKUP = "D:\Backups\NeuroForge\cores_20260210_095530"
-
-# Restaurar binário
-Copy-Item -Path "$BACKUP\esp32_qemu\qemu-system-xtensa.exe" `
-          -Destination "C:\qemu-project\builds\esp32\bin\qemu-system-xtensa.exe" -Force
-
-# Restaurar data files
-Copy-Item -Path "$BACKUP\esp32_qemu\data" `
-          -Destination "C:\qemu-project\builds\esp32\share\qemu" -Recurse -Force
-
-# Testar
-qemu-system-xtensa.exe --version
 ```
 
 ---
@@ -196,38 +270,76 @@ Register-ScheduledTask -TaskName "NeuroForge Backup" -Action $action -Trigger $t
 robocopy "D:\Backups\NeuroForge" "C:\Users\USER\OneDrive\NeuroForge_Backups" /MIR
 ```
 
+### Verificar se Patch Funciona
+
+```powershell
+# 1. Criar sketch de teste
+$sketch = @"
+void setup() {
+  pinMode(13, OUTPUT);
+}
+void loop() {
+  digitalWrite(13, HIGH);
+  delay(1000);
+  digitalWrite(13, LOW);
+  delay(1000);
+}
+"@
+
+Set-Content -Path "test.ino" -Value $sketch
+
+# 2. Compilar
+arduino-cli compile --fqbn arduino:avr:unoqemu test.ino
+
+# 3. Verificar símbolos
+$avrNm = "$env:LOCALAPPDATA\Arduino15\packages\arduino\tools\avr-gcc\7.3.0-atmel3.6.1-arduino7\bin\avr-nm.exe"
+& $avrNm build/arduino.avr.unoqemu/test.ino.elf | Select-String "nf_report_gpio"
+
+# 4. Se retornar algo, o patch está funcionando!
+```
+
 ---
 
 ## ❓ Perguntas Frequentes
 
-### O core precisa ser reinstalado após atualizar Arduino CLI?
+### O patch sobrevive a atualizações do Arduino CLI?
 
-**Sim.** Se você atualizar o core `arduino:avr` (ex: 1.8.7 → 1.8.8), o NeuroForge core será perdido.
+**Não.** Se você atualizar o core `arduino:avr`, o patch será perdido.
 
 **Solução:**
-1. Fazer backup antes de atualizar
-2. Após atualizar, restaurar o core na nova versão
-
-### O backup inclui bibliotecas Arduino?
-
-**Não.** O backup foca em:
-- Cores customizados (NeuroForge)
-- QEMU binários (ESP32)
-- Configurações do projeto
-
-Bibliotecas Arduino padrão podem ser reinstaladas via `arduino-cli lib install`.
-
-### Como saber qual versão do core AVR tenho?
-
 ```powershell
-arduino-cli core list | Select-String "arduino:avr"
+# Após atualizar core AVR:
+.\fix-arduino-gpio.ps1 -Force
 ```
 
-### Posso usar o backup em outro PC?
+### Como saber se o LED deveria estar piscando?
 
-**Sim!** Mas ajuste os caminhos:
-- Abra `INVENTARIO.txt` no backup
-- Execute os comandos de restauração ajustando os paths
+**Teste direto com QEMU:**
+```powershell
+qemu-system-avr -machine arduino-uno -bios blink.elf -serial mon:stdio -nographic
+```
+
+**Deve aparecer:**
+```
+G:pin=13,v=1
+G:pin=13,v=0
+G:pin=13,v=1
+G:pin=13,v=0
+```
+
+Se não aparece, o problema é no core (execute `fix-arduino-gpio.ps1`).
+
+### O ESP32 também precisa de patch?
+
+**Não.** O ESP32 usa um core diferente que já emite o protocolo GPIO nativamente.
+
+### Como restaurar o wiring_digital.c original?
+
+```powershell
+$ARDUINO_CORE = "$env:LOCALAPPDATA\Arduino15\packages\arduino\hardware\avr\1.8.7\cores\arduino"
+Copy-Item -Path "$ARDUINO_CORE\wiring_digital.c.neuroforge_backup" `
+          -Destination "$ARDUINO_CORE\wiring_digital.c" -Force
+```
 
 ---
 
@@ -254,8 +366,9 @@ Problemas ao restaurar? Consulte:
 1. `README_AVR.txt` dentro do backup
 2. `README_ESP32.txt` dentro do backup
 3. `INVENTARIO.txt` para verificar integridade
+4. Execute `.\diagnose-arduino-gpio.ps1` para diagnóstico completo
 
 ---
 
 **Última atualização:** 10/02/2026  
-**Versão:** 1.0.0
+**Versão:** 1.1.0
