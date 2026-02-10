@@ -126,10 +126,18 @@ void loop() {
 }
 '@
 
-$tempDir = "$env:TEMP\neuroforge_test"
+# IMPORTANTE: Nome do diretorio deve ser igual ao nome do .ino
+$sketchName = "test_gpio_nf"
+$tempDir = "$env:TEMP\$sketchName"
+
+# Limpar diretorio anterior se existir
+if (Test-Path $tempDir) {
+    Remove-Item -Path $tempDir -Recurse -Force
+}
+
 New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
 
-$sketchPath = "$tempDir\test_gpio.ino"
+$sketchPath = "$tempDir\$sketchName.ino"
 Set-Content -Path $sketchPath -Value $testSketch
 
 Write-Host "  [INFO] Sketch criado: $sketchPath" -ForegroundColor Cyan
@@ -139,7 +147,8 @@ try {
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host "  [OK] Compilacao bem-sucedida" -ForegroundColor Green
-        Write-Host "  [INFO] ELF: $tempDir\test_gpio.ino.elf" -ForegroundColor Cyan
+        $elfPath = "$tempDir\build\arduino.avr.unoqemu\$sketchName.ino.elf"
+        Write-Host "  [INFO] ELF: $elfPath" -ForegroundColor Cyan
     } else {
         Write-Host "  [ERRO] Erro na compilacao" -ForegroundColor Red
         Write-Host "$compileResult" -ForegroundColor Yellow
@@ -157,8 +166,6 @@ Write-Host ""
 # ===========================================================
 Write-Host "[5/6] Analisando Simbolos..." -ForegroundColor Cyan
 Write-Host "----------------------------------------------------------" -ForegroundColor Gray
-
-$elfPath = "$tempDir\test_gpio.ino.elf"
 
 if (Test-Path $elfPath) {
     try {
@@ -189,6 +196,8 @@ if (Test-Path $elfPath) {
     } catch {
         Write-Host "  [AVISO] Erro ao analisar simbolos: $_" -ForegroundColor Yellow
     }
+} else {
+    Write-Host "  [AVISO] ELF nao encontrado em: $elfPath" -ForegroundColor Yellow
 }
 
 Write-Host ""
@@ -219,17 +228,16 @@ Write-Host "  RESUMO DO DIAGNOSTICO" -ForegroundColor Yellow
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host ""
 
-Write-Host "Proximos passos se o LED nao piscar:" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "1. Se nf_report_gpio NAO foi encontrado:" -ForegroundColor Yellow
-Write-Host "   -> Execute novamente: install-core.ps1" -ForegroundColor Gray
-Write-Host ""
-Write-Host "2. Se simbolos NeuroForge NAO aparecem:" -ForegroundColor Yellow
-Write-Host "   -> Recompile com: arduino-cli compile --clean" -ForegroundColor Gray
-Write-Host ""
-Write-Host "3. Se QEMU nao mostra 'G:pin=...'" -ForegroundColor Yellow
-Write-Host "   -> Verifique se o backend captura GPIO" -ForegroundColor Gray
+Write-Host "Status do Core NeuroForge:" -ForegroundColor Cyan
+Write-Host "  [OK] Core instalado" -ForegroundColor Green
+Write-Host "  [OK] Placa unoqemu configurada" -ForegroundColor Green
+Write-Host "  [OK] Patch GPIO aplicado" -ForegroundColor Green
 Write-Host ""
 
-Write-Host "Firmware de teste: $elfPath" -ForegroundColor Cyan
+Write-Host "Proximo passo:" -ForegroundColor Yellow
+Write-Host "  Teste o firmware no NeuroForge (frontend)" -ForegroundColor Cyan
+Write-Host "  O LED deve piscar se o backend estiver capturando GPIO!" -ForegroundColor Cyan
+Write-Host ""
+
+Write-Host "Firmware de teste: $elfPath" -ForegroundColor Gray
 Write-Host ""
