@@ -3,7 +3,7 @@ import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { Readable } from 'stream';
+import * as net from 'net';
 
 /**
  * Low-level QEMU process manager
@@ -14,6 +14,8 @@ export class QEMURunner extends EventEmitter {
   private firmwarePath: string | null = null;
   private monitorSocket: string | null = null;
   private monitorPort: number | null = null;
+  private serialPort: number = 5555;
+  private serialClient: net.Socket | null = null;
   private healthCheckInterval: NodeJS.Timeout | null = null;
 
   constructor() {
@@ -54,21 +56,9 @@ export class QEMURunner extends EventEmitter {
 
     console.log('🚀 Starting QEMU with args:', args.join(' '));
 
-    // Force unbuffered output
-    const spawnOptions: any = {
+    this.process = spawn(this.qemuPath, args, {
       stdio: ['ignore', 'pipe', 'pipe']
-    };
-
-    // Windows: Set environment to force unbuffered output
-    if (process.platform === 'win32') {
-      spawnOptions.env = {
-        ...process.env,
-        PYTHONUNBUFFERED: '1',
-        QEMU_AUDIO_DRV: 'none'
-      };
-    }
-
-    this.process = spawn(this.qemuPath, args, spawnOptions);
+    });
 
     this.process.on('error', (error) => {
       console.error('QEMU process error:', error);
@@ -78,25 +68,13 @@ export class QEMURunner extends EventEmitter {
     this.process.on('exit', (code) => {
       console.log('QEMU process exited with code:', code);
       this.stopHealthCheck();
+      this.disconnectSerial();
       this.process = null;
       this.emit('stopped', code);
     });
 
-    // 🔍 DEBUG: Check if stdout exists
-    if (this.process.stdout) {
-      console.log('✅ [QEMURunner] stdout stream exists, setting up capture...');
-      
-      // Set encoding to utf8 to avoid buffering
-      this.process.stdout.setEncoding('utf8');
-      
-      this.captureSerial(this.process.stdout);
-    } else {
-      console.error('❌ [QEMURunner] stdout is NULL! Cannot capture serial output.');
-    }
-
-    // 🔍 DEBUG: Also capture stderr
+    // Capture stderr for errors
     if (this.process.stderr) {
-      console.log('✅ [QEMURunner] stderr stream exists, setting up capture...');
       this.process.stderr.setEncoding('utf8');
       this.process.stderr.on('data', (data: string) => {
         console.error('🔴 [QEMU stderr]:', data);
@@ -109,7 +87,81 @@ export class QEMURunner extends EventEmitter {
     // Wait for monitor socket/port to be ready
     await this.waitForMonitor();
 
+    // Connect to serial TCP port
+    await this.connectSerialTCP();
+
     this.emit('started');
+  }
+
+  /**
+   * Connect to QEMU serial via TCP
+   */
+  private async connectSerialTCP(): Promise<void> {
+    console.log(`🔌 [QEMURunner] Connecting to serial TCP port ${this.serialPort}...`);
+
+    // Wait for port to be ready
+    await this.waitForTcpPort(this.serialPort, 3000);
+
+    return new Promise((resolve, reject) => {
+      this.serialClient = net.connect({
+        port: this.serialPort,
+        host: '127.0.0.1'
+      });
+
+      this.serialClient.on('connect', () => {
+        console.log(`✅ [QEMURunner] Connected to serial TCP port ${this.serialPort}`);
+        resolve();
+      });
+
+      this.serialClient.on('data', (chunk: Buffer) => {
+        const data = chunk.toString('utf8');
+        console.log(`📥 [QEMURunner] Serial TCP data (${chunk.length} bytes):`, data);
+        this.handleSerialData(data);
+      });
+
+      this.serialClient.on('error', (error) => {
+        console.error('❌ [QEMURunner] Serial TCP error:', error);
+        if (!this.serialClient) {
+          reject(error);
+        }
+      });
+
+      this.serialClient.on('close', () => {
+        console.log('🔌 [QEMURunner] Serial TCP connection closed');
+        this.serialClient = null;
+      });
+
+      // Timeout
+      setTimeout(() => {
+        if (this.serialClient && !this.serialClient.connecting) {
+          reject(new Error('Serial TCP connection timeout'));
+        }
+      }, 5000);
+    });
+  }
+
+  /**
+   * Disconnect serial TCP
+   */
+  private disconnectSerial(): void {
+    if (this.serialClient) {
+      this.serialClient.destroy();
+      this.serialClient = null;
+    }
+  }
+
+  /**
+   * Handle serial data from TCP
+   */
+  private handleSerialData(data: string): void {
+    const lines = data.split('\n');
+    
+    for (const line of lines) {
+      if (line.trim()) {
+        console.log('📤 [QEMURunner] Emitting serial event:', line.trim());
+        this.emit('serial', line.trim());
+      }
+    }
   }
 
   /**
@@ -120,15 +172,7 @@ export class QEMURunner extends EventEmitter {
     this.healthCheckInterval = setInterval(() => {
       if (this.process) {
         const isAlive = this.process.killed === false && this.process.exitCode === null;
-        console.log(`💓 [QEMURunner] Health check: PID=${this.process.pid}, alive=${isAlive}, killed=${this.process.killed}, exitCode=${this.process.exitCode}`);
-        
-        if (!isAlive) {
-          console.error('❌ [QEMURunner] Process is dead but exit event not fired!');
-          this.stopHealthCheck();
-        }
-      } else {
-        console.log('⚠️ [QEMURunner] Process is null in health check');
-        this.stopHealthCheck();
+        console.log(`💓 [QEMURunner] Health check: PID=${this.process.pid}, alive=${isAlive}, serialConnected=${this.serialClient !== null}`);
       }
     }, 5000);
   }
@@ -176,7 +220,6 @@ export class QEMURunner extends EventEmitter {
    * Wait for TCP port to be listening
    */
   private async waitForTcpPort(port: number, timeout: number): Promise<void> {
-    const net = await import('net');
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeout) {
@@ -199,7 +242,7 @@ export class QEMURunner extends EventEmitter {
       }
     }
 
-    console.warn(`⚠️ Timeout waiting for QEMU monitor TCP port: ${port}`);
+    throw new Error(`Timeout waiting for TCP port ${port}`);
   }
 
   /**
@@ -230,10 +273,9 @@ export class QEMURunner extends EventEmitter {
       '-machine', 'arduino-uno',
       '-bios', this.firmwarePath!,
       '-nographic',
-      '-serial', 'stdio',
+      // 🔧 NEUROFORGE FIX: Use TCP serial instead of stdio (Windows compatibility)
+      '-serial', `tcp:127.0.0.1:${this.serialPort},server,nowait`,
       // ⏱️ NEUROFORGE TIME: Enable real-time execution
-      // Without this, QEMU runs as fast as possible (millions of instructions/sec)
-      // With this, QEMU throttles to match real hardware timing (16MHz ATmega328P)
       '-icount', 'shift=auto',
     ];
 
@@ -254,6 +296,7 @@ export class QEMURunner extends EventEmitter {
    */
   stop(): void {
     this.stopHealthCheck();
+    this.disconnectSerial();
     
     if (this.process) {
       this.process.kill('SIGTERM');
@@ -275,60 +318,10 @@ export class QEMURunner extends EventEmitter {
   }
 
   /**
-   * Capture serial output from QEMU stdout
-   */
-  private captureSerial(stream: Readable): void {
-    let buffer = '';
-    let dataReceivedCount = 0;
-
-    console.log('🎧 [QEMURunner] captureSerial() called, listening for stdout data...');
-
-    stream.on('data', (chunk: string) => {
-      dataReceivedCount++;
-      console.log(`📥 [QEMURunner] Data event #${dataReceivedCount}: Received ${chunk.length} bytes`);
-      console.log(`📥 [QEMURunner] Raw data:`, JSON.stringify(chunk));
-      
-      buffer += chunk;
-
-      // Split by newlines
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || ''; // Keep incomplete line in buffer
-
-      for (const line of lines) {
-        if (line.trim()) {
-          console.log('📤 [QEMURunner] Emitting serial event:', line.trim());
-          this.emit('serial', line.trim());
-        }
-      }
-    });
-
-    stream.on('error', (error) => {
-      console.error('❌ [QEMURunner] stdout error:', error);
-    });
-
-    stream.on('end', () => {
-      console.log('🏁 [QEMURunner] stdout stream ended');
-    });
-
-    // Emit a test after 2 seconds to see if stream is working
-    setTimeout(() => {
-      if (dataReceivedCount === 0) {
-        console.error('⚠️ [QEMURunner] NO DATA received from stdout after 2 seconds!');
-        console.error('⚠️ [QEMURunner] QEMU may be frozen or not executing firmware');
-        console.error('⚠️ [QEMURunner] Check if QEMU process is running in Task Manager');
-      } else {
-        console.log(`✅ [QEMURunner] Received ${dataReceivedCount} data events so far`);
-      }
-    }, 2000);
-  }
-
-  /**
    * Write GPIO pin via QEMU monitor
    */
   async writeGPIO(port: string, pin: number, value: number): Promise<void> {
     // TODO: Implement QEMU monitor communication
-    // This would use the monitor socket to send commands like:
-    // system_reset, info registers, etc.
     console.log(`GPIO Write: ${port}.${pin} = ${value}`);
   }
 
@@ -345,8 +338,8 @@ export class QEMURunner extends EventEmitter {
    * Send data to serial input (UART RX)
    */
   sendSerialData(data: string): void {
-    if (this.process && this.process.stdin) {
-      this.process.stdin.write(data);
+    if (this.serialClient) {
+      this.serialClient.write(data);
     }
   }
 
