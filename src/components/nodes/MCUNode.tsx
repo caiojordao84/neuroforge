@@ -12,7 +12,6 @@ interface MCUNodeProps {
   selected?: boolean;
 }
 
-// SVG Arduino Uno R3 Pin Mapping
 const SVG_VIEWBOX_WIDTH = 171;
 const SVG_VIEWBOX_HEIGHT = 129;
 const SVG_RENDER_WIDTH = 260;
@@ -163,7 +162,7 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
     return 'bg-[#1a5fb4]';
   };
 
-  const getBoardColor = () => {
+  const getBorderColor = () => {
     if (isArduino) return 'border-[#0d3a7a]';
     if (isESP32) return 'border-[#1a3a0d]';
     if (isPico) return 'border-[#8b1539]';
