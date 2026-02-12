@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 171 129" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;">
+    <g id="board">
+        <path id="board-body" d="M7.929,0c-1.193,0.151 -1.78,0.908 -2.079,1.954l0.025,124.437c0,0.991 0.834,1.753 1.718,1.753l155.114,0c1.057,-0.175 1.506,-0.845 1.664,-1.753l0.354,-4.25l4.944,-4.948l0.97,-3.455l0,-77.051c-2.031,-2.161 -5.799,-5.923 -5.799,-5.923l-0.129,-27.935l-2.83,-2.805l-153.953,-0.024Zm34.204,2.043c2.099,-0 3.8,1.655 3.8,3.698c0,2.042 -1.701,3.698 -3.8,3.698c-2.099,-0 -3.8,-1.656 -3.8,-3.698c0,-2.042 1.701,-3.697 3.8,-3.698Zm122.753,36.768c2.093,-0 3.789,1.697 3.789,3.789c0,2.093 -1.697,3.789 -3.789,3.789c-2.093,0 -3.789,-1.697 -3.789,-3.789c-0,-2.093 1.697,-3.789 3.789,-3.789Zm-0.071,67.746c1.956,-0 3.542,1.586 3.542,3.542c-0,1.956 -1.586,3.541 -3.542,3.541c-1.956,-0 -3.541,-1.585 -3.541,-3.541c-0,-1.956 1.585,-3.541 3.541,-3.542Zm-125.61,12.127c1.956,0 3.541,1.585 3.541,3.541c0,1.956 -1.585,3.541 -3.541,3.542c-1.956,0 -3.542,-1.586 -3.542,-3.542c0,-1.956 1.586,-3.541 3.542,-3.541Z" style="fill:#017e7b;fill-rule:nonzero;"/>
+        <clipPath id="_clip1">
+            <path id="board-body1" serif:id="board-body" d="M7.929,0c-1.193,0.151 -1.78,0.908 -2.079,1.954l0.025,124.437c0,0.991 0.834,1.753 1.718,1.753l155.114,0c1.057,-0.175 1.506,-0.845 1.664,-1.753l0.354,-4.25l4.944,-4.948l0.97,-3.455l0,-77.051c-2.031,-2.161 -5.799,-5.923 -5.799,-5.923l-0.129,-27.935l-2.83,-2.805l-153.953,-0.024Zm34.204,2.043c2.099,-0 3.8,1.655 3.8,3.698c0,2.042 -1.701,3.698 -3.8,3.698c-2.099,-0 -3.8,-1.656 -3.8,-3.698c0,-2.042 1.701,-3.697 3.8,-3.698Zm122.753,36.768c2.093,-0 3.789,1.697 3.789,3.789c0,2.093 -1.697,3.789 -3.789,3.789c-2.093,0 -3.789,-1.697 -3.789,-3.789c-0,-2.093 1.697,-3.789 3.789,-3.789Zm-0.071,67.746c1.956,-0 3.542,1.586 3.542,3.542c-0,1.956 -1.586,3.541 -3.542,3.541c-1.956,-0 -3.541,-1.585 -3.541,-3.541c-0,-1.956 1.585,-3.541 3.541,-3.542Zm-125.61,12.127c1.956,0 3.541,1.585 3.541,3.541c0,1.956 -1.585,3.541 -3.541,3.542c-1.956,0 -3.542,-1.586 -3.542,-3.542c0,-1.956 1.586,-3.541 3.542,-3.541Z" clip-rule="nonzero"/>
+        </clipPath>
+        <g clip-path="url(#_clip1)">
+            <path d="M15.413,67.606l-0.027,0.027c0,-36.264 50.044,-51.615 74.432,-12.872c25.743,-39.191 73.355,-22.288 73.355,12.804c0,35.092 -47.821,51.127 -73.328,12.872c-24.612,36.894 -74.432,23.399 -74.432,-12.831Zm13.082,0c0,26.143 36.61,33.121 54.142,0c-17.187,-34.401 -54.142,-26.15 -54.142,0Zm35.817,-3.672l0,7.228l-21.929,0l0,-7.228l21.929,0Zm32.735,3.672c15.033,33.466 53.214,25.52 53.329,0.054c0.115,-25.466 -37.843,-35.133 -53.329,-0.054Zm24.91,3.448l-7.235,0l0,-7.682l7.235,0l0,-7.235l7.689,0l0,7.235l7.235,0l0,7.682l-7.235,0l0,7.235l-7.689,0l0,-7.235Z" style="fill:#174d4f;"/>
+            <path d="M13.163,65.356c0,36.23 49.82,49.725 74.432,12.831c25.506,38.256 73.328,22.22 73.328,-12.872c0,-35.092 -47.611,-51.995 -73.355,-12.804c-24.388,-38.744 -74.432,-23.392 -74.432,12.872l0.027,-0.027Zm13.082,0c0,-26.15 36.955,-34.401 54.142,0c-17.533,33.121 -54.142,26.143 -54.142,0Zm68.552,0c15.487,-35.079 53.444,-25.411 53.329,0.054c-0.115,25.466 -38.296,33.412 -53.329,-0.054Z" style="fill:#fff;fill-rule:nonzero;stroke:#000;stroke-width:1.64px;"/>
+            <path d="M119.706,68.804l-7.235,0l0,-7.682l7.235,0l0,-7.235l7.689,0l0,7.235l7.235,0l0,7.682l-7.235,0l0,7.235l-7.689,0l0,-7.235Z" style="fill:#fff;fill-rule:nonzero;"/>
+        </g>
+    </g>
+    <g id="icsp-header-main">
+        <path id="icsp-1-reset" d="M157.229,67.46c0,-1.213 0.985,-2.198 2.198,-2.198c1.213,0 2.198,0.985 2.198,2.198c0,1.213 -0.985,2.198 -2.198,2.198c-1.213,0 -2.198,-0.985 -2.198,-2.198Z"/>
+        <path id="icsp-1-gnd" d="M162.723,67.46c0,-1.213 0.985,-2.198 2.198,-2.198c1.213,0 2.198,0.985 2.198,2.198c0,1.213 -0.985,2.198 -2.198,2.198c-1.213,0 -2.198,-0.985 -2.198,-2.198Z"/>
+        <path id="icsp-1-sck" d="M157.229,61.188c0,-1.213 0.985,-2.198 2.198,-2.198c1.213,0 2.198,0.985 2.198,2.198c0,1.213 -0.985,2.198 -2.198,2.198c-1.213,0 -2.198,-0.985 -2.198,-2.198Z"/>
+        <path id="icsp-1-mosi" d="M162.723,61.188c0,-1.213 0.985,-2.198 2.198,-2.198c1.213,0 2.198,0.985 2.198,2.198c0,1.213 -0.985,2.198 -2.198,2.198c-1.213,0 -2.198,-0.985 -2.198,-2.198Z"/>
+        <path id="icsp-1-miso" d="M157.229,54.917c0,-1.213 0.985,-2.198 2.198,-2.198c1.213,0 2.198,0.985 2.198,2.198c0,1.213 -0.985,2.198 -2.198,2.198c-1.213,0 -2.198,-0.985 -2.198,-2.198Z"/>
+        <path id="icsp-1-vcc" d="M162.723,54.917c0,-1.213 0.985,-2.198 2.198,-2.198c1.213,0 2.198,0.985 2.198,2.198c0,1.213 -0.985,2.198 -2.198,2.198c-1.213,0 -2.198,-0.985 -2.198,-2.198Z"/>
+    </g>
+    <g id="icsp-header-usb">
+        <circle id="icsp-2-reset" cx="43.071" cy="16.987" r="2.198"/>
+        <circle id="icsp-2-gnd" cx="43.071" cy="22.481" r="2.198"/>
+        <circle id="icsp-2-sck" cx="49.343" cy="16.987" r="2.198"/>
+        <circle id="icsp-2-mosi" cx="49.343" cy="22.481" r="2.198"/>
+        <circle id="icsp-2-miso" cx="55.615" cy="16.987" r="2.198"/>
+        <circle id="icsp-2-vcc" cx="55.615" cy="22.481" r="2.198"/>
+    </g>
+    <g id="header-power">
+        <circle id="pin-aref" cx="61.886" cy="3.933" r="2.198"/>
+        <circle id="pin-vin" cx="116.288" cy="123.071" r="2.198"/>
+        <circle id="pin-gnd-0" cx="68.158" cy="3.933" r="2.198"/>
+        <circle id="pin-ioref" cx="78.658" cy="123.071" r="2.198"/>
+        <circle id="pin-reset" cx="84.929" cy="123.071" r="2.198"/>
+        <circle id="pin-3v3" cx="91.201" cy="123.071" r="2.198"/>
+        <circle id="pin-5v" cx="97.473" cy="123.071" r="2.198"/>
+        <circle id="pin-gnd-2" cx="103.745" cy="123.071" r="2.198"/>
+        <circle id="pin-gnd-1" cx="110.016" cy="123.071" r="2.198"/>
+        <circle id="pin-nc" cx="72.386" cy="123.071" r="2.198"/>
+        <g id="pin-nc-text" transform="matrix(0,-1,1,0,-211.245132,230.631555)">
+            <g transform="matrix(3,0,0,3,112.299174,284.697333)">
+            </g>
+            <text x="110.39px" y="284.697px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#ff0021;">X</text>
+        </g>
+        <g id="pin-ioref-text" transform="matrix(0,-1,1,0,-204.973363,236.903324)">
+            <g transform="matrix(3,0,0,3,124.855123,284.697333)">
+            </g>
+            <text x="116.662px" y="284.697px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">IOREF</text>
+        </g>
+        <g id="header-power-text" transform="matrix(5,0,0,5,107.869128,109.074801)">
+        </g>
+        <text x="90.872px" y="109.075px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:5px;fill:#fff;">POWER</text>
+        <g id="pin-reset-text" transform="matrix(0,-1,1,0,-198.701594,243.175093)">
+            <g transform="matrix(3,0,0,3,131.747985,284.697333)">
+            </g>
+            <text x="122.934px" y="284.697px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">RESET</text>
+        </g>
+        <g id="pin-3v3-text" transform="matrix(0,-1,1,0,-192.429825,249.446862)">
+            <g transform="matrix(3,0,0,3,136.176981,284.697333)">
+            </g>
+            <text x="129.206px" y="284.697px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">3.3 V</text>
+        </g>
+        <g id="pin-5v-text" transform="matrix(0,-1,1,0,-186.173437,255.70325)">
+            <g transform="matrix(3,0,0,3,139.839131,284.697333)">
+            </g>
+            <text x="135.462px" y="284.697px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">5 V</text>
+        </g>
+        <g id="pin-gnd-2-text" transform="matrix(0,-1,1,0,-179.886287,261.9904)">
+            <g transform="matrix(3,0,0,3,147.848937,284.697333)">
+            </g>
+            <text x="141.749px" y="284.697px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">GND</text>
+        </g>
+        <g id="pin-gnd-1-text" transform="matrix(0,-1,1,0,-173.614518,268.262169)">
+            <g transform="matrix(3,0,0,3,154.120706,284.697333)">
+            </g>
+            <text x="148.021px" y="284.697px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">GND</text>
+        </g>
+        <g id="pin-vin-text" transform="matrix(0,-1,1,0,-167.342749,274.533938)">
+            <g transform="matrix(3,0,0,3,159.198627,284.697333)">
+            </g>
+            <text x="154.293px" y="284.697px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">VIN</text>
+        </g>
+        <g id="pin-aref-text" transform="matrix(0,-1,1,0,-115.908244,114.296074)">
+            <g transform="matrix(3,0,0,3,107.048413,178.861148)">
+            </g>
+            <text x="99.891px" y="178.861px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">AREF</text>
+        </g>
+        <g id="pin-gnd-0-text" transform="matrix(0,-1,1,0,-109.636475,120.567843)">
+            <g transform="matrix(3,0,0,3,113.320182,178.861148)">
+            </g>
+            <text x="107.221px" y="178.861px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">GND</text>
+        </g>
+    </g>
+    <g id="header-digital">
+        <g id="header-i2c">
+            <path id="header-i2c-decoration" d="M46.124,0l12.869,0l0,14.309l-12.869,0l0,-14.309Z" style="fill:#fff;"/>
+            <circle id="pin-19-scl" cx="49.343" cy="3.933" r="2.198"/>
+            <circle id="pin-18-sda" cx="55.615" cy="3.933" r="2.198"/>
+            <g id="pin-18-sda-text" transform="matrix(0,-1,1,0,-121.863668,107.956754)">
+                <g transform="matrix(3,0,0,3,100.90104,178.6692)">
+                </g>
+                <text x="95.194px" y="178.669px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#017e7b;">SDA</text>
+            </g>
+            <g id="pin-18-scl-text" transform="matrix(0,-1,1,0,-128.259833,101.560588)">
+                <g transform="matrix(3,0,0,3,94.504875,178.6692)">
+                </g>
+                <text x="89.085px" y="178.669px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#017e7b;">SCL</text>
+            </g>
+        </g>
+        <circle id="pin-d7" cx="116.075" cy="3.933" r="2.198"/>
+        <circle id="pin-d6" cx="122.346" cy="3.933" r="2.198"/>
+        <circle id="pin-d13" cx="74.43" cy="3.933" r="2.198"/>
+        <circle id="pin-d5" cx="128.618" cy="3.933" r="2.198"/>
+        <circle id="pin-d12" cx="80.702" cy="3.933" r="2.198"/>
+        <circle id="pin-d4" cx="134.89" cy="3.933" r="2.198"/>
+        <circle id="pin-d11" cx="86.974" cy="3.933" r="2.198"/>
+        <circle id="pin-d3" cx="141.162" cy="3.933" r="2.198"/>
+        <circle id="pin-d10" cx="93.245" cy="3.933" r="2.198"/>
+        <circle id="pin-d2" cx="147.433" cy="3.933" r="2.198"/>
+        <circle id="pin-d9" cx="99.517" cy="3.933" r="2.198"/>
+        <circle id="pin-d1" cx="153.705" cy="3.933" r="2.198"/>
+        <circle id="pin-d8" cx="105.789" cy="3.933" r="2.198"/>
+        <circle id="pin-d0" cx="159.977" cy="3.933" r="2.198"/>
+        <g id="pin-d9-text" transform="matrix(0,-1,1,0,-78.27763,151.926688)">
+            <g transform="matrix(3,0,0,3,144.679027,178.861148)">
+            </g>
+            <text x="141.014px" y="178.861px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">~9</text>
+        </g>
+        <g id="pin-d9-text1" serif:id="pin-d9-text" transform="matrix(0,-1,1,0,-72.005861,158.198457)">
+            <g transform="matrix(3,0,0,3,150.950796,178.861148)">
+            </g>
+            <text x="149.23px" y="178.861px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">8</text>
+        </g>
+        <g id="pin-d9-text2" serif:id="pin-d9-text" transform="matrix(0,-1,1,0,-61.720165,168.484153)">
+            <g transform="matrix(3,0,0,3,161.236492,178.861148)">
+            </g>
+            <text x="159.515px" y="178.861px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">7</text>
+        </g>
+        <g id="pin-d9-text3" serif:id="pin-d9-text" transform="matrix(0,-1,1,0,-55.448396,174.755922)">
+            <g transform="matrix(3,0,0,3,167.508261,178.861148)">
+            </g>
+            <text x="163.843px" y="178.861px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">~6</text>
+        </g>
+        <g id="header-digital-text" transform="matrix(5,0,0,5,134.211902,19.432202)">
+        </g>
+        <text x="90.872px" y="19.432px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:5px;fill:#fff;">DIGIT<tspan x="102.977px 106.158px " y="19.432px 19.432px ">AL</tspan> (PWM = ~)</text>
+        <g id="pin-d9-text4" serif:id="pin-d9-text" transform="matrix(0,-1,1,0,-49.192008,181.01231)">
+            <g transform="matrix(3,0,0,3,173.764649,178.861148)">
+            </g>
+            <text x="170.1px" y="178.861px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">~5</text>
+        </g>
+        <g id="pin-d9-text5" serif:id="pin-d9-text" transform="matrix(0,-1,1,0,-42.904858,187.29946)">
+            <g transform="matrix(3,0,0,3,180.051799,178.861148)">
+            </g>
+            <text x="178.331px" y="178.861px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">4</text>
+        </g>
+        <g id="pin-d9-text6" serif:id="pin-d9-text" transform="matrix(0,-1,1,0,-36.633089,193.571229)">
+            <g transform="matrix(3,0,0,3,186.323568,178.861148)">
+            </g>
+            <text x="182.659px" y="178.861px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">~3</text>
+        </g>
+        <g id="pin-d9-text7" serif:id="pin-d9-text" transform="matrix(0,-1,1,0,-30.345939,199.858379)">
+            <g transform="matrix(3,0,0,3,192.610718,178.861148)">
+            </g>
+            <text x="190.89px" y="178.861px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">2</text>
+        </g>
+        <g id="pin-d9-text8" serif:id="pin-d9-text" transform="matrix(0,-0.24,0.24,0,91.012608,115.102159)">
+            <text x="415.74px" y="265.662px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:12.5px;fill:#fff;">TX0</text>
+            <g transform="matrix(10.416667,0,0,10.416667,449.393741,265.662455)">
+            </g>
+            <text x="438.036px" y="265.662px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:10.417px;fill:#fff;">&gt;1</text>
+        </g>
+        <g id="pin-d9-text9" serif:id="pin-d9-text" transform="matrix(0,-0.24,0.24,0,97.284377,115.102159)">
+            <text x="415.023px" y="265.662px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:12.5px;fill:#fff;">RX0</text>
+            <g transform="matrix(10.416667,0,0,10.416667,449.393741,265.662455)">
+            </g>
+            <text x="438.112px" y="265.662px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:10.417px;fill:#fff;">&lt;0</text>
+        </g>
+        <g id="pin-d13-text" transform="matrix(0,-1,1,0,-103.364706,126.839612)">
+            <g transform="matrix(3,0,0,3,119.591951,178.861148)">
+            </g>
+            <text x="116.15px" y="178.861px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">13</text>
+        </g>
+        <g id="pin-d12-text" transform="matrix(0,-1,1,0,-97.077556,133.126762)">
+            <g transform="matrix(3,0,0,3,125.879101,178.861148)">
+            </g>
+            <text x="122.437px" y="178.861px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">12</text>
+        </g>
+        <g id="pin-d11-text" transform="matrix(0,-1,1,0,-90.805787,139.398531)">
+            <g transform="matrix(3,0,0,3,132.15087,178.861148)">
+            </g>
+            <text x="126.765px" y="178.861px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">~11</text>
+        </g>
+        <g id="pin-d10-text" transform="matrix(0,-1,1,0,-84.549399,145.654919)">
+            <g transform="matrix(3,0,0,3,138.407258,178.861148)">
+            </g>
+            <text x="133.021px" y="178.861px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">~10</text>
+        </g>
+    </g>
+    <g id="power-jack">
+        <circle id="power-jack-outer" cx="11.723" cy="107.881" r="6.448"/>
+        <circle id="power-jack-inner" cx="11.723" cy="107.881" r="3.732" style="fill:#404040;"/>
+        <path id="power-jack-shell" d="M6.576,116.935l0,0.932c0,0.316 -0.231,0.571 -0.518,0.571l-5.54,0c-0.287,0 -0.518,-0.254 -0.518,-0.571l0,-20.219c0,-0.316 0.231,-0.571 0.518,-0.571l5.54,0c0.287,0 0.518,0.254 0.518,0.571l0,0.931l25.281,0l0,18.356l-25.281,0Z" style="fill:#333;"/>
+    </g>
+    <circle id="led-pin13" cx="74.43" cy="26.163" r="2.198"/>
+    <circle id="led-tx" cx="74.43" cy="39.537" r="2.198"/>
+    <circle id="led-rx" cx="74.43" cy="45.32" r="2.198"/>
+    <g id="header-analog">
+        <circle id="pin-a0" cx="128.832" cy="123.071" r="2.198"/>
+        <g id="pin-vin-text1" serif:id="pin-vin-text" transform="matrix(0,-1,1,0,-154.799211,287.077476)">
+            <g transform="matrix(3,0,0,3,170.466286,284.697333)">
+            </g>
+            <text x="166.836px" y="284.697px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">A0</text>
+        </g>
+        <g id="pin-vin-text2" serif:id="pin-vin-text" transform="matrix(0,-1,1,0,-148.512062,293.364625)">
+            <g transform="matrix(3,0,0,3,176.753436,284.697333)">
+            </g>
+            <text x="173.124px" y="284.697px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">A1</text>
+        </g>
+        <g id="header-analog-text" transform="matrix(5,0,0,5,149.736188,109.074801)">
+        </g>
+        <text x="130.315px" y="109.075px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:5px;fill:#fff;">ANALOG</text>
+        <g id="pin-vin-text3" serif:id="pin-vin-text" transform="matrix(0,-1,1,0,-142.240293,299.636394)">
+            <g transform="matrix(3,0,0,3,183.025205,284.697333)">
+            </g>
+            <text x="179.395px" y="284.697px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">A2</text>
+        </g>
+        <g id="pin-vin-text4" serif:id="pin-vin-text" transform="matrix(0,-1,1,0,-135.983905,305.892782)">
+            <g transform="matrix(3,0,0,3,189.281593,284.697333)">
+            </g>
+            <text x="185.652px" y="284.697px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3px;fill:#fff;">A3</text>
+        </g>
+        <g id="pin-vin-text5" serif:id="pin-vin-text" transform="matrix(0,-0.24,0.24,0,91.226208,220.938343)">
+            <text x="419.572px" y="265.662px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:12.5px;fill:#fff;">A4</text>
+            <g transform="matrix(10.416667,0,0,10.416667,457.625349,265.662455)">
+            </g>
+            <text x="437.809px" y="265.662px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:10.417px;fill:#fff;">SD<tspan x="450.998px " y="265.662px ">A</tspan></text>
+        </g>
+        <g id="pin-vin-text6" serif:id="pin-vin-text" transform="matrix(0,-0.24,0.24,0,97.497977,220.938343)">
+            <text x="419.572px" y="265.662px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:12.5px;fill:#fff;">A5</text>
+            <g transform="matrix(10.416667,0,0,10.416667,456.628441,265.662455)">
+            </g>
+            <text x="437.809px" y="265.662px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:10.417px;fill:#fff;">SCL</text>
+        </g>
+        <circle id="pin-a1" cx="135.103" cy="123.071" r="2.198"/>
+        <circle id="pin-a2" cx="141.375" cy="123.071" r="2.198"/>
+        <circle id="pin-a3" cx="147.647" cy="123.071" r="2.198"/>
+        <circle id="pin-a4" cx="153.919" cy="123.071" r="2.198"/>
+        <circle id="pin-a5" cx="160.191" cy="123.071" r="2.198"/>
+    </g>
+    <circle id="led-power" cx="147.433" cy="39.717" r="2.198"/>
+    <g id="reset-button">
+        <rect id="reset-button-body" x="14.701" y="2.91" width="11.775" height="11.775" style="fill:#ebebeb;"/>
+        <circle id="reset-button-button" cx="20.589" cy="8.797" r="3.824" style="fill:#931515;"/>
+    </g>
+    <g id="chip-atmega328p">
+        <path id="chip-atmega328p-base" d="M74.935,76.702l84.757,0c0.34,0 0.613,0.374 0.613,0.838l0,22.563c0,0.464 -0.274,0.838 -0.613,0.838l-84.757,0c-0.34,0 -0.613,-0.374 -0.613,-0.838l0,-22.563c0,-0.464 0.274,-0.838 0.613,-0.838Z" style="fill:#1a1a1a;fill-rule:nonzero;"/>
+        <rect id="chip-atmega328p-body" x="74.372" y="79.957" width="85.883" height="17.729" style="fill:#2c3034;"/>
+        <path id="chip-atmega328p-pins" d="M155.859,97.937l2.407,0l0,1.148l-2.407,0l0,-1.148Zm-6.235,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.235,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.235,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.235,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.235,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.235,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.235,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.235,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.235,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.235,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.235,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.235,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-4.887,0l2.673,0l0,1.148l-2.673,0l0,-1.148Zm79.501,-18.877l2.673,0l0,1.148l-2.673,0l0,-1.148Zm-5.914,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.357,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.144,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.321,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.18,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.375,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.162,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.162,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.162,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.327,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.327,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-6.185,0l3.664,0l0,1.148l-3.664,0l0,-1.148Zm-5.071,0l2.55,0l0,1.148l-2.55,0l0,-1.148Z" style="fill:#c7c3c2;fill-rule:nonzero;"/>
+        <g id="chip-atmega328p-label" transform="matrix(5,0,0,5,106.434855,95.305297)">
+        </g>
+        <text x="76.43px" y="95.305px" style="font-family:'RobotoMono-Regular', 'Roboto Mono', monospace;font-size:5px;fill:#fff;">ATmega328P</text>
+    </g>
+    <g id="chip-atmega16u2">
+        <path id="chip-atmega16u2-pins" d="M46.83,40.457l0,-0.416l0.779,0l0,0.416l-0.779,0Zm0,1.151l0,-0.416l0.779,0l0,0.416l-0.779,0Zm0,1.151l0,-0.416l0.779,0l0,0.416l-0.779,0Zm0,1.151l0,-0.416l0.779,0l0,0.416l-0.779,0Zm0,1.293l0,-0.416l0.779,0l0,0.416l-0.779,0Zm0,1.293l0,-0.416l0.779,0l0,0.416l-0.779,0Zm0,1.151l0,-0.416l0.779,0l0,0.416l-0.779,0Zm0,1.346l0,-0.416l0.779,0l0,0.416l-0.779,0Zm2.643,2.216l-0.416,0l0,-0.779l0.416,0l0,0.779Zm1.208,0l-0.416,0l0,-0.779l0.416,0l0,0.779Zm1.208,0l-0.416,0l0,-0.779l0.416,0l0,0.779Zm1.208,0l-0.416,0l0,-0.779l0.416,0l0,0.779Zm1.208,0l-0.416,0l0,-0.779l0.416,0l0,0.779Zm1.208,0l-0.416,0l0,-0.779l0.416,0l0,0.779Zm1.208,0l-0.416,0l0,-0.779l0.416,0l0,0.779Zm1.252,0l-0.416,0l0,-0.779l0.416,0l0,0.779Zm2.335,-2.727l0,0.416l-0.779,0l0,-0.416l0.779,0Zm0,-1.208l0,0.416l-0.779,0l0,-0.416l0.779,0Zm0,-1.208l0,0.416l-0.779,0l0,-0.416l0.779,0Zm0,-1.208l0,0.416l-0.779,0l0,-0.416l0.779,0Zm0,-1.208l0,0.416l-0.779,0l0,-0.416l0.779,0Zm0,-1.158l0,0.416l-0.779,0l0,-0.416l0.779,0Zm0,-1.265l0,0.416l-0.779,0l0,-0.416l0.779,0Zm0,-1.164l0,0.416l-0.779,0l0,-0.416l0.779,0Zm-2.746,-2.41l0.416,0l0,0.779l-0.416,0l0,-0.779Zm-1.255,0l0.416,0l0,0.779l-0.416,0l0,-0.779Zm-1.255,0l0.416,0l0,0.779l-0.416,0l0,-0.779Zm-1.143,0l0.416,0l0,0.779l-0.416,0l0,-0.779Zm-1.143,0l0.416,0l0,0.779l-0.416,0l0,-0.779Zm-1.231,0l0.416,0l0,0.779l-0.416,0l0,-0.779Zm-1.231,0l0.416,0l0,0.779l-0.416,0l0,-0.779Zm-1.231,0l0.416,0l0,0.779l-0.416,0l0,-0.779Z" style="fill:#d7dadb;"/>
+        <rect id="chip-atmega16u2-body" x="47.608" y="38.468" width="11.923" height="11.923" style="fill:#2c3034;"/>
+        <g id="chip-atmega328p-label1" serif:id="chip-atmega328p-label" transform="matrix(3,0,0,3,62.630385,54.83753)">
+        </g>
+        <text x="44.627px" y="54.838px" style="font-family:'RobotoMono-Regular', 'Roboto Mono', monospace;font-size:3px;fill:#fff;">ATmega16U2</text>
+    </g>
+    <g id="usb-connector">
+        <rect id="usb-connector-body" x="0.064" y="21.048" width="28.8" height="28.8" style="fill:#585858;"/>
+    </g>
+    <rect id="crystal-16mhz" x="40.778" y="62.522" width="22.255" height="7.602" style="fill:#fff;"/>
+    <g id="voltage-regulator">
+        <path id="voltage-regulator-chips" d="M20.061,78.764l8.038,0l0,14.547l-8.038,0l0,-14.547Zm3.221,-17.94l3.224,0l0,6.802l-3.224,0l0,-6.802Zm33.096,27.191l3.224,0l0,6.802l-3.224,0l0,-6.802Zm-8.568,-12.089l6.801,0l0,6.838l-6.801,0l0,-6.838Z" style="fill:#53555f;fill-rule:nonzero;"/>
+        <path id="voltage-regulator-pins" d="M28.099,92.381l0,-1.496l3.262,0l0,1.496l-3.262,0Zm0,-5.595l0,-1.496l3.262,0l0,1.496l-3.262,0Zm0,-5.379l0,-1.496l3.262,0l0,1.496l-3.262,0Zm-12.841,8.313l0,-7.365l4.803,0l0,7.365l-4.803,0Zm11.248,-27.34l0,-0.841l1.722,0l0,0.841l-1.722,0Zm0,4.582l0,-0.841l1.722,0l0,0.841l-1.722,0Zm-4.946,-2.404l0,-0.841l1.722,0l0,0.841l-1.722,0Zm38.041,25.011l0,-0.841l1.722,0l0,0.841l-1.722,0Zm0,4.582l0,-0.841l1.722,0l0,0.841l-1.722,0Zm-4.946,0l0,-0.841l1.722,0l0,0.841l-1.722,0Zm0,-2.404l0,-0.841l1.722,0l0,0.841l-1.722,0Zm0,-2.179l0,-0.841l1.722,0l0,0.841l-1.722,0Zm-0.045,-7.68l0,-0.841l1.522,0l0,0.841l-1.522,0Zm0,-1.549l0,-0.841l1.522,0l0,0.841l-1.522,0Zm0,-1.549l0,-0.841l1.522,0l0,0.841l-1.522,0Zm0,-1.549l0,-0.841l1.522,0l0,0.841l-1.522,0Zm-8.323,4.657l0,-0.841l1.522,0l0,0.841l-1.522,0Zm0,-1.567l0,-0.841l1.522,0l0,0.841l-1.522,0Zm0,-1.567l0,-0.841l1.522,0l0,0.841l-1.522,0Zm0,-1.567l0,-0.841l1.522,0l0,0.841l-1.522,0Z" style="fill:#d7dadb;fill-rule:nonzero;"/>
+    </g>
+</svg>
