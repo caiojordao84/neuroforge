@@ -13,14 +13,14 @@ interface MCUNodeProps {
 }
 
 // SVG Arduino Uno R3 Pin Mapping
-// Coordinates extracted from arduino-uno-r3.svg (viewBox: 0 0 171 129)
 const SVG_VIEWBOX_WIDTH = 171;
 const SVG_VIEWBOX_HEIGHT = 129;
 const SVG_RENDER_WIDTH = 260;
 const SVG_RENDER_HEIGHT = (SVG_VIEWBOX_HEIGHT / SVG_VIEWBOX_WIDTH) * SVG_RENDER_WIDTH;
 const SCALE = SVG_RENDER_WIDTH / SVG_VIEWBOX_WIDTH;
+const PIN_RADIUS = 2.198;
+const PIN_DIAMETER = PIN_RADIUS * 2 * SCALE;
 
-// Pin coordinate mapping - exact pixel positions from SVG
 const PIN_MAP = [
   { id: 'D0', cx: 159.977, cy: 3.933, position: Position.Top },
   { id: 'D1', cx: 153.705, cy: 3.933, position: Position.Top },
@@ -54,6 +54,19 @@ const PIN_MAP = [
   { id: 'RESET', cx: 84.929, cy: 123.071, position: Position.Bottom },
   { id: 'IOREF', cx: 78.658, cy: 123.071, position: Position.Bottom },
 ];
+
+const getPinColor = (pinId: string): string => {
+  if (pinId.startsWith('GND')) return '#1f2937';
+  if (pinId === '5V') return '#ef4444';
+  if (pinId === '3V3') return '#f472b6';
+  if (pinId === 'VIN') return '#fbbf24';
+  if (pinId === 'RESET') return '#9ca3af';
+  if (pinId === 'IOREF') return '#60a5fa';
+  if (pinId === 'AREF') return '#a78bfa';
+  if (pinId === 'SDA' || pinId === 'SCL') return '#10b981';
+  if (pinId.startsWith('A')) return '#fbbf24';
+  return '#00d9ff';
+};
 
 export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
   const mcuType = (data.mcuType as BoardType) || 'arduino-uno';
@@ -101,26 +114,33 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
         {PIN_MAP.map((pin) => {
           const left = pin.cx * SCALE;
           const top = pin.cy * SCALE;
+          const color = getPinColor(pin.id);
+          const isHovered = hoveredPin === pin.id;
+          
           return (
             <Handle
               key={pin.id}
               type="source"
               position={pin.position}
               id={pin.id}
+              onMouseEnter={() => setHoveredPin(pin.id)}
+              onMouseLeave={() => setHoveredPin(null)}
               style={{
                 position: 'absolute',
                 left: `${left}px`,
                 top: `${top}px`,
                 transform: 'translate(-50%, -50%)',
-                width: 14,
-                height: 14,
+                width: PIN_DIAMETER,
+                height: PIN_DIAMETER,
                 borderRadius: '50%',
-                border: '2px solid #00d9ff',
-                background: 'rgba(0, 217, 255, 0.2)',
+                border: 'none',
+                background: color,
                 cursor: 'crosshair',
                 zIndex: 10,
+                opacity: 1,
+                boxShadow: isHovered ? `0 0 8px ${color}` : 'none',
+                transition: 'box-shadow 0.2s ease',
               }}
-              className="hover:bg-[#00d9ff] transition-colors"
             />
           );
         })}
@@ -143,7 +163,7 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
     return 'bg-[#1a5fb4]';
   };
 
-  const getBorderColor = () => {
+  const getBoardColor = () => {
     if (isArduino) return 'border-[#0d3a7a]';
     if (isESP32) return 'border-[#1a3a0d]';
     if (isPico) return 'border-[#8b1539]';
