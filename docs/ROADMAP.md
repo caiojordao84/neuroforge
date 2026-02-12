@@ -1,6 +1,6 @@
 # ROADMAP da Plataforma NeuroForge
 
-Este documento resume o estado atual da plataforma e os próximos passos planeados, com foco em três camadas: boards, backends de execução (QEMU/outros) e frameworks (Arduino, ESP‑IDF, etc.).
+Este documento resume o estado atual da plataforma e os próximos passos planeados, com foco em três camadas: boards, backends de execução (QEMU/outros) e frameworks (Arduino, ESP-IDF, etc.).
 
 ---
 
@@ -18,19 +18,22 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 ## Estado Atual
 
 ### Boards AVR (Arduino clássico) ✅ COMPLETO
-- JSONs de boards em `docs/boards/` para UNO, Nano, etc.
+- JSONs de boards em `src/components/boards/` para UNO, Nano, etc.
 - Backend AVR integrado:
   - QEMU AVR configurado e funcional.
   - Pipeline de compilação AVR (Arduino CLI / avr-gcc) a gerar ELF executado no QEMU.
   - Board custom `arduino:avr:unoqemu` com NeuroForge Time.
+  - **Serial TCP**: QEMU conecta ao backend via TCP (fix para Windows stdio).
+  - **Auto-inject Serial.begin()**: Código do usuário sem Serial.begin() recebe injeção automática.
 - Serviços:
   - Serial/monitor integrado.
   - `SerialGPIOParser` com regex não-gananciosa para detectar frames `G:pin=...,v=...`.
+  - **Buffer TCP**: Acumula fragmentos até linha completa (`\n`).
   - Filtro de logs de controle (frames `G:` e `M:` não aparecem no Serial Monitor).
   - Multi-pin GPIO sincronizado.
 
 ### Backend ESP32 ✅ COMPLETO
-- Toolchain ESP‑IDF v6.1 configurado no Windows com Python 3.12.
+- Toolchain ESP-IDF v6.1 configurado no Windows com Python 3.12.
 - QEMU ESP32 oficial da Espressif instalado (`qemu-system-xtensa -M esp32 ...`).
 - **Compilação Real**: Sistema agora compila código do usuário com `arduino-cli --export-binaries`.
 - **Shim de GPIO** (`esp32-shim.cpp`):
@@ -46,6 +49,30 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 ### Documentação de Arquitetura
 - [`docs/architecture/backends.md`](./architecture/backends.md) descreve a arquitetura multi-backend (AVR, ESP32, RP2040) com separação entre board, backend de execução e framework.
 - [`docs/ledPisca.md`](./ledPisca.md) documenta todas as correções implementadas para Arduino e ESP32.
+- [`docs/fixes.md`](./fixes.md) documenta correções técnicas críticas (QEMU serial TCP, buffer TCP, auto-inject).
+
+### Estrutura de Boards ✅ REORGANIZADA (12/02/2026)
+- **Nova estrutura**: `src/components/boards/`
+  ```
+  src/components/boards/
+    arduino/
+      json/arduino-uno.json
+      svg/arduino-uno-r3.svg
+    esp32/
+      json/esp32-devkit.json
+      svg/esp32-devkit.svg
+    raspberry-pi-pico/
+      json/raspberry-pi-pico.json
+      svg/raspberry-pi-pico.svg
+    board-schema.json
+  ```
+- **SVG Arduino Uno R3**: Criado com nomenclatura padronizada:
+  - IDs: `pin-d0` a `pin-d13`, `pin-a0` a `pin-a5`, `pin-vin`, `pin-5v`, etc.
+  - Data attributes: `data-pin`, `data-analog`, `data-i2c`, `data-pwm`, `data-interrupt`.
+  - Componentes: `chip-atmega328p`, `chip-atmega16u2`, `usb-connector`, `power-jack`, `reset-button`.
+  - LEDs: `led-power`, `led-tx`, `led-rx`, `led-pin13`.
+  - ICSP: `icsp-1-miso` a `icsp-1-gnd`, `icsp-2-miso` a `icsp-2-gnd`.
+- Servidor não é afetado (não usa os JSONs, apenas tipos TypeScript).
 
 ---
 
@@ -54,8 +81,9 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 ### Suporte a RP2040 (Raspberry Pi Pico) - Simulação JS
 > **⚠️ NOTA:** A emulação backend via QEMU/Renode foi suspensa temporariamente para focar na simulação frontend (JS/WASM).
 - [x] Remover scripts Renode obsoletos do servidor.
-- [x] Definir JSON de board em `docs/boards/raspberry-pi-pico.json`.
+- [x] Definir JSON de board em `src/components/boards/raspberry-pi-pico/`.
 - [ ] Implementar simulação lógica básica (pinos, LED) no frontend.
+- [ ] Criar SVG do Raspberry Pi Pico com nomenclatura padronizada.
 
 ### Unificação da camada de simulação
 - [ ] Extrair um `SimulationProtocol`:
@@ -69,9 +97,15 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 
 ## Próximos Passos (Curto Prazo)
 
+### Componentes de Board
+- [ ] Criar index.ts para importar todos os boards automaticamente.
+- [ ] Implementar BoardLoader no frontend para carregar JSON + SVG dinamicamente.
+- [ ] Sistema de binding SVG ↔ GPIO state (pin highlighting, LED animations).
+
 ### Suporte a RP2040 (Raspberry Pi Pico)
 - [ ] Validar integração com `board-schema.json`.
 - [ ] Implementar interpretador/simulador JS para RP2040 (sem QEMU no momento).
+- [ ] Criar SVG do Raspberry Pi Pico.
 
 ### Componentes Avançados
 - [ ] Sensores analógicos (LDR, potenciômetro já funciona).
@@ -86,10 +120,10 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 ### Backend RP2040 (QEMU/Renode) - ⏸️ POSTERGADO
 - Retornaremos à emulação full-system backend quando o projeto estiver mais maduro.
 
-### Multi‑framework no mesmo MCU
+### Multi-framework no mesmo MCU
 - [ ] Suporte paralelo a:
-  - Arduino AVR / Arduino‑ESP32 (experiência maker).
-  - ESP‑IDF puro (experiência industrial).
+  - Arduino AVR / Arduino-ESP32 (experiência maker).
+  - ESP-IDF puro (experiência industrial).
   - Futuro: MicroPython, Rust/TinyGo (educacional e prototipagem rápida).
 - [ ] Permitir que o utilizador escolha framework por projeto/board, mantendo o mesmo backend de simulação.
 
@@ -107,7 +141,7 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 ## Mini ROADMAP deste Job (ESP32 QEMU no Windows)
 
 ### 1. Infraestrutura de ferramentas ✅ CONCLUÍDO
-- [x] Instalar ESP‑IDF v6.1 no Windows com Python 3.12.
+- [x] Instalar ESP-IDF v6.1 no Windows com Python 3.12.
 - [x] Corrigir conflitos de `windows-curses` com Python 3.14 via venv dedicada.
 - [x] Instalar toolchain `xtensa-esp-elf` e colocar no PATH.
 - [x] Instalar QEMU ESP32 via `idf_tools.py` e garantir que `qemu-system-xtensa -M esp32` funciona.
@@ -129,12 +163,32 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 - [x] Multi-pin GPIO sincronizado.
 - [x] Documentação em `docs/ledPisca.md`.
 
-### 4. Generalização e limpeza ✅ CONCLUÍDO
-- [x] Documentar a arquitetura multi‑backend em `docs/architecture/backends.md`.
+### 4. Correções Críticas do QEMU no Windows ✅ CONCLUÍDO (10-12/02/2026)
+- [x] **FIX #1: QEMU Serial TCP** - stdio não funciona no Windows:
+  - Backend cria TCP server na porta 5555 antes de iniciar QEMU.
+  - QEMU conecta como cliente usando `-serial tcp:127.0.0.1:5555`.
+  - Dados serial recebidos via socket TCP.
+  - Commits: `08b83a9`, `092ef1c`.
+- [x] **FIX #2: Buffer TCP** - Dados fragmentados:
+  - Buffer TCP acumula fragmentos até encontrar `\n`.
+  - Apenas linhas completas emitidas como eventos.
+  - Commit: `2bd66e3`.
+- [x] **FIX #3: Auto-inject Serial.begin()** - Código sem Serial.begin():
+  - Auto-inject `Serial.begin(115200)` no início de `setup()`.
+  - Apenas se não existir no código original.
+  - Funciona para Arduino AVR (ESP32 usa shim separado).
+  - Commit: `6e2544e`.
+- [x] Documentação completa em `docs/fixes.md` com scripts PowerShell de backup/restore.
+- [x] Reorganização de boards: `docs/boards/` → `src/components/boards/`.
+- [x] SVG Arduino Uno R3 com nomenclatura padronizada.
+
+### 5. Generalização e limpeza ✅ CONCLUÍDO
+- [x] Documentar a arquitetura multi-backend em `docs/architecture/backends.md`.
 - [x] Atualizar este ROADMAP à medida que a integração ESP32 evolui.
 - [x] Criar `docs/ledPisca.md` com relatório técnico completo.
+- [x] Criar `docs/fixes.md` com correções técnicas e scripts de manutenção.
 
-### 5. Enhanced QEMU Orchestration (planeado)
+### 6. Enhanced QEMU Orchestration (planeado)
 - [ ] **Unified Backend Manager**: Melhorar `QEMUSimulationEngine` com API unificada
 - [ ] **Shared Event System**: Agregação de eventos de múltiplas instâncias QEMU
 - [ ] **Multiplexed Serial Monitor**: Console única para AVR + ESP32 + outros backends
@@ -143,19 +197,22 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 - [ ] **Resource Pooling**: Gerenciamento inteligente de portas TCP/Monitor
 - [ ] **Error Handling**: Sistema unificado de tratamento de erros e recovery
 
-### 6. Multi-Device Orchestration (planeado)
+### 7. Multi-Device Orchestration (planeado)
 - [ ] **Simultaneous Multi-MCU**: Rodar AVR + ESP32 + RP2040 simultaneamente
 - [ ] **Shared NeuroForge Clock**: Clock virtual sincronizado entre todos os devices
-- [ ] **Inter-Device Communication**: GPIO/I2C/SPI bus compartilhado entre MCUs\n- [ ] **QEMU Network Bridge**: Conectar instâncias QEMU via networking features\n- [ ] **Coordinated Stepping**: Debug síncrono de múltiplos devices\n- [ ] **Resource Arbitration**: Gerenciamento de recursos compartilhados entre instâncias
+- [ ] **Inter-Device Communication**: GPIO/I2C/SPI bus compartilhado entre MCUs
+- [ ] **QEMU Network Bridge**: Conectar instâncias QEMU via networking features
+- [ ] **Coordinated Stepping**: Debug síncrono de múltiplos devices
+- [ ] **Resource Arbitration**: Gerenciamento de recursos compartilhados entre instâncias
 
-### 7. Multi-Language Toolchain (planeado)
+### 8. Multi-Language Toolchain (planeado)
 - [ ] **MicroPython Setup**: Scripts de instalação de firmware e tools (mpy-cross)
 - [ ] **CircuitPython Integration**: Suporte a UF2 workflow e bibliotecas
 - [ ] **Rust Embedded**: Setup de toolchain (cargo, avr-hal, esp-hal, rp-hal)
 - [ ] **TinyGo Support**: Configuração de compilador para AVR/ESP32/RP2040
 - [ ] **JavaScript Runtimes**: Integração com Moddable/Kaluma (se viável)
 
-### 8. NeuroForge Transpiler & Visual Programming (planeado)
+### 9. NeuroForge Transpiler & Visual Programming (planeado)
 - [ ] **Unified AST**: Parser universal para blocos, flowcharts e código
 - [ ] **Transpiler Core**: Engine de transformação (ex: TypeScript -> C++, Blocos -> Python)
 - [ ] **Visual Blocks**: Interface estilo Scratch/Blockly integrada
@@ -240,19 +297,28 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 - [x] Carregamento de binário no QEMU
 - [x] UART redirection para Serial Monitor
 - [x] ESP32 backend integration
+- [x] **QEMU Serial TCP** para compatibilidade Windows
+- [x] **Buffer TCP** para fragmentos de dados
+- [x] **Auto-inject Serial.begin()** para Arduino AVR
 
-#### Semana 3: Multi-Board Support
+#### Semana 3: Multi-Board Support ✅ COMPLETO
 - [x] Arduino Uno (AVR)
 - [x] ESP32 (Xtensa)
 - [ ] RP2040 (Simulação JS) - em progresso
 - [x] Board Selector unificado no app
+- [x] **Reorganização de estrutura**: `src/components/boards/`
+- [x] **SVG Arduino Uno R3** com nomenclatura padronizada
 
 #### 1.1.1. Backend AVR (QEMU) ✅ COMPLETO
 
-- [x] JSONs de boards AVR em `docs/boards/`
+- [x] JSONs de boards AVR em `src/components/boards/arduino/`
+- [x] SVG Arduino Uno R3 com IDs padronizados
 - [x] QEMU AVR configurado e funcional
 - [x] Pipeline de compilação AVR (Arduino CLI / avr-gcc)
 - [x] Board custom `arduino:avr:unoqemu` com NeuroForge Time
+- [x] **QEMU Serial via TCP** (fix Windows stdio)
+- [x] **Buffer TCP** para linhas completas
+- [x] **Auto-inject Serial.begin()** automático
 - [x] `SerialGPIOParser` com parser de linhas `G:pin=...,v=...`
 - [x] Regex não-gananciosa para detecção robusta
 - [x] Filtro de logs de controle no `QEMUSimulationEngine`
@@ -261,7 +327,7 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 
 #### 1.1.2. Backend ESP32 (QEMU) ✅ COMPLETO
 
-- [x] Toolchain ESP‑IDF v6.1 no Windows
+- [x] Toolchain ESP-IDF v6.1 no Windows
 - [x] QEMU ESP32 oficial da Espressif instalado
 - [x] Projeto `hello_world` compilado e executado em QEMU
 - [x] Binários `qemu_flash.bin` e `qemu_efuse.bin` gerados
@@ -299,19 +365,19 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 - [ ] Implementar suporte a perfis de modelos
 - [ ] Documentação de perfis de placas
 
-##### Perfis de Placas Pré‑Configurados
+##### Perfis de Placas Pré-Configurados
 
   A aplicação inclui perfis detalhados para placas de desenvolvimento populares:
 
   #### Família ESP32:
 
-  - ESP32‑DevKitC: mapeamento de 38 pinos com avisos de strapping pins
+  - ESP32-DevKitC: mapeamento de 38 pinos com avisos de strapping pins
 
-  - ESP32‑S3: suporte USB OTG, dupla interface USB‑Serial
+  - ESP32-S3: suporte USB OTG, dupla interface USB-Serial
 
-  - ESP32‑C3: notas sobre arquitetura RISC‑V, pinos limitados
+  - ESP32-C3: notas sobre arquitetura RISC-V, pinos limitados
 
-  - ESP32 WROOM‑32: variante padrão de 30 pinos
+  - ESP32 WROOM-32: variante padrão de 30 pinos
 
   Inclui assistentes de configuração WiFi/Bluetooth
 
@@ -360,4 +426,104 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 - **Time & Location**: **Real-Time** (Relógio RTC, Alarmes, NTP Sync); **GPS** (Coordendas, Map preview, Altitude, Sat count); **Uptime** (Sistema/Boot counter).
 - **Display Emulators**: **Segmented** (7-Segment multi-digit, Alphanumeric); **LCD/OLED** (Character LCD 16x2/20x4 com custom chars, SSD1306/SH1106 canvas render accurate); **TFT/E-Paper** (Resoluções variadas, Touch simulation, Partial update).
 - **LED Displays**: **Bar Graph** (VU meter, Level gradients); **Dot Matrix** (Pixel control, Scrolling text, Animation preview).
-- **Indicators**: **Status Label** (Labels dinâmicos, Icon library, Badges); **Progress & Chart** (Linear/Circular bars, Real-time charts multi-series, Export CSV).\n- **Communication**: **Connectivity** (WiFi Status, RSSI, MQTT Monitor/Topic subscribe, I2C Scanner, SPI Config); **Serial & Logging** (UART Terminal, Send command, Log filtering DEBUG/INFO/ERR, CSV export).\n- **Storage & Media** (SD Card browser, File upload/download, ESP32-CAM MJPEG stream preview).\n- **UX/UI Layout**: **Organization** (Tabs/Pages, Cards/Sections colapsáveis, Grid layout responsive); **Alerts** (Toasts, Dismiss timing, Severity levels).\n- **Advanced Inputs**: **Color Picker** (Full spectrum, Hex/Sliders); **Keypads** (Numeric keypad touch-friendly, Text input com histórico e validação).\n\n---\n\n### FASE 3: DASHBOARD BUILDER\n\n**STATUS: PLANEADO**\n\n- Grid layout responsivo tipo Home Assistant / Lovelace.\n- Widgets de gauge, switch, botão, texto, gráficos.\n- Binding de widgets a GPIO, Serial, variáveis globais, MQTT, HTTP.\n- Engine de automação (rules, scenes, schedules).\n- Export de dashboards (HTML standalone, apps móveis via Capacitor).\n\n---\n\n### FASE 4: INDUSTRIAL FEATURES\n\n**STATUS: PLANEADO**\n\n- Simulação de PLC (Modbus RTU/TCP, coils, registers).\n- Ladder viewer/editor básico.\n- SCADA dashboard com tema industrial.\n- Componentes industriais (sensores, atuadores, VFD, etc.).\n- Safety systems (E-stop, light curtain, safety PLC).\n\n---\n\n### FASE 5: POLISH E LANÇAMENTO\n\n**STATUS: PLANEADO**\n\n- Testes (unit, integration, performance, security).\n- Documentação maker + industrial.\n- Marketing e lançamento público.\n- Integração de pagamentos e planos.\n\n---\n\n### Métricas de sucesso (KPIs)\n\n- Mês 1: QEMU + Arduino Uno rodando blink real, 10 componentes compatíveis. ✅ **COMPLETO**\n- Mês 2: ESP32 QEMU + GPIO sincronizado + Serial Monitor. ✅ **COMPLETO**\n- Mês 3: Placas Maker, 30+ componentes maker, Dashboard Builder funcional.\n- Mês 6: PLC + SCADA, 50+ componentes maker 30+ industriais, 1k usuários ativos.\n- Ano 1: 100+ componentes maker 50+ industriais, 10k usuários, €15k MRR.\n\n---\n\n## Roadmaps Técnicos por Área\n\nAqui ficam os **roadmaps técnicos detalhados**, cada um focado numa feature/stack específica.\n\n### GPIO via Serial (AVR/ESP32/RP2040)\n\nArquivo: [`docs/roadmaps/gpio-serial-protocol.md`](./roadmaps/gpio-serial-protocol.md)\n\n- Protocolo `G:...` para reportar GPIO via Serial.\n- Backend `SerialGPIOParser` com regex não-gananciosa.\n- Helper firmware `NeuroForgeGPIO` (AVR) e shim ESP32 com weak symbols.\n- Roadmap de expansão multiplataforma e otimizações (rate limiting, checksum, modo binário).\n\n### Arquitetura Multi-Backend\n\nArquivo: [`docs/architecture/backends.md`](./architecture/backends.md)\n\n- Descrição completa da arquitetura em três camadas: Board/Device, Backend de Execução, Framework/Runtime.\n- Detalhes do backend ESP32 (QEMU) e visão de expansão para RP2040, STM32, etc.\n- Protocolo de simulação unificado para makers e uso industrial.\n\n### Correções do LED Pisca (Arduino & ESP32)\n\nArquivo: [`docs/ledPisca.md`](./ledPisca.md)\n\n- Relatório técnico completo das correções implementadas.\n- Detalhes do shim de GPIO do ESP32.\n- Explicação da compilação real vs binário estático.\n- Parser de GPIO e filtro de logs.\n\n### Outros roadmaps técnicos\n\n- QEMU + memória mapeada de GPIO (AVR/ESP32) – planejado/postergado, manter em `docs/roadmaps/`.\n- NeuroForge Time (clock virtual e timeline de eventos).\n- UI Builder & Dashboard Builder.\n- PLC/SCADA & integrações industriais.\n\nConforme novos roadmaps forem criados em `docs/roadmaps/*.md`, devem ser **linkados nesta seção**, mantendo este arquivo como fonte única de verdade do roadmap geral do projeto.\n
+- **Indicators**: **Status Label** (Labels dinâmicos, Icon library, Badges); **Progress & Chart** (Linear/Circular bars, Real-time charts multi-series, Export CSV).
+- **Communication**: **Connectivity** (WiFi Status, RSSI, MQTT Monitor/Topic subscribe, I2C Scanner, SPI Config); **Serial & Logging** (UART Terminal, Send command, Log filtering DEBUG/INFO/ERR, CSV export).
+- **Storage & Media** (SD Card browser, File upload/download, ESP32-CAM MJPEG stream preview).
+- **UX/UI Layout**: **Organization** (Tabs/Pages, Cards/Sections colapsáveis, Grid layout responsive); **Alerts** (Toasts, Dismiss timing, Severity levels).
+- **Advanced Inputs**: **Color Picker** (Full spectrum, Hex/Sliders); **Keypads** (Numeric keypad touch-friendly, Text input com histórico e validação).
+
+---
+
+### FASE 3: DASHBOARD BUILDER
+
+**STATUS: PLANEADO**
+
+- Grid layout responsivo tipo Home Assistant / Lovelace.
+- Widgets de gauge, switch, botão, texto, gráficos.
+- Binding de widgets a GPIO, Serial, variáveis globais, MQTT, HTTP.
+- Engine de automação (rules, scenes, schedules).
+- Export de dashboards (HTML standalone, apps móveis via Capacitor).
+
+---
+
+### FASE 4: INDUSTRIAL FEATURES
+
+**STATUS: PLANEADO**
+
+- Simulação de PLC (Modbus RTU/TCP, coils, registers).
+- Ladder viewer/editor básico.
+- SCADA dashboard com tema industrial.
+- Componentes industriais (sensores, atuadores, VFD, etc.).
+- Safety systems (E-stop, light curtain, safety PLC).
+
+---
+
+### FASE 5: POLISH E LANÇAMENTO
+
+**STATUS: PLANEADO**
+
+- Testes (unit, integration, performance, security).
+- Documentação maker + industrial.
+- Marketing e lançamento público.
+- Integração de pagamentos e planos.
+
+---
+
+### Métricas de sucesso (KPIs)
+
+- Mês 1: QEMU + Arduino Uno rodando blink real, 10 componentes compatíveis. ✅ **COMPLETO**
+- Mês 2: ESP32 QEMU + GPIO sincronizado + Serial Monitor. ✅ **COMPLETO**
+- Mês 3: Placas Maker, 30+ componentes maker, Dashboard Builder funcional.
+- Mês 6: PLC + SCADA, 50+ componentes maker 30+ industriais, 1k usuários ativos.
+- Ano 1: 100+ componentes maker 50+ industriais, 10k usuários, €15k MRR.
+
+---
+
+## Roadmaps Técnicos por Área
+
+Aqui ficam os **roadmaps técnicos detalhados**, cada um focado numa feature/stack específica.
+
+### GPIO via Serial (AVR/ESP32/RP2040)
+
+Arquivo: [`docs/roadmaps/gpio-serial-protocol.md`](./roadmaps/gpio-serial-protocol.md)
+
+- Protocolo `G:...` para reportar GPIO via Serial.
+- Backend `SerialGPIOParser` com regex não-gananciosa.
+- Helper firmware `NeuroForgeGPIO` (AVR) e shim ESP32 com weak symbols.
+- Roadmap de expansão multiplataforma e otimizações (rate limiting, checksum, modo binário).
+
+### Arquitetura Multi-Backend
+
+Arquivo: [`docs/architecture/backends.md`](./architecture/backends.md)
+
+- Descrição completa da arquitetura em três camadas: Board/Device, Backend de Execução, Framework/Runtime.
+- Detalhes do backend ESP32 (QEMU) e visão de expansão para RP2040, STM32, etc.
+- Protocolo de simulação unificado para makers e uso industrial.
+
+### Correções do LED Pisca (Arduino & ESP32)
+
+Arquivo: [`docs/ledPisca.md`](./ledPisca.md)
+
+- Relatório técnico completo das correções implementadas.
+- Detalhes do shim de GPIO do ESP32.
+- Explicação da compilação real vs binário estático.
+- Parser de GPIO e filtro de logs.
+
+### Correções Técnicas (QEMU Serial TCP, Buffer, Auto-inject)
+
+Arquivo: [`docs/fixes.md`](./fixes.md)
+
+- **FIX #1**: QEMU Serial via TCP (Windows stdio não funciona)
+- **FIX #2**: Buffer TCP para dados fragmentados
+- **FIX #3**: Auto-inject Serial.begin() para GPIO protocol
+- Scripts PowerShell de backup/restore dos cores customizados (Arduino AVR e ESP32)
+- Diagnóstico e verificação de instalação dos cores
+
+### Outros roadmaps técnicos
+
+- QEMU + memória mapeada de GPIO (AVR/ESP32) – planejado/postergado, manter em `docs/roadmaps/`.
+- NeuroForge Time (clock virtual e timeline de eventos).
+- UI Builder & Dashboard Builder.
+- PLC/SCADA & integrações industriais.
+
+Conforme novos roadmaps forem criados em `docs/roadmaps/*.md`, devem ser **linkados nesta seção**, mantendo este arquivo como fonte única de verdade do roadmap geral do projeto.
