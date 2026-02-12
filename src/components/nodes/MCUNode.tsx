@@ -4,6 +4,7 @@ import { boardConfigs } from '@/stores/useSimulationStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { cn } from '@/lib/utils';
 import type { BoardType } from '@/types';
+import arduinoUnoSvg from '@/components/boards/arduino/svg/arduino-uno-r3.svg';
 
 interface MCUNodeProps {
   id: string;
@@ -16,6 +17,7 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
   const config = boardConfigs[mcuType];
   const label = (data.label as string) || config.name;
   const isRunning = (data.isRunning as boolean) ?? false;
+  const useSvgBoard = (data.useSvgBoard as boolean) ?? false;
   const { openWindow } = useUIStore();
 
   // Track which pins are being hovered
@@ -35,6 +37,45 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
   const isESP32 = mcuType === 'esp32-devkit';
   const isPico = mcuType === 'raspberry-pi-pico';
 
+  // If this is the SVG prototype board, render the real SVG image
+  if (isArduino && useSvgBoard) {
+    return (
+      <div
+        className={cn(
+          'relative inline-block rounded-lg overflow-hidden',
+          selected ? 'ring-2 ring-[#00d9ff]' : 'ring-2 ring-transparent',
+          'shadow-lg transition-all duration-200'
+        )}
+        onDoubleClick={handleDoubleClick}
+        title="Double-click to open properties"
+      >
+        {/* Header with board name */}
+        <div className="absolute top-0 left-0 right-0 z-10 px-2 py-1 bg-black/70">
+          <span className="text-white text-[10px] font-bold truncate block">{label}</span>
+        </div>
+
+        {/* SVG board image */}
+        <img
+          src={arduinoUnoSvg}
+          alt={label}
+          className="block w-[260px] h-auto select-none"
+          draggable={false}
+        />
+
+        {/* Status LED overlay */}
+        <div className="absolute bottom-1 right-2">
+          <div
+            className={cn(
+              'w-2 h-2 rounded-full shadow-sm',
+              isRunning ? 'bg-green-400 animate-pulse' : 'bg-gray-600'
+            )}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Legacy/simple board rendering for all other MCUs
   // Get board color based on type
   const getBoardColor = () => {
     if (isArduino) return 'bg-[#1a5fb4]';
