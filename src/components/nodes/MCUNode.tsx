@@ -101,9 +101,6 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
         title="Double-click to open properties"
         style={{ width: SVG_RENDER_WIDTH, height: SVG_RENDER_HEIGHT }}
       >
-        <div className="absolute top-0 left-0 right-0 z-10 px-2 py-1 bg-black/70 rounded-t-lg">
-          <span className="text-white text-[10px] font-bold truncate block">{label}</span>
-        </div>
         <img
           src={arduinoUnoSvg}
           alt={label}
@@ -143,14 +140,6 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
             />
           );
         })}
-        <div className="absolute bottom-1 right-2 z-20">
-          <div
-            className={cn(
-              'w-2 h-2 rounded-full shadow-sm',
-              isRunning ? 'bg-green-400 animate-pulse' : 'bg-gray-600'
-            )}
-          />
-        </div>
       </div>
     );
   }
