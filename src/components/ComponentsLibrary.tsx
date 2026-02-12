@@ -9,7 +9,8 @@ import {
   SlidersHorizontal,
   Cpu,
   Wifi,
-  Bluetooth
+  Bluetooth,
+  Image
 } from 'lucide-react';
 
 const componentItems: ComponentLibraryItem[] = [
@@ -22,6 +23,18 @@ const componentItems: ComponentLibraryItem[] = [
       mcuType: 'arduino-uno',
       label: 'Arduino Uno',
       isRunning: false,
+    },
+  },
+  {
+    type: 'mcu',
+    name: 'Arduino Uno R3 (SVG)',
+    description: 'Prototype with real SVG pinout visualization',
+    icon: 'Image',
+    defaultData: {
+      mcuType: 'arduino-uno',
+      label: 'Arduino Uno R3 (SVG)',
+      isRunning: false,
+      useSvgBoard: true,
     },
   },
   {
@@ -109,6 +122,7 @@ const iconMap: Record<string, React.ElementType> = {
   Cpu,
   Wifi,
   Bluetooth,
+  Image,
 };
 
 export const ComponentsLibrary: React.FC = () => {
