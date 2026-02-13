@@ -1,0 +1,2304 @@
+{
+  "root": "D:\\Documents\\NeuroForge\\neuroforge",
+  "generated": "2026-02-13 21:17:17",
+  "tree": {
+    "name": "NeuroForge",
+    "type": "directory",
+    "last_modified": "2026-02-13 21:17:17",
+    "children": [
+      {
+        "name": "app",
+        "type": "directory",
+        "last_modified": "2026-02-10 00:29:46",
+        "children": [],
+        "item_count": 0
+      },
+      {
+        "name": "docs",
+        "type": "directory",
+        "last_modified": "2026-02-13 21:16:28",
+        "children": [
+          {
+            "name": "architecture",
+            "type": "directory",
+            "last_modified": "2026-02-10 00:29:46",
+            "children": [
+              {
+                "name": "backends.md",
+                "type": "file",
+                "size_bytes": 5350,
+                "size_human": "5.22 KiB",
+                "extension": ".md",
+                "last_modified": "2026-02-10 00:29:46"
+              }
+            ],
+            "item_count": 1
+          },
+          {
+            "name": "boards",
+            "type": "directory",
+            "last_modified": "2026-02-12 10:33:08",
+            "children": [],
+            "item_count": 0
+          },
+          {
+            "name": "firmware",
+            "type": "directory",
+            "last_modified": "2026-02-10 00:29:46",
+            "children": [
+              {
+                "name": ".gitkeep",
+                "type": "file",
+                "size_bytes": 47,
+                "size_human": "47.00 B",
+                "extension": "(sem extensão)",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "esp32-idf-setup.md",
+                "type": "file",
+                "size_bytes": 6381,
+                "size_human": "6.23 KiB",
+                "extension": ".md",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "esp32-setup-guide.md",
+                "type": "file",
+                "size_bytes": 7955,
+                "size_human": "7.77 KiB",
+                "extension": ".md",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "rp2040-setup.md",
+                "type": "file",
+                "size_bytes": 11610,
+                "size_human": "11.34 KiB",
+                "extension": ".md",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "rp2040-windows-install.ps1",
+                "type": "file",
+                "size_bytes": 7942,
+                "size_human": "7.76 KiB",
+                "extension": ".ps1",
+                "last_modified": "2026-02-10 00:29:46"
+              }
+            ],
+            "item_count": 5
+          },
+          {
+            "name": "roadmaps",
+            "type": "directory",
+            "last_modified": "2026-02-10 00:29:46",
+            "children": [
+              {
+                "name": "gpio-memory-mapped-postponed.md",
+                "type": "file",
+                "size_bytes": 4359,
+                "size_human": "4.26 KiB",
+                "extension": ".md",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "gpio-serial-protocol.md",
+                "type": "file",
+                "size_bytes": 5576,
+                "size_human": "5.45 KiB",
+                "extension": ".md",
+                "last_modified": "2026-02-10 00:29:46"
+              }
+            ],
+            "item_count": 2
+          },
+          {
+            "name": "AI_ASSISTANT_CONTEXT.md",
+            "type": "file",
+            "size_bytes": 23722,
+            "size_human": "23.17 KiB",
+            "extension": ".md",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "boards-documentation.md",
+            "type": "file",
+            "size_bytes": 9764,
+            "size_human": "9.54 KiB",
+            "extension": ".md",
+            "last_modified": "2026-02-12 21:49:33"
+          },
+          {
+            "name": "fixes.md",
+            "type": "file",
+            "size_bytes": 8864,
+            "size_human": "8.66 KiB",
+            "extension": ".md",
+            "last_modified": "2026-02-10 22:05:07"
+          },
+          {
+            "name": "ledPisca.md",
+            "type": "file",
+            "size_bytes": 4521,
+            "size_human": "4.42 KiB",
+            "extension": ".md",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "QEMU_SETUP.md",
+            "type": "file",
+            "size_bytes": 6813,
+            "size_human": "6.65 KiB",
+            "extension": ".md",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "roadmap-prs-qemu-gpio-monitor.md",
+            "type": "file",
+            "size_bytes": 6153,
+            "size_human": "6.01 KiB",
+            "extension": ".md",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "ROADMAP.md",
+            "type": "file",
+            "size_bytes": 24502,
+            "size_human": "23.93 KiB",
+            "extension": ".md",
+            "last_modified": "2026-02-12 10:59:46"
+          },
+          {
+            "name": "serial-gpio-protocol.md",
+            "type": "file",
+            "size_bytes": 6609,
+            "size_human": "6.45 KiB",
+            "extension": ".md",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "todayCheck.md",
+            "type": "file",
+            "size_bytes": 3513,
+            "size_human": "3.43 KiB",
+            "extension": ".md",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "tree.json",
+            "type": "file",
+            "size_bytes": 81739,
+            "size_human": "79.82 KiB",
+            "extension": ".json",
+            "last_modified": "2026-02-13 21:03:45"
+          },
+          {
+            "name": "tree.md",
+            "type": "file",
+            "size_bytes": 12302,
+            "size_human": "12.01 KiB",
+            "extension": ".md",
+            "last_modified": "2026-02-13 21:03:45"
+          }
+        ],
+        "item_count": 15
+      },
+      {
+        "name": "poc",
+        "type": "directory",
+        "last_modified": "2026-02-10 00:29:46",
+        "children": [
+          {
+            "name": "blink",
+            "type": "directory",
+            "last_modified": "2026-02-10 00:29:46",
+            "children": [
+              {
+                "name": "blink.ino",
+                "type": "file",
+                "size_bytes": 811,
+                "size_human": "811.00 B",
+                "extension": ".ino",
+                "last_modified": "2026-02-10 00:29:46"
+              }
+            ],
+            "item_count": 1
+          },
+          {
+            "name": "gpio_test",
+            "type": "directory",
+            "last_modified": "2026-02-10 00:29:46",
+            "children": [
+              {
+                "name": "gpio_test.ino",
+                "type": "file",
+                "size_bytes": 1047,
+                "size_human": "1.02 KiB",
+                "extension": ".ino",
+                "last_modified": "2026-02-10 00:29:46"
+              }
+            ],
+            "item_count": 1
+          },
+          {
+            "name": "libraries",
+            "type": "directory",
+            "last_modified": "2026-02-10 00:29:46",
+            "children": [
+              {
+                "name": "NeuroForgeGPIO",
+                "type": "directory",
+                "last_modified": "2026-02-10 00:29:46",
+                "children": [
+                  {
+                    "name": "library.properties",
+                    "type": "file",
+                    "size_bytes": 358,
+                    "size_human": "358.00 B",
+                    "extension": ".properties",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "NeuroForgeGPIO.cpp",
+                    "type": "file",
+                    "size_bytes": 1665,
+                    "size_human": "1.63 KiB",
+                    "extension": ".cpp",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "NeuroForgeGPIO.h",
+                    "type": "file",
+                    "size_bytes": 954,
+                    "size_human": "954.00 B",
+                    "extension": ".h",
+                    "last_modified": "2026-02-10 00:29:46"
+                  }
+                ],
+                "item_count": 3
+              },
+              {
+                "name": "NeuroForgeGPIO_ESP32",
+                "type": "directory",
+                "last_modified": "2026-02-10 00:29:46",
+                "children": [
+                  {
+                    "name": "examples",
+                    "type": "directory",
+                    "last_modified": "2026-02-10 00:29:46",
+                    "children": [
+                      {
+                        "name": "ESP32_GPIOTest",
+                        "type": "directory",
+                        "last_modified": "2026-02-10 00:29:46",
+                        "children": [
+                          {
+                            "name": "ESP32_GPIOTest.ino",
+                            "type": "file",
+                            "size_bytes": 947,
+                            "size_human": "947.00 B",
+                            "extension": ".ino",
+                            "last_modified": "2026-02-10 00:29:46"
+                          }
+                        ],
+                        "item_count": 1
+                      }
+                    ],
+                    "item_count": 1
+                  },
+                  {
+                    "name": "library.properties",
+                    "type": "file",
+                    "size_bytes": 373,
+                    "size_human": "373.00 B",
+                    "extension": ".properties",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "NeuroForgeGPIO_ESP32.cpp",
+                    "type": "file",
+                    "size_bytes": 429,
+                    "size_human": "429.00 B",
+                    "extension": ".cpp",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "NeuroForgeGPIO_ESP32.h",
+                    "type": "file",
+                    "size_bytes": 1198,
+                    "size_human": "1.17 KiB",
+                    "extension": ".h",
+                    "last_modified": "2026-02-10 00:29:46"
+                  }
+                ],
+                "item_count": 4
+              }
+            ],
+            "item_count": 2
+          },
+          {
+            "name": "serial_test",
+            "type": "directory",
+            "last_modified": "2026-02-10 00:29:46",
+            "children": [
+              {
+                "name": "serial_test.ino",
+                "type": "file",
+                "size_bytes": 762,
+                "size_human": "762.00 B",
+                "extension": ".ino",
+                "last_modified": "2026-02-10 00:29:46"
+              }
+            ],
+            "item_count": 1
+          },
+          {
+            "name": "compile.ps1",
+            "type": "file",
+            "size_bytes": 2742,
+            "size_human": "2.68 KiB",
+            "extension": ".ps1",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "debug_qemu.ps1",
+            "type": "file",
+            "size_bytes": 2109,
+            "size_human": "2.06 KiB",
+            "extension": ".ps1",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "fix_qemu_path.ps1",
+            "type": "file",
+            "size_bytes": 2106,
+            "size_human": "2.06 KiB",
+            "extension": ".ps1",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "install_qemu_avr.ps1",
+            "type": "file",
+            "size_bytes": 3766,
+            "size_human": "3.68 KiB",
+            "extension": ".ps1",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "README.md",
+            "type": "file",
+            "size_bytes": 2031,
+            "size_human": "1.98 KiB",
+            "extension": ".md",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "run_qemu.ps1",
+            "type": "file",
+            "size_bytes": 4562,
+            "size_human": "4.46 KiB",
+            "extension": ".ps1",
+            "last_modified": "2026-02-10 00:29:46"
+          }
+        ],
+        "item_count": 10
+      },
+      {
+        "name": "server",
+        "type": "directory",
+        "last_modified": "2026-02-10 09:14:54",
+        "children": [
+          {
+            "name": "cores",
+            "type": "directory",
+            "last_modified": "2026-02-10 00:29:46",
+            "children": [
+              {
+                "name": "neuroforge_qemu",
+                "type": "directory",
+                "last_modified": "2026-02-10 00:29:46",
+                "children": [
+                  {
+                    "name": "boards.txt",
+                    "type": "file",
+                    "size_bytes": 43028,
+                    "size_human": "42.02 KiB",
+                    "extension": ".txt",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "nf_arduino_time.cpp",
+                    "type": "file",
+                    "size_bytes": 1512,
+                    "size_human": "1.48 KiB",
+                    "extension": ".cpp",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "nf_gpio.cpp",
+                    "type": "file",
+                    "size_bytes": 1381,
+                    "size_human": "1.35 KiB",
+                    "extension": ".cpp",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "nf_gpio.h",
+                    "type": "file",
+                    "size_bytes": 321,
+                    "size_human": "321.00 B",
+                    "extension": ".h",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "nf_time.cpp",
+                    "type": "file",
+                    "size_bytes": 2202,
+                    "size_human": "2.15 KiB",
+                    "extension": ".cpp",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "nf_time.h",
+                    "type": "file",
+                    "size_bytes": 1516,
+                    "size_human": "1.48 KiB",
+                    "extension": ".h",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "README.md",
+                    "type": "file",
+                    "size_bytes": 6095,
+                    "size_human": "5.95 KiB",
+                    "extension": ".md",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "wiring.c.patch",
+                    "type": "file",
+                    "size_bytes": 687,
+                    "size_human": "687.00 B",
+                    "extension": ".patch",
+                    "last_modified": "2026-02-10 00:29:46"
+                  }
+                ],
+                "item_count": 8
+              },
+              {
+                "name": "install-core-fixed.ps1",
+                "type": "file",
+                "size_bytes": 5326,
+                "size_human": "5.20 KiB",
+                "extension": ".ps1",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "install-core.ps1",
+                "type": "file",
+                "size_bytes": 5225,
+                "size_human": "5.10 KiB",
+                "extension": ".ps1",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "install-core.sh",
+                "type": "file",
+                "size_bytes": 3438,
+                "size_human": "3.36 KiB",
+                "extension": ".sh",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "NEUROFORGE_TIME_IMPLEMENTATION.md",
+                "type": "file",
+                "size_bytes": 9181,
+                "size_human": "8.97 KiB",
+                "extension": ".md",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "patch-wiring.ps1",
+                "type": "file",
+                "size_bytes": 4591,
+                "size_human": "4.48 KiB",
+                "extension": ".ps1",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "update-nf-time.ps1",
+                "type": "file",
+                "size_bytes": 1809,
+                "size_human": "1.77 KiB",
+                "extension": ".ps1",
+                "last_modified": "2026-02-10 00:29:46"
+              }
+            ],
+            "item_count": 7
+          },
+          {
+            "name": "scripts",
+            "type": "directory",
+            "last_modified": "2026-02-10 09:30:59",
+            "children": [
+              {
+                "name": "backup-cores.ps1",
+                "type": "file",
+                "size_bytes": 13031,
+                "size_human": "12.73 KiB",
+                "extension": ".ps1",
+                "last_modified": "2026-02-10 09:14:54"
+              },
+              {
+                "name": "diagnose-arduino-gpio.ps1",
+                "type": "file",
+                "size_bytes": 9881,
+                "size_human": "9.65 KiB",
+                "extension": ".ps1",
+                "last_modified": "2026-02-10 09:30:59"
+              },
+              {
+                "name": "fix-arduino-gpio.ps1",
+                "type": "file",
+                "size_bytes": 7974,
+                "size_human": "7.79 KiB",
+                "extension": ".ps1",
+                "last_modified": "2026-02-10 09:19:52"
+              },
+              {
+                "name": "README.md",
+                "type": "file",
+                "size_bytes": 10271,
+                "size_human": "10.03 KiB",
+                "extension": ".md",
+                "last_modified": "2026-02-10 09:19:52"
+              }
+            ],
+            "item_count": 4
+          },
+          {
+            "name": "src",
+            "type": "directory",
+            "last_modified": "2026-02-10 00:29:46",
+            "children": [
+              {
+                "name": "api",
+                "type": "directory",
+                "last_modified": "2026-02-10 00:29:46",
+                "children": [
+                  {
+                    "name": "routes.ts",
+                    "type": "file",
+                    "size_bytes": 7639,
+                    "size_human": "7.46 KiB",
+                    "extension": ".ts",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "websocket.ts",
+                    "type": "file",
+                    "size_bytes": 2267,
+                    "size_human": "2.21 KiB",
+                    "extension": ".ts",
+                    "last_modified": "2026-02-10 00:29:46"
+                  }
+                ],
+                "item_count": 2
+              },
+              {
+                "name": "services",
+                "type": "directory",
+                "last_modified": "2026-02-10 19:26:16",
+                "children": [
+                  {
+                    "name": "CompilerService.ts",
+                    "type": "file",
+                    "size_bytes": 10491,
+                    "size_human": "10.25 KiB",
+                    "extension": ".ts",
+                    "last_modified": "2026-02-10 19:16:30"
+                  },
+                  {
+                    "name": "Esp32Backend.ts",
+                    "type": "file",
+                    "size_bytes": 11587,
+                    "size_human": "11.32 KiB",
+                    "extension": ".ts",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "Esp32SerialClient.ts",
+                    "type": "file",
+                    "size_bytes": 3381,
+                    "size_human": "3.30 KiB",
+                    "extension": ".ts",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "QEMUMonitorService.ts",
+                    "type": "file",
+                    "size_bytes": 9598,
+                    "size_human": "9.37 KiB",
+                    "extension": ".ts",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "QEMURunner.ts",
+                    "type": "file",
+                    "size_bytes": 10787,
+                    "size_human": "10.53 KiB",
+                    "extension": ".ts",
+                    "last_modified": "2026-02-10 19:26:16"
+                  },
+                  {
+                    "name": "QEMUSimulationEngine.ts",
+                    "type": "file",
+                    "size_bytes": 10715,
+                    "size_human": "10.46 KiB",
+                    "extension": ".ts",
+                    "last_modified": "2026-02-10 14:26:09"
+                  },
+                  {
+                    "name": "SerialGPIOParser.ts",
+                    "type": "file",
+                    "size_bytes": 1760,
+                    "size_human": "1.72 KiB",
+                    "extension": ".ts",
+                    "last_modified": "2026-02-10 00:29:46"
+                  }
+                ],
+                "item_count": 7
+              },
+              {
+                "name": "shims",
+                "type": "directory",
+                "last_modified": "2026-02-10 00:29:46",
+                "children": [
+                  {
+                    "name": "esp32-shim.cpp",
+                    "type": "file",
+                    "size_bytes": 1296,
+                    "size_human": "1.27 KiB",
+                    "extension": ".cpp",
+                    "last_modified": "2026-02-10 00:29:46"
+                  }
+                ],
+                "item_count": 1
+              },
+              {
+                "name": "types",
+                "type": "directory",
+                "last_modified": "2026-02-10 00:29:46",
+                "children": [
+                  {
+                    "name": "esp32.types.ts",
+                    "type": "file",
+                    "size_bytes": 875,
+                    "size_human": "875.00 B",
+                    "extension": ".ts",
+                    "last_modified": "2026-02-10 00:29:46"
+                  }
+                ],
+                "item_count": 1
+              },
+              {
+                "name": "server.ts",
+                "type": "file",
+                "size_bytes": 1074,
+                "size_human": "1.05 KiB",
+                "extension": ".ts",
+                "last_modified": "2026-02-10 00:29:46"
+              }
+            ],
+            "item_count": 5
+          },
+          {
+            "name": "test-firmware",
+            "type": "directory",
+            "last_modified": "2026-02-10 00:29:46",
+            "children": [
+              {
+                "name": "esp32",
+                "type": "directory",
+                "last_modified": "2026-02-10 00:29:46",
+                "children": [
+                  {
+                    "name": "qemu_efuse.bin",
+                    "type": "file",
+                    "size_bytes": 124,
+                    "size_human": "124.00 B",
+                    "extension": ".bin",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "qemu_flash.bin",
+                    "type": "file",
+                    "size_bytes": 2097152,
+                    "size_human": "2.00 MiB",
+                    "extension": ".bin",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "README.md",
+                    "type": "file",
+                    "size_bytes": 2287,
+                    "size_human": "2.23 KiB",
+                    "extension": ".md",
+                    "last_modified": "2026-02-10 00:29:46"
+                  }
+                ],
+                "item_count": 3
+              },
+              {
+                "name": "esp32_shim_test",
+                "type": "directory",
+                "last_modified": "2026-02-10 00:29:46",
+                "children": [
+                  {
+                    "name": "esp32_shim_test.ino",
+                    "type": "file",
+                    "size_bytes": 359,
+                    "size_human": "359.00 B",
+                    "extension": ".ino",
+                    "last_modified": "2026-02-10 00:29:46"
+                  }
+                ],
+                "item_count": 1
+              },
+              {
+                "name": "rp2040",
+                "type": "directory",
+                "last_modified": "2026-02-10 00:29:46",
+                "children": [
+                  {
+                    "name": "blink",
+                    "type": "directory",
+                    "last_modified": "2026-02-10 00:29:46",
+                    "children": [
+                      {
+                        "name": "platforms",
+                        "type": "directory",
+                        "last_modified": "2026-02-10 00:29:46",
+                        "children": [
+                          {
+                            "name": "raspberry-pico.repl",
+                            "type": "file",
+                            "size_bytes": 306,
+                            "size_human": "306.00 B",
+                            "extension": ".repl",
+                            "last_modified": "2026-02-10 00:29:46"
+                          },
+                          {
+                            "name": "rp2040.repl",
+                            "type": "file",
+                            "size_bytes": 2963,
+                            "size_human": "2.89 KiB",
+                            "extension": ".repl",
+                            "last_modified": "2026-02-10 00:29:46"
+                          }
+                        ],
+                        "item_count": 2
+                      },
+                      {
+                        "name": "bare.ld",
+                        "type": "file",
+                        "size_bytes": 374,
+                        "size_human": "374.00 B",
+                        "extension": ".ld",
+                        "last_modified": "2026-02-10 00:29:46"
+                      },
+                      {
+                        "name": "CMakeLists.txt",
+                        "type": "file",
+                        "size_bytes": 1975,
+                        "size_human": "1.93 KiB",
+                        "extension": ".txt",
+                        "last_modified": "2026-02-10 00:29:46"
+                      },
+                      {
+                        "name": "main.c",
+                        "type": "file",
+                        "size_bytes": 3156,
+                        "size_human": "3.08 KiB",
+                        "extension": ".c",
+                        "last_modified": "2026-02-10 00:29:46"
+                      },
+                      {
+                        "name": "main_bare.c",
+                        "type": "file",
+                        "size_bytes": 3631,
+                        "size_human": "3.55 KiB",
+                        "extension": ".c",
+                        "last_modified": "2026-02-10 00:29:46"
+                      },
+                      {
+                        "name": "main_minimal.c",
+                        "type": "file",
+                        "size_bytes": 2189,
+                        "size_human": "2.14 KiB",
+                        "extension": ".c",
+                        "last_modified": "2026-02-10 00:29:46"
+                      },
+                      {
+                        "name": "main_simple.c",
+                        "type": "file",
+                        "size_bytes": 2289,
+                        "size_human": "2.24 KiB",
+                        "extension": ".c",
+                        "last_modified": "2026-02-10 00:29:46"
+                      },
+                      {
+                        "name": "main_systick.c",
+                        "type": "file",
+                        "size_bytes": 2900,
+                        "size_human": "2.83 KiB",
+                        "extension": ".c",
+                        "last_modified": "2026-02-10 00:29:46"
+                      },
+                      {
+                        "name": "monitor-serial.ps1",
+                        "type": "file",
+                        "size_bytes": 2294,
+                        "size_human": "2.24 KiB",
+                        "extension": ".ps1",
+                        "last_modified": "2026-02-10 00:29:46"
+                      },
+                      {
+                        "name": "pico_sdk_import.cmake",
+                        "type": "file",
+                        "size_bytes": 2825,
+                        "size_human": "2.76 KiB",
+                        "extension": ".cmake",
+                        "last_modified": "2026-02-10 00:29:46"
+                      },
+                      {
+                        "name": "test-bare.resc",
+                        "type": "file",
+                        "size_bytes": 1032,
+                        "size_human": "1.01 KiB",
+                        "extension": ".resc",
+                        "last_modified": "2026-02-10 00:29:46"
+                      },
+                      {
+                        "name": "test-blink.resc",
+                        "type": "file",
+                        "size_bytes": 2977,
+                        "size_human": "2.91 KiB",
+                        "extension": ".resc",
+                        "last_modified": "2026-02-10 00:29:46"
+                      },
+                      {
+                        "name": "test-simple.resc",
+                        "type": "file",
+                        "size_bytes": 4713,
+                        "size_human": "4.60 KiB",
+                        "extension": ".resc",
+                        "last_modified": "2026-02-10 00:29:46"
+                      },
+                      {
+                        "name": "timer_patch.py",
+                        "type": "file",
+                        "size_bytes": 1545,
+                        "size_human": "1.51 KiB",
+                        "extension": ".py",
+                        "last_modified": "2026-02-10 00:29:46"
+                      }
+                    ],
+                    "item_count": 14
+                  }
+                ],
+                "item_count": 1
+              },
+              {
+                "name": "blink.ino",
+                "type": "file",
+                "size_bytes": 373,
+                "size_human": "373.00 B",
+                "extension": ".ino",
+                "last_modified": "2026-02-10 00:29:46"
+              }
+            ],
+            "item_count": 4
+          },
+          {
+            "name": "test-sketch",
+            "type": "directory",
+            "last_modified": "2026-02-10 00:29:46",
+            "children": [
+              {
+                "name": "test-sketch.ino",
+                "type": "file",
+                "size_bytes": 151,
+                "size_human": "151.00 B",
+                "extension": ".ino",
+                "last_modified": "2026-02-10 00:29:46"
+              }
+            ],
+            "item_count": 1
+          },
+          {
+            "name": ".env.example",
+            "type": "file",
+            "size_bytes": 1772,
+            "size_human": "1.73 KiB",
+            "extension": ".example",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "example-gpio-esp32.ts",
+            "type": "file",
+            "size_bytes": 6846,
+            "size_human": "6.69 KiB",
+            "extension": ".ts",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "example-gpio.ts",
+            "type": "file",
+            "size_bytes": 2900,
+            "size_human": "2.83 KiB",
+            "extension": ".ts",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "example-mock.ts",
+            "type": "file",
+            "size_bytes": 2380,
+            "size_human": "2.32 KiB",
+            "extension": ".ts",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "example-monitor.ts",
+            "type": "file",
+            "size_bytes": 7613,
+            "size_human": "7.43 KiB",
+            "extension": ".ts",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "example.ts",
+            "type": "file",
+            "size_bytes": 1801,
+            "size_human": "1.76 KiB",
+            "extension": ".ts",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "package-lock.json",
+            "type": "file",
+            "size_bytes": 61596,
+            "size_human": "60.15 KiB",
+            "extension": ".json",
+            "last_modified": "2026-02-10 07:40:05"
+          },
+          {
+            "name": "package.json",
+            "type": "file",
+            "size_bytes": 812,
+            "size_human": "812.00 B",
+            "extension": ".json",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "QEMUGPIOService.ts",
+            "type": "file",
+            "size_bytes": 7117,
+            "size_human": "6.95 KiB",
+            "extension": ".ts",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "QEMURunner.ts",
+            "type": "file",
+            "size_bytes": 10154,
+            "size_human": "9.92 KiB",
+            "extension": ".ts",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "QEMUSimulationEngine.ts",
+            "type": "file",
+            "size_bytes": 4704,
+            "size_human": "4.59 KiB",
+            "extension": ".ts",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "README.md",
+            "type": "file",
+            "size_bytes": 8382,
+            "size_human": "8.19 KiB",
+            "extension": ".md",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "README_MONITOR.md",
+            "type": "file",
+            "size_bytes": 9745,
+            "size_human": "9.52 KiB",
+            "extension": ".md",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "README_TESTING.md",
+            "type": "file",
+            "size_bytes": 3607,
+            "size_human": "3.52 KiB",
+            "extension": ".md",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "SerialGPIOService.ts",
+            "type": "file",
+            "size_bytes": 5719,
+            "size_human": "5.58 KiB",
+            "extension": ".ts",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "tsconfig.json",
+            "type": "file",
+            "size_bytes": 497,
+            "size_human": "497.00 B",
+            "extension": ".json",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "tsconfig.tsbuildinfo",
+            "type": "file",
+            "size_bytes": 340,
+            "size_human": "340.00 B",
+            "extension": ".tsbuildinfo",
+            "last_modified": "2026-02-10 00:29:46"
+          }
+        ],
+        "item_count": 22
+      },
+      {
+        "name": "src",
+        "type": "directory",
+        "last_modified": "2026-02-10 00:29:46",
+        "children": [
+          {
+            "name": "components",
+            "type": "directory",
+            "last_modified": "2026-02-13 01:11:26",
+            "children": [
+              {
+                "name": "boards",
+                "type": "directory",
+                "last_modified": "2026-02-12 10:33:08",
+                "children": [
+                  {
+                    "name": "arduino",
+                    "type": "directory",
+                    "last_modified": "2026-02-12 10:33:07",
+                    "children": [
+                      {
+                        "name": "json",
+                        "type": "directory",
+                        "last_modified": "2026-02-12 10:33:08",
+                        "children": [
+                          {
+                            "name": "arduino-uno.json",
+                            "type": "file",
+                            "size_bytes": 5658,
+                            "size_human": "5.53 KiB",
+                            "extension": ".json",
+                            "last_modified": "2026-02-10 00:29:46"
+                          }
+                        ],
+                        "item_count": 1
+                      },
+                      {
+                        "name": "svg",
+                        "type": "directory",
+                        "last_modified": "2026-02-12 10:33:08",
+                        "children": [
+                          {
+                            "name": "arduino-uno-r3.svg",
+                            "type": "file",
+                            "size_bytes": 24557,
+                            "size_human": "23.98 KiB",
+                            "extension": ".svg",
+                            "last_modified": "2026-02-12 10:11:54"
+                          }
+                        ],
+                        "item_count": 1
+                      }
+                    ],
+                    "item_count": 2
+                  },
+                  {
+                    "name": "esp32",
+                    "type": "directory",
+                    "last_modified": "2026-02-12 10:33:07",
+                    "children": [
+                      {
+                        "name": "json",
+                        "type": "directory",
+                        "last_modified": "2026-02-12 10:33:08",
+                        "children": [
+                          {
+                            "name": "esp32-devkit.json",
+                            "type": "file",
+                            "size_bytes": 8057,
+                            "size_human": "7.87 KiB",
+                            "extension": ".json",
+                            "last_modified": "2026-02-10 00:29:46"
+                          }
+                        ],
+                        "item_count": 1
+                      },
+                      {
+                        "name": "svg",
+                        "type": "directory",
+                        "last_modified": "2026-02-12 10:33:07",
+                        "children": [],
+                        "item_count": 0
+                      }
+                    ],
+                    "item_count": 2
+                  },
+                  {
+                    "name": "raspberry-pi-pico",
+                    "type": "directory",
+                    "last_modified": "2026-02-12 10:33:08",
+                    "children": [
+                      {
+                        "name": "json",
+                        "type": "directory",
+                        "last_modified": "2026-02-12 10:33:08",
+                        "children": [
+                          {
+                            "name": "raspberry-pi-pico.json",
+                            "type": "file",
+                            "size_bytes": 4819,
+                            "size_human": "4.71 KiB",
+                            "extension": ".json",
+                            "last_modified": "2026-02-10 00:29:46"
+                          }
+                        ],
+                        "item_count": 1
+                      },
+                      {
+                        "name": "svg",
+                        "type": "directory",
+                        "last_modified": "2026-02-12 10:33:08",
+                        "children": [],
+                        "item_count": 0
+                      }
+                    ],
+                    "item_count": 2
+                  },
+                  {
+                    "name": "board-schema.json",
+                    "type": "file",
+                    "size_bytes": 15358,
+                    "size_human": "15.00 KiB",
+                    "extension": ".json",
+                    "last_modified": "2026-02-10 00:29:46"
+                  }
+                ],
+                "item_count": 4
+              },
+              {
+                "name": "edges",
+                "type": "directory",
+                "last_modified": "2026-02-10 00:29:46",
+                "children": [
+                  {
+                    "name": "index.ts",
+                    "type": "file",
+                    "size_bytes": 238,
+                    "size_human": "238.00 B",
+                    "extension": ".ts",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "ManhattanEdge.tsx",
+                    "type": "file",
+                    "size_bytes": 4759,
+                    "size_human": "4.65 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  }
+                ],
+                "item_count": 2
+              },
+              {
+                "name": "nodes",
+                "type": "directory",
+                "last_modified": "2026-02-13 01:11:26",
+                "children": [
+                  {
+                    "name": "ButtonNode.tsx",
+                    "type": "file",
+                    "size_bytes": 6552,
+                    "size_human": "6.40 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "index.ts",
+                    "type": "file",
+                    "size_bytes": 618,
+                    "size_human": "618.00 B",
+                    "extension": ".ts",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "LEDNode.tsx",
+                    "type": "file",
+                    "size_bytes": 6578,
+                    "size_human": "6.42 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "MCUNode.tsx",
+                    "type": "file",
+                    "size_bytes": 16414,
+                    "size_human": "16.03 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-13 01:11:26"
+                  },
+                  {
+                    "name": "PotentiometerNode.tsx",
+                    "type": "file",
+                    "size_bytes": 8143,
+                    "size_human": "7.95 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "RGBLEDNode.tsx",
+                    "type": "file",
+                    "size_bytes": 7923,
+                    "size_human": "7.74 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "ServoNode.tsx",
+                    "type": "file",
+                    "size_bytes": 7301,
+                    "size_human": "7.13 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  }
+                ],
+                "item_count": 7
+              },
+              {
+                "name": "ui",
+                "type": "directory",
+                "last_modified": "2026-02-10 00:29:46",
+                "children": [
+                  {
+                    "name": "accordion.tsx",
+                    "type": "file",
+                    "size_bytes": 2103,
+                    "size_human": "2.05 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "alert-dialog.tsx",
+                    "type": "file",
+                    "size_bytes": 4005,
+                    "size_human": "3.91 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "alert.tsx",
+                    "type": "file",
+                    "size_bytes": 1680,
+                    "size_human": "1.64 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "aspect-ratio.tsx",
+                    "type": "file",
+                    "size_bytes": 291,
+                    "size_human": "291.00 B",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "avatar.tsx",
+                    "type": "file",
+                    "size_bytes": 1134,
+                    "size_human": "1.11 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "badge.tsx",
+                    "type": "file",
+                    "size_bytes": 1679,
+                    "size_human": "1.64 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "breadcrumb.tsx",
+                    "type": "file",
+                    "size_bytes": 2466,
+                    "size_human": "2.41 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "button-group.tsx",
+                    "type": "file",
+                    "size_bytes": 2292,
+                    "size_human": "2.24 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "button.tsx",
+                    "type": "file",
+                    "size_bytes": 2280,
+                    "size_human": "2.23 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "calendar.tsx",
+                    "type": "file",
+                    "size_bytes": 8013,
+                    "size_human": "7.83 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "card.tsx",
+                    "type": "file",
+                    "size_bytes": 2079,
+                    "size_human": "2.03 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "carousel.tsx",
+                    "type": "file",
+                    "size_bytes": 5781,
+                    "size_human": "5.65 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "chart.tsx",
+                    "type": "file",
+                    "size_bytes": 10426,
+                    "size_human": "10.18 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "checkbox.tsx",
+                    "type": "file",
+                    "size_bytes": 1251,
+                    "size_human": "1.22 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "collapsible.tsx",
+                    "type": "file",
+                    "size_bytes": 817,
+                    "size_human": "817.00 B",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "command.tsx",
+                    "type": "file",
+                    "size_bytes": 4986,
+                    "size_human": "4.87 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "context-menu.tsx",
+                    "type": "file",
+                    "size_bytes": 8526,
+                    "size_human": "8.33 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "dialog.tsx",
+                    "type": "file",
+                    "size_bytes": 4122,
+                    "size_human": "4.03 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "drawer.tsx",
+                    "type": "file",
+                    "size_bytes": 4390,
+                    "size_human": "4.29 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "dropdown-menu.tsx",
+                    "type": "file",
+                    "size_bytes": 8665,
+                    "size_human": "8.46 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "empty.tsx",
+                    "type": "file",
+                    "size_bytes": 2500,
+                    "size_human": "2.44 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "field.tsx",
+                    "type": "file",
+                    "size_bytes": 6391,
+                    "size_human": "6.24 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "form.tsx",
+                    "type": "file",
+                    "size_bytes": 3931,
+                    "size_human": "3.84 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "hover-card.tsx",
+                    "type": "file",
+                    "size_bytes": 1576,
+                    "size_human": "1.54 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "input-group.tsx",
+                    "type": "file",
+                    "size_bytes": 5235,
+                    "size_human": "5.11 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "input-otp.tsx",
+                    "type": "file",
+                    "size_bytes": 2315,
+                    "size_human": "2.26 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "input.tsx",
+                    "type": "file",
+                    "size_bytes": 983,
+                    "size_human": "983.00 B",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "item.tsx",
+                    "type": "file",
+                    "size_bytes": 4687,
+                    "size_human": "4.58 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "kbd.tsx",
+                    "type": "file",
+                    "size_bytes": 890,
+                    "size_human": "890.00 B",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "label.tsx",
+                    "type": "file",
+                    "size_bytes": 635,
+                    "size_human": "635.00 B",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "menubar.tsx",
+                    "type": "file",
+                    "size_bytes": 8654,
+                    "size_human": "8.45 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "navigation-menu.tsx",
+                    "type": "file",
+                    "size_bytes": 6832,
+                    "size_human": "6.67 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "pagination.tsx",
+                    "type": "file",
+                    "size_bytes": 2844,
+                    "size_human": "2.78 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "popover.tsx",
+                    "type": "file",
+                    "size_bytes": 1683,
+                    "size_human": "1.64 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "progress.tsx",
+                    "type": "file",
+                    "size_bytes": 755,
+                    "size_human": "755.00 B",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "radio-group.tsx",
+                    "type": "file",
+                    "size_bytes": 1511,
+                    "size_human": "1.48 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "resizable.tsx",
+                    "type": "file",
+                    "size_bytes": 2047,
+                    "size_human": "2.00 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "scroll-area.tsx",
+                    "type": "file",
+                    "size_bytes": 1703,
+                    "size_human": "1.66 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "select.tsx",
+                    "type": "file",
+                    "size_bytes": 6532,
+                    "size_human": "6.38 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "separator.tsx",
+                    "type": "file",
+                    "size_bytes": 727,
+                    "size_human": "727.00 B",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "sheet.tsx",
+                    "type": "file",
+                    "size_bytes": 4213,
+                    "size_human": "4.11 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "sidebar.tsx",
+                    "type": "file",
+                    "size_bytes": 22364,
+                    "size_human": "21.84 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "skeleton.tsx",
+                    "type": "file",
+                    "size_bytes": 289,
+                    "size_human": "289.00 B",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "slider.tsx",
+                    "type": "file",
+                    "size_bytes": 2059,
+                    "size_human": "2.01 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "sonner.tsx",
+                    "type": "file",
+                    "size_bytes": 1058,
+                    "size_human": "1.03 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "spinner.tsx",
+                    "type": "file",
+                    "size_bytes": 347,
+                    "size_human": "347.00 B",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "switch.tsx",
+                    "type": "file",
+                    "size_bytes": 1208,
+                    "size_human": "1.18 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "table.tsx",
+                    "type": "file",
+                    "size_bytes": 2548,
+                    "size_human": "2.49 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "tabs.tsx",
+                    "type": "file",
+                    "size_bytes": 2035,
+                    "size_human": "1.99 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "textarea.tsx",
+                    "type": "file",
+                    "size_bytes": 777,
+                    "size_human": "777.00 B",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "toggle-group.tsx",
+                    "type": "file",
+                    "size_bytes": 2381,
+                    "size_human": "2.33 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "toggle.tsx",
+                    "type": "file",
+                    "size_bytes": 1601,
+                    "size_human": "1.56 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  },
+                  {
+                    "name": "tooltip.tsx",
+                    "type": "file",
+                    "size_bytes": 1953,
+                    "size_human": "1.91 KiB",
+                    "extension": ".tsx",
+                    "last_modified": "2026-02-10 00:29:46"
+                  }
+                ],
+                "item_count": 53
+              },
+              {
+                "name": "ButtonPropertiesPanel.tsx",
+                "type": "file",
+                "size_bytes": 8683,
+                "size_human": "8.48 KiB",
+                "extension": ".tsx",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "CanvasArea.tsx",
+                "type": "file",
+                "size_bytes": 16727,
+                "size_human": "16.33 KiB",
+                "extension": ".tsx",
+                "last_modified": "2026-02-13 01:11:26"
+              },
+              {
+                "name": "CodeEditor.tsx",
+                "type": "file",
+                "size_bytes": 10602,
+                "size_human": "10.35 KiB",
+                "extension": ".tsx",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "CodeEditorWithTabs.tsx",
+                "type": "file",
+                "size_bytes": 23451,
+                "size_human": "22.90 KiB",
+                "extension": ".tsx",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "ComponentsLibrary.tsx",
+                "type": "file",
+                "size_bytes": 5705,
+                "size_human": "5.57 KiB",
+                "extension": ".tsx",
+                "last_modified": "2026-02-12 21:57:49"
+              },
+              {
+                "name": "FloatingWindow.tsx",
+                "type": "file",
+                "size_bytes": 7812,
+                "size_human": "7.63 KiB",
+                "extension": ".tsx",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "LEDPropertiesPanel.tsx",
+                "type": "file",
+                "size_bytes": 16223,
+                "size_human": "15.84 KiB",
+                "extension": ".tsx",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "LeftSidebar.tsx",
+                "type": "file",
+                "size_bytes": 4585,
+                "size_human": "4.48 KiB",
+                "extension": ".tsx",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "LibrariesPanel.tsx",
+                "type": "file",
+                "size_bytes": 13557,
+                "size_human": "13.24 KiB",
+                "extension": ".tsx",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "MCUPropertiesPanel.tsx",
+                "type": "file",
+                "size_bytes": 13495,
+                "size_human": "13.18 KiB",
+                "extension": ".tsx",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "PotentiometerPropertiesPanel.tsx",
+                "type": "file",
+                "size_bytes": 9130,
+                "size_human": "8.92 KiB",
+                "extension": ".tsx",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "PropertiesPanel.tsx",
+                "type": "file",
+                "size_bytes": 2184,
+                "size_human": "2.13 KiB",
+                "extension": ".tsx",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "RGBLEDPropertiesPanel.tsx",
+                "type": "file",
+                "size_bytes": 11703,
+                "size_human": "11.43 KiB",
+                "extension": ".tsx",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "SerialMonitor.tsx",
+                "type": "file",
+                "size_bytes": 6649,
+                "size_human": "6.49 KiB",
+                "extension": ".tsx",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "ServoPropertiesPanel.tsx",
+                "type": "file",
+                "size_bytes": 11006,
+                "size_human": "10.75 KiB",
+                "extension": ".tsx",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "SimulationModeToggle.tsx",
+                "type": "file",
+                "size_bytes": 3332,
+                "size_human": "3.25 KiB",
+                "extension": ".tsx",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "Terminal.tsx",
+                "type": "file",
+                "size_bytes": 3834,
+                "size_human": "3.74 KiB",
+                "extension": ".tsx",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "TopToolbar.tsx",
+                "type": "file",
+                "size_bytes": 10571,
+                "size_human": "10.32 KiB",
+                "extension": ".tsx",
+                "last_modified": "2026-02-10 00:29:46"
+              }
+            ],
+            "item_count": 22
+          },
+          {
+            "name": "engine",
+            "type": "directory",
+            "last_modified": "2026-02-10 00:29:46",
+            "children": [
+              {
+                "name": "CodeParser.ts",
+                "type": "file",
+                "size_bytes": 11278,
+                "size_human": "11.01 KiB",
+                "extension": ".ts",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "example.ts",
+                "type": "file",
+                "size_bytes": 2297,
+                "size_human": "2.24 KiB",
+                "extension": ".ts",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "QEMURunner.ts",
+                "type": "file",
+                "size_bytes": 5427,
+                "size_human": "5.30 KiB",
+                "extension": ".ts",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "QEMUSimulationEngine.ts",
+                "type": "file",
+                "size_bytes": 5367,
+                "size_human": "5.24 KiB",
+                "extension": ".ts",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "README.md",
+                "type": "file",
+                "size_bytes": 5538,
+                "size_human": "5.41 KiB",
+                "extension": ".md",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "SimulationEngine.ts",
+                "type": "file",
+                "size_bytes": 14004,
+                "size_human": "13.68 KiB",
+                "extension": ".ts",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "Transpiler.ts",
+                "type": "file",
+                "size_bytes": 531,
+                "size_human": "531.00 B",
+                "extension": ".ts",
+                "last_modified": "2026-02-10 00:29:46"
+              }
+            ],
+            "item_count": 7
+          },
+          {
+            "name": "hooks",
+            "type": "directory",
+            "last_modified": "2026-02-10 00:29:46",
+            "children": [
+              {
+                "name": "use-mobile.ts",
+                "type": "file",
+                "size_bytes": 584,
+                "size_human": "584.00 B",
+                "extension": ".ts",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "useQEMUSimulation.ts",
+                "type": "file",
+                "size_bytes": 4642,
+                "size_human": "4.53 KiB",
+                "extension": ".ts",
+                "last_modified": "2026-02-10 00:29:46"
+              }
+            ],
+            "item_count": 2
+          },
+          {
+            "name": "lib",
+            "type": "directory",
+            "last_modified": "2026-02-10 00:29:46",
+            "children": [
+              {
+                "name": "utils.ts",
+                "type": "file",
+                "size_bytes": 172,
+                "size_human": "172.00 B",
+                "extension": ".ts",
+                "last_modified": "2026-02-10 00:29:46"
+              }
+            ],
+            "item_count": 1
+          },
+          {
+            "name": "services",
+            "type": "directory",
+            "last_modified": "2026-02-10 00:29:46",
+            "children": [
+              {
+                "name": "QEMUApiClient.ts",
+                "type": "file",
+                "size_bytes": 5452,
+                "size_human": "5.32 KiB",
+                "extension": ".ts",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "QEMUWebSocket.ts",
+                "type": "file",
+                "size_bytes": 3395,
+                "size_human": "3.32 KiB",
+                "extension": ".ts",
+                "last_modified": "2026-02-10 00:29:46"
+              }
+            ],
+            "item_count": 2
+          },
+          {
+            "name": "stores",
+            "type": "directory",
+            "last_modified": "2026-02-10 00:29:46",
+            "children": [
+              {
+                "name": "useConnectionStore.ts",
+                "type": "file",
+                "size_bytes": 4230,
+                "size_human": "4.13 KiB",
+                "extension": ".ts",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "useFileStore.ts",
+                "type": "file",
+                "size_bytes": 5187,
+                "size_human": "5.07 KiB",
+                "extension": ".ts",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "useLibraryStore.ts",
+                "type": "file",
+                "size_bytes": 3820,
+                "size_human": "3.73 KiB",
+                "extension": ".ts",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "useQEMUStore.ts",
+                "type": "file",
+                "size_bytes": 2058,
+                "size_human": "2.01 KiB",
+                "extension": ".ts",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "useSerialStore.ts",
+                "type": "file",
+                "size_bytes": 2888,
+                "size_human": "2.82 KiB",
+                "extension": ".ts",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "useSimulationStore.ts",
+                "type": "file",
+                "size_bytes": 12121,
+                "size_human": "11.84 KiB",
+                "extension": ".ts",
+                "last_modified": "2026-02-10 00:29:46"
+              },
+              {
+                "name": "useUIStore.ts",
+                "type": "file",
+                "size_bytes": 6563,
+                "size_human": "6.41 KiB",
+                "extension": ".ts",
+                "last_modified": "2026-02-10 00:29:46"
+              }
+            ],
+            "item_count": 7
+          },
+          {
+            "name": "types",
+            "type": "directory",
+            "last_modified": "2026-02-10 00:29:46",
+            "children": [
+              {
+                "name": "index.ts",
+                "type": "file",
+                "size_bytes": 5004,
+                "size_human": "4.89 KiB",
+                "extension": ".ts",
+                "last_modified": "2026-02-10 00:29:46"
+              }
+            ],
+            "item_count": 1
+          },
+          {
+            "name": "App.css",
+            "type": "file",
+            "size_bytes": 4990,
+            "size_human": "4.87 KiB",
+            "extension": ".css",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "App.tsx",
+            "type": "file",
+            "size_bytes": 2724,
+            "size_human": "2.66 KiB",
+            "extension": ".tsx",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "index.css",
+            "type": "file",
+            "size_bytes": 3671,
+            "size_human": "3.58 KiB",
+            "extension": ".css",
+            "last_modified": "2026-02-10 00:29:46"
+          },
+          {
+            "name": "main.tsx",
+            "type": "file",
+            "size_bytes": 240,
+            "size_human": "240.00 B",
+            "extension": ".tsx",
+            "last_modified": "2026-02-10 00:29:46"
+          }
+        ],
+        "item_count": 11
+      },
+      {
+        "name": "all_symbols.txt",
+        "type": "file",
+        "size_bytes": 11359,
+        "size_human": "11.09 KiB",
+        "extension": ".txt",
+        "last_modified": "2026-02-10 00:29:46"
+      },
+      {
+        "name": "app.code-workspace",
+        "type": "file",
+        "size_bytes": 67,
+        "size_human": "67.00 B",
+        "extension": ".code-workspace",
+        "last_modified": "2026-02-10 00:29:46"
+      },
+      {
+        "name": "boot_disasm.txt",
+        "type": "file",
+        "size_bytes": 16878,
+        "size_human": "16.48 KiB",
+        "extension": ".txt",
+        "last_modified": "2026-02-10 00:29:46"
+      },
+      {
+        "name": "boot_disasm_ascii.txt",
+        "type": "file",
+        "size_bytes": 8438,
+        "size_human": "8.24 KiB",
+        "extension": ".txt",
+        "last_modified": "2026-02-10 00:29:46"
+      },
+      {
+        "name": "components.json",
+        "type": "file",
+        "size_bytes": 483,
+        "size_human": "483.00 B",
+        "extension": ".json",
+        "last_modified": "2026-02-10 00:29:46"
+      },
+      {
+        "name": "cpu_help.txt",
+        "type": "file",
+        "size_bytes": 558,
+        "size_human": "558.00 B",
+        "extension": ".txt",
+        "last_modified": "2026-02-10 00:29:46"
+      },
+      {
+        "name": "disassembly.txt",
+        "type": "file",
+        "size_bytes": 2774,
+        "size_human": "2.71 KiB",
+        "extension": ".txt",
+        "last_modified": "2026-02-10 00:29:46"
+      },
+      {
+        "name": "disassembly_ascii.txt",
+        "type": "file",
+        "size_bytes": 1386,
+        "size_human": "1.35 KiB",
+        "extension": ".txt",
+        "last_modified": "2026-02-10 00:29:46"
+      },
+      {
+        "name": "eslint.config.js",
+        "type": "file",
+        "size_bytes": 639,
+        "size_human": "639.00 B",
+        "extension": ".js",
+        "last_modified": "2026-02-10 00:29:46"
+      },
+      {
+        "name": "fixes.md",
+        "type": "file",
+        "size_bytes": 36291,
+        "size_human": "35.44 KiB",
+        "extension": ".md",
+        "last_modified": "2026-02-10 00:29:46"
+      },
+      {
+        "name": "index.html",
+        "type": "file",
+        "size_bytes": 309,
+        "size_human": "309.00 B",
+        "extension": ".html",
+        "last_modified": "2026-02-10 00:29:46"
+      },
+      {
+        "name": "install-deps.ps1",
+        "type": "file",
+        "size_bytes": 3425,
+        "size_human": "3.34 KiB",
+        "extension": ".ps1",
+        "last_modified": "2026-02-10 00:29:46"
+      },
+      {
+        "name": "install-deps.sh",
+        "type": "file",
+        "size_bytes": 3075,
+        "size_human": "3.00 KiB",
+        "extension": ".sh",
+        "last_modified": "2026-02-10 00:29:46"
+      },
+      {
+        "name": "package-lock.json",
+        "type": "file",
+        "size_bytes": 250891,
+        "size_human": "245.01 KiB",
+        "extension": ".json",
+        "last_modified": "2026-02-10 00:33:47"
+      },
+      {
+        "name": "package.json",
+        "type": "file",
+        "size_bytes": 2639,
+        "size_human": "2.58 KiB",
+        "extension": ".json",
+        "last_modified": "2026-02-10 00:29:46"
+      },
+      {
+        "name": "postcss.config.js",
+        "type": "file",
+        "size_bytes": 86,
+        "size_human": "86.00 B",
+        "extension": ".js",
+        "last_modified": "2026-02-10 00:29:46"
+      },
+      {
+        "name": "README.md",
+        "type": "file",
+        "size_bytes": 19015,
+        "size_human": "18.57 KiB",
+        "extension": ".md",
+        "last_modified": "2026-02-10 00:29:46"
+      },
+      {
+        "name": "tailwind.config.js",
+        "type": "file",
+        "size_bytes": 2860,
+        "size_human": "2.79 KiB",
+        "extension": ".js",
+        "last_modified": "2026-02-10 00:29:46"
+      },
+      {
+        "name": "tree.md",
+        "type": "file",
+        "size_bytes": 12277,
+        "size_human": "11.99 KiB",
+        "extension": ".md",
+        "last_modified": "2026-02-13 21:17:17"
+      },
+      {
+        "name": "tsconfig.app.json",
+        "type": "file",
+        "size_bytes": 883,
+        "size_human": "883.00 B",
+        "extension": ".json",
+        "last_modified": "2026-02-10 00:29:46"
+      },
+      {
+        "name": "tsconfig.json",
+        "type": "file",
+        "size_bytes": 248,
+        "size_human": "248.00 B",
+        "extension": ".json",
+        "last_modified": "2026-02-10 00:29:46"
+      },
+      {
+        "name": "tsconfig.node.json",
+        "type": "file",
+        "size_bytes": 579,
+        "size_human": "579.00 B",
+        "extension": ".json",
+        "last_modified": "2026-02-10 00:29:46"
+      },
+      {
+        "name": "vite.config.ts",
+        "type": "file",
+        "size_bytes": 342,
+        "size_human": "342.00 B",
+        "extension": ".ts",
+        "last_modified": "2026-02-10 00:29:46"
+      }
+    ],
+    "item_count": 28
+  }
+}
