@@ -110,6 +110,55 @@ const CanvasInner: React.FC = () => {
     }
   }, [nodes, syncMCUsWithCanvas, getAllMCUs]);
 
+  // Add rotation keypress handler
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      // Ignore if typing in input/textarea
+      const target = event.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+
+      // R key to rotate selected MCU nodes
+      if (event.key === 'r' || event.key === 'R') {
+        const selectedNodes = nodes.filter((node) => node.selected && node.type === 'mcu');
+        
+        if (selectedNodes.length === 0) {
+          return;
+        }
+
+        event.preventDefault();
+
+        setNodes((nds) =>
+          nds.map((node) => {
+            if (!node.selected || node.type !== 'mcu') {
+              return node;
+            }
+
+            const currentRotation = (node.data.rotation as number) ?? 0;
+            const newRotation = (currentRotation + 90) % 360;
+
+            addTerminalLine(
+              `🔄 Rotated ${node.data.label || node.id} to ${newRotation}°`,
+              'info'
+            );
+
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                rotation: newRotation,
+              },
+            };
+          })
+        );
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [nodes, setNodes, addTerminalLine]);
+
   // Get default code template for board type
   const getDefaultCodeForBoard = useCallback((boardType: BoardType, lang: Language): string => {
     const baseCode = defaultCodeMap[lang];
