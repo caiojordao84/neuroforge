@@ -90,9 +90,12 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
   const isESP32 = mcuType === 'esp32-devkit';
   const isPico = mcuType === 'raspberry-pi-pico';
 
-  // Calculate container dimensions based on rotation
+  // Normalize rotation for dimension calculations (but not for CSS transform)
+  const normalizedRotation = rotation % 360;
+
+  // Calculate container dimensions based on normalized rotation
   const containerDimensions = useMemo(() => {
-    const isRotated90or270 = rotation === 90 || rotation === 270;
+    const isRotated90or270 = normalizedRotation === 90 || normalizedRotation === 270;
     if (useSvgBoard) {
       return {
         width: isRotated90or270 ? SVG_RENDER_HEIGHT : SVG_RENDER_WIDTH,
@@ -106,16 +109,12 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
       width: isRotated90or270 ? baseHeight : baseWidth,
       height: isRotated90or270 ? baseWidth : baseHeight,
     };
-  }, [rotation, useSvgBoard, isArduino]);
+  }, [normalizedRotation, useSvgBoard, isArduino]);
 
   if (isArduino && useSvgBoard) {
     return (
       <div
-        className={cn(
-          'relative inline-flex items-center justify-center',
-          selected ? 'ring-2 ring-[#00d9ff]' : 'ring-2 ring-transparent',
-          'rounded-lg shadow-lg transition-all duration-200'
-        )}
+        className="relative inline-block shadow-lg"
         onDoubleClick={handleDoubleClick}
         title="Double-click to open properties | Press R to rotate"
         style={{
@@ -123,15 +122,19 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
           height: containerDimensions.height,
         }}
       >
-        {/* Rotatable content wrapper */}
+        {/* Rotatable content wrapper with fixed dimensions */}
         <div
+          className={cn(
+            'absolute top-1/2 left-1/2 rounded-lg',
+            selected ? 'ring-2 ring-[#00d9ff]' : '',
+            'transition-all duration-200'
+          )}
           style={{
             width: SVG_RENDER_WIDTH,
             height: SVG_RENDER_HEIGHT,
-            transform: `rotate(${rotation}deg)`,
+            transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
             transformOrigin: 'center center',
             transition: 'transform 0.3s ease',
-            position: 'relative',
           }}
         >
           <img
@@ -139,6 +142,10 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
             alt={label}
             className="block w-full h-full select-none"
             draggable={false}
+            style={{
+              width: SVG_RENDER_WIDTH,
+              height: SVG_RENDER_HEIGHT,
+            }}
           />
           {PIN_MAP.map((pin) => {
             const left = pin.cx * SCALE;
@@ -196,11 +203,7 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
   // CSS Board rendering with rotation
   return (
     <div
-      className={cn(
-        'relative inline-flex items-center justify-center',
-        selected ? 'ring-2 ring-[#00d9ff]' : 'ring-2 ring-transparent',
-        'rounded-lg shadow-lg transition-all duration-200'
-      )}
+      className="relative inline-block"
       onDoubleClick={handleDoubleClick}
       title="Double-click to open properties | Press R to rotate"
       style={{
@@ -210,12 +213,14 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
     >
       <div
         className={cn(
-          'relative rounded-lg overflow-hidden border-4',
+          'absolute top-1/2 left-1/2 rounded-lg overflow-hidden border-4 shadow-lg',
+          selected ? 'ring-2 ring-[#00d9ff]' : '',
           selected ? 'border-[#00d9ff]' : getBorderColor(),
-          isArduino ? 'w-[200px] h-[280px]' : 'w-[240px] h-[320px]'
+          isArduino ? 'w-[200px] h-[280px]' : 'w-[240px] h-[320px]',
+          'transition-all duration-200'
         )}
         style={{
-          transform: `rotate(${rotation}deg)`,
+          transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
           transformOrigin: 'center center',
           transition: 'transform 0.3s ease',
         }}

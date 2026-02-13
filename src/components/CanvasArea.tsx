@@ -136,10 +136,15 @@ const CanvasInner: React.FC = () => {
             }
 
             const currentRotation = (node.data.rotation as number) ?? 0;
-            const newRotation = (currentRotation + 90) % 360;
+            // Don't normalize here - let it accumulate (360, 450, 540, etc)
+            // This ensures CSS always rotates clockwise (+90°)
+            const newRotation = Math.max(0, currentRotation + 90);
+            
+            // Normalize only for display in terminal
+            const displayRotation = newRotation % 360;
 
             addTerminalLine(
-              `🔄 Rotated ${node.data.label || node.id} to ${newRotation}°`,
+              `🔄 Rotated ${node.data.label || node.id} to ${displayRotation}°`,
               'info'
             );
 
@@ -147,7 +152,7 @@ const CanvasInner: React.FC = () => {
               ...node,
               data: {
                 ...node.data,
-                rotation: newRotation,
+                rotation: newRotation, // Store non-normalized value
               },
             };
           })
