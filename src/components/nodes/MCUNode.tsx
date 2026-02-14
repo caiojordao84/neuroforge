@@ -17,8 +17,22 @@ const SVG_VIEWBOX_HEIGHT = 129;
 const SVG_RENDER_WIDTH = 260;
 const SVG_RENDER_HEIGHT = (SVG_VIEWBOX_HEIGHT / SVG_VIEWBOX_WIDTH) * SVG_RENDER_WIDTH;
 const SCALE = SVG_RENDER_WIDTH / SVG_VIEWBOX_WIDTH;
+
+// Pin configuration
 const PIN_RADIUS = 2.198;
 const PIN_DIAMETER = PIN_RADIUS * 2 * SCALE;
+
+// LED configuration
+const LED_RADIUS = 2.198;
+const LED_DIAMETER = LED_RADIUS * 2 * SCALE;
+
+// LED mapping (extracted from arduino-uno-r3.svg)
+const LED_MAP = [
+  { id: 'led-pin13', cx: 74.43, cy: 26.163, linkedPin: 13, color: '#ff8c00', type: 'pin' as const },
+  { id: 'led-tx', cx: 74.43, cy: 39.537, linkedPin: 1, color: '#ffd700', type: 'uart-tx' as const },
+  { id: 'led-rx', cx: 74.43, cy: 45.32, linkedPin: 0, color: '#ffd700', type: 'uart-rx' as const },
+  { id: 'led-power', cx: 147.433, cy: 39.717, linkedPin: null, color: '#00ff00', type: 'power' as const },
+];
 
 const PIN_MAP = [
   { id: 'D0', cx: 159.977, cy: 3.933, position: Position.Top },
@@ -147,6 +161,8 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
               height: SVG_RENDER_HEIGHT,
             }}
           />
+          
+          {/* Pin Handles */}
           {PIN_MAP.map((pin) => {
             const left = pin.cx * SCALE;
             const top = pin.cy * SCALE;
@@ -178,6 +194,46 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
                   transition: 'box-shadow 0.2s ease',
                   pointerEvents: 'all',
                 }}
+              />
+            );
+          })}
+
+          {/* Functional LEDs - MISSÃO 1: Render all LEDs as gray (off state) */}
+          {LED_MAP.map((led) => {
+            const left = led.cx * SCALE;
+            const top = led.cy * SCALE;
+            
+            // MISSÃO 1: All LEDs start as OFF (gray)
+            // MISSÃO 3 & 4 will implement the logic to turn them on
+            const isOn = false;
+            
+            // Fallback color in case led.color is undefined (blindagem)
+            const ledColor = led.color ?? '#9ca3af';
+            
+            return (
+              <div
+                key={led.id}
+                data-led-id={led.id}
+                data-led-type={led.type}
+                data-linked-pin={led.linkedPin ?? 'none'}
+                style={{
+                  position: 'absolute',
+                  left: `${left}px`,
+                  top: `${top}px`,
+                  transform: 'translate(-50%, -50%)',
+                  width: LED_DIAMETER,
+                  height: LED_DIAMETER,
+                  borderRadius: '50%',
+                  background: isOn ? ledColor : '#9ca3af',
+                  boxShadow: isOn 
+                    ? `0 0 8px ${ledColor}, 0 0 12px ${ledColor}, 0 0 16px ${ledColor}` 
+                    : 'none',
+                  transition: 'background 0.2s ease, box-shadow 0.2s ease',
+                  pointerEvents: 'none',
+                  zIndex: 5,
+                  opacity: isOn ? 1 : 0.6,
+                }}
+                title={`${led.id}${led.linkedPin !== null ? ` (Pin ${led.linkedPin})` : ' (Power)'}`}
               />
             );
           })}
