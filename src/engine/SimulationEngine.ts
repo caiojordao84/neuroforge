@@ -421,11 +421,17 @@ export class SimulationEngine extends EventEmitter {
   serialPrint(text: string): void {
     const serialStore = useSerialStore.getState();
     serialStore.serialPrint(text);
+    
+    // MISSION 4: Emit event for TX LED
+    this.emit('serialTransmit', { text });
   }
 
   serialPrintln(text: string): void {
     const serialStore = useSerialStore.getState();
     serialStore.serialPrintln(text);
+    
+    // MISSION 4: Emit event for TX LED
+    this.emit('serialTransmit', { text });
   }
 
   serialAvailable(): number {
@@ -433,6 +439,8 @@ export class SimulationEngine extends EventEmitter {
   }
 
   serialRead(): number {
+    // MISSION 4: Emit event for RX LED (when implemented)
+    this.emit('serialReceive', {});
     return -1;
   }
 
