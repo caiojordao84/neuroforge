@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { boardConfigs } from '@/stores/useSimulationStore';
+import { boardConfigs, useSimulationStore } from '@/stores/useSimulationStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { cn } from '@/lib/utils';
 import type { BoardType } from '@/types';
@@ -85,7 +85,11 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
   const mcuType = (data.mcuType as BoardType) || 'arduino-uno';
   const config = boardConfigs[mcuType];
   const label = (data.label as string) || config.name;
-  const isRunning = (data.isRunning as boolean) ?? false;
+  
+  // FIX: Read isRunning directly from store instead of data
+  const status = useSimulationStore((state) => state.status);
+  const isRunning = status === 'running';
+  
   const useSvgBoard = (data.useSvgBoard as boolean) ?? false;
   const rotation = (data.rotation as number) ?? 0;
   const { openWindow } = useUIStore();
@@ -203,8 +207,8 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
             const left = led.cx * SCALE;
             const top = led.cy * SCALE;
             
-            // MISSÃO 2: Power LED lights up when simulation is running
-            // MISSÃO 3 & 4 will implement pin-based logic
+            // MISSÃO 2: Power LED lights up when simulation is running (FIXED)
+            // Now reading from useSimulationStore instead of data.isRunning
             const isOn = led.type === 'power' ? isRunning : false;
             
             // Fallback color in case led.color is undefined (blindagem)
