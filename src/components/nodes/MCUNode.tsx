@@ -26,6 +26,7 @@ const PIN_DIAMETER = PIN_RADIUS * 2 * SCALE;
 // LED configuration
 const LED_RADIUS = 2.198;
 const LED_DIAMETER = LED_RADIUS * 2 * SCALE;
+const LED_BLINK_DURATION = 100; // ms
 
 // LED mapping (extracted from arduino-uno-r3.svg)
 const LED_MAP = [
@@ -99,6 +100,10 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
   
   // MISSION 3: Track pin 13 value for LED
   const [pin13Value, setPin13Value] = useState<number>(0);
+  
+  // MISSION 4: Track TX/RX LED states
+  const [ledTxOn, setLedTxOn] = useState<boolean>(false);
+  const [ledRxOn, setLedRxOn] = useState<boolean>(false);
 
   // MISSION 3: Listen to pin changes from SimulationEngine
   useEffect(() => {
@@ -127,6 +132,61 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
 
     return () => {
       unsubscribe(); // Use the returned cleanup function
+    };
+  }, []);
+
+  // MISSION 4: Listen to serial events for TX/RX LEDs
+  useEffect(() => {
+    let txTimeoutId: number | null = null;
+    let rxTimeoutId: number | null = null;
+
+    const handleSerialTransmit = () => {
+      // Turn on TX LED
+      setLedTxOn(true);
+      
+      // Clear previous timeout if exists
+      if (txTimeoutId !== null) {
+        clearTimeout(txTimeoutId);
+      }
+      
+      // Turn off after LED_BLINK_DURATION
+      txTimeoutId = window.setTimeout(() => {
+        setLedTxOn(false);
+        txTimeoutId = null;
+      }, LED_BLINK_DURATION);
+    };
+
+    const handleSerialReceive = () => {
+      // Turn on RX LED
+      setLedRxOn(true);
+      
+      // Clear previous timeout if exists
+      if (rxTimeoutId !== null) {
+        clearTimeout(rxTimeoutId);
+      }
+      
+      // Turn off after LED_BLINK_DURATION
+      rxTimeoutId = window.setTimeout(() => {
+        setLedRxOn(false);
+        rxTimeoutId = null;
+      }, LED_BLINK_DURATION);
+    };
+
+    const unsubscribeTx = simulationEngine.on('serialTransmit', handleSerialTransmit);
+    const unsubscribeRx = simulationEngine.on('serialReceive', handleSerialReceive);
+
+    return () => {
+      // Cleanup timeouts
+      if (txTimeoutId !== null) {
+        clearTimeout(txTimeoutId);
+      }
+      if (rxTimeoutId !== null) {
+        clearTimeout(rxTimeoutId);
+      }
+      
+      // Unsubscribe from events
+      unsubscribeTx();
+      unsubscribeRx();
     };
   }, []);
 
@@ -253,6 +313,14 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
               // MISSION 3: Pin 13 LED reacts to digitalWrite/analogWrite
               brightness = pin13Value;
               isOn = brightness > 0;
+            } else if (led.type === 'uart-tx') {
+              // MISSION 4: TX LED blinks on serial transmit
+              isOn = ledTxOn;
+              brightness = isOn ? 255 : 0;
+            } else if (led.type === 'uart-rx') {
+              // MISSION 4: RX LED blinks on serial receive
+              isOn = ledRxOn;
+              brightness = isOn ? 255 : 0;
             }
             
             // Fallback color in case led.color is undefined
@@ -294,7 +362,7 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
                   // Subtle border to define LED edge
                   border: isOn ? `1px solid ${ledColor}` : '1px solid #6b7280',
                 }}
-                title={`${led.id}${led.linkedPin !== null ? ` (Pin ${led.linkedPin})` : ' (Power)'}`}
+                title={`${led.id}${led.linkedPin !== null ? ` (Pin ${led.linkedPin})` : led.type === 'uart-tx' ? ' (TX)' : led.type === 'uart-rx' ? ' (RX)' : ' (Power)'}`}
               />
             );
           })}
@@ -310,7 +378,7 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
     return 'bg-[#1a5fb4]';
   };
 
-  const getBorderColor = () => {
+  const getBoarderColor = () => {
     if (isArduino) return 'border-[#0d3a7a]';
     if (isESP32) return 'border-[#1a3a0d]';
     if (isPico) return 'border-[#8b1539]';
@@ -332,7 +400,7 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
         className={cn(
           'absolute top-1/2 left-1/2 rounded-lg overflow-hidden border-4 shadow-lg',
           selected ? 'ring-2 ring-[#00d9ff]' : '',
-          selected ? 'border-[#00d9ff]' : getBorderColor(),
+          selected ? 'border-[#00d9ff]' : getBoarderColor(),
           isArduino ? 'w-[200px] h-[280px]' : 'w-[240px] h-[320px]',
           'transition-all duration-200'
         )}
@@ -343,7 +411,7 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
         }}
       >
         <div className={cn('w-full h-full', getBoardColor())}>
-          <div className={cn('px-3 py-2', getBorderColor())}>
+          <div className={cn('px-3 py-2', getBoarderColor())}>
             <span className="text-white text-xs font-bold truncate block">{label}</span>
           </div>
           <div className="absolute top-8 left-1/2 -translate-x-1/2 w-12 h-8 bg-[#333] rounded border-2 border-[#555]" />
