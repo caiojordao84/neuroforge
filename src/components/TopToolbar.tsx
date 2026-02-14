@@ -124,6 +124,9 @@ export const TopToolbar: React.FC = () => {
       addTerminalLine(`🔨 Compiling ${activeMCU.label} (${activeMCU.type})...`, 'info');
       addTerminalLine(`📄 Source: ${source}`, 'info');
 
+      // FIX: Update simulation status to 'running' so MCUNode can detect it
+      startSimulation();
+
       await compileAndStart(codeToCompile, activeMCU.type);
 
     } else {
