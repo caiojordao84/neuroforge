@@ -329,6 +329,11 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
             // Calculate opacity based on brightness (0-255)
             const baseOpacity = isOn ? 0.3 + (brightness / 255) * 0.7 : 0.4;
             
+            // FIX: TX/RX LEDs should have instant transition (no fade)
+            const transitionDuration = (led.type === 'uart-tx' || led.type === 'uart-rx') 
+              ? '0s' 
+              : '0.1s';
+            
             return (
               <div
                 key={led.id}
@@ -354,8 +359,8 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
                        0 0 12px ${ledColor},
                        inset 0 0 3px rgba(255, 255, 255, 0.6)` 
                     : 'inset 0 1px 2px rgba(0, 0, 0, 0.2)',
-                  // Fast transition like LEDNode (0.1s)
-                  transition: 'all 0.1s ease-out',
+                  // TX/RX = instant (0s), others = smooth (0.1s)
+                  transition: `all ${transitionDuration} ease-out`,
                   pointerEvents: 'none',
                   zIndex: 5,
                   opacity: baseOpacity,
@@ -378,7 +383,7 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
     return 'bg-[#1a5fb4]';
   };
 
-  const getBoarderColor = () => {
+  const getBorderColor = () => {
     if (isArduino) return 'border-[#0d3a7a]';
     if (isESP32) return 'border-[#1a3a0d]';
     if (isPico) return 'border-[#8b1539]';
@@ -400,7 +405,7 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
         className={cn(
           'absolute top-1/2 left-1/2 rounded-lg overflow-hidden border-4 shadow-lg',
           selected ? 'ring-2 ring-[#00d9ff]' : '',
-          selected ? 'border-[#00d9ff]' : getBoarderColor(),
+          selected ? 'border-[#00d9ff]' : getBorderColor(),
           isArduino ? 'w-[200px] h-[280px]' : 'w-[240px] h-[320px]',
           'transition-all duration-200'
         )}
@@ -411,7 +416,7 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
         }}
       >
         <div className={cn('w-full h-full', getBoardColor())}>
-          <div className={cn('px-3 py-2', getBoarderColor())}>
+          <div className={cn('px-3 py-2', getBorderColor())}>
             <span className="text-white text-xs font-bold truncate block">{label}</span>
           </div>
           <div className="absolute top-8 left-1/2 -translate-x-1/2 w-12 h-8 bg-[#333] rounded border-2 border-[#555]" />
