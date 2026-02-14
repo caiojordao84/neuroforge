@@ -108,10 +108,11 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
       }
     };
 
-    simulationEngine.on('pinChange', handlePinChange);
+    // FIX: simulationEngine.on() returns a cleanup function
+    const unsubscribe = simulationEngine.on('pinChange', handlePinChange);
 
     return () => {
-      simulationEngine.off('pinChange', handlePinChange);
+      unsubscribe(); // Use the returned cleanup function
     };
   }, []);
 
