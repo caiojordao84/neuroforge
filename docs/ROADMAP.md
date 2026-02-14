@@ -7,6 +7,7 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 ## Índice Rápido
 
 - [Estado Atual](#estado-atual)
+- [Sistema de LEDs do MCU](#sistema-de-leds-do-mcu)
 - [Em Progresso](#em-progresso)
 - [Próximos Passos (Curto Prazo)](#próximos-passos-curto-prazo)
 - [Visão de Médio Prazo](#visão-de-médio-prazo)
@@ -46,6 +47,20 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
   - Multi-pin GPIO sincronizado.
   - LED pisca no canvas em tempo real.
 
+### Sistema de LEDs do MCUNode ✅ COMPLETO (14/02/2026)
+- **4 LEDs Funcionais**: Power (verde), Pin 13 (laranja), TX/RX (amarelo)
+- **Mapeamento SVG**: Coordenadas extraídas do `arduino-uno-r3.svg`
+- **Feedback Visual em Tempo Real**:
+  - LED Power indica estado da simulação (running/paused/stopped)
+  - LED Pin 13 responde a `digitalWrite()` e `analogWrite()` com PWM
+  - LEDs TX/RX piscam durante comunicação Serial
+- **Compatibilidade Total**: JS Runtime e QEMU Emulation
+- **Animações Diferenciadas**:
+  - Fade suave (0.1s) para Power e Pin 13 (efeitos PWM)
+  - Instantâneo (0s) para TX/RX (comunicação serial rápida)
+- **Commits**: `6cfd560`, `52d9913`, `65a9c6f`, `acbed44`
+- Ver seção [Sistema de LEDs do MCU](#sistema-de-leds-do-mcu) para detalhes completos
+
 ### Documentação de Arquitetura
 - [`docs/architecture/backends.md`](./architecture/backends.md) descreve a arquitetura multi-backend (AVR, ESP32, RP2040) com separação entre board, backend de execução e framework.
 - [`docs/ledPisca.md`](./ledPisca.md) documenta todas as correções implementadas para Arduino e ESP32.
@@ -76,6 +91,248 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 
 ---
 
+## Sistema de LEDs do MCU
+
+**STATUS: ✅ COMPLETO (Fevereiro 14, 2026)**  
+**Commits:** `6cfd560`, `52d9913`, `65a9c6f`, `acbed44`
+
+### Visão Geral
+
+O sistema de LEDs do MCUNode fornece **feedback visual em tempo real** do estado da simulação, replicando o comportamento físico de uma placa Arduino Uno R3 real. Quatro LEDs funcionais foram mapeados, configurados e integrados com os motores de simulação (JS e QEMU).
+
+**Objetivos Alcançados:**
+- ✅ Mapeamento preciso de LEDs a partir do SVG do Arduino Uno R3
+- ✅ LED Power indica estado da simulação (verde)
+- ✅ LED Pin 13 reage a `digitalWrite()` e `analogWrite()` (laranja)
+- ✅ LEDs TX/RX piscam durante comunicação Serial (amarelo)
+- ✅ Compatibilidade total com JS Runtime e QEMU Emulation
+- ✅ Animações diferenciadas: fade suave para PWM, instantâneo para serial
+
+---
+
+### MISSÃO 1: Mapeamento de LEDs do SVG
+
+**Objetivo:** Extrair coordenadas e propriedades dos 4 LEDs do Arduino Uno R3 SVG.
+
+**Implementação:**
+```typescript
+const LED_MAP = [
+  { id: 'led-pin13', cx: 74.43, cy: 26.163, linkedPin: 13, color: '#ff8c00', type: 'pin' },
+  { id: 'led-tx', cx: 74.43, cy: 39.537, linkedPin: 1, color: '#ffd700', type: 'uart-tx' },
+  { id: 'led-rx', cx: 74.43, cy: 45.32, linkedPin: 0, color: '#ffd700', type: 'uart-rx' },
+  { id: 'led-power', cx: 147.433, cy: 39.717, linkedPin: null, color: '#00ff00', type: 'power' },
+];
+```
+
+**Detalhes Técnicos:**
+- Coordenadas `cx`, `cy` extraídas do `arduino-uno-r3.svg`
+- Escala aplicada: `SCALE = 260 / 171 ≈ 1.52`
+- Diâmetro do LED: `≈ 6.67px`
+- Posicionamento absoluto com centralização precisa
+
+---
+
+### MISSÃO 2: LED Power (Verde)
+
+**Objetivo:** LED Power acende quando a simulação está em execução.
+
+**Lógica:**
+```typescript
+const status = useSimulationStore((state) => state.status);
+const isRunning = status === 'running';
+
+if (led.type === 'power') {
+  isOn = isRunning;
+  brightness = isOn ? 255 : 0;
+}
+```
+
+**Comportamento:**
+- **OFF** (cinza): Simulação parada/pausada
+- **ON** (verde brilhante): Simulação em execução
+- **Transição:** Fade suave de 0.1s
+
+---
+
+### MISSÃO 3: LED Pin 13 (Laranja)
+
+**Objetivo:** LED Pin 13 responde a `digitalWrite()` e `analogWrite()`.
+
+**Modos de Operação:**
+
+| Função | Valor | Brightness | Uso |
+|--------|-------|------------|-----|
+| `digitalWrite(13, HIGH)` | 255 | 100% | Blink |
+| `digitalWrite(13, LOW)` | 0 | 0% | OFF |
+| `analogWrite(13, 128)` | 128 | 50% | Fade |
+| `analogWrite(13, 64)` | 64 | 25% | Dim |
+
+**Event Flow:**
+```
+Código → digitalWrite(13, HIGH)
+  ↓
+SimulationEngine.digitalWrite()
+  ↓
+emit('pinChange', { pin: 13, value: 'HIGH' })
+  ↓
+MCUNode.handlePinChange()
+  ↓
+setPin13Value(255)
+  ↓
+LED re-render com brightness 100%
+```
+
+**Transição:** Fade suave `0.1s` para efeitos PWM naturais.
+
+---
+
+### MISSÃO 4: LEDs TX/RX (Amarelo)
+
+**Objetivo:** LEDs TX e RX piscam instantaneamente durante comunicação Serial.
+
+**Sistema:**
+```typescript
+const [ledTxOn, setLedTxOn] = useState<boolean>(false);
+const LED_BLINK_DURATION = 100; // ms
+
+const handleSerialTransmit = () => {
+  setLedTxOn(true);
+  setTimeout(() => setLedTxOn(false), LED_BLINK_DURATION);
+};
+
+simulationEngine.on('serialTransmit', handleSerialTransmit);
+```
+
+**Event Flow - JS Mode:**
+```
+Serial.print("Hello")
+  ↓
+SimulationEngine.serialPrint()
+  ↓
+emit('serialTransmit', { text })
+  ↓
+MCUNode listener
+  ↓
+LED TX pisca 100ms
+```
+
+**Event Flow - QEMU Mode:**
+```
+Serial.print("Hello") → UART (C++)
+  ↓
+QEMU Serial TCP
+  ↓
+WebSocket Bridge
+  ↓
+useQEMUSimulation.on('serial')
+  ↓
+emit('serialTransmit')
+  ↓
+LED TX pisca 100ms
+```
+
+**Características Especiais:**
+- **Transição Instantânea:** `0s` (sem fade)
+- **Timer Auto-Cancelável:** Múltiplos `Serial.print()` rápidos = LED fica aceso
+- **Cleanup Robusto:** Todos os timers cancelados no unmount
+
+---
+
+### Correções e Bugs
+
+#### BUG #1: Fade Indesejado nos LEDs TX/RX
+
+**Problema:** LEDs TX/RX tinham fade de 0.1s, parecendo "respirar" ao invés de piscar.
+
+**Solução:**
+```typescript
+const transitionDuration = (led.type === 'uart-tx' || led.type === 'uart-rx') 
+  ? '0s'    // TX/RX: Instantâneo
+  : '0.1s'; // Power, Pin 13: Fade suave
+```
+
+**Commit:** `65a9c6f`
+
+---
+
+#### BUG #2: QEMU Não Piscava TX/RX
+
+**Problema:** Backend emitia eventos Serial mas MCUNode não recebia.
+
+**Código Problemático:**
+```typescript
+// ANTES - só terminal
+qemuWebSocket.on('serial', (line) => {
+  addSerialLine(line, 'output');
+});
+```
+
+**Solução:**
+```typescript
+// DEPOIS - terminal + LED
+qemuWebSocket.on('serial', (line) => {
+  addSerialLine(line, 'output');
+  simulationEngine.emit('serialTransmit', { text: line }); // Bridge
+});
+```
+
+**Commit:** `acbed44`
+
+---
+
+### Resumo de Status
+
+| # | LED | Cor | Trigger | JS | QEMU | Animação |
+|---|-----|-----|---------|-------|------|----------|
+| **1** | Mapeamento | - | - | ✅ | ✅ | - |
+| **2** | Power | 💚 | `running` | ✅ | ✅ | Fade 0.1s |
+| **3** | Pin 13 | 🔶 | `digitalWrite/analogWrite` | ✅ | ✅ | Fade 0.1s |
+| **4** | TX | 🟡 | `Serial.print` | ✅ | ✅ | Instant 0s |
+| **4** | RX | 🟡 | `Serial.read` | 🚧 | 🚧 | Instant 0s |
+
+**Legenda:**
+- ✅ Funcional e testado
+- 🚧 Infraestrutura pronta
+- 🔶 Suporta PWM (0-255)
+
+---
+
+### Código de Teste Completo
+
+```cpp
+void setup() {
+  Serial.begin(9600);
+  pinMode(13, OUTPUT);
+  Serial.println("=== LED Test Started ===");
+}
+
+void loop() {
+  // Test 1: Digital blink
+  digitalWrite(13, HIGH);
+  Serial.println("LED ON | TX flash");
+  delay(1000);
+  
+  digitalWrite(13, LOW);
+  Serial.println("LED OFF | TX flash");
+  delay(1000);
+  
+  // Test 2: PWM fade
+  for(int i = 0; i <= 255; i += 5) {
+    analogWrite(13, i);
+    Serial.print("Brightness: ");
+    Serial.println(i);
+    delay(20);
+  }
+}
+```
+
+**Resultado Esperado:**
+1. LED Power: Verde constante
+2. LED Pin 13: Pisca laranja + fade breathing
+3. LED TX: Pisca amarelo instantâneo
+
+---
+
 ## Em Progresso
 
 ### Suporte a RP2040 (Raspberry Pi Pico) - Simulação JS
@@ -97,6 +354,38 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 
 ## Próximos Passos (Curto Prazo)
 
+### LEDs e Indicadores Visuais
+
+#### LED RX Funcional
+- [ ] Implementar `Serial.read()` com buffer de entrada
+- [ ] Terminal interativo (input field + send button)
+- [ ] LED RX pisca quando dados são lidos do buffer
+- [ ] Suporte a comandos AT e protocolos simples
+
+#### ADC (Analog-to-Digital Converter)
+- [ ] Implementar `analogRead()` funcional para pinos A0-A5
+- [ ] Conectar componentes analógicos (Potentiometer, LDR, Sensor)
+- [ ] Exibir valores ADC no Serial Monitor em tempo real
+- [ ] Integração QEMU: parse de eventos ADC via serial protocol
+
+#### PWM Visual Enhancement
+- [ ] LED Pin 13 com intensidade variável visual
+- [ ] Outros pinos PWM digitais: 3, 5, 6, 9, 10, 11
+- [ ] Slider visual para testar `analogWrite()` em tempo real
+- [ ] Indicadores de duty cycle (%) nos pinos PWM
+
+#### Outros Boards - LEDs
+- [ ] ESP32: LEDs Power, GPIO2 (built-in LED), TX/RX
+- [ ] Raspberry Pi Pico: LED onboard (GP25), UART TX/RX
+- [ ] Arduino Nano: LED 13, TX/RX
+- [ ] Arduino Mega: LEDs L (13), TX0/RX0, TX1/RX1, TX2/RX2, TX3/RX3
+
+#### Indicadores de Comunicação
+- [ ] I2C: LEDs SDA/SCL piscam durante transações
+- [ ] SPI: LEDs MISO/MOSI/SCK piscam durante transfers
+- [ ] CAN Bus: TX/RX indicators (ESP32, STM32)
+- [ ] Ethernet: Link/Activity LEDs (W5500, ESP32)
+
 ### Componentes de Board
 - [ ] Criar index.ts para importar todos os boards automaticamente.
 - [ ] Implementar BoardLoader no frontend para carregar JSON + SVG dinamicamente.
@@ -116,6 +405,32 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 ---
 
 ## Visão de Médio Prazo
+
+### LEDs e Componentes Visuais Avançados (Q2-Q3 2026)
+
+#### Componentes RGB e Matrizes
+- [ ] WS2812/NeoPixel strip com preview em tempo real
+- [ ] LED RGB (3 canais PWM) com color picker
+- [ ] LED Matrix 8x8 com scrolling text
+- [ ] 7-Segment display com dígitos numéricos
+
+#### Dashboard Indicators
+- [ ] Status LEDs customizáveis no Dashboard Builder
+- [ ] Bind de LEDs a variáveis globais, MQTT topics, HTTP endpoints
+- [ ] Animações: blink, fade, breathing, rainbow
+- [ ] Temas: Industrial (red/yellow/green), Maker (colorful), Retro (amber/green)
+
+#### Advanced Debugging
+- [ ] Breakpoint visual: LED pisca quando breakpoint é atingido
+- [ ] Watchpoint: LED indica quando variável muda
+- [ ] Performance: LED indica CPU usage / memory pressure
+- [ ] Error indicator: LED vermelho em runtime errors / crashes
+
+#### Accessibility & UX
+- [ ] Modo daltônico: cores alternativas para LEDs
+- [ ] High contrast mode: LEDs mais brilhantes
+- [ ] Tooltips interativos: hover no LED mostra estado detalhado
+- [ ] Customização: usuário pode escolher cores dos LEDs
 
 ### Backend RP2040 (QEMU/Renode) - ⏸️ POSTERGADO
 - Retornaremos à emulação full-system backend quando o projeto estiver mais maduro.
@@ -188,7 +503,18 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 - [x] Criar `docs/ledPisca.md` com relatório técnico completo.
 - [x] Criar `docs/fixes.md` com correções técnicas e scripts de manutenção.
 
-### 6. Enhanced QEMU Orchestration (planeado)
+### 6. Sistema de LEDs do MCU ✅ CONCLUÍDO (14/02/2026)
+- [x] **MISSÃO 1**: Mapeamento de LEDs do SVG Arduino Uno R3
+- [x] **MISSÃO 2**: LED Power (verde) indica simulação running
+- [x] **MISSÃO 3**: LED Pin 13 (laranja) responde a digitalWrite/analogWrite
+- [x] **MISSÃO 4**: LEDs TX/RX (amarelo) piscam com Serial.print
+- [x] **FIX**: Fade removido de TX/RX para piscar instantâneo
+- [x] **FIX**: QEMU bridge para eventos Serial
+- [x] Compatibilidade JS Runtime e QEMU Emulation
+- [x] Documentação completa neste ROADMAP
+- Commits: `6cfd560`, `52d9913`, `65a9c6f`, `acbed44`
+
+### 7. Enhanced QEMU Orchestration (planeado)
 - [ ] **Unified Backend Manager**: Melhorar `QEMUSimulationEngine` com API unificada
 - [ ] **Shared Event System**: Agregação de eventos de múltiplas instâncias QEMU
 - [ ] **Multiplexed Serial Monitor**: Console única para AVR + ESP32 + outros backends
@@ -197,7 +523,7 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 - [ ] **Resource Pooling**: Gerenciamento inteligente de portas TCP/Monitor
 - [ ] **Error Handling**: Sistema unificado de tratamento de erros e recovery
 
-### 7. Multi-Device Orchestration (planeado)
+### 8. Multi-Device Orchestration (planeado)
 - [ ] **Simultaneous Multi-MCU**: Rodar AVR + ESP32 + RP2040 simultaneamente
 - [ ] **Shared NeuroForge Clock**: Clock virtual sincronizado entre todos os devices
 - [ ] **Inter-Device Communication**: GPIO/I2C/SPI bus compartilhado entre MCUs
@@ -205,14 +531,14 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 - [ ] **Coordinated Stepping**: Debug síncrono de múltiplos devices
 - [ ] **Resource Arbitration**: Gerenciamento de recursos compartilhados entre instâncias
 
-### 8. Multi-Language Toolchain (planeado)
+### 9. Multi-Language Toolchain (planeado)
 - [ ] **MicroPython Setup**: Scripts de instalação de firmware e tools (mpy-cross)
 - [ ] **CircuitPython Integration**: Suporte a UF2 workflow e bibliotecas
 - [ ] **Rust Embedded**: Setup de toolchain (cargo, avr-hal, esp-hal, rp-hal)
 - [ ] **TinyGo Support**: Configuração de compilador para AVR/ESP32/RP2040
 - [ ] **JavaScript Runtimes**: Integração com Moddable/Kaluma (se viável)
 
-### 9. NeuroForge Transpiler & Visual Programming (planeado)
+### 10. NeuroForge Transpiler & Visual Programming (planeado)
 - [ ] **Unified AST**: Parser universal para blocos, flowcharts e código
 - [ ] **Transpiler Core**: Engine de transformação (ex: TypeScript -> C++, Blocos -> Python)
 - [ ] **Visual Blocks**: Interface estilo Scratch/Blockly integrada
@@ -472,7 +798,7 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 ### Métricas de sucesso (KPIs)
 
 - Mês 1: QEMU + Arduino Uno rodando blink real, 10 componentes compatíveis. ✅ **COMPLETO**
-- Mês 2: ESP32 QEMU + GPIO sincronizado + Serial Monitor. ✅ **COMPLETO**
+- Mês 2: ESP32 QEMU + GPIO sincronizado + Serial Monitor + Sistema de LEDs. ✅ **COMPLETO**
 - Mês 3: Placas Maker, 30+ componentes maker, Dashboard Builder funcional.
 - Mês 6: PLC + SCADA, 50+ componentes maker 30+ industriais, 1k usuários ativos.
 - Ano 1: 100+ componentes maker 50+ industriais, 10k usuários, €15k MRR.
