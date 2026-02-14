@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { boardConfigs, useSimulationStore } from '@/stores/useSimulationStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { simulationEngine } from '@/engine/SimulationEngine';
 import { cn } from '@/lib/utils';
 import type { BoardType } from '@/types';
 import arduinoUnoSvg from '@/components/boards/arduino/svg/arduino-uno-r3.svg';
@@ -95,6 +96,24 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
   const { openWindow } = useUIStore();
   const [hoveredPin, setHoveredPin] = useState<number | string | null>(null);
   const [selectedPin, setSelectedPin] = useState<number | string | null>(null);
+  
+  // MISSION 3: Track pin 13 value for LED
+  const [pin13Value, setPin13Value] = useState<number>(0);
+
+  // MISSION 3: Listen to pin changes from SimulationEngine
+  useEffect(() => {
+    const handlePinChange = (event: { pin: number; value: number }) => {
+      if (event.pin === 13) {
+        setPin13Value(event.value);
+      }
+    };
+
+    simulationEngine.on('pinChange', handlePinChange);
+
+    return () => {
+      simulationEngine.off('pinChange', handlePinChange);
+    };
+  }, []);
 
   const handlePinClick = useCallback((pin: number | string) => {
     setSelectedPin(pin === selectedPin ? null : pin);
@@ -207,15 +226,24 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
             const left = led.cx * SCALE;
             const top = led.cy * SCALE;
             
-            // MISSÃO 2: Power LED lights up when simulation is running (FIXED)
-            // Now reading from useSimulationStore instead of data.isRunning
-            const isOn = led.type === 'power' ? isRunning : false;
+            // Determine if LED should be ON based on type
+            let isOn = false;
+            let brightness = 0;
             
-            // Fallback color in case led.color is undefined (blindagem)
+            if (led.type === 'power') {
+              // MISSION 2: Power LED lights up when simulation is running
+              isOn = isRunning;
+              brightness = isOn ? 255 : 0;
+            } else if (led.type === 'pin' && led.linkedPin === 13) {
+              // MISSION 3: Pin 13 LED reacts to digitalWrite/analogWrite
+              brightness = pin13Value;
+              isOn = brightness > 0;
+            }
+            
+            // Fallback color in case led.color is undefined
             const ledColor = led.color ?? '#9ca3af';
             
-            // Calculate brightness for opacity (like LEDNode)
-            const brightness = isOn ? 255 : 0;
+            // Calculate opacity based on brightness (0-255)
             const baseOpacity = isOn ? 0.3 + (brightness / 255) * 0.7 : 0.4;
             
             return (
