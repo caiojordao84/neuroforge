@@ -102,9 +102,23 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
 
   // MISSION 3: Listen to pin changes from SimulationEngine
   useEffect(() => {
-    const handlePinChange = (event: { pin: number; value: number }) => {
+    const handlePinChange = (data: unknown) => {
+      const event = data as { pin: number; value: number | 'HIGH' | 'LOW' };
+      
       if (event.pin === 13) {
-        setPin13Value(event.value);
+        // Convert 'HIGH'/'LOW' to numeric value (digitalWrite)
+        // or use numeric value directly (analogWrite)
+        let numericValue: number;
+        
+        if (event.value === 'HIGH') {
+          numericValue = 255;
+        } else if (event.value === 'LOW') {
+          numericValue = 0;
+        } else {
+          numericValue = event.value as number;
+        }
+        
+        setPin13Value(numericValue);
       }
     };
 
