@@ -198,17 +198,21 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
             );
           })}
 
-          {/* Functional LEDs - MISSÃO 1: Render all LEDs as gray (off state) */}
+          {/* Functional LEDs with improved visual effects */}
           {LED_MAP.map((led) => {
             const left = led.cx * SCALE;
             const top = led.cy * SCALE;
             
-            // MISSÃO 1: All LEDs start as OFF (gray)
-            // MISSÃO 3 & 4 will implement the logic to turn them on
-            const isOn = false;
+            // MISSÃO 2: Power LED lights up when simulation is running
+            // MISSÃO 3 & 4 will implement pin-based logic
+            const isOn = led.type === 'power' ? isRunning : false;
             
             // Fallback color in case led.color is undefined (blindagem)
             const ledColor = led.color ?? '#9ca3af';
+            
+            // Calculate brightness for opacity (like LEDNode)
+            const brightness = isOn ? 255 : 0;
+            const baseOpacity = isOn ? 0.3 + (brightness / 255) * 0.7 : 0.4;
             
             return (
               <div
@@ -224,14 +228,24 @@ export const MCUNode: React.FC<MCUNodeProps> = ({ data, selected }) => {
                   width: LED_DIAMETER,
                   height: LED_DIAMETER,
                   borderRadius: '50%',
-                  background: isOn ? ledColor : '#9ca3af',
+                  // Radial gradient effect (like LEDNode)
+                  background: isOn 
+                    ? `radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.8), ${ledColor})`
+                    : '#9ca3af',
+                  // Multi-layer glow effect (similar to LEDNode filter)
                   boxShadow: isOn 
-                    ? `0 0 8px ${ledColor}, 0 0 12px ${ledColor}, 0 0 16px ${ledColor}` 
-                    : 'none',
-                  transition: 'background 0.2s ease, box-shadow 0.2s ease',
+                    ? `0 0 4px ${ledColor}, 
+                       0 0 8px ${ledColor}, 
+                       0 0 12px ${ledColor},
+                       inset 0 0 3px rgba(255, 255, 255, 0.6)` 
+                    : 'inset 0 1px 2px rgba(0, 0, 0, 0.2)',
+                  // Fast transition like LEDNode (0.1s)
+                  transition: 'all 0.1s ease-out',
                   pointerEvents: 'none',
                   zIndex: 5,
-                  opacity: isOn ? 1 : 0.6,
+                  opacity: baseOpacity,
+                  // Subtle border to define LED edge
+                  border: isOn ? `1px solid ${ledColor}` : '1px solid #6b7280',
                 }}
                 title={`${led.id}${led.linkedPin !== null ? ` (Pin ${led.linkedPin})` : ' (Power)'}`}
               />
