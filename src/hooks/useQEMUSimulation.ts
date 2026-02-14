@@ -65,7 +65,12 @@ export function useQEMUSimulation() {
       }),
 
       qemuWebSocket.on('serial', (line: string) => {
+        // Add to serial terminal
         addSerialLine(line, 'output');
+        
+        // MISSION 4: Emit event for TX LED (QEMU support)
+        // This makes TX LED blink in QEMU mode just like in JS mode
+        simulationEngine.emit('serialTransmit', { text: line });
       }),
 
       qemuWebSocket.on('pinChange', ({ pin, value, mode }) => {
