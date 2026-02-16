@@ -5,6 +5,8 @@ import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { cn } from '@/lib/utils';
 
+type PullResistor = 'NONE' | 'PULLUP' | 'PULLDOWN';
+
 interface ButtonNodeProps {
   id: string;
   data: Record<string, unknown>;
@@ -14,26 +16,33 @@ interface ButtonNodeProps {
 export const ButtonNode: React.FC<ButtonNodeProps> = ({ data, selected, id }) => {
   const [isPressed, setIsPressed] = useState((data.isPressed as boolean) ?? false);
   const [isProperlyWired, setIsProperlyWired] = useState(false);
-  const [connectedPin, setConnectedPin] = useState<number | undefined>(data.connectedPin as number);
+  const [isFloating, setIsFloating] = useState(false);
+  const [connectedPin, setConnectedPin] = useState<number | undefined>(
+    data.connectedPin as number
+  );
 
   const { connections } = useConnectionStore();
   const { openWindow } = useUIStore();
-  const isPullUp = (data.isPullUp as boolean) ?? false;
-  const label = (data.label as string) || 'Button';
+
+  const pullResistor: PullResistor =
+    ((data.pullResistor as PullResistor) ?? 'NONE') || 'NONE';
+  const debounceTime = (data.debounceTime as number) ?? 50;
+  const label = (data.name as string) || (data.label as string) || 'BTN';
+
+  const [debounceTimeout, setDebounceTimeout] = useState<number | null>(null);
 
   const handleDoubleClick = useCallback(() => {
     openWindow('properties');
   }, [openWindow]);
 
+  // Descobre wiring: signal + ground/VCC; define isFloating
   useEffect(() => {
     const checkWiring = () => {
       const signalConnection = connections.find(
         (c) => c.source === `${id}:signal` || c.target === `${id}:signal`
       );
 
-      const hasSignalConnection = !!signalConnection;
-
-      setIsProperlyWired(hasSignalConnection);
+      setIsProperlyWired(!!signalConnection);
 
       if (signalConnection) {
         const otherEnd = signalConnection.source.startsWith(id)
@@ -44,38 +53,63 @@ export const ButtonNode: React.FC<ButtonNodeProps> = ({ data, selected, id }) =>
           setConnectedPin(parseInt(pinMatch[1], 10));
         }
       }
+
+      if (pullResistor === 'NONE' && !signalConnection) {
+        setIsFloating(true);
+      } else {
+        setIsFloating(false);
+      }
     };
 
     checkWiring();
-  }, [connections, id]);
+  }, [connections, id, pullResistor]);
+
+  const scheduleWrite = useCallback(
+    (pressed: boolean) => {
+      if (connectedPin === undefined) return;
+
+      if (debounceTimeout !== null) {
+        window.clearTimeout(debounceTimeout);
+      }
+
+      const timeout = window.setTimeout(() => {
+        let value: 'HIGH' | 'LOW';
+
+        switch (pullResistor) {
+          case 'PULLUP':
+            value = pressed ? 'LOW' : 'HIGH';
+            break;
+          case 'PULLDOWN':
+            value = pressed ? 'HIGH' : 'LOW';
+            break;
+          case 'NONE':
+          default:
+            value = pressed ? 'HIGH' : 'LOW';
+            break;
+        }
+
+        simulationEngine.digitalWrite(connectedPin, value);
+        simulationEngine.emit('buttonPress', {
+          pin: connectedPin,
+          pressed,
+          value,
+        });
+      }, debounceTime);
+
+      setDebounceTimeout(timeout);
+    },
+    [connectedPin, debounceTime, debounceTimeout, pullResistor]
+  );
 
   const handleMouseDown = useCallback(() => {
     setIsPressed(true);
-
-    if (connectedPin !== undefined) {
-      const value = isPullUp ? 'LOW' : 'HIGH';
-
-      simulationEngine.emit('buttonPress', {
-        pin: connectedPin,
-        pressed: true,
-        value
-      });
-    }
-  }, [connectedPin, isPullUp]);
+    scheduleWrite(true);
+  }, [scheduleWrite]);
 
   const handleMouseUp = useCallback(() => {
     setIsPressed(false);
-
-    if (connectedPin !== undefined) {
-      const value = isPullUp ? 'HIGH' : 'LOW';
-
-      simulationEngine.emit('buttonPress', {
-        pin: connectedPin,
-        pressed: false,
-        value
-      });
-    }
-  }, [connectedPin, isPullUp]);
+    scheduleWrite(false);
+  }, [scheduleWrite]);
 
   const handleMouseLeave = useCallback(() => {
     if (isPressed) {
@@ -112,7 +146,12 @@ export const ButtonNode: React.FC<ButtonNodeProps> = ({ data, selected, id }) =>
           </linearGradient>
 
           <filter id={`buttonShadow-${id}`} x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy={isPressed ? '1' : '3'} stdDeviation="2" floodOpacity="0.5" />
+            <feDropShadow
+              dx="0"
+              dy={isPressed ? '1' : '3'}
+              stdDeviation="2"
+              floodOpacity="0.5"
+            />
           </filter>
         </defs>
 
@@ -151,7 +190,12 @@ export const ButtonNode: React.FC<ButtonNodeProps> = ({ data, selected, id }) =>
 
         {isPressed && (
           <circle cx="30" cy="30" r="8" fill="#00d9ff" opacity={0.5}>
-            <animate attributeName="opacity" values="0.5;0.8;0.5" dur="0.2s" repeatCount="indefinite" />
+            <animate
+              attributeName="opacity"
+              values="0.5;0.8;0.5"
+              dur="0.2s"
+              repeatCount="indefinite"
+            />
           </circle>
         )}
 
@@ -172,20 +216,29 @@ export const ButtonNode: React.FC<ButtonNodeProps> = ({ data, selected, id }) =>
       <div
         className={cn(
           'absolute top-1 right-1 w-2 h-2 rounded-full',
-          isPressed ? 'bg-green-400' : 'bg-gray-600',
+          isFloating
+            ? 'bg-yellow-400'
+            : isPressed
+            ? 'bg-green-400'
+            : 'bg-gray-600',
           'transition-colors duration-75'
         )}
       />
 
-      {!isProperlyWired && (
+      {(!isProperlyWired || isFloating) && (
         <div
           className={cn(
             'absolute -top-2 -right-2',
-            'w-5 h-5 rounded-full bg-yellow-500',
+            'w-5 h-5 rounded-full',
+            'bg-yellow-500',
             'flex items-center justify-center',
             'text-[10px] font-bold text-black'
           )}
-          title="Button not properly wired. Connect signal pin to a digital pin."
+          title={
+            isFloating
+              ? 'Input floating: configure pull resistor or connect to VCC/GND.'
+              : 'Button not properly wired. Connect signal pin to a digital pin.'
+          }
         >
           !
         </div>
@@ -220,7 +273,7 @@ export const ButtonNode: React.FC<ButtonNodeProps> = ({ data, selected, id }) =>
           background: '#444',
           border: '2px solid #0a0e14',
         }}
-        title="Ground"
+        title="Ground or VCC"
       />
     </div>
   );

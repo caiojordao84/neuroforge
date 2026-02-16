@@ -12,26 +12,42 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { Lightbulb, RotateCcw, Save } from 'lucide-react';
-
-// LED color presets
-const ledColors = [
-    { value: 'red', label: 'Red', color: '#ff0000', vf: 2.0 },
-    { value: 'green', label: 'Green', color: '#00ff00', vf: 2.2 },
-    { value: 'blue', label: 'Blue', color: '#0000ff', vf: 3.3 },
-    { value: 'yellow', label: 'Yellow', color: '#ffff00', vf: 2.1 },
-    { value: 'white', label: 'White', color: '#ffffff', vf: 3.0 },
-    { value: 'orange', label: 'Orange', color: '#ff8800', vf: 2.0 },
-];
+import { Lightbulb, RotateCcw, Save, AlertTriangle } from 'lucide-react';
+import {
+    ledProfiles,
+    resistorOptions,
+    getActiveMicrocontrollerProfile,
+    calculateRealCurrent,
+    calculateLuminousIntensity,
+    getSafetyStatus,
+    type LedColorProfile,
+    type ResistorOption,
+} from '@/lib/ledCalculations';
 
 interface LEDNodeData {
+    id?: string;
+    name?: string;
     label?: string;
-    color?: string;
+
+    connectedPin?: number | null;
+
+    colorProfile?: LedColorProfile;
+    customColorHex?: string;
+
+    forwardVoltage?: number;
+    nominalCurrent?: number; // A
+    maxCurrent?: number;     // A
+
+    internalResistance?: ResistorOption;
+    customResistance?: number;
+
     isOn?: boolean;
     brightness?: number;
-    forwardVoltage?: number;
-    nominalCurrent?: number;
-    maxCurrent?: number;
+
+    realCurrent?: number;
+    luminousIntensity?: number;
+    isBurned?: boolean;
+
     polarityEnforced?: boolean;
     initialState?: 'on' | 'off';
 }
@@ -40,31 +56,45 @@ export const LEDPropertiesPanel: React.FC = () => {
     const { setNodes } = useReactFlow();
     const nodes = useNodes();
 
-    // Find the selected LED node
     const selectedNode = nodes.find((n) => n.selected && n.type === 'led');
 
     const [localData, setLocalData] = useState<LEDNodeData>({});
     const [hasChanges, setHasChanges] = useState(false);
 
-    // Initialize local state when selection changes
     React.useEffect(() => {
         if (selectedNode) {
+            const d = selectedNode.data as LEDNodeData;
+            const profileKey: LedColorProfile = d.colorProfile ?? 'RED';
+            const profile = ledProfiles[profileKey];
+
             setLocalData({
-                label: (selectedNode.data.label as string) || 'LED',
-                color: (selectedNode.data.color as string) || 'red',
-                isOn: (selectedNode.data.isOn as boolean) ?? false,
-                brightness: (selectedNode.data.brightness as number) ?? 1.0,
-                forwardVoltage: (selectedNode.data.forwardVoltage as number) ?? 2.0,
-                nominalCurrent: (selectedNode.data.nominalCurrent as number) ?? 20,
-                maxCurrent: (selectedNode.data.maxCurrent as number) ?? 30,
-                polarityEnforced: (selectedNode.data.polarityEnforced as boolean) ?? true,
-                initialState: (selectedNode.data.initialState as 'on' | 'off') || 'off',
+                id: d.id ?? selectedNode.id,
+                name: d.name ?? d.label ?? 'LED',
+                label: d.label,
+                connectedPin: d.connectedPin ?? null,
+
+                colorProfile: profileKey,
+                customColorHex: d.customColorHex ?? profile.hex,
+
+                forwardVoltage: d.forwardVoltage ?? profile.vf,
+                nominalCurrent: d.nominalCurrent ?? profile.if_nom,
+                maxCurrent: d.maxCurrent ?? profile.if_max,
+
+                internalResistance: d.internalResistance ?? 220,
+                customResistance: d.customResistance,
+
+                realCurrent: d.realCurrent ?? 0,
+                luminousIntensity: d.luminousIntensity ?? 0,
+                isBurned: d.isBurned ?? false,
+
+                brightness: d.brightness ?? 1.0,
+                polarityEnforced: d.polarityEnforced ?? true,
+                initialState: d.initialState ?? 'off',
             });
             setHasChanges(false);
         }
     }, [selectedNode?.id]);
 
-    // All callbacks must be defined before any conditional returns
     const handleChange = useCallback(<K extends keyof LEDNodeData>(
         key: K,
         value: LEDNodeData[K]
@@ -73,16 +103,27 @@ export const LEDPropertiesPanel: React.FC = () => {
         setHasChanges(true);
     }, []);
 
-    const handleColorChange = useCallback((colorValue: string) => {
-        const colorData = ledColors.find((c) => c.value === colorValue);
-        if (colorData) {
-            setLocalData((prev) => ({
-                ...prev,
-                color: colorValue,
-                forwardVoltage: colorData.vf,
-            }));
-            setHasChanges(true);
-        }
+    const handleColorChange = useCallback((value: LedColorProfile) => {
+        const profile = ledProfiles[value];
+
+        setLocalData((prev) => ({
+            ...prev,
+            colorProfile: value,
+            forwardVoltage: prev.forwardVoltage ?? profile.vf,
+            nominalCurrent: prev.nominalCurrent ?? profile.if_nom,
+            maxCurrent: prev.maxCurrent ?? profile.if_max,
+            customColorHex: value === 'USER' ? prev.customColorHex ?? profile.hex : profile.hex,
+        }));
+        setHasChanges(true);
+    }, []);
+
+    const handleResistorChange = useCallback((value: string) => {
+        const parsed: ResistorOption = value === 'USER' ? 'USER' : parseInt(value, 10);
+        setLocalData((prev) => ({
+            ...prev,
+            internalResistance: parsed,
+        }));
+        setHasChanges(true);
     }, []);
 
     const handleSave = useCallback(() => {
@@ -95,7 +136,31 @@ export const LEDPropertiesPanel: React.FC = () => {
                         ...n,
                         data: {
                             ...n.data,
-                            ...localData,
+                            id: localData.id ?? selectedNode.id,
+                            name: localData.name ?? 'LED',
+                            label: localData.name ?? 'LED',
+                            connectedPin: localData.connectedPin ?? null,
+
+                            colorProfile: localData.colorProfile ?? 'RED',
+                            customColorHex: localData.customColorHex,
+
+                            forwardVoltage: localData.forwardVoltage,
+                            nominalCurrent: localData.nominalCurrent,
+                            maxCurrent: localData.maxCurrent,
+
+                            internalResistance: localData.internalResistance ?? 220,
+                            customResistance:
+                                localData.internalResistance === 'USER'
+                                    ? localData.customResistance
+                                    : undefined,
+
+                            brightness: localData.brightness,
+                            realCurrent: localData.realCurrent,
+                            luminousIntensity: localData.luminousIntensity,
+                            isBurned: localData.isBurned,
+
+                            polarityEnforced: localData.polarityEnforced,
+                            initialState: localData.initialState,
                         },
                     };
                 }
@@ -107,23 +172,34 @@ export const LEDPropertiesPanel: React.FC = () => {
     }, [selectedNode, localData, setNodes]);
 
     const handleReset = useCallback(() => {
-        if (selectedNode) {
-            setLocalData({
-                label: (selectedNode.data.label as string) || 'LED',
-                color: (selectedNode.data.color as string) || 'red',
-                isOn: (selectedNode.data.isOn as boolean) ?? false,
-                brightness: (selectedNode.data.brightness as number) ?? 1.0,
-                forwardVoltage: (selectedNode.data.forwardVoltage as number) ?? 2.0,
-                nominalCurrent: (selectedNode.data.nominalCurrent as number) ?? 20,
-                maxCurrent: (selectedNode.data.maxCurrent as number) ?? 30,
-                polarityEnforced: (selectedNode.data.polarityEnforced as boolean) ?? true,
-                initialState: (selectedNode.data.initialState as 'on' | 'off') || 'off',
-            });
-            setHasChanges(false);
-        }
+        if (!selectedNode) return;
+
+        const d = selectedNode.data as LEDNodeData;
+        const profileKey: LedColorProfile = d.colorProfile ?? 'RED';
+        const profile = ledProfiles[profileKey];
+
+        setLocalData({
+            id: d.id ?? selectedNode.id,
+            name: d.name ?? d.label ?? 'LED',
+            label: d.label,
+            connectedPin: d.connectedPin ?? null,
+            colorProfile: profileKey,
+            customColorHex: d.customColorHex ?? profile.hex,
+            forwardVoltage: d.forwardVoltage ?? profile.vf,
+            nominalCurrent: d.nominalCurrent ?? profile.if_nom,
+            maxCurrent: d.maxCurrent ?? profile.if_max,
+            internalResistance: d.internalResistance ?? 220,
+            customResistance: d.customResistance,
+            brightness: d.brightness ?? 1.0,
+            realCurrent: d.realCurrent ?? 0,
+            luminousIntensity: d.luminousIntensity ?? 0,
+            isBurned: d.isBurned ?? false,
+            polarityEnforced: d.polarityEnforced ?? true,
+            initialState: d.initialState ?? 'off',
+        });
+        setHasChanges(false);
     }, [selectedNode]);
 
-    // Now we can do conditional rendering after all hooks are defined
     if (!selectedNode) {
         return (
             <div className="flex flex-col h-full items-center justify-center text-[#9ca3af] p-4">
@@ -133,7 +209,34 @@ export const LEDPropertiesPanel: React.FC = () => {
         );
     }
 
-    const selectedColor = ledColors.find((c) => c.value === localData.color) || ledColors[0];
+    const profileKey: LedColorProfile = localData.colorProfile ?? 'RED';
+    const profile = ledProfiles[profileKey];
+    const mcu = getActiveMicrocontrollerProfile();
+
+    const internalR =
+        localData.internalResistance === 'USER'
+            ? localData.customResistance || 220
+            : localData.internalResistance || 220;
+
+    const vf = localData.forwardVoltage ?? profile.vf;
+    const iNom = localData.nominalCurrent ?? profile.if_nom;
+
+    const iReal = calculateRealCurrent(mcu.v_out, vf, internalR);
+    const intensity = calculateLuminousIntensity(profile.mcd, iReal, iNom);
+
+    const safety = getSafetyStatus(iReal, iNom, mcu.max_ma);
+
+    const statusLabel =
+        safety === 'burned'
+            ? 'Burned (no light)'
+            : safety === 'error'
+            ? 'MCU Overload'
+            : safety === 'warning'
+            ? 'Over nominal current'
+            : 'Within safe range';
+
+    const intensityPercent =
+        iNom > 0 ? Math.round((Math.min(1, Math.max(0, iReal / iNom)) || 0) * 100) : 0;
 
     return (
         <div className="flex flex-col h-full bg-[#0a0e14]">
@@ -178,12 +281,34 @@ export const LEDPropertiesPanel: React.FC = () => {
                     </h3>
 
                     <div className="space-y-2">
-                        <Label className="text-[#9ca3af] text-xs">Display Name</Label>
+                        <Label className="text-[#9ca3af] text-xs">ID</Label>
                         <Input
-                            value={localData.label || ''}
-                            onChange={(e) => handleChange('label', e.target.value)}
+                            value={localData.id ?? selectedNode.id}
+                            readOnly
+                            className="bg-[#111827] border-[rgba(0,217,255,0.3)] text-[#9ca3af] text-xs h-8"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label className="text-[#9ca3af] text-xs">Name</Label>
+                        <Input
+                            value={localData.name || ''}
+                            onChange={(e) => handleChange('name', e.target.value)}
                             className="bg-[#151b24] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm h-8"
                             placeholder="LED"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label className="text-[#9ca3af] text-xs">Pin Mapping</Label>
+                        <Input
+                            value={
+                                localData.connectedPin != null
+                                    ? `D${localData.connectedPin}`
+                                    : 'Not connected'
+                            }
+                            readOnly
+                            className="bg-[#111827] border-[rgba(0,217,255,0.3)] text-[#9ca3af] text-xs h-8"
                         />
                     </div>
                 </div>
@@ -197,25 +322,27 @@ export const LEDPropertiesPanel: React.FC = () => {
                     <div className="space-y-2">
                         <Label className="text-[#9ca3af] text-xs">LED Color</Label>
                         <Select
-                            value={localData.color || 'red'}
-                            onValueChange={handleColorChange}
+                            value={profileKey}
+                            onValueChange={(v) => handleColorChange(v as LedColorProfile)}
                         >
                             <SelectTrigger className="bg-[#151b24] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm h-8">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="bg-[#151b24] border-[rgba(0,217,255,0.3)]">
-                                {ledColors.map((color) => (
+                                {(
+                                    ['RED', 'GREEN', 'BLUE', 'YELLOW', 'WHITE', 'ORANGE', 'UV', 'USER'] as LedColorProfile[]
+                                ).map((key) => (
                                     <SelectItem
-                                        key={color.value}
-                                        value={color.value}
+                                        key={key}
+                                        value={key}
                                         className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)]"
                                     >
                                         <div className="flex items-center gap-2">
                                             <div
                                                 className="w-3 h-3 rounded-full"
-                                                style={{ backgroundColor: color.color }}
+                                                style={{ backgroundColor: ledProfiles[key].hex }}
                                             />
-                                            {color.label}
+                                            {key}
                                         </div>
                                     </SelectItem>
                                 ))}
@@ -223,68 +350,122 @@ export const LEDPropertiesPanel: React.FC = () => {
                         </Select>
                     </div>
 
+                    {profileKey === 'USER' && (
+                        <div className="space-y-2">
+                            <Label className="text-[#9ca3af] text-xs">Custom Color (HEX)</Label>
+                            <Input
+                                value={localData.customColorHex || ''}
+                                onChange={(e) => handleChange('customColorHex', e.target.value)}
+                                className="bg-[#151b24] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm h-8"
+                                placeholder="#ff0000"
+                            />
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                            <Label className="text-[#9ca3af] text-xs">Forward Voltage (V)</Label>
+                            <Label className="text-[#9ca3af] text-xs">Forward Voltage (Vf)</Label>
                             <Input
                                 type="number"
                                 step="0.1"
-                                value={localData.forwardVoltage || ''}
-                                onChange={(e) => handleChange('forwardVoltage', parseFloat(e.target.value))}
+                                value={localData.forwardVoltage ?? ''}
+                                onChange={(e) =>
+                                    handleChange('forwardVoltage', parseFloat(e.target.value) || 0)
+                                }
                                 className="bg-[#151b24] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm h-8"
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-[#9ca3af] text-xs">Nominal Current (mA)</Label>
+                            <Label className="text-[#9ca3af] text-xs">Nominal Current (A)</Label>
                             <Input
                                 type="number"
-                                value={localData.nominalCurrent || ''}
-                                onChange={(e) => handleChange('nominalCurrent', parseFloat(e.target.value))}
+                                step="0.001"
+                                value={localData.nominalCurrent ?? ''}
+                                onChange={(e) =>
+                                    handleChange('nominalCurrent', parseFloat(e.target.value) || 0)
+                                }
                                 className="bg-[#151b24] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm h-8"
                             />
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                        <Label className="text-[#9ca3af] text-xs">Maximum Current (mA)</Label>
-                        <Input
-                            type="number"
-                            value={localData.maxCurrent || ''}
-                            onChange={(e) => handleChange('maxCurrent', parseFloat(e.target.value))}
-                            className="bg-[#151b24] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm h-8"
-                        />
+                        <Label className="text-[#9ca3af] text-xs">Internal Resistance (Ω)</Label>
+                        <Select
+                            value={
+                                localData.internalResistance === 'USER'
+                                    ? 'USER'
+                                    : String(localData.internalResistance ?? 220)
+                            }
+                            onValueChange={handleResistorChange}
+                        >
+                            <SelectTrigger className="bg-[#151b24] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm h-8">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#151b24] border-[rgba(0,217,255,0.3)]">
+                                {resistorOptions.map((r) => (
+                                    <SelectItem
+                                        key={String(r)}
+                                        value={String(r)}
+                                        className="text-[#e6e6e6]"
+                                    >
+                                        {r === 'USER' ? 'Custom' : `${r} Ω`}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {localData.internalResistance === 'USER' && (
+                            <div className="mt-1">
+                                <Input
+                                    type="number"
+                                    value={localData.customResistance ?? ''}
+                                    onChange={(e) =>
+                                        handleChange('customResistance', parseFloat(e.target.value) || 0)
+                                    }
+                                    className="bg-[#151b24] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm h-8"
+                                    placeholder="Custom Ohms"
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Optical Section */}
+                {/* Optical & Simulation */}
                 <div className="space-y-3">
                     <h3 className="text-xs font-semibold text-[#00d9ff] uppercase tracking-wider">
                         Optical & Simulation
                     </h3>
 
-                    <div className="space-y-2">
+                    <div className="space-y-1 text-xs text-[#9ca3af]">
                         <div className="flex justify-between">
-                            <Label className="text-[#9ca3af] text-xs">Brightness Multiplier</Label>
-                            <span className="text-[#00d9ff] text-xs">
-                                {Math.round((localData.brightness || 1) * 100)}%
+                            <span>MCU</span>
+                            <span className="text-[#e5e7eb]">{mcu.name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span>V_source</span>
+                            <span className="text-[#e5e7eb]">{mcu.v_out.toFixed(1)} V</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span>I_real</span>
+                            <span className="text-[#e5e7eb]">
+                                {(iReal * 1000).toFixed(1)} mA
                             </span>
                         </div>
-                        <input
-                            type="range"
-                            min="0"
-                            max="1"
-                            step="0.05"
-                            value={localData.brightness || 1}
-                            onChange={(e) => handleChange('brightness', parseFloat(e.target.value))}
-                            className="w-full h-2 bg-[#151b24] rounded-lg appearance-none cursor-pointer accent-[#00d9ff]"
-                        />
+                        <div className="flex justify-between">
+                            <span>Intensity</span>
+                            <span className="text-[#e5e7eb]">
+                                {intensity.toFixed(0)} mcd ({intensityPercent}%)
+                            </span>
+                        </div>
                     </div>
 
                     <div className="space-y-2">
                         <Label className="text-[#9ca3af] text-xs">Initial State</Label>
                         <Select
                             value={localData.initialState || 'off'}
-                            onValueChange={(v) => handleChange('initialState', v as 'on' | 'off')}
+                            onValueChange={(v) =>
+                                handleChange('initialState', v as 'on' | 'off')
+                            }
                         >
                             <SelectTrigger className="bg-[#151b24] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm h-8">
                                 <SelectValue />
@@ -316,6 +497,32 @@ export const LEDPropertiesPanel: React.FC = () => {
                             className="data-[state=checked]:bg-[#00d9ff]"
                         />
                     </div>
+
+                    {/* Alertas de segurança */}
+                    {safety !== 'safe' && (
+                        <div
+                            className={cn(
+                                'flex items-start gap-2 p-2 rounded-md border text-xs',
+                                safety === 'burned'
+                                    ? 'border-red-500/60 bg-red-500/10 text-red-300'
+                                    : safety === 'error'
+                                    ? 'border-red-500/60 bg-red-500/10 text-red-200'
+                                    : 'border-yellow-400/60 bg-yellow-500/10 text-yellow-200'
+                            )}
+                        >
+                            <AlertTriangle className="w-4 h-4 mt-0.5" />
+                            <div>
+                                <div className="font-semibold">
+                                    {safety === 'burned'
+                                        ? 'LED burned!'
+                                        : safety === 'error'
+                                        ? 'Microcontroller overload!'
+                                        : 'Current above nominal'}
+                                </div>
+                                <div className="mt-0.5 text-[11px]">{statusLabel}</div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Preview */}
@@ -327,14 +534,22 @@ export const LEDPropertiesPanel: React.FC = () => {
                         <div
                             className={cn(
                                 'w-8 h-8 rounded-full transition-all duration-300',
-                                localData.initialState === 'on' && 'animate-pulse'
+                                safety === 'burned' && 'ring-2 ring-red-500'
                             )}
                             style={{
-                                backgroundColor: selectedColor.color,
-                                opacity: localData.initialState === 'on' ? localData.brightness : 0.3,
-                                boxShadow: localData.initialState === 'on'
-                                    ? `0 0 20px ${selectedColor.color}80`
-                                    : 'none',
+                                backgroundColor:
+                                    profileKey === 'USER'
+                                        ? localData.customColorHex || profile.hex
+                                        : profile.hex,
+                                opacity: safety === 'burned' ? 0.2 : intensityPercent / 100,
+                                boxShadow:
+                                    safety === 'burned'
+                                        ? 'none'
+                                        : `0 0 20px ${
+                                              profile.hex
+                                          }${Math.round(intensityPercent / 100 * 128)
+                                              .toString(16)
+                                              .padStart(2, '0')}`,
                             }}
                         />
                     </div>

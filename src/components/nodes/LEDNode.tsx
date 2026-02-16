@@ -4,6 +4,15 @@ import { simulationEngine } from '@/engine/SimulationEngine';
 import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { cn } from '@/lib/utils';
+import {
+  ledProfiles,
+  getActiveMicrocontrollerProfile,
+  calculateRealCurrent,
+  calculateLuminousIntensity,
+  getSafetyStatus,
+  type LedColorProfile,
+  type ResistorOption,
+} from '@/lib/ledCalculations';
 
 interface LEDNodeProps {
   id: string;
@@ -12,15 +21,54 @@ interface LEDNodeProps {
 }
 
 export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
-  const [isOn, setIsOn] = useState((data.isOn as boolean) ?? false);
-  const [brightness, setBrightness] = useState((data.brightness as number) ?? 255);
+  // Estados visuais
+  const [isOn, setIsOn] = useState<boolean>((data.isOn as boolean) ?? false);
+  const [brightness, setBrightness] = useState<number>(
+    (data.brightness as number) ?? 255
+  );
+  const [isBurned, setIsBurned] = useState<boolean>(
+    (data.isBurned as boolean) ?? false
+  );
+
+  // Wiring
   const [isProperlyWired, setIsProperlyWired] = useState(false);
-  const [connectedPin, setConnectedPin] = useState<number | null>(null);
-  const color = (data.color as string) || '#ff0000';
-  const label = (data.label as string) || 'LED';
+  const [connectedPin, setConnectedPin] = useState<number | null>(
+    (data.connectedPin as number) ?? null
+  );
+
+  // Propriedades elétricas vindas do painel (com defaults seguros)
+  const colorProfile: LedColorProfile =
+    ((data.colorProfile as LedColorProfile) ?? 'RED') || 'RED';
+  const profile = ledProfiles[colorProfile];
+
+  const forwardVoltage =
+    (data.forwardVoltage as number) || profile.vf || 2.0;
+
+  const nominalCurrent =
+    (data.nominalCurrent as number) || profile.if_nom || 0.02; // A
+
+  const internalResistanceOption =
+    (data.internalResistance as ResistorOption) ?? 220;
+
+  const customResistance =
+    (data.customResistance as number | undefined) ?? undefined;
+
+  const effectiveResistance =
+    internalResistanceOption === 'USER'
+      ? customResistance || 220
+      : internalResistanceOption || 220;
+
+  const label = (data.name as string) || (data.label as string) || 'LED';
 
   const { connections } = useConnectionStore();
   const { openWindow } = useUIStore();
+
+  const [realCurrent, setRealCurrent] = useState<number>(
+    (data.realCurrent as number) ?? 0
+  );
+  const [luminousIntensity, setLuminousIntensity] = useState<number>(
+    (data.luminousIntensity as number) ?? 0
+  );
 
   const handleDoubleClick = useCallback(() => {
     openWindow('properties');
@@ -29,12 +77,10 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
   // Check wiring and find connected MCU pin
   useEffect(() => {
     const checkWiring = () => {
-      // Find connection to anode
       const anodeConnection = connections.find(
         (c) => c.source === `${id}:anode` || c.target === `${id}:anode`
       );
 
-      // Find connection to cathode
       const cathodeConnection = connections.find(
         (c) => c.source === `${id}:cathode` || c.target === `${id}:cathode`
       );
@@ -44,13 +90,12 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
 
       setIsProperlyWired(hasAnodeConnection && hasCathodeConnection);
 
-      // Extract pin number from anode connection
       if (anodeConnection) {
-        const otherEnd = anodeConnection.source === `${id}:anode`
-          ? anodeConnection.target
-          : anodeConnection.source;
+        const otherEnd =
+          anodeConnection.source === `${id}:anode`
+            ? anodeConnection.target
+            : anodeConnection.source;
 
-        // Match patterns like "mcu_123:D13" or "board:D13"
         const pinMatch = otherEnd.match(/D(\d+)/);
         if (pinMatch) {
           const pinNumber = parseInt(pinMatch[1], 10);
@@ -64,37 +109,97 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
     checkWiring();
   }, [connections, id]);
 
+  // Calcula física do LED dado o estado (on/off)
+  const recalcPhysics = useCallback(
+    (isActive: boolean) => {
+      const mcu = getActiveMicrocontrollerProfile();
+      if (!isActive || !isProperlyWired || effectiveResistance <= 0) {
+        setRealCurrent(0);
+        setLuminousIntensity(0);
+        setBrightness(0);
+        return;
+      }
+
+      const iReal = calculateRealCurrent(
+        mcu.v_out,
+        forwardVoltage,
+        effectiveResistance
+      );
+      const intensity = calculateLuminousIntensity(
+        profile.mcd,
+        iReal,
+        nominalCurrent
+      );
+      const safety = getSafetyStatus(iReal, nominalCurrent, mcu.max_ma);
+
+      setRealCurrent(iReal);
+      setLuminousIntensity(intensity);
+
+      if (safety === 'burned') {
+        setIsBurned(true);
+        setIsOn(false);
+        setBrightness(0);
+        return;
+      }
+
+      const ratio =
+        nominalCurrent > 0 ? Math.min(1, Math.max(0, iReal / nominalCurrent)) : 0;
+      setBrightness(Math.round(50 + ratio * 205));
+
+      setIsOn(isActive);
+    },
+    [
+      effectiveResistance,
+      forwardVoltage,
+      isProperlyWired,
+      nominalCurrent,
+      profile.mcd,
+    ]
+  );
+
   // Listen for pin changes from simulation engine
   useEffect(() => {
     const unsubscribe = simulationEngine.on('pinChange', (event) => {
-      const pinEvent = event as { pin: number; value: 'HIGH' | 'LOW' | number };
+      const pinEvent = event as {
+        pin: number;
+        value: 'HIGH' | 'LOW' | number;
+      };
 
-      console.log(`💡 [LED-${id}] Event: pin=${pinEvent.pin}, value=${pinEvent.value} (Connected to: ${connectedPin})`);
+      if (connectedPin === null || connectedPin !== pinEvent.pin) return;
 
-      // Only react if this LED is connected to the changed pin
-      if (connectedPin !== null && connectedPin === pinEvent.pin) {
-        if (typeof pinEvent.value === 'number') {
-          setIsOn(pinEvent.value > 0);
-          setBrightness(pinEvent.value);
-        } else {
-          setIsOn(pinEvent.value === 'HIGH');
-          setBrightness(pinEvent.value === 'HIGH' ? 255 : 0);
-        }
+      let isActive = false;
+      if (typeof pinEvent.value === 'number') {
+        isActive = pinEvent.value > 0;
+      } else {
+        isActive = pinEvent.value === 'HIGH';
       }
+
+      recalcPhysics(isActive);
     });
 
     return unsubscribe;
-  }, [connectedPin]);
+  }, [connectedPin, recalcPhysics]);
 
   // Reset LED state when simulation stops
   useEffect(() => {
     const unsubscribe = simulationEngine.on('simulationStopped', () => {
       setIsOn(false);
       setBrightness(0);
+      setRealCurrent(0);
+      setLuminousIntensity(0);
+      setIsBurned(false);
     });
 
     return unsubscribe;
   }, []);
+
+  const displayColor =
+    colorProfile === 'USER'
+      ? ((data.customColorHex as string) || ledProfiles.USER.hex)
+      : ledProfiles[colorProfile].hex;
+
+  const strokeColor = isBurned ? '#ff4d4f' : isOn ? displayColor : '#444';
+  const fillOpacity = isBurned ? 0.2 : isOn ? 0.3 + (brightness / 255) * 0.7 : 0.4;
 
   return (
     <div
@@ -110,7 +215,10 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
       <svg width="60" height="60" viewBox="0 0 60 60">
         <defs>
           <filter id={`glow-${id}`} x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation={isOn ? 6 : 2} result="coloredBlur" />
+            <feGaussianBlur
+              stdDeviation={isOn && !isBurned ? 6 : 2}
+              result="coloredBlur"
+            />
             <feMerge>
               <feMergeNode in="coloredBlur" />
               <feMergeNode in="SourceGraphic" />
@@ -119,7 +227,11 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
 
           <radialGradient id={`ledGradient-${id}`} cx="50%" cy="30%" r="50%">
             <stop offset="0%" stopColor="#ffffff" stopOpacity={0.8} />
-            <stop offset="100%" stopColor={color} stopOpacity={1} />
+            <stop
+              offset="100%"
+              stopColor={isBurned ? '#333333' : displayColor}
+              stopOpacity={1}
+            />
           </radialGradient>
         </defs>
 
@@ -128,11 +240,11 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
           cy="30"
           r="20"
           fill={`url(#ledGradient-${id})`}
-          stroke={isOn ? color : '#444'}
+          stroke={strokeColor}
           strokeWidth={2}
-          filter={isOn ? `url(#glow-${id})` : 'none'}
+          filter={isOn && !isBurned ? `url(#glow-${id})` : 'none'}
           style={{
-            opacity: isOn ? 0.3 + (brightness / 255) * 0.7 : 0.4,
+            opacity: isBurned ? 0.2 : fillOpacity,
             transition: 'all 0.1s ease-out',
           }}
         />
@@ -143,7 +255,7 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
           rx="8"
           ry="5"
           fill="white"
-          opacity={isOn ? 0.6 : 0.2}
+          opacity={isOn && !isBurned ? 0.6 : 0.2}
           style={{ transition: 'opacity 0.1s ease-out' }}
         />
 
@@ -154,7 +266,11 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
       <div
         className={cn(
           'absolute top-1 right-1 w-2 h-2 rounded-full',
-          isOn ? 'bg-green-400 animate-pulse' : 'bg-gray-600'
+          isBurned
+            ? 'bg-red-500'
+            : isOn
+            ? 'bg-green-400 animate-pulse'
+            : 'bg-gray-600'
         )}
       />
 
