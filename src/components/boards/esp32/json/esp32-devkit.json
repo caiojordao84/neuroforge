@@ -1,10 +1,10 @@
 {
-    "id": "esp32-devkit",
-    "name": "ESP32 DevKit V1",
-    "manufacturer": "Espressif",
+    "id": "esp32-devkitc-v4",
+    "name": "ESP32 DevKitC V4",
+    "manufacturer": "Espressif Systems",
     "mcu": "ESP32-WROOM-32",
     "category": "maker",
-    "image": "/boards/esp32-devkit.svg",
+    "image": "/boards/esp32-devkitc-v4.svg",
     "url": "https://www.espressif.com/en/products/devkits/esp32-devkitc",
     "specs": {
         "flashMemory": 4194304,
@@ -12,6 +12,8 @@
         "eeprom": 0,
         "clockSpeed": 240000000,
         "voltage": 3.3,
+        "cores": 2,
+        "architecture": "Xtensa LX6",
         "wireless": [
             "wifi",
             "bluetooth",
@@ -20,25 +22,28 @@
     },
     "dimensions": {
         "width": 27.9,
-        "height": 48.3,
+        "height": 55.0,
         "thickness": 1.6
     },
     "powerPins": [
         {
             "name": "VIN",
+            "voltage": 5.0,
             "direction": "input"
         },
         {
             "name": "3V3",
             "voltage": 3.3,
-            "direction": "output"
+            "direction": "output",
+            "maxCurrent": 600
         },
         {
             "name": "GND"
         },
         {
-            "name": "RESET",
-            "direction": "input"
+            "name": "EN",
+            "direction": "input",
+            "description": "Reset pin (active low)"
         }
     ],
     "gpio": [
@@ -47,14 +52,17 @@
             "type": "digital",
             "pwm": true,
             "interrupt": true,
-            "label": "GPIO0 BOOT"
+            "label": "GPIO0 BOOT",
+            "strapping": true,
+            "warning": "Strapping pin - Boot mode selection"
         },
         {
             "pin": 1,
             "type": "digital",
             "pwm": true,
             "interrupt": true,
-            "label": "GPIO1 TX"
+            "label": "GPIO1 TX",
+            "uart": "TX0"
         },
         {
             "pin": 2,
@@ -63,14 +71,17 @@
             "interrupt": true,
             "adc": true,
             "touch": true,
-            "label": "GPIO2"
+            "label": "GPIO2",
+            "strapping": true,
+            "warning": "Strapping pin - Boot voltage selection"
         },
         {
             "pin": 3,
             "type": "digital",
             "pwm": true,
             "interrupt": true,
-            "label": "GPIO3 RX"
+            "label": "GPIO3 RX",
+            "uart": "RX0"
         },
         {
             "pin": 4,
@@ -86,7 +97,9 @@
             "type": "digital",
             "pwm": true,
             "interrupt": true,
-            "label": "GPIO5"
+            "label": "GPIO5",
+            "strapping": true,
+            "warning": "Strapping pin - SDIO slave timing"
         },
         {
             "pin": 12,
@@ -95,7 +108,9 @@
             "interrupt": true,
             "adc": true,
             "touch": true,
-            "label": "GPIO12"
+            "label": "GPIO12",
+            "strapping": true,
+            "warning": "Strapping pin - Flash voltage (MTDI)"
         },
         {
             "pin": 13,
@@ -122,7 +137,9 @@
             "interrupt": true,
             "adc": true,
             "touch": true,
-            "label": "GPIO15"
+            "label": "GPIO15",
+            "strapping": true,
+            "warning": "Strapping pin - Silences boot messages (MTDO)"
         },
         {
             "pin": 16,
@@ -143,35 +160,40 @@
             "type": "digital",
             "pwm": true,
             "interrupt": true,
-            "label": "GPIO18 SCK"
+            "label": "GPIO18 SCK",
+            "spi": "SCK"
         },
         {
             "pin": 19,
             "type": "digital",
             "pwm": true,
             "interrupt": true,
-            "label": "GPIO19 MISO"
+            "label": "GPIO19 MISO",
+            "spi": "MISO"
         },
         {
             "pin": 21,
             "type": "digital",
             "pwm": true,
             "interrupt": true,
-            "label": "GPIO21 SDA"
+            "label": "GPIO21 SDA",
+            "i2c": "SDA"
         },
         {
             "pin": 22,
             "type": "digital",
             "pwm": true,
             "interrupt": true,
-            "label": "GPIO22 SCL"
+            "label": "GPIO22 SCL",
+            "i2c": "SCL"
         },
         {
             "pin": 23,
             "type": "digital",
             "pwm": true,
             "interrupt": true,
-            "label": "GPIO23 MOSI"
+            "label": "GPIO23 MOSI",
+            "spi": "MOSI"
         },
         {
             "pin": 25,
@@ -224,7 +246,8 @@
             "pwm": false,
             "adc": true,
             "inputOnly": true,
-            "label": "GPIO34 (Input only)"
+            "label": "GPIO34",
+            "warning": "Input-only (no pull-up/pull-down)"
         },
         {
             "pin": 35,
@@ -232,7 +255,8 @@
             "pwm": false,
             "adc": true,
             "inputOnly": true,
-            "label": "GPIO35 (Input only)"
+            "label": "GPIO35",
+            "warning": "Input-only (no pull-up/pull-down)"
         },
         {
             "pin": 36,
@@ -240,7 +264,8 @@
             "pwm": false,
             "adc": true,
             "inputOnly": true,
-            "label": "GPIO36 SVP (Input only)"
+            "label": "GPIO36 SVP",
+            "warning": "Input-only (no pull-up/pull-down)"
         },
         {
             "pin": 39,
@@ -248,23 +273,46 @@
             "pwm": false,
             "adc": true,
             "inputOnly": true,
-            "label": "GPIO39 SVN (Input only)"
+            "label": "GPIO39 SVN",
+            "warning": "Input-only (no pull-up/pull-down)"
         }
     ],
     "peripherals": {
         "serial": {
-            "uarts": 3
+            "uarts": 3,
+            "default": {
+                "tx": 1,
+                "rx": 3
+            }
         },
         "i2c": {
             "channels": 2,
-            "sda": 21,
-            "scl": 22
+            "default": {
+                "sda": 21,
+                "scl": 22
+            }
         },
         "spi": {
             "channels": 4,
-            "miso": 19,
-            "mosi": 23,
-            "sck": 18
+            "default": {
+                "miso": 19,
+                "mosi": 23,
+                "sck": 18
+            }
+        },
+        "adc": {
+            "channels": 18,
+            "resolution": 12,
+            "pins": [0, 2, 4, 12, 13, 14, 15, 25, 26, 27, 32, 33, 34, 35, 36, 37, 38, 39]
+        },
+        "dac": {
+            "channels": 2,
+            "resolution": 8,
+            "pins": [25, 26]
+        },
+        "touch": {
+            "channels": 10,
+            "pins": [0, 2, 4, 12, 13, 14, 15, 27, 32, 33]
         },
         "wifi": {
             "protocols": [
@@ -280,7 +328,8 @@
         },
         "bluetooth": {
             "classic": true,
-            "ble": true
+            "ble": true,
+            "version": "4.2"
         }
     },
     "usb": {
@@ -289,33 +338,64 @@
         "vid": "0x10C4",
         "pid": "0xEA60"
     },
+    "leds": [
+        {
+            "id": "led-power",
+            "color": "green",
+            "function": "power",
+            "alwaysOn": true
+        },
+        {
+            "id": "led-gpio2",
+            "color": "blue",
+            "linkedPin": 2,
+            "function": "user"
+        },
+        {
+            "id": "led-tx",
+            "color": "yellow",
+            "linkedPin": 1,
+            "function": "uart-tx"
+        },
+        {
+            "id": "led-rx",
+            "color": "yellow",
+            "linkedPin": 3,
+            "function": "uart-rx"
+        }
+    ],
+    "buttons": [
+        {
+            "id": "reset-button",
+            "linkedPin": "EN",
+            "function": "reset",
+            "activeLevel": "low"
+        },
+        {
+            "id": "boot-button",
+            "linkedPin": 0,
+            "function": "boot",
+            "activeLevel": "low"
+        }
+    ],
     "restrictions": {
-        "strappingPins": [
-            0,
-            2,
-            5,
-            12,
-            15
-        ],
-        "reservedPins": [
-            6,
-            7,
-            8,
-            9,
-            10,
-            11
-        ],
-        "outputCurrent": 40,
+        "strappingPins": [0, 2, 5, 12, 15],
+        "reservedPins": [6, 7, 8, 9, 10, 11],
+        "inputOnlyPins": [34, 35, 36, 39],
+        "maxPinCurrent": 40,
+        "maxTotalCurrent": 1200,
         "warnings": [
             "GPIO 6-11 are connected to the integrated SPI flash (DO NOT USE)",
-            "GPIO 0, 2, 5, 12, 15 are strapping pins - use with caution",
-            "GPIO 34-39 are INPUT ONLY (no internal pull-up/pull-down)",
+            "GPIO 0, 2, 5, 12, 15 are strapping pins - use with caution during boot",
+            "GPIO 34-39 are INPUT ONLY (no internal pull-up/pull-down resistors)",
             "GPIO 1 and 3 are used for Serial debugging (USB)",
-            "Total current from all GPIO pins should not exceed 1200mA"
+            "Total current from all GPIO pins should not exceed 1200mA",
+            "Each GPIO pin maximum current: 40mA"
         ]
     },
     "compatibility": {
         "arduinoCore": "2.0.14",
+        "espIdf": "5.0+",
         "platformio": "espressif32",
         "frameworks": [
             "arduino",
@@ -328,5 +408,10 @@
         "circuitpython",
         "esp-idf"
     ],
-    "bootloader": "esp32-bootloader"
+    "bootloader": "esp32-bootloader",
+    "qemu": {
+        "machine": "esp32",
+        "cpu": "esp32",
+        "requiresEfuse": true
+    }
 }
