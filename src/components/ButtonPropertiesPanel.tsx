@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Square, RotateCcw, Save } from 'lucide-react';
+import { useConnectionStore } from '@/stores/useConnectionStore';
 
 type PullResistor = 'NONE' | 'PULLUP' | 'PULLDOWN';
 
@@ -26,6 +27,8 @@ interface ButtonNodeData {
 export const ButtonPropertiesPanel: React.FC = () => {
     const { setNodes } = useReactFlow();
     const nodes = useNodes();
+    const { connections } = useConnectionStore();
+
     const selectedNode = nodes.find((n) => n.selected && n.type === 'button');
 
     const [localData, setLocalData] = useState<ButtonNodeData>({});
@@ -35,11 +38,26 @@ export const ButtonPropertiesPanel: React.FC = () => {
         if (selectedNode) {
             const d = selectedNode.data as ButtonNodeData;
 
+            let connectedPin: number | null = d.connectedPin ?? null;
+            const signalConnection = connections.find(
+                (c) => c.source === `${selectedNode.id}:signal` || c.target === `${selectedNode.id}:signal`
+            );
+            if (signalConnection) {
+                const otherEnd =
+                    signalConnection.source === `${selectedNode.id}:signal`
+                        ? signalConnection.target
+                        : signalConnection.source;
+                const pinMatch = otherEnd.match(/D(\d+)/);
+                if (pinMatch) {
+                    connectedPin = parseInt(pinMatch[1], 10);
+                }
+            }
+
             setLocalData({
                 id: d.id ?? selectedNode.id,
                 name: d.name ?? d.label ?? 'BTN',
                 label: d.label,
-                connectedPin: d.connectedPin ?? null,
+                connectedPin,
                 pullResistor: d.pullResistor ?? 'NONE',
                 debounceTime: d.debounceTime ?? 50,
                 isPressed: d.isPressed ?? false,
@@ -47,7 +65,7 @@ export const ButtonPropertiesPanel: React.FC = () => {
             });
             setHasChanges(false);
         }
-    }, [selectedNode?.id]);
+    }, [selectedNode?.id, connections]);
 
     const handleChange = useCallback(<K extends keyof ButtonNodeData>(key: K, value: ButtonNodeData[K]) => {
         setLocalData((prev) => ({ ...prev, [key]: value }));
@@ -77,18 +95,34 @@ export const ButtonPropertiesPanel: React.FC = () => {
         if (!selectedNode) return;
 
         const d = selectedNode.data as ButtonNodeData;
+
+        let connectedPin: number | null = d.connectedPin ?? null;
+        const signalConnection = connections.find(
+            (c) => c.source === `${selectedNode.id}:signal` || c.target === `${selectedNode.id}:signal`
+        );
+        if (signalConnection) {
+            const otherEnd =
+                signalConnection.source === `${selectedNode.id}:signal`
+                    ? signalConnection.target
+                    : signalConnection.source;
+            const pinMatch = otherEnd.match(/D(\d+)/);
+            if (pinMatch) {
+                connectedPin = parseInt(pinMatch[1], 10);
+            }
+        }
+
         setLocalData({
             id: d.id ?? selectedNode.id,
             name: d.name ?? d.label ?? 'BTN',
             label: d.label,
-            connectedPin: d.connectedPin ?? null,
+            connectedPin,
             pullResistor: d.pullResistor ?? 'NONE',
             debounceTime: d.debounceTime ?? 50,
             isPressed: d.isPressed ?? false,
             isFloating: d.isFloating ?? false,
         });
         setHasChanges(false);
-    }, [selectedNode]);
+    }, [selectedNode, connections]);
 
     if (!selectedNode) {
         return (
@@ -137,7 +171,7 @@ export const ButtonPropertiesPanel: React.FC = () => {
                             className="bg-[#111827] border-[rgba(0,217,255,0.3)] text-[#9ca3af] text-xs h-8"
                         />
                     </div>
-                    <div className="space-y-2"><Label className="text-[#9ca3af] text-xs">Display Name</Label><Input value={localData.name || ''} onChange={(e) => handleChange('name', e.target.value)} className="bg-[#151b24] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm h-8" /></div>
+                    <div className="space-y-2"><Label className="text-[#9ca3af] text-xs">Display Name</Label><Input value={localData.name || ''} onChange={(e) => handleChange('name', e.target value)} className="bg-[#151b24] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm h-8" /></div>
                     <div className="space-y-2">
                         <Label className="text-[#9ca3af] text-xs">Pin Mapping</Label>
                         <Input

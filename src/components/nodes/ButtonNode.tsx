@@ -275,6 +275,22 @@ export const ButtonNode: React.FC<ButtonNodeProps> = ({ data, selected, id }) =>
         }}
         title="Ground or VCC"
       />
+
+      {pullResistor === 'NONE' && (
+        <Handle
+          type="target"
+          position={Position.Right}
+          id="external"
+          style={{
+            right: -8,
+            width: 12,
+            height: 12,
+            background: '#ff9500',
+            border: '2px solid #0a0e14',
+          }}
+          title="External VCC/GND (when no pull resistor)"
+        />
+      )}
     </div>
   );
 };

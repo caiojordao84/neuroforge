@@ -23,6 +23,7 @@ import {
     type LedColorProfile,
     type ResistorOption,
 } from '@/lib/ledCalculations';
+import { useConnectionStore } from '@/stores/useConnectionStore';
 
 interface LEDNodeData {
     id?: string;
@@ -55,6 +56,7 @@ interface LEDNodeData {
 export const LEDPropertiesPanel: React.FC = () => {
     const { setNodes } = useReactFlow();
     const nodes = useNodes();
+    const { connections } = useConnectionStore();
 
     const selectedNode = nodes.find((n) => n.selected && n.type === 'led');
 
@@ -67,11 +69,26 @@ export const LEDPropertiesPanel: React.FC = () => {
             const profileKey: LedColorProfile = d.colorProfile ?? 'RED';
             const profile = ledProfiles[profileKey];
 
+            let connectedPin: number | null = d.connectedPin ?? null;
+            const anodeConnection = connections.find(
+                (c) => c.source === `${selectedNode.id}:anode` || c.target === `${selectedNode.id}:anode`
+            );
+            if (anodeConnection) {
+                const otherEnd =
+                    anodeConnection.source === `${selectedNode.id}:anode`
+                        ? anodeConnection.target
+                        : anodeConnection.source;
+                const pinMatch = otherEnd.match(/D(\d+)/);
+                if (pinMatch) {
+                    connectedPin = parseInt(pinMatch[1], 10);
+                }
+            }
+
             setLocalData({
                 id: d.id ?? selectedNode.id,
                 name: d.name ?? d.label ?? 'LED',
                 label: d.label,
-                connectedPin: d.connectedPin ?? null,
+                connectedPin,
 
                 colorProfile: profileKey,
                 customColorHex: d.customColorHex ?? profile.hex,
@@ -93,7 +110,7 @@ export const LEDPropertiesPanel: React.FC = () => {
             });
             setHasChanges(false);
         }
-    }, [selectedNode?.id]);
+    }, [selectedNode?.id, connections]);
 
     const handleChange = useCallback(<K extends keyof LEDNodeData>(
         key: K,
@@ -178,11 +195,26 @@ export const LEDPropertiesPanel: React.FC = () => {
         const profileKey: LedColorProfile = d.colorProfile ?? 'RED';
         const profile = ledProfiles[profileKey];
 
+        let connectedPin: number | null = d.connectedPin ?? null;
+        const anodeConnection = connections.find(
+            (c) => c.source === `${selectedNode.id}:anode` || c.target === `${selectedNode.id}:anode`
+        );
+        if (anodeConnection) {
+            const otherEnd =
+                anodeConnection.source === `${selectedNode.id}:anode`
+                    ? anodeConnection.target
+                    : anodeConnection.source;
+            const pinMatch = otherEnd.match(/D(\d+)/);
+            if (pinMatch) {
+                connectedPin = parseInt(pinMatch[1], 10);
+            }
+        }
+
         setLocalData({
             id: d.id ?? selectedNode.id,
             name: d.name ?? d.label ?? 'LED',
             label: d.label,
-            connectedPin: d.connectedPin ?? null,
+            connectedPin,
             colorProfile: profileKey,
             customColorHex: d.customColorHex ?? profile.hex,
             forwardVoltage: d.forwardVoltage ?? profile.vf,
@@ -198,7 +230,7 @@ export const LEDPropertiesPanel: React.FC = () => {
             initialState: d.initialState ?? 'off',
         });
         setHasChanges(false);
-    }, [selectedNode]);
+    }, [selectedNode, connections]);
 
     if (!selectedNode) {
         return (
