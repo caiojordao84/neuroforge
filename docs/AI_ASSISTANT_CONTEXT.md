@@ -165,15 +165,16 @@ Esta regra existe porque commits mistos ou parciais causaram quebras no passado 
 ### Estrutura Completa do Projeto
 
 ```
-neuroforge/
+```markdown
 ├── README.md                      # Visão geral do projeto
 ├── docs/                          # Documentação completa
 │   ├── AI_ASSISTANT_CONTEXT.md    # Este arquivo (contexto para IAs)
 │   ├── ROADMAP.md                 # Roadmap macro (fonte única de verdade)
 │   ├── QEMU_SETUP.md              # Guia de instalação QEMU
-│   ├── serial-gpio-protocol.md   # Protocolo Serial GPIO v1.0
+│   ├── serial-gpio-protocol.md    # Protocolo Serial GPIO v1.0
 │   ├── fixes.md                   # Histórico de correções (FIX 1.1-2.10)
-│   ├── project-tree.md            # Árvore de arquivos
+│   ├── tree.md                    # Árvore de arquivos
+│   ├── tree.json                  # Árvore de arquivos em JSON
 │   ├── todayCheck.md              # Checklist de localizações QEMU
 │   ├── roadmaps/                  # Roadmaps técnicos específicos
 │   ├── architecture/              # Documentação de arquitetura

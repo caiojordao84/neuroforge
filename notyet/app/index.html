@@ -1,0 +1,44 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NeuroForge MVP</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Blockly Core -->
+    <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+    <style>
+      body { margin: 0; padding: 0; background-color: #f3f4f6; }
+      #root { height: 100vh; display: flex; flex-direction: column; }
+      .blocklyDiv { height: 100%; width: 100%; }
+      /* React Flow Custom Styles */
+      .react-flow__node-decision {
+          width: 80px; height: 80px; transform: rotate(45deg);
+          border-radius: 4px; background: #fff; border: 1px solid #777;
+          display: flex; justify-content: center; align-items: center;
+      }
+      .decision-label { transform: rotate(-45deg); text-align: center; font-size: 10px; }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^18.2.0/",
+    "react": "https://esm.sh/react@^18.2.0",
+    "react-dom/": "https://esm.sh/react-dom@^18.2.0/",
+    "react-dom": "https://esm.sh/react-dom@^18.2.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.564.0",
+    "web-tree-sitter": "https://esm.sh/web-tree-sitter@0.20.8",
+    "reactflow": "https://esm.sh/reactflow@11.10.3?deps=react@18.2.0,react-dom@18.2.0",
+    "reactflow/": "https://esm.sh/reactflow@^11.11.4/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
