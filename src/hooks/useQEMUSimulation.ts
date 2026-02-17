@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useQEMUStore } from '@/stores/useQEMUStore';
 import { qemuApi } from '@/services/QEMUApiClient';
 import { qemuWebSocket } from '@/services/QEMUWebSocket';
@@ -24,6 +24,9 @@ export function useQEMUSimulation() {
 
   const { status } = useSimulationStore();
   const { addSerialLine } = useSerialStore();
+
+  // Flag to prevent infinite loops (QEMU -> Engine -> QEMU)
+  const isUpdatingFromQEMU = useRef(false);
 
   /**
    * Check backend health on mount
@@ -67,7 +70,7 @@ export function useQEMUSimulation() {
       qemuWebSocket.on('serial', (line: string) => {
         // Add to serial terminal
         addSerialLine(line, 'output');
-        
+
         // MISSION 4: Emit event for TX LED (QEMU support)
         // This makes TX LED blink in QEMU mode just like in JS mode
         simulationEngine.emit('serialTransmit', { text: line });
@@ -76,19 +79,24 @@ export function useQEMUSimulation() {
       qemuWebSocket.on('pinChange', ({ pin, value, mode }) => {
         const pinNum = Number(pin);
 
+        // Set flag to prevent echoing back to QEMU
+        isUpdatingFromQEMU.current = true;
+
         // 1. Update Mode if provided
         if (mode) {
           useSimulationStore.getState().setPinMode(pinNum, mode as any);
         }
 
-        // 2. Update Value ONLY if provided (not during pure mode changes)
+        // 2. Update Value
         if (value !== undefined) {
           const pinValue = (value === 1 || value === 'HIGH') ? 'HIGH' : 'LOW';
-          console.log(`📡 [QEMU-WS] Pin ${pinNum} -> ${pinValue} (Mode: ${mode || 'OUTPUT'})`);
 
           useSimulationStore.getState().digitalWrite(pinNum, pinValue);
           simulationEngine.emit('pinChange', { pin: pinNum, value: pinValue });
         }
+
+        // Reset flag
+        isUpdatingFromQEMU.current = false;
       }),
 
       qemuWebSocket.on('simulationStarted', () => {
@@ -100,9 +108,29 @@ export function useQEMUSimulation() {
       })
     ];
 
+    // Listen for local engine changes (e.g. Button pressed)
+    // We need to use 'pinChange' from simulationEngine
+    // Note: We need a reference to the handler to unsubscribe
+    // Listen for local engine changes (e.g. Button pressed)
+    // We need to use 'pinChange' from simulationEngine
+    // Note: We need a reference to the handler to unsubscribe
+    const handleEnginePinChange = (data: any) => {
+      // If this change came from QEMU, ignore it
+      if (isUpdatingFromQEMU.current) return;
+
+      // Otherwise, it's a local interaction (e.g. ButtonNode calling externalDigitalWrite)
+      // Send it to QEMU
+      const pinNum = Number(data.pin);
+      const valNum = data.value === 'HIGH' ? 1 : 0;
+
+      qemuWebSocket.sendPinChange(pinNum, valNum);
+    };
+
+    const unsubEngine = simulationEngine.on('pinChange', handleEnginePinChange);
+
     return () => {
       unsubscribers.forEach(unsub => unsub());
-      qemuWebSocket.disconnect();
+      unsubEngine();
     };
   }, [mode, isBackendConnected, setWebSocketConnected, setSimulationRunning, addSerialLine]);
 

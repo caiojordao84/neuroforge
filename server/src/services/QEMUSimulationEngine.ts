@@ -155,22 +155,13 @@ export class QEMUSimulationEngine extends EventEmitter {
   private setupRunnerEvents(): void {
     // Forward serial output
     this.runner.on('serial', (line: string) => {
-      // 🔍 DEBUG: Log every line received from QEMU
-      console.log('🔍 [QEMU Serial]:', line);
-      
       // NeuroForge: Process line for GPIO first. 
       // If it's a GPIO frame, it returns true and we DON'T echo it to serial monitor.
       const isGPIO = this.gpioParser.processLine(line);
 
-      if (isGPIO) {
-        console.log('⚡ [GPIO Detected] Line matched GPIO protocol:', line);
-      }
-
       if (!isGPIO) {
         this.serialBuffer.push(line);
         this.emit('serial', line);
-      } else {
-        // console.log('🛡️ [QEMU] Filtered GPIO frame from serial:', line);
       }
     });
 
@@ -194,19 +185,14 @@ export class QEMUSimulationEngine extends EventEmitter {
   private setupGpioParserEvents(): void {
     this.gpioParser.on('pin-change', (update: PinStateUpdate) => {
       const { pin, value, mode } = update;
-      
-      // 🔍 DEBUG: Log pin-change event
-      console.log(`⚡ [GPIO pin-change] Pin ${pin} = ${value} (mode: ${mode || 'OUTPUT'})`);
-      
+
       const state: PinState = {
         mode: mode || 'OUTPUT',
         value
       };
 
       this.pinStates.set(pin, state);
-      
-      // 🔍 DEBUG: About to emit pin-change
-      console.log(`📡 [Engine] Emitting pin-change event to WebSocket...`);
+
       this.emit('pin-change', pin, state);
     });
   }
@@ -264,9 +250,13 @@ export class QEMUSimulationEngine extends EventEmitter {
    */
   async setPinState(pin: number, value: number): Promise<void> {
     try {
-      // Write to QEMU via monitor (AVR only for now)
+      // Route to correct backend
       if (this.backendType === 'avr') {
+        // Write to QEMU via monitor (AVR)
         await this.monitor.setGPIOPin(pin, value === 1 ? 'HIGH' : 'LOW');
+      } else if (this.backendType === 'esp32' && this.esp32Backend) {
+        // Write to QEMU via monitor (ESP32)
+        await this.esp32Backend.setGPIO(pin, value);
       }
 
       // Update local cache

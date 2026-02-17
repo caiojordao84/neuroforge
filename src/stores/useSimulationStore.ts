@@ -232,7 +232,6 @@ export const useSimulationStore = create<SimulationStore>()(
         set((state) => {
           const newMCUs = new Map(state.mcus);
           newMCUs.set(id, { id, ...config });
-          console.log(`✅ [Store] Added MCU: ${id} (${config.type})`);
           return {
             mcus: newMCUs,
             activeMCUId: state.activeMCUId || id
@@ -244,7 +243,6 @@ export const useSimulationStore = create<SimulationStore>()(
         set((state) => {
           const newMCUs = new Map(state.mcus);
           newMCUs.delete(id);
-          console.log(`🗑️ [Store] Removed MCU: ${id}`);
           return {
             mcus: newMCUs,
             activeMCUId: state.activeMCUId === id
@@ -313,7 +311,6 @@ export const useSimulationStore = create<SimulationStore>()(
           // Remove MCUs that are no longer on canvas
           for (const mcuId of newMCUs.keys()) {
             if (!canvasNodeIds.includes(mcuId)) {
-              console.log(`🧹 [Store] Cleaning phantom MCU: ${mcuId}`);
               newMCUs.delete(mcuId);
               changed = true;
             }
@@ -326,8 +323,6 @@ export const useSimulationStore = create<SimulationStore>()(
             ? state.activeMCUId
             : (newMCUs.size > 0 ? Array.from(newMCUs.keys())[0] : null);
 
-          console.log(`✅ [Store] Synced ${newMCUs.size} MCUs with canvas`);
-
           return {
             mcus: newMCUs,
             activeMCUId: newActiveMCUId
@@ -337,7 +332,6 @@ export const useSimulationStore = create<SimulationStore>()(
 
       // Clear all MCUs
       clearAllMCUs: () => {
-        console.log('🧹 [Store] Clearing all MCUs');
         set({ mcus: new Map(), activeMCUId: null });
       },
 

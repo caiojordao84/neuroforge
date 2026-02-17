@@ -132,6 +132,15 @@ export class QEMUWebSocket {
   isConnected(): boolean {
     return this.socket?.connected ?? false;
   }
+
+  /**
+   * Send pin change to backend
+   */
+  sendPinChange(pin: number, value: number): void {
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('pinChange', { pin, value });
+    }
+  }
 }
 
 // Singleton instance

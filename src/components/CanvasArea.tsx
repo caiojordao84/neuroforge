@@ -63,13 +63,11 @@ const CanvasInner: React.FC = () => {
 
   // Handle node click to open properties window
   const onNodeClick = useCallback((_event: React.MouseEvent, _node: Node) => {
-    console.log('onNodeClick fired, opening properties window');
     openWindow('properties');
   }, [openWindow]);
 
   // Handle node double-click to open properties window
   const onNodeDoubleClick = useCallback((_event: React.MouseEvent, _node: Node) => {
-    console.log('onNodeDoubleClick fired, opening properties window');
     openWindow('properties');
   }, [openWindow]);
 
@@ -89,7 +87,6 @@ const CanvasInner: React.FC = () => {
 
   // Sync MCUs with canvas on initialization
   useEffect(() => {
-    console.log('🔄 [Canvas] Initializing - syncing MCUs with canvas');
     const mcuNodeIds = nodes.filter(n => n.type === 'mcu').map(n => n.id);
     syncMCUsWithCanvas(mcuNodeIds);
   }, []); // Run only on mount
@@ -105,7 +102,6 @@ const CanvasInner: React.FC = () => {
     const removed = storeMCUIds.filter(id => !mcuNodeIds.includes(id));
 
     if (added.length > 0 || removed.length > 0) {
-      console.log(`🔄 [Canvas] MCUs changed - Added: ${added.length}, Removed: ${removed.length}`);
       syncMCUsWithCanvas(mcuNodeIds);
     }
   }, [nodes, syncMCUsWithCanvas, getAllMCUs]);
@@ -122,7 +118,7 @@ const CanvasInner: React.FC = () => {
       // R key to rotate selected MCU nodes
       if (event.key === 'r' || event.key === 'R') {
         const selectedNodes = nodes.filter((node) => node.selected && node.type === 'mcu');
-        
+
         if (selectedNodes.length === 0) {
           return;
         }
@@ -139,7 +135,7 @@ const CanvasInner: React.FC = () => {
             // Don't normalize here - let it accumulate (360, 450, 540, etc)
             // This ensures CSS always rotates clockwise (+90°)
             const newRotation = Math.max(0, currentRotation + 90);
-            
+
             // Normalize only for display in terminal
             const displayRotation = newRotation % 360;
 
@@ -168,7 +164,7 @@ const CanvasInner: React.FC = () => {
   const getDefaultCodeForBoard = useCallback((boardType: BoardType, lang: Language): string => {
     const baseCode = defaultCodeMap[lang];
     const boardName = boardConfigs[boardType].name;
-    
+
     // Add board-specific comment
     return `// ${boardName}\n${baseCode}`;
   }, []);
@@ -289,7 +285,7 @@ const CanvasInner: React.FC = () => {
         const mcuType = (componentData.mcuType as BoardType) || 'arduino-uno';
         const defaultCode = getDefaultCodeForBoard(mcuType, language);
         const boardName = boardConfigs[mcuType].name;
-        
+
         addMCU(newNode.id, {
           type: mcuType,
           code: defaultCode,

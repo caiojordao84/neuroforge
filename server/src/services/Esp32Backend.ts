@@ -3,8 +3,9 @@ import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
-import { Esp32BackendConfig, Esp32RunnerHandle } from '../types/esp32.types';
+import { Esp32BackendConfig } from '../types/esp32.types';
 import { Esp32SerialClient } from './Esp32SerialClient';
+import { QEMUMonitorService } from './QEMUMonitorService';
 
 /**
  * Backend para executar QEMU ESP32 (qemu-system-xtensa)
@@ -13,11 +14,13 @@ import { Esp32SerialClient } from './Esp32SerialClient';
 export class Esp32Backend extends EventEmitter {
   private process: ChildProcess | null = null;
   private serialClient: Esp32SerialClient | null = null;
+  private monitor: QEMUMonitorService;
   private config: Esp32BackendConfig | null = null;
   private qemuPath: string;
 
   constructor(qemuPath?: string) {
     super();
+    this.monitor = new QEMUMonitorService();
     // Default: buscar no PATH ou usar variável de ambiente
     this.qemuPath = qemuPath
       || process.env.ESP32_QEMU_PATH
@@ -28,11 +31,6 @@ export class Esp32Backend extends EventEmitter {
 
   /**
    * Tenta detectar automaticamente o caminho de dados do QEMU ESP32
-   * Estratégias (em ordem de prioridade):
-   * 1. Variável de ambiente ESP32_QEMU_DATA_PATH
-   * 2. Caminho relativo ao binário qemu-system-xtensa
-   * 3. Paths comuns por plataforma (Windows/Linux/Mac)
-   * 4. Retorna null (QEMU tentará usar paths internos)
    */
   private getQemuDataPath(): string | null {
     // 1. Variável de ambiente (highest priority)
@@ -184,8 +182,9 @@ export class Esp32Backend extends EventEmitter {
 
     this.config = config;
     const serialPort = config.flash.serialPort || parseInt(process.env.ESP32_SERIAL_PORT || '5555');
+    const monitorPort = serialPort + 1; // Ops, ensure this doesn't conflict. 5556 usually ok.
 
-    const args = this.buildQemuArgs(config, serialPort);
+    const args = this.buildQemuArgs(config, serialPort, monitorPort);
 
     console.log('🚀 Starting QEMU ESP32:', this.qemuPath);
     console.log('📋 Args:', args.join(' '));
@@ -211,6 +210,30 @@ export class Esp32Backend extends EventEmitter {
     this.serialClient.on('line', (line: string) => {
       this.emit('serial', line);
     });
+
+    // Conectar ao Monitor (com retry)
+    try {
+      console.log(`🔌 Connecting to ESP32 Monitor on port ${monitorPort}...`);
+
+      // Retry for up to 2 seconds
+      let connected = false;
+      for (let i = 0; i < 10; i++) {
+        try {
+          await this.monitor.connect(`127.0.0.1:${monitorPort}`);
+          connected = true;
+          console.log('✅ ESP32 Monitor connected');
+          break;
+        } catch (e) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      }
+
+      if (!connected) {
+        console.warn('⚠️ Failed to connect to ESP32 Monitor after retries');
+      }
+    } catch (error) {
+      console.warn('⚠️ Error connecting to ESP32 Monitor:', error);
+    }
 
     this.emit('started');
   }
@@ -256,7 +279,7 @@ export class Esp32Backend extends EventEmitter {
   /**
    * Constrói argumentos da linha de comando do QEMU ESP32
    */
-  private buildQemuArgs(config: Esp32BackendConfig, serialPort: number): string[] {
+  private buildQemuArgs(config: Esp32BackendConfig, serialPort: number, monitorPort: number): string[] {
     const memory = config.qemuOptions?.memory || process.env.ESP32_DEFAULT_MEMORY || '4M';
     const wdtDisable = config.qemuOptions?.wdtDisable !== false; // Default true
     const networkMode = config.qemuOptions?.networkMode || 'user';
@@ -271,7 +294,8 @@ export class Esp32Backend extends EventEmitter {
       '-global', 'driver=nvram.esp32.efuse,property=drive,value=efuse',
       ...(wdtDisable ? ['-global', 'driver=timer.esp32.timg,property=wdt_disable,value=true'] : []),
       '-nographic',
-      '-serial', `tcp::${serialPort},server,nowait`
+      '-serial', `tcp::${serialPort},server,nowait`,
+      '-monitor', `tcp::${monitorPort},server,nowait`
     ];
 
     if (networkMode !== 'none') {
@@ -318,6 +342,10 @@ export class Esp32Backend extends EventEmitter {
    */
   stop(): void {
     console.log('⏹️ Stopping ESP32 Backend...');
+
+    if (this.monitor) {
+      this.monitor.disconnect();
+    }
 
     if (this.serialClient) {
       this.serialClient.disconnect();
@@ -370,5 +398,20 @@ export class Esp32Backend extends EventEmitter {
       return false;
     }
     return this.serialClient.write(data);
+  }
+
+  /**
+   * Set GPIO state via Monitor (Using QEMUMonitorService)
+   */
+  async setGPIO(pin: number, value: number): Promise<void> {
+    if (this.monitor && this.monitor.isConnected()) {
+      const state = value === 1 ? 'HIGH' : 'LOW';
+      // console.log(`📝 [ESP32Backend] Setting GPIO ${pin} to ${state}`);
+      // NOTE: QEMU Xtensa/ESP32 has specific GPIO commands in qom-set usually?
+      // Or we reuse the generic setGPIOPin which tries to log/use standard mechanisms.
+      await this.monitor.setGPIOPin(pin, state, 'esp32');
+    } else {
+      console.warn('⚠️ Cannot set GPIO: Monitor not connected');
+    }
   }
 }

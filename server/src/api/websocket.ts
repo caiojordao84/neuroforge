@@ -23,7 +23,6 @@ export function setupWebSocket(httpServer: HTTPServer): SocketIOServer {
 
     // Forward pin changes to client
     const pinChangeHandler = (pin: number, state: any) => {
-      console.log(`📡 [WebSocket] Forwarding pin-change: pin=${pin}, state=`, state);
       socket.emit('pinChange', { pin, ...state });
     };
 
@@ -69,6 +68,13 @@ export function setupWebSocket(httpServer: HTTPServer): SocketIOServer {
     socket.emit('status', {
       running: engine.isRunning(),
       paused: engine.isPaused()
+    });
+
+    // Receive pin changes from client (e.g. Button press)
+    socket.on('pinChange', (data: { pin: number; value: number }) => {
+      console.log(`📥 [WebSocket] Received pin-change from client:`, data);
+      // Forward to engine to update QEMU state
+      engine.setPinState(data.pin, data.value);
     });
   });
 
