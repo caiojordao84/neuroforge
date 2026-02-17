@@ -339,10 +339,18 @@ export const useSimulationStore = create<SimulationStore>()(
         set((state) => {
           const newPins = new Map(state.pins);
           const existingPin = newPins.get(pin);
+
+          // If INPUT_PULLUP, default to HIGH if no value exists or if it was previously LOW
+          // This matches real Arduino behavior where pull-up drives the pin HIGH.
+          let newValue = existingPin?.value ?? 'LOW';
+          if (mode === 'INPUT_PULLUP') {
+            newValue = 'HIGH';
+          }
+
           newPins.set(pin, {
             pin,
             mode,
-            value: existingPin?.value ?? 'LOW',
+            value: newValue,
           });
           return { pins: newPins };
         });

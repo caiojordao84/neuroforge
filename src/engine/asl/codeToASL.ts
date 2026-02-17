@@ -102,8 +102,9 @@ function extractFunctionBody(code: string, functionName: string): string {
 }
 
 function normalizeElseBlocks(body: string): string {
-  // Transforma "} else {" em duas linhas: "}" e "else {"
-  return body.replace(/}\s*else\s*{/g, '}\nelse {');
+  // Transforma "} else" em duas linhas: "}" e "else"
+  // para que o scanner de linha encontre o else no índice seguinte.
+  return body.replace(/}\s*else\b/g, '}\nelse');
 }
 
 function normalizeIfHeaders(body: string): string {
@@ -296,11 +297,16 @@ function parseIfBlock(
   let elseBranch: ASLStatement[] | undefined;
   let lastIndex = i;
 
-  // Verifica se há else ou else-if logo após o bloco THEN
-  const elseIndex = i + 1;
-  if (elseIndex < lines.length) {
+  // Verifica se há else ou else-if logo após o bloco THEN, pulando comentários e linhas vazias
+  let elseIndex = i + 1;
+  while (elseIndex < lines.length) {
     const nextRaw = lines[elseIndex];
     const nextLine = nextRaw.replace(/\/\/.*$/, '').trim();
+
+    if (!nextLine) {
+      elseIndex++;
+      continue;
+    }
 
     if (nextLine.startsWith('else')) {
       const elseIfMatch = nextLine.match(/^else\s+if\s*\((.+)\)\s*\{/);
@@ -346,6 +352,8 @@ function parseIfBlock(
         lastIndex = j;
       }
     }
+    // Para no primeiro statement não-else encontrado fora do bloco
+    break;
   }
 
   const stmt: ASLStatement = {

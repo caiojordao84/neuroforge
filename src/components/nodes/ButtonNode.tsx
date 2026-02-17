@@ -83,9 +83,18 @@ export const ButtonNode: React.FC<ButtonNodeProps> = ({ data, selected, id }) =>
             value = pressed ? 'HIGH' : 'LOW';
             break;
           case 'NONE':
-          default:
-            value = pressed ? 'HIGH' : 'LOW';
+          default: {
+            // Auto-Polarity: detect if MCU has internal pull-up enabled
+            const pinState = simulationEngine.getPinState(connectedPin);
+            if (pinState?.mode === 'INPUT_PULLUP') {
+              // If MCU has internal pull-up, button likely connects signal to GND (Active-Low)
+              value = pressed ? 'LOW' : 'HIGH';
+            } else {
+              // Default behavior (Active-High)
+              value = pressed ? 'HIGH' : 'LOW';
+            }
             break;
+          }
         }
 
         // console.log(`[BTN ${id}] connectedPin=${connectedPin}, pressed=${pressed}, pullResistor=${pullResistor}`);
