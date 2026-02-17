@@ -17,9 +17,9 @@ function cppToASL(code: string): ASLProgram {
   const setupBody = extractFunctionBody(code, 'setup');
   const loopBody = extractFunctionBody(code, 'loop');
 
-  // Normaliza padrões "} else {" para duas linhas: "}" e "else {"
-  const normalizedSetup = normalizeElseBlocks(setupBody);
-  const normalizedLoop = normalizeElseBlocks(loopBody);
+  // Normalizações de controle de fluxo para facilitar o parser linha‑a‑linha
+  const normalizedSetup = normalizeElseBlocks(normalizeIfHeaders(setupBody));
+  const normalizedLoop = normalizeElseBlocks(normalizeIfHeaders(loopBody));
 
   const setupStmts = cppLinesToASLStatements(normalizedSetup.split('\n'));
   const loopStmts = cppLinesToASLStatements(normalizedLoop.split('\n'));
@@ -106,6 +106,19 @@ function normalizeElseBlocks(body: string): string {
   return body.replace(/}\s*else\s*{/g, '}\nelse {');
 }
 
+function normalizeIfHeaders(body: string): string {
+  // Transforma:
+  //   if (COND)
+  //   {
+  //     ...
+  //   }
+  // em:
+  //   if (COND) {
+  //     ...
+  //   }
+  return body.replace(/if\s*\(([^)]+)\)\s*\n\s*{/g, 'if ($1) {');
+}
+
 function cppLinesToASLStatements(lines: string[]): ASLStatement[] {
   const stmts: ASLStatement[] = [];
 
@@ -114,6 +127,24 @@ function cppLinesToASLStatements(lines: string[]): ASLStatement[] {
     const line = raw.replace(/\/\/.*$/, '').trim();
     if (!line) continue;
 
+    // If de uma linha: if (COND) STATEMENT;
+    const singleLineIf = line.match(/^if\s*\((.+)\)\s*([^;{]+);$/);
+    if (singleLineIf) {
+      const conditionSrc = singleLineIf[1].trim();
+      const stmtSrc = singleLineIf[2].trim();
+
+      const conditionExpr = parseConditionExpr(conditionSrc);
+      const thenBranch = cppLinesToASLStatements([stmtSrc + ';']);
+
+      stmts.push({
+        kind: 'if',
+        condition: conditionExpr,
+        thenBranch,
+      });
+
+      continue;
+    }
+
     // Controle de fluxo: suportamos apenas if/else simples na v0.
     if (line.startsWith('if')) {
       const { stmt, nextIndex } = parseIfBlock(lines, i);
@@ -121,6 +152,11 @@ function cppLinesToASLStatements(lines: string[]): ASLStatement[] {
       i = nextIndex;
       continue;
     }
+
+    // TODO ASL v1:
+    // - Suportar 'else if' em cascata mapeando para if aninhado ou cadeia de ASLIf.
+    // - Suportar if aninhado dentro de blocos then/else.
+    // - Suportar for/while simples convertendo para ASLWhile.
 
     // Ainda não suportamos for/while via ASL v0
     if (line.startsWith('for') || line.startsWith('while')) {
@@ -285,8 +321,20 @@ function parseIfBlock(
 }
 
 function parseConditionExpr(src: string): ASLExpr {
+  const trimmed = src.trim();
+
+  // !EXPR -> unary not
+  const notMatch = trimmed.match(/^!\s*(.+)$/);
+  if (notMatch) {
+    return {
+      kind: 'unary',
+      op: '!',
+      expr: makeVarOrLiteral(notMatch[1].trim()),
+    };
+  }
+
   // Suporta: a == b, a != b
-  const eqMatch = src.match(/^(.+)==(.+)$/);
+  const eqMatch = trimmed.match(/^(.+)==(.+)$/);
   if (eqMatch) {
     const leftToken = eqMatch[1].trim();
     const rightToken = eqMatch[2].trim();
@@ -298,7 +346,7 @@ function parseConditionExpr(src: string): ASLExpr {
     };
   }
 
-  const neqMatch = src.match(/^(.+)!=(.+)$/);
+  const neqMatch = trimmed.match(/^(.+)!=(.+)$/);
   if (neqMatch) {
     const leftToken = neqMatch[1].trim();
     const rightToken = neqMatch[2].trim();
@@ -311,7 +359,7 @@ function parseConditionExpr(src: string): ASLExpr {
   }
 
   // Fallback: trata expressão inteira como algo a ser convertido diretamente
-  return makeVarOrLiteral(src);
+  return makeVarOrLiteral(trimmed);
 }
 
 function makeVarOrLiteral(token: string): ASLExpr {
