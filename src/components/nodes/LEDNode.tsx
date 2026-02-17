@@ -181,7 +181,6 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
         isActive = pinEvent.value === 'HIGH';
       }
 
-      console.log(`[LED ${id}] CHAMANDO recalcPhysics(${isActive})`);
       recalcPhysics(isActive);
     });
 

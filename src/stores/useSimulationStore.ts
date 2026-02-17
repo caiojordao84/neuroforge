@@ -355,6 +355,9 @@ export const useSimulationStore = create<SimulationStore>()(
       },
 
       digitalWrite: (pin, value) => {
+        // if (pin === 2 || pin === 3) {
+        //   console.log(`[Store] digitalWrite(${pin}, ${value})`);
+        // }
         set((state) => {
           const pinState = state.pins.get(pin);
           // NeuroForge: allow writing even if mode is unknown for QEMU sync

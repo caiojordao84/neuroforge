@@ -110,9 +110,10 @@ export class CodeParser {
       if (pin !== null) {
         // We need to access the engine's read function synchronously? 
         // SimulationEngine digitalRead returns 'HIGH' | 'LOW'
-        const val = simulationEngine.digitalRead(pin);
-        console.log(`[CodeParser] digitalRead(${pin}) = ${val}`);
-        return val === 'HIGH' ? 1 : 0;
+        // const val = simulationEngine.digitalRead(pin);
+        // console.log(`[CodeParser] digitalRead(${pin}) = ${val}`);
+        // return val === 'HIGH' ? 1 : 0;
+        return simulationEngine.digitalRead(pin) === 'HIGH' ? 1 : 0;
       }
       return 0;
     }
@@ -319,7 +320,7 @@ export class CodeParser {
     // Variable Re-assignment: val = ...;
     const varAssignMatch = cleanLine.match(/^(\w+)\s*=\s*([^;]+);/);
     if (varAssignMatch) {
-      if (!cleanLine.startsWith('int ') && !cleanLine.startsWith('const ')) { // avoid double matching declaration
+      if (!cleanLine.startsWith('int ') && !cleanLine.startsWith('const ') && !cleanLine.startsWith('byte ') && !cleanLine.startsWith('long ') && !cleanLine.startsWith('float ') && !cleanLine.startsWith('double ') && !cleanLine.startsWith('bool ')) { // avoid double matching declaration
         const varName = varAssignMatch[1];
         const valExpr = varAssignMatch[2];
         const value = this.evaluateExpression(valExpr);
@@ -329,6 +330,9 @@ export class CodeParser {
           this.localVariables.set(varName, value);
         } else if (this.globalVariables.has(varName)) {
           this.globalVariables.set(varName, value);
+        } else {
+          // Treat as local if not found (implicit declaration or lost scope?)
+          this.localVariables.set(varName, value);
         }
         return;
       }
@@ -385,7 +389,7 @@ export class CodeParser {
           }
         }
 
-        console.log(`[CodeParser] Executando digitalWrite(${pinValue}, ${state})`);
+        // console.log(`[CodeParser] Executando digitalWrite(${pinValue}, ${state})`);
         simulationEngine.digitalWrite(pinValue, state);
       } else {
         console.warn(`Could not resolve pin variable: ${digitalWriteMatch[1]}`);

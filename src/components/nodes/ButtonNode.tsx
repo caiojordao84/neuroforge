@@ -88,8 +88,8 @@ export const ButtonNode: React.FC<ButtonNodeProps> = ({ data, selected, id }) =>
             break;
         }
 
-        console.log(`[BTN ${id}] connectedPin=${connectedPin}, value=${value}, pullResistor=${pullResistor}`);
-        console.log(`[BTN ${id}] Chamando simulationEngine.externalDigitalWrite(${connectedPin}, ${value})`);
+        // console.log(`[BTN ${id}] connectedPin=${connectedPin}, pressed=${pressed}, pullResistor=${pullResistor}`);
+        // console.log(`[BTN ${id}] externalDigitalWrite(${connectedPin}, ${value})`);
 
         simulationEngine.externalDigitalWrite(connectedPin, value);
         simulationEngine.emit('buttonPress', {
@@ -135,7 +135,7 @@ export const ButtonNode: React.FC<ButtonNodeProps> = ({ data, selected, id }) =>
         width="60"
         height="60"
         viewBox="0 0 60 60"
-        className="cursor-pointer select-none"
+        className="nodrag cursor-pointer select-none"
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
