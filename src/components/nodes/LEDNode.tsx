@@ -159,13 +159,20 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
 
   // Listen for pin changes from simulation engine
   useEffect(() => {
+    console.log(`[LED ${id}] Configurando listener pinChange. connectedPin=${connectedPin}`);
+
     const unsubscribe = simulationEngine.on('pinChange', (event) => {
       const pinEvent = event as {
         pin: number;
         value: 'HIGH' | 'LOW' | number;
       };
 
-      if (connectedPin === null || connectedPin !== pinEvent.pin) return;
+      console.log(`[LED ${id}] pinChange recebido:`, pinEvent, `| Meu connectedPin: ${connectedPin}`);
+
+      if (connectedPin === null || connectedPin !== pinEvent.pin) {
+        console.log(`[LED ${id}] IGNORANDO - pino não corresponde`);
+        return;
+      }
 
       let isActive = false;
       if (typeof pinEvent.value === 'number') {
@@ -174,11 +181,12 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
         isActive = pinEvent.value === 'HIGH';
       }
 
+      console.log(`[LED ${id}] CHAMANDO recalcPhysics(${isActive})`);
       recalcPhysics(isActive);
     });
 
     return unsubscribe;
-  }, [connectedPin, recalcPhysics]);
+  }, [connectedPin, recalcPhysics, id]);
 
   // Reset LED state when simulation stops
   useEffect(() => {
@@ -269,8 +277,8 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
           isBurned
             ? 'bg-red-500'
             : isOn
-            ? 'bg-green-400 animate-pulse'
-            : 'bg-gray-600'
+              ? 'bg-green-400 animate-pulse'
+              : 'bg-gray-600'
         )}
       />
 

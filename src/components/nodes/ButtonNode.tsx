@@ -88,6 +88,9 @@ export const ButtonNode: React.FC<ButtonNodeProps> = ({ data, selected, id }) =>
             break;
         }
 
+        console.log(`[BTN ${id}] connectedPin=${connectedPin}, value=${value}, pullResistor=${pullResistor}`);
+        console.log(`[BTN ${id}] Chamando simulationEngine.externalDigitalWrite(${connectedPin}, ${value})`);
+
         simulationEngine.externalDigitalWrite(connectedPin, value);
         simulationEngine.emit('buttonPress', {
           pin: connectedPin,

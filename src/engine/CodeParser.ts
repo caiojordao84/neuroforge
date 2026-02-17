@@ -111,6 +111,7 @@ export class CodeParser {
         // We need to access the engine's read function synchronously? 
         // SimulationEngine digitalRead returns 'HIGH' | 'LOW'
         const val = simulationEngine.digitalRead(pin);
+        console.log(`[CodeParser] digitalRead(${pin}) = ${val}`);
         return val === 'HIGH' ? 1 : 0;
       }
       return 0;
@@ -384,6 +385,7 @@ export class CodeParser {
           }
         }
 
+        console.log(`[CodeParser] Executando digitalWrite(${pinValue}, ${state})`);
         simulationEngine.digitalWrite(pinValue, state);
       } else {
         console.warn(`Could not resolve pin variable: ${digitalWriteMatch[1]}`);
