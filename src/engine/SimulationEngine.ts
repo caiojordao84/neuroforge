@@ -126,7 +126,7 @@ export class SimulationEngine extends EventEmitter {
     return preprocessCode(code, language);
   }
 
-  start(setupFn: () => void, loopFn: () => void | Promise<void>, speed = 1): void {
+  async start(setupFn: () => void | Promise<void>, loopFn: () => void | Promise<void>, speed = 1): Promise<void> {
     if (this.isRunning) {
       this.stop();
     }
@@ -147,7 +147,7 @@ export class SimulationEngine extends EventEmitter {
     serialStore.addTerminalLine('▶️ Simulation started', 'success');
 
     try {
-      setupFn();
+      await setupFn();
       this.setupExecuted = true;
     } catch (error) {
       serialStore.addTerminalLine(
@@ -376,6 +376,23 @@ export class SimulationEngine extends EventEmitter {
     return simulationStore.analogRead(pin);
   }
 
+  // Method for external components (sensors, buttons) to drive pins
+  // ignoring the MCU's pin mode (e.g. driving an INPUT pin HIGH/LOW)
+  externalDigitalWrite(pin: number, value: 'HIGH' | 'LOW'): void {
+    const simulationStore = useSimulationStore.getState();
+
+    // We can just set the value directly in the store
+    // The store's digitalWrite doesn't enforce mode, only the Engine's wrapper does.
+    simulationStore.digitalWrite(pin, value);
+
+    const updatedPinState = simulationStore.getPinState(pin);
+    if (updatedPinState) {
+      this.pinCache.set(pin, updatedPinState);
+    }
+
+    this.emit('pinChange', { pin, value });
+  }
+
   getPinState(pin: number): PinState | undefined {
     if (this.pinCache.has(pin)) {
       return this.pinCache.get(pin);
@@ -421,7 +438,7 @@ export class SimulationEngine extends EventEmitter {
   serialPrint(text: string): void {
     const serialStore = useSerialStore.getState();
     serialStore.serialPrint(text);
-    
+
     // MISSION 4: Emit event for TX LED
     this.emit('serialTransmit', { text });
   }
@@ -429,7 +446,7 @@ export class SimulationEngine extends EventEmitter {
   serialPrintln(text: string): void {
     const serialStore = useSerialStore.getState();
     serialStore.serialPrintln(text);
-    
+
     // MISSION 4: Emit event for TX LED
     this.emit('serialTransmit', { text });
   }

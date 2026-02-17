@@ -88,7 +88,7 @@ export const ButtonNode: React.FC<ButtonNodeProps> = ({ data, selected, id }) =>
             break;
         }
 
-        simulationEngine.digitalWrite(connectedPin, value);
+        simulationEngine.externalDigitalWrite(connectedPin, value);
         simulationEngine.emit('buttonPress', {
           pin: connectedPin,
           pressed,
@@ -219,8 +219,8 @@ export const ButtonNode: React.FC<ButtonNodeProps> = ({ data, selected, id }) =>
           isFloating
             ? 'bg-yellow-400'
             : isPressed
-            ? 'bg-green-400'
-            : 'bg-gray-600',
+              ? 'bg-green-400'
+              : 'bg-gray-600',
           'transition-colors duration-75'
         )}
       />
