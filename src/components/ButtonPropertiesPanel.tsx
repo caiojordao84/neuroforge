@@ -155,8 +155,23 @@ export const ButtonPropertiesPanel: React.FC = () => {
                     <span className="text-[#e6e6e6] font-medium text-sm">Button Properties</span>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={handleReset} className="h-7 px-2 bg-transparent border-[rgba(0,217,255,0.3)] text-[#9ca3af]"><RotateCcw className="w-3.5 h-3.5" /></Button>
-                    <Button size="sm" onClick={handleSave} disabled={!hasChanges} className={cn('h-7 px-3', hasChanges ? 'bg-[#00d9ff] text-[#0a0e14]' : 'bg-[#1a3a5c] text-[#9ca3af]')}><Save className="w-3.5 h-3.5 mr-1" />Save</Button>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleReset} 
+                        className="h-7 px-2 bg-transparent border-[rgba(0,217,255,0.3)] text-[#9ca3af]"
+                    >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button 
+                        size="sm" 
+                        onClick={handleSave} 
+                        disabled={!hasChanges} 
+                        className={cn('h-7 px-3', hasChanges ? 'bg-[#00d9ff] text-[#0a0e14]' : 'bg-[#1a3a5c] text-[#9ca3af]')}
+                    >
+                        <Save className="w-3.5 h-3.5 mr-1" />
+                        Save
+                    </Button>
                 </div>
             </div>
 
@@ -171,7 +186,14 @@ export const ButtonPropertiesPanel: React.FC = () => {
                             className="bg-[#111827] border-[rgba(0,217,255,0.3)] text-[#9ca3af] text-xs h-8"
                         />
                     </div>
-                    <div className="space-y-2"><Label className="text-[#9ca3af] text-xs">Display Name</Label><Input value={localData.name || ''} onChange={(e) => handleChange('name', e.target value)} className="bg-[#151b24] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm h-8" /></div>
+                    <div className="space-y-2">
+                        <Label className="text-[#9ca3af] text-xs">Display Name</Label>
+                        <Input 
+                            value={localData.name || ''} 
+                            onChange={(e) => handleChange('name', e.target.value)} 
+                            className="bg-[#151b24] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm h-8" 
+                        />
+                    </div>
                     <div className="space-y-2">
                         <Label className="text-[#9ca3af] text-xs">Pin Mapping</Label>
                         <Input
@@ -188,11 +210,15 @@ export const ButtonPropertiesPanel: React.FC = () => {
 
                 <div className="space-y-3">
                     <h3 className="text-xs font-semibold text-[#00d9ff] uppercase">Electrical</h3>
-                    <div className="space-y-2"><Label className="text-[#9ca3af] text-xs">Pull Resistor</Label>
-                        <Select value={localData.pullResistor ?? 'NONE'} onValueChange={(v) =>
-                            handleChange('pullResistor', v as PullResistor)
-                        }>
-                            <SelectTrigger className="bg-[#151b24] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm h-8"><SelectValue /></SelectTrigger>
+                    <div className="space-y-2">
+                        <Label className="text-[#9ca3af] text-xs">Pull Resistor</Label>
+                        <Select 
+                            value={localData.pullResistor ?? 'NONE'} 
+                            onValueChange={(v) => handleChange('pullResistor', v as PullResistor)}
+                        >
+                            <SelectTrigger className="bg-[#151b24] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm h-8">
+                                <SelectValue />
+                            </SelectTrigger>
                             <SelectContent className="bg-[#151b24] border-[rgba(0,217,255,0.3)]">
                                 <SelectItem value="NONE" className="text-[#e6e6e6]">None</SelectItem>
                                 <SelectItem value="PULLUP" className="text-[#e6e6e6]">Pull-up</SelectItem>
@@ -201,14 +227,27 @@ export const ButtonPropertiesPanel: React.FC = () => {
                         </Select>
                         <p className="text-[11px] text-[#9ca3af] mt-1">{logicStateLabel}</p>
                     </div>
-                    <div className="space-y-2"><Label className="text-[#9ca3af] text-xs">Debounce Time (ms)</Label><Input type="number" value={localData.debounceTime ?? 50} onChange={(e) =>
-                        handleChange('debounceTime', parseInt(e.target.value) || 0)
-                    } className="bg-[#151b24] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm h-8" /></div>
+                    <div className="space-y-2">
+                        <Label className="text-[#9ca3af] text-xs">Debounce Time (ms)</Label>
+                        <Input 
+                            type="number" 
+                            value={localData.debounceTime ?? 50} 
+                            onChange={(e) => handleChange('debounceTime', parseInt(e.target.value) || 0)}
+                            className="bg-[#151b24] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-sm h-8" 
+                        />
+                    </div>
                 </div>
 
                 <div className="space-y-3">
                     <h3 className="text-xs font-semibold text-[#00d9ff] uppercase">Simulation</h3>
-                    <div className="flex items-center justify-between py-2"><Label className="text-[#9ca3af] text-xs cursor-pointer">Initially Pressed</Label><Switch checked={localData.isPressed ?? false} onCheckedChange={(v) => handleChange('isPressed', v)} className="data-[state=checked]:bg-[#00d9ff]" /></div>
+                    <div className="flex items-center justify-between py-2">
+                        <Label className="text-[#9ca3af] text-xs cursor-pointer">Initially Pressed</Label>
+                        <Switch 
+                            checked={localData.isPressed ?? false} 
+                            onCheckedChange={(v) => handleChange('isPressed', v)} 
+                            className="data-[state=checked]:bg-[#00d9ff]" 
+                        />
+                    </div>
 
                     <div className="space-y-1 text-xs text-[#9ca3af]">
                         <div className="flex justify-between">
@@ -228,7 +267,9 @@ export const ButtonPropertiesPanel: React.FC = () => {
                 <div className="space-y-3">
                     <h3 className="text-xs font-semibold text-[#00d9ff] uppercase">Preview</h3>
                     <div className="flex items-center justify-center p-4 bg-[#151b24] rounded-lg border border-[rgba(0,217,255,0.2)]">
-                        <div className={cn('w-16 h-16 rounded-lg border-2 flex items-center justify-center transition-all', localData.isPressed ? 'bg-[#00d9ff] border-[#00d9ff]' : 'bg-[#1a3a5c] border-[rgba(0,217,255,0.3)]')}><Square className={cn('w-8 h-8', localData.isPressed ? 'text-[#0a0e14]' : 'text-[#00d9ff]')} /></div>
+                        <div className={cn('w-16 h-16 rounded-lg border-2 flex items-center justify-center transition-all', localData.isPressed ? 'bg-[#00d9ff] border-[#00d9ff]' : 'bg-[#1a3a5c] border-[rgba(0,217,255,0.3)]')}>
+                            <Square className={cn('w-8 h-8', localData.isPressed ? 'text-[#0a0e14]' : 'text-[#00d9ff]')} />
+                        </div>
                     </div>
                 </div>
             </div>
