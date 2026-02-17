@@ -100,13 +100,22 @@ function extractFunctionBody(code: string, functionName: string): string {
 function cppLinesToASLStatements(lines: string[]): ASLStatement[] {
   const stmts: ASLStatement[] = [];
 
-  for (const raw of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
     const line = raw.replace(/\/\/.*$/, '').trim();
     if (!line) continue;
 
-    // Controle de fluxo ainda não suportado na v0: for/while/if
-    if (line.startsWith('if') || line.startsWith('for') || line.startsWith('while')) {
-      throw new Error('ASL v0: control flow not yet supported via codeToASL');
+    // Controle de fluxo: suportamos apenas if/else simples na v0.
+    if (line.startsWith('if')) {
+      const { stmt, nextIndex } = parseIfBlock(lines, i);
+      stmts.push(stmt);
+      i = nextIndex;
+      continue;
+    }
+
+    // Ainda não suportamos for/while via ASL v0
+    if (line.startsWith('for') || line.startsWith('while')) {
+      throw new Error('ASL v0: for/while not yet supported via codeToASL');
     }
 
     // pinMode(PIN, MODE)
@@ -189,16 +198,134 @@ function cppLinesToASLStatements(lines: string[]): ASLStatement[] {
     }
 
     // Outras linhas são ignoradas silenciosamente na v0.
-    // Podemos adicionar logs de debug se necessário.
   }
 
   return stmts;
 }
 
+function parseIfBlock(
+  lines: string[],
+  startIndex: number
+): { stmt: ASLStatement; nextIndex: number } {
+  const headerRaw = lines[startIndex];
+  const header = headerRaw.replace(/\/\/.*$/, '').trim();
+
+  // Suporta: if (COND) {
+  const m = header.match(/^if\s*\((.+)\)\s*\{/);
+  if (!m) {
+    throw new Error('ASL v0: unsupported if header format');
+  }
+
+  const conditionSrc = m[1].trim();
+  const conditionExpr = parseConditionExpr(conditionSrc);
+
+  const thenBranch: ASLStatement[] = [];
+  const elseBranch: ASLStatement[] = [];
+
+  // Coletar corpo THEN até linha com apenas '}'
+  let i = startIndex + 1;
+  for (; i < lines.length; i++) {
+    const raw = lines[i];
+    const line = raw.replace(/\/\/.*$/, '').trim();
+    if (!line) continue;
+
+    if (line === '}') {
+      i++; // avança além do '}'
+      break;
+    }
+
+    // Dentro do if, só aceitamos statements simples (sem if aninhado)
+    thenBranch.push(...cppLinesToASLStatements([raw]));
+  }
+
+  // Verifica se há else logo em seguida
+  if (i < lines.length) {
+    const nextRaw = lines[i];
+    const nextLine = nextRaw.replace(/\/\/.*$/, '').trim();
+
+    if (nextLine.startsWith('else')) {
+      // Suporta: else {
+      if (!nextLine.match(/^else\s*\{/)) {
+        throw new Error('ASL v0: unsupported else header format');
+      }
+
+      i++; // entra no corpo do else
+      for (; i < lines.length; i++) {
+        const raw = lines[i];
+        const line = raw.replace(/\/\/.*$/, '').trim();
+        if (!line) continue;
+
+        if (line === '}') {
+          i++; // avança além do '}'
+          break;
+        }
+
+        elseBranch.push(...cppLinesToASLStatements([raw]));
+      }
+    }
+  }
+
+  const stmt: ASLStatement = {
+    kind: 'if',
+    condition: conditionExpr,
+    thenBranch,
+    elseBranch: elseBranch.length > 0 ? elseBranch : undefined,
+  };
+
+  return { stmt, nextIndex: i - 1 };
+}
+
+function parseConditionExpr(src: string): ASLExpr {
+  // Suporta: a == b, a != b
+  const eqMatch = src.match(/^(.+)==(.+)$/);
+  if (eqMatch) {
+    const leftToken = eqMatch[1].trim();
+    const rightToken = eqMatch[2].trim();
+    return {
+      kind: 'binary',
+      op: '==',
+      left: makeVarOrLiteral(leftToken),
+      right: makeVarOrLiteral(rightToken),
+    };
+  }
+
+  const neqMatch = src.match(/^(.+)!=(.+)$/);
+  if (neqMatch) {
+    const leftToken = neqMatch[1].trim();
+    const rightToken = neqMatch[2].trim();
+    return {
+      kind: 'binary',
+      op: '!=',
+      left: makeVarOrLiteral(leftToken),
+      right: makeVarOrLiteral(rightToken),
+    };
+  }
+
+  // Fallback: trata expressão inteira como algo a ser convertido diretamente
+  return makeVarOrLiteral(src);
+}
+
 function makeVarOrLiteral(token: string): ASLExpr {
-  const num = parseFloat(token);
+  const t = token.trim();
+
+  // Constantes lógicas/Arduino comuns
+  if (t === 'LOW') {
+    return { kind: 'literal', value: 0 };
+  }
+  if (t === 'HIGH') {
+    return { kind: 'literal', value: 1 };
+  }
+  if (t === 'true') {
+    return { kind: 'literal', value: true };
+  }
+  if (t === 'false') {
+    return { kind: 'literal', value: false };
+  }
+
+  const num = parseFloat(t);
   if (!Number.isNaN(num)) {
     return { kind: 'literal', value: num };
   }
-  return { kind: 'var', name: token };
+
+  return { kind: 'var', name: t };
 }
