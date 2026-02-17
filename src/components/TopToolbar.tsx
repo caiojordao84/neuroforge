@@ -5,6 +5,8 @@ import { useQEMUStore } from '@/stores/useQEMUStore';
 import { useQEMUSimulation } from '@/hooks/useQEMUSimulation';
 import { simulationEngine } from '@/engine/SimulationEngine';
 import { codeParser } from '@/engine/CodeParser';
+import { createASLRuntime } from '@/engine/asl/ASLExecutor';
+import { codeToASL } from '@/engine/asl/codeToASL';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { SimulationModeToggle } from '@/components/SimulationModeToggle';
@@ -138,18 +140,43 @@ export const TopToolbar: React.FC = () => {
         return;
       }
 
-      codeParser.setLanguage(activeMCU.language);
-
       // Preprocess code to inject libraries
       const processedCode = simulationEngine.preprocess(activeMCU.code, activeMCU.language);
-      const parsed = codeParser.parse(processedCode);
 
-      if (parsed) {
-        startSimulation();
-        simulationEngine.start(parsed.setup, parsed.loop, speed);
-        addTerminalLine(`▶️ Simulation started on ${activeMCU.label}`, 'info');
-      } else {
-        addTerminalLine('❌ Failed to parse code', 'error');
+      let startedWithASL = false;
+
+      // Experimento ASL: apenas para C++ por enquanto
+      if (activeMCU.language === 'cpp') {
+        try {
+          const aslProgram = codeToASL(processedCode, activeMCU.language);
+          const runtime = createASLRuntime(aslProgram);
+
+          startSimulation();
+          simulationEngine.start(runtime.setup, runtime.loop, speed);
+          addTerminalLine(`▶️ Simulation (ASL) started on ${activeMCU.label}`, 'info');
+          startedWithASL = true;
+        } catch (err) {
+          console.error('[ASL] Failed to run via ASL, falling back to legacy parser', err);
+          addTerminalLine(
+            '⚠️ ASL path not supported for this sketch, falling back to legacy parser',
+            'warning'
+          );
+        }
+      }
+
+      // Fallback para o parser antigo se ASL não rodar ou se não for C++
+      if (!startedWithASL) {
+        codeParser.setLanguage(activeMCU.language);
+
+        const parsed = codeParser.parse(processedCode);
+
+        if (parsed) {
+          startSimulation();
+          simulationEngine.start(parsed.setup, parsed.loop, speed);
+          addTerminalLine(`▶️ Simulation started on ${activeMCU.label}`, 'info');
+        } else {
+          addTerminalLine('❌ Failed to parse code', 'error');
+        }
       }
     }
   }, [mode, speed, isBackendConnected, getActiveMCU, startSimulation, compileAndStart, addTerminalLine]);
