@@ -17,8 +17,12 @@ function cppToASL(code: string): ASLProgram {
   const setupBody = extractFunctionBody(code, 'setup');
   const loopBody = extractFunctionBody(code, 'loop');
 
-  const setupStmts = cppLinesToASLStatements(setupBody.split('\n'));
-  const loopStmts = cppLinesToASLStatements(loopBody.split('\n'));
+  // Normaliza padrões "} else {" para duas linhas: "}" e "else {"
+  const normalizedSetup = normalizeElseBlocks(setupBody);
+  const normalizedLoop = normalizeElseBlocks(loopBody);
+
+  const setupStmts = cppLinesToASLStatements(normalizedSetup.split('\n'));
+  const loopStmts = cppLinesToASLStatements(normalizedLoop.split('\n'));
 
   return {
     metadata: {
@@ -95,6 +99,11 @@ function extractFunctionBody(code: string, functionName: string): string {
   }
 
   return code.substring(startIndex, endIndex - 1);
+}
+
+function normalizeElseBlocks(body: string): string {
+  // Transforma "} else {" em duas linhas: "}" e "else {"
+  return body.replace(/}\s*else\s*{/g, '}\nelse {');
 }
 
 function cppLinesToASLStatements(lines: string[]): ASLStatement[] {
