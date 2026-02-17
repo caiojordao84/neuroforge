@@ -61,6 +61,24 @@ Este documento resume o estado atual da plataforma e os próximos passos planead
 - **Commits**: `6cfd560`, `52d9913`, `65a9c6f`, `acbed44`
 - Ver seção [Sistema de LEDs do MCU](#sistema-de-leds-do-mcu) para detalhes completos
 
+### Sistema de Botões & Entradas Digitais ✅ COMPLETO (17/02/2026)
+
+- **Cenário validado:** Sketch `Teste_2Botoes_2LEDs.ino` com 2 botões (D2, D3) controlando 2 LEDs (D12, D13) via `digitalRead()` + `digitalWrite()`.
+- **ButtonNode**:
+  - Resolve `connectedPin` a partir do handle `signal` e das conexões no canvas.
+  - Usa `SimulationEngine.externalDigitalWrite(pin, HIGH/LOW)` para dirigir pinos de entrada, respeitando `pullResistor` (`NONE`, `PULLUP`, `PULLDOWN`).
+  - Expõe propriedades de identificação, debounce e pull no painel `ButtonPropertiesPanel`.
+- **CodeParser (C++)**:
+  - Suporta `digitalRead(pin)` e `analogRead(pin)` em expressões, com avaliação correta de `if (btnState == HIGH)`.
+  - Mantém variáveis globais/locais e controla blocos `if / else` com uma pilha de execução simples.
+- **SimulationEngine / useSimulationStore**:
+  - `externalDigitalWrite` permite que componentes externos (botões, sensores) atualizem diretamente o estado dos pinos, sem depender do firmware setar `pinMode` primeiro.
+  - `digitalRead(pin)` passa a refletir fielmente o estado do pino vindo tanto do firmware quanto dos componentes visuais.
+- **LEDNode + React**:
+  - LEDNodes recebem eventos `pinChange` e comparam com `connectedPin` para atualizar o estado visual (ON/OFF) em tempo real.
+  - Ajustes de UI garantem que o estado lógico dos pinos seja sempre visível no canvas (commit `74089aa2…`).
+- **Commits principais:** `bf989fbf7c…`, `74089aa2…`.
+
 ### Documentação de Arquitetura
 - [`docs/architecture/backends.md`](./architecture/backends.md) descreve a arquitetura multi-backend (AVR, ESP32, RP2040) com separação entre board, backend de execução e framework.
 - [`docs/ledPisca.md`](./ledPisca.md) documenta todas as correções implementadas para Arduino e ESP32.
@@ -312,6 +330,7 @@ void loop() {
   Serial.println("LED ON | TX flash");
   delay(1000);
   
+  // Turn the LED off
   digitalWrite(13, LOW);
   Serial.println("LED OFF | TX flash");
   delay(1000);
@@ -514,7 +533,24 @@ void loop() {
 - [x] Documentação completa neste ROADMAP
 - Commits: `6cfd560`, `52d9913`, `65a9c6f`, `acbed44`
 
-### 7. Enhanced QEMU Orchestration (planeado)
+### 7. Sistema de Botões + LEDs via Sketch C++ ✅ CONCLUÍDO (17/02/2026)
+
+- [x] Implementar `SimulationEngine.externalDigitalWrite(pin, HIGH/LOW)` para permitir que componentes externos (ButtonNode, sensores) dirijam pinos diretamente.
+- [x] Conectar ButtonNode ao grafo de conexões para resolver `connectedPin` a partir do handle `signal`.
+- [x] Atualizar CodeParser (C++) para:
+  - [x] Avaliar `digitalRead(pin)` em expressões (`if (btnState == HIGH)`).
+  - [x] Manter variáveis globais e locais separadas.
+  - [x] Controlar blocos `if / else` com uma pilha de execução simples.
+- [x] Ajustar LEDNode para:
+  - [x] Ouvir eventos `pinChange` e casar com `connectedPin`.
+  - [x] Atualizar `recalcPhysics(isActive)` de acordo com HIGH/LOW no pino.
+- [x] Refinar integração React:
+  - [x] Garantir que o estado visual de ButtonNode e LEDNode acompanhe fielmente o estado lógico dos pinos.
+  - [x] Melhorar tooltips/labels para wiring correto (handles `signal`, `ground`, `external`).
+- [x] Validar com o sketch `Teste_2Botoes_2LEDs.ino` (D2/D3 → D12/D13) usando o Arduino Uno em modo de simulação JS.
+- Commits principais: `bf989fbf7c…`, `74089aa2…`.
+
+### 8. Enhanced QEMU Orchestration (planeado)
 - [ ] **Unified Backend Manager**: Melhorar `QEMUSimulationEngine` com API unificada
 - [ ] **Shared Event System**: Agregação de eventos de múltiplas instâncias QEMU
 - [ ] **Multiplexed Serial Monitor**: Console única para AVR + ESP32 + outros backends
@@ -523,7 +559,7 @@ void loop() {
 - [ ] **Resource Pooling**: Gerenciamento inteligente de portas TCP/Monitor
 - [ ] **Error Handling**: Sistema unificado de tratamento de erros e recovery
 
-### 8. Multi-Device Orchestration (planeado)
+### 9. Multi-Device Orchestration (planeado)
 - [ ] **Simultaneous Multi-MCU**: Rodar AVR + ESP32 + RP2040 simultaneamente
 - [ ] **Shared NeuroForge Clock**: Clock virtual sincronizado entre todos os devices
 - [ ] **Inter-Device Communication**: GPIO/I2C/SPI bus compartilhado entre MCUs
@@ -531,20 +567,12 @@ void loop() {
 - [ ] **Coordinated Stepping**: Debug síncrono de múltiplos devices
 - [ ] **Resource Arbitration**: Gerenciamento de recursos compartilhados entre instâncias
 
-### 9. Multi-Language Toolchain (planeado)
+### 10. Multi-Language Toolchain (planeado)
 - [ ] **MicroPython Setup**: Scripts de instalação de firmware e tools (mpy-cross)
 - [ ] **CircuitPython Integration**: Suporte a UF2 workflow e bibliotecas
 - [ ] **Rust Embedded**: Setup de toolchain (cargo, avr-hal, esp-hal, rp-hal)
 - [ ] **TinyGo Support**: Configuração de compilador para AVR/ESP32/RP2040
 - [ ] **JavaScript Runtimes**: Integração com Moddable/Kaluma (se viável)
-
-### 10. NeuroForge Transpiler & Visual Programming (planeado)
-- [ ] **Unified AST**: Parser universal para blocos, flowcharts e código
-- [ ] **Transpiler Core**: Engine de transformação (ex: TypeScript -> C++, Blocos -> Python)
-- [ ] **Visual Blocks**: Interface estilo Scratch/Blockly integrada
-- [ ] **Flowchart-to-Code**: Conversão de diagramas React Flow para código executável
-- [ ] **Custom Syntax DSL**: Suporte a sintaxe simplificada do NeuroForge
-- [ ] **Binary Generation**: Integração com compiladores nativos para gerar .hex/.bin finais
 
 ---
 

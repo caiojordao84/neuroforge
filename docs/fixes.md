@@ -271,3 +271,153 @@ __attribute__((weak)) void nf_report_gpio(char mode, uint8_t pin, uint8_t val) {
 - Logs detalhados em `QEMURunner.ts`
 - Use `📥`, `📤`, `🔍` emojis para filtrar logs
 - Serial Monitor mostra timestamp `[HH:mm:ss]`
+
+---
+
+## 🐛 FIX #4: Botões não acendiam LEDs (integração ButtonNode + CodeParser + React)
+
+### Problema
+
+- Um sketch simples como abaixo compilava e rodava, mas **os LEDs não acendiam ao pressionar os botões**:
+
+  ```cpp
+  // Sketch: Teste_2Botoes_2LEDs.ino
+
+  const int btn1Pin = 2;   // Botão 1 no D2
+  const int btn2Pin = 3;   // Botão 2 no D3
+  const int led1Pin = 12;  // LED 1 no D12
+  const int led2Pin = 13;  // LED 2 no D13
+
+  void setup() {
+    Serial.begin(9600);
+
+    pinMode(btn1Pin, INPUT);
+    pinMode(btn2Pin, INPUT);
+
+    pinMode(led1Pin, OUTPUT);
+    pinMode(led2Pin, OUTPUT);
+  }
+
+  void loop() {
+    int btn1State = digitalRead(btn1Pin);
+    int btn2State = digitalRead(btn2Pin);
+
+    if (btn1State == HIGH) {
+      digitalWrite(led1Pin, HIGH);
+    } else {
+      digitalWrite(led1Pin, LOW);
+    }
+
+    if (btn2State == HIGH) {
+      digitalWrite(led2Pin, HIGH);
+    } else {
+      digitalWrite(led2Pin, LOW);
+    }
+
+    delay(50);
+  }
+  ```
+
+- No console apareciam logs do `CodeParser` apenas com `digitalRead(2) = LOW` e `digitalRead(3) = LOW` e `digitalWrite(12, LOW)`, `digitalWrite(13, LOW)` em todas as iterações, ou seja, **do ponto de vista do firmware os botões estavam sempre em LOW**.
+- O teste de “LED direto no código” (`digitalWrite(led1Pin, HIGH); digitalWrite(led2Pin, HIGH);`) funcionava, comprovando que o pipeline MCU → SimulationStore → LEDNode estava correto, mas o caminho Button → pino de entrada não.
+
+### Causa Raiz
+
+- **ButtonNode**:
+  - Não estava garantindo, de forma robusta, que o `connectedPin` do botão correspondia ao pino digital usado pelo sketch.
+  - Escrevia nos pinos, mas de forma que o estado não era lido corretamente pelo `digitalRead()` do `CodeParser`.
+- **SimulationEngine / SimulationStore**:
+  - Faltava uma API explícita para componentes externos (botão, sensores) dirigirem pinos de entrada sem esbarrar nas verificações de `pinMode` do firmware.
+- **CodeParser (C++)**:
+  - A versão antiga apenas ignorava muitas construções de controle (`if`, `else`) e não avaliava `digitalRead(pin)` em expressões como `if (btn1State == HIGH)`.
+  - Não havia distinção clara entre variáveis globais e locais, nem uma pilha de execução para encadear `if / else` corretamente.
+- **React / UI**:
+  - O estado visual dos componentes (ButtonNode, LEDNode) não refletia de forma previsível os eventos de simulação, dificultando ver quando um pino realmente mudava de estado.
+  - Faltava “visual input” consistente na UI (commit `74089aa2…` refinou exatamente essa integração entre estado lógico e renderização).
+
+### Solução Aplicada
+
+#### 1) ButtonNode → SimulationEngine.externalDigitalWrite
+
+- `src/components/nodes/ButtonNode.tsx` foi ajustado para:
+  - Resolver o pino conectado ao handle `signal` via `useConnectionStore`, extraindo `Dxx` e armazenando em `connectedPin`.
+  - Usar `simulationEngine.externalDigitalWrite(connectedPin, value)` em vez de depender do mesmo caminho de `digitalWrite` do firmware para representar o estado elétrico do botão no pino.
+  - Respeitar `pullResistor` (`NONE`, `PULLUP`, `PULLDOWN`) ao escolher HIGH/LOW quando o botão é pressionado ou solto.
+  - Emitir um evento `buttonPress` para debugging/telemetria.
+
+#### 2) SimulationEngine.externalDigitalWrite → useSimulationStore
+
+- `src/engine/SimulationEngine.ts` ganhou o método:
+
+  ```ts
+  externalDigitalWrite(pin: number, value: 'HIGH' | 'LOW'): void {
+    const simulationStore = useSimulationStore.getState();
+
+    simulationStore.digitalWrite(pin, value);
+
+    const updatedPinState = simulationStore.getPinState(pin);
+    if (updatedPinState) {
+      this.pinCache.set(pin, updatedPinState);
+    }
+
+    this.emit('pinChange', { pin, value });
+  }
+  ```
+
+- Objetivo:
+  - Permitir que componentes externos (botões, sensores) **escrevam diretamente no estado do pino**, sem depender do firmware ter chamado `pinMode(pin, INPUT/INPUT_PULLUP)` antes.
+  - Garantir que qualquer `externalDigitalWrite` se propague imediatamente:
+    - Para `digitalRead(pin)` no `CodeParser`.
+    - Para os `LEDNode`s e demais componentes ouvindo o evento `pinChange`.
+
+#### 3) useSimulationStore: leitura/escrita coerente de pinos
+
+- `src/stores/useSimulationStore.ts` já mantinha o estado dos pinos em `pins: Map<number, PinState>`, com:
+
+  ```ts
+  digitalWrite: (pin, value) => { ... }
+  digitalRead: (pin) => { ... }
+  analogRead: (pin) => { ... }
+  getPinState: (pin) => get().pins.get(pin)
+  ```
+
+- A lógica foi alinhada para garantir que:
+  - `digitalWrite` (tanto do firmware quanto de `externalDigitalWrite`) atualize sempre `pins[pin].value`.
+  - `digitalRead(pin)` apenas devolve `HIGH` ou `LOW` com base nesse valor, sem bloquear por modo de pino, permitindo simular entradas dirigidas por componentes externos.
+
+#### 4) CodeParser: controle de fluxo e digitalRead() corretos
+
+- `src/engine/CodeParser.ts` foi reescrito/expandido para suportar um modelo simples, mas coerente, de execução de C++:
+  - **Mapas separados** para `globalVariables` e `localVariables`.
+  - `resolveVariable(name)` sabe lidar com:
+    - Globais/locais.
+    - Constantes como `HIGH`, `LOW`, `true`, `false`.
+    - Literais numéricos.
+  - `evaluateExpression(expr)` suporta:
+    - `digitalRead(pin)` (chama `simulationEngine.digitalRead(pin)` e converte `HIGH/LOW` em `1/0`).
+    - `analogRead(pin)`.
+    - Comparações simples `==` e `!=` entre expressões.
+  - Stack de execução `executionStack` para controlar:
+    - `if (cond) { ... }`
+    - Blocos `} else { ... }`
+    - Evitar executar linhas dentro de blocos cujo `if` anterior não foi satisfeito.
+- Com isso:
+  - Quando o botão eleva `D2` ou `D3` para HIGH via `externalDigitalWrite`, `digitalRead(2)` / `digitalRead(3)` passa a logar como `HIGH`, e os ramos `if (btnXState == HIGH)` realmente executam os `digitalWrite(12, HIGH)` / `digitalWrite(13, HIGH)`.
+
+#### 5) LEDNode + React visual
+
+- `src/components/nodes/LEDNode.tsx` foi ajustado para:
+  - Resolver `connectedPin` a partir do grafo (similar ao ButtonNode).
+  - Ouvir `simulationEngine.on('pinChange', ...)` e comparar `pinEvent.pin` com `connectedPin` antes de chamar `recalcPhysics(isActive)`.
+  - Atualizar animações/cores de forma consistente com o estado lógico (commit `74089aa2…` refinou muito esse “visual input” no React).
+
+### Resultado
+
+- O sketch `Teste_2Botoes_2LEDs.ino` agora funciona de ponta a ponta:
+  - Pressionar o botão ligado em D2 liga apenas o LED em D12.
+  - Pressionar o botão ligado em D3 liga apenas o LED em D13.
+  - O Serial Monitor continua funcional.
+- O fluxo completo “**Botão → pino digital → digitalRead → lógica C++ → digitalWrite(LED) → LEDNode → React**” está implementado e documentado.
+- Commits principais relacionados:
+  - `bf989fbf7ce1b074532ea355814f249592a342a8` – melhorias no CodeParser / SimulationEngine / ButtonNode.
+  - `74089aa2825092cda822eaf2400b47bd71ffe33f` – refinamento visual e de estado em ButtonNode / LEDNode / CodeParser / SimulationStore.
