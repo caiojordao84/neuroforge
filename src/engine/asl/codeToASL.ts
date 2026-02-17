@@ -1,5 +1,5 @@
 // src/engine/asl/codeToASL.ts
-// Conversão de um subconjunto de Arduino C++ para ASLProgram (v0).
+// Conversão de um subconjunto de Arduino C++ para ASLProgram (v0/v1 controle de fluxo).
 
 import type { Language } from '@/types';
 import type { ASLProgram, ASLGlobalVar, ASLStatement, ASLExpr } from './ASLTypes';
@@ -145,7 +145,7 @@ function cppLinesToASLStatements(lines: string[]): ASLStatement[] {
       continue;
     }
 
-    // Controle de fluxo: suportamos apenas if/else simples na v0.
+    // If/else/else-if em bloco
     if (line.startsWith('if')) {
       const { stmt, nextIndex } = parseIfBlock(lines, i);
       stmts.push(stmt);
@@ -153,14 +153,20 @@ function cppLinesToASLStatements(lines: string[]): ASLStatement[] {
       continue;
     }
 
-    // TODO ASL v1:
-    // - Suportar 'else if' em cascata mapeando para if aninhado ou cadeia de ASLIf.
-    // - Suportar if aninhado dentro de blocos then/else.
-    // - Suportar for/while simples convertendo para ASLWhile.
+    // While (COND) { ... } simples
+    if (line.startsWith('while')) {
+      const { stmt, nextIndex } = parseWhileBlock(lines, i);
+      stmts.push(stmt);
+      i = nextIndex;
+      continue;
+    }
 
-    // Ainda não suportamos for/while via ASL v0
-    if (line.startsWith('for') || line.startsWith('while')) {
-      throw new Error('ASL v0: for/while not yet supported via codeToASL');
+    // TODO ASL v2:
+    // - Suportar for simples convertendo para ASLWhile com init/cond/inc separadas.
+
+    // Ainda não suportamos for via ASL v1
+    if (line.startsWith('for')) {
+      throw new Error('ASL v1: for not yet supported via codeToASL');
     }
 
     // pinMode(PIN, MODE)
@@ -242,7 +248,7 @@ function cppLinesToASLStatements(lines: string[]): ASLStatement[] {
       continue;
     }
 
-    // Outras linhas são ignoradas silenciosamente na v0.
+    // Outras linhas são ignoradas silenciosamente na v1.
   }
 
   return stmts;
@@ -258,54 +264,86 @@ function parseIfBlock(
   // Suporta: if (COND) {
   const m = header.match(/^if\s*\((.+)\)\s*\{/);
   if (!m) {
-    throw new Error('ASL v0: unsupported if header format');
+    throw new Error('ASL v1: unsupported if header format');
   }
 
   const conditionSrc = m[1].trim();
   const conditionExpr = parseConditionExpr(conditionSrc);
 
-  const thenBranch: ASLStatement[] = [];
-  const elseBranch: ASLStatement[] = [];
-
-  // Coletar corpo THEN até linha com apenas '}'
+  // Encontrar fim do bloco THEN, respeitando blocos aninhados
+  let braceCount = 1;
   let i = startIndex + 1;
   for (; i < lines.length; i++) {
     const raw = lines[i];
-    const line = raw.replace(/\/\/.*$/, '').trim();
-    if (!line) continue;
-
-    if (line === '}') {
-      i++; // avança além do '}'
+    const stripped = raw.replace(/\/\/.*$/, '');
+    for (let j = 0; j < stripped.length; j++) {
+      const ch = stripped[j];
+      if (ch === '{') braceCount++;
+      else if (ch === '}') braceCount--;
+    }
+    if (braceCount === 0) {
       break;
     }
-
-    // Dentro do if, só aceitamos statements simples (sem if aninhado)
-    thenBranch.push(...cppLinesToASLStatements([raw]));
   }
 
-  // Verifica se há else logo em seguida
-  if (i < lines.length) {
-    const nextRaw = lines[i];
+  if (braceCount !== 0) {
+    throw new Error('ASL v1: unmatched braces in if block');
+  }
+
+  const thenLines = lines.slice(startIndex + 1, i);
+  const thenBranch = cppLinesToASLStatements(thenLines);
+
+  let elseBranch: ASLStatement[] | undefined;
+  let lastIndex = i;
+
+  // Verifica se há else ou else-if logo após o bloco THEN
+  const elseIndex = i + 1;
+  if (elseIndex < lines.length) {
+    const nextRaw = lines[elseIndex];
     const nextLine = nextRaw.replace(/\/\/.*$/, '').trim();
 
     if (nextLine.startsWith('else')) {
-      // Suporta: else {
-      if (!nextLine.match(/^else\s*\{/)) {
-        throw new Error('ASL v0: unsupported else header format');
-      }
+      const elseIfMatch = nextLine.match(/^else\s+if\s*\((.+)\)\s*\{/);
+      if (elseIfMatch) {
+        // else if (COND) { ... }  ->  else { if (COND) { ... } ... }
+        const patchedLines = [...lines];
+        patchedLines[elseIndex] = nextRaw.replace(/else\s+if/, 'if');
 
-      i++; // entra no corpo do else
-      for (; i < lines.length; i++) {
-        const raw = lines[i];
-        const line = raw.replace(/\/\/.*$/, '').trim();
-        if (!line) continue;
+        const { stmt: nestedIf, nextIndex: nestedLastIndex } = parseIfBlock(
+          patchedLines,
+          elseIndex
+        );
 
-        if (line === '}') {
-          i++; // avança além do '}'
-          break;
+        elseBranch = [nestedIf];
+        lastIndex = nestedLastIndex;
+      } else {
+        // else { ... }
+        if (!nextLine.match(/^else\s*\{/)) {
+          throw new Error('ASL v1: unsupported else header format');
         }
 
-        elseBranch.push(...cppLinesToASLStatements([raw]));
+        braceCount = 1;
+        let j = elseIndex + 1;
+        for (; j < lines.length; j++) {
+          const raw = lines[j];
+          const stripped = raw.replace(/\/\/.*$/, '');
+          for (let k = 0; k < stripped.length; k++) {
+            const ch = stripped[k];
+            if (ch === '{') braceCount++;
+            else if (ch === '}') braceCount--;
+          }
+          if (braceCount === 0) {
+            break;
+          }
+        }
+
+        if (braceCount !== 0) {
+          throw new Error('ASL v1: unmatched braces in else block');
+        }
+
+        const elseLines = lines.slice(elseIndex + 1, j);
+        elseBranch = cppLinesToASLStatements(elseLines);
+        lastIndex = j;
       }
     }
   }
@@ -314,10 +352,59 @@ function parseIfBlock(
     kind: 'if',
     condition: conditionExpr,
     thenBranch,
-    elseBranch: elseBranch.length > 0 ? elseBranch : undefined,
+    elseBranch,
   };
 
-  return { stmt, nextIndex: i - 1 };
+  // nextIndex deve ser o último índice de linha consumido
+  return { stmt, nextIndex: lastIndex };
+}
+
+function parseWhileBlock(
+  lines: string[],
+  startIndex: number
+): { stmt: ASLStatement; nextIndex: number } {
+  const headerRaw = lines[startIndex];
+  const header = headerRaw.replace(/\/\/.*$/, '').trim();
+
+  // Suporta: while (COND) {
+  const m = header.match(/^while\s*\((.+)\)\s*\{/);
+  if (!m) {
+    throw new Error('ASL v1: unsupported while header format');
+  }
+
+  const conditionSrc = m[1].trim();
+  const conditionExpr = parseConditionExpr(conditionSrc);
+
+  // Encontrar fim do bloco WHILE, respeitando blocos aninhados
+  let braceCount = 1;
+  let i = startIndex + 1;
+  for (; i < lines.length; i++) {
+    const raw = lines[i];
+    const stripped = raw.replace(/\/\/.*$/, '');
+    for (let j = 0; j < stripped.length; j++) {
+      const ch = stripped[j];
+      if (ch === '{') braceCount++;
+      else if (ch === '}') braceCount--;
+    }
+    if (braceCount === 0) {
+      break;
+    }
+  }
+
+  if (braceCount !== 0) {
+    throw new Error('ASL v1: unmatched braces in while block');
+  }
+
+  const bodyLines = lines.slice(startIndex + 1, i);
+  const body = cppLinesToASLStatements(bodyLines);
+
+  const stmt: ASLStatement = {
+    kind: 'while',
+    condition: conditionExpr,
+    body,
+  };
+
+  return { stmt, nextIndex: i };
 }
 
 function parseConditionExpr(src: string): ASLExpr {
