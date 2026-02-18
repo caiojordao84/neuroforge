@@ -162,12 +162,12 @@ function cppLinesToASLStatements(lines: string[]): ASLStatement[] {
       continue;
     }
 
-    // TODO ASL v2:
-    // - Suportar for simples convertendo para ASLWhile com init/cond/inc separadas.
-
-    // Ainda não suportamos for via ASL v1
+    // for (init; cond; inc) { ... } simples
     if (line.startsWith('for')) {
-      throw new Error('ASL v1: for not yet supported via codeToASL');
+      const { stmts: forStmts, nextIndex } = parseForBlock(lines, i);
+      stmts.push(...forStmts);
+      i = nextIndex;
+      continue;
     }
 
     // Declaração local simples: int i = 0;
@@ -458,6 +458,82 @@ function parseWhileBlock(
   return { stmt, nextIndex: i };
 }
 
+function parseForBlock(
+  lines: string[],
+  startIndex: number
+): { stmts: ASLStatement[]; nextIndex: number } {
+  const headerRaw = lines[startIndex];
+  const header = headerRaw.replace(/\/\/.*$/, '').trim();
+
+  // Suporta: for (init; cond; inc) {
+  const m = header.match(/^for\s*\((.+)\)\s*\{/);
+  if (!m) {
+    throw new Error('ASL v1: unsupported for header format');
+  }
+
+  const parts = m[1].split(';');
+  if (parts.length !== 3) {
+    throw new Error('ASL v1: for header must have 3 parts: init; cond; inc');
+  }
+
+  const initSrc = parts[0].trim();
+  const condSrc = parts[1].trim();
+  const incSrc = parts[2].trim();
+
+  const resultStmts: ASLStatement[] = [];
+
+  // init;
+  if (initSrc) {
+    const initStmts = cppLinesToASLStatements([initSrc + ';']);
+    resultStmts.push(...initStmts);
+  }
+
+  // cond
+  if (!condSrc) {
+    throw new Error('ASL v1: for without condition not supported yet');
+  }
+  const conditionExpr = parseConditionExpr(condSrc);
+
+  // Encontrar fim do bloco FOR/WHILE, respeitando blocos aninhados
+  let braceCount = 1;
+  let i = startIndex + 1;
+  for (; i < lines.length; i++) {
+    const raw = lines[i];
+    const stripped = raw.replace(/\/\/.*$/, '');
+    for (let j = 0; j < stripped.length; j++) {
+      const ch = stripped[j];
+      if (ch === '{') braceCount++;
+      else if (ch === '}') braceCount--;
+    }
+    if (braceCount === 0) {
+      break;
+    }
+  }
+
+  if (braceCount !== 0) {
+    throw new Error('ASL v1: unmatched braces in for block');
+  }
+
+  const bodyLines = lines.slice(startIndex + 1, i);
+  const bodyStmts = cppLinesToASLStatements(bodyLines);
+
+  // inc;
+  let incStmts: ASLStatement[] = [];
+  if (incSrc) {
+    incStmts = cppLinesToASLStatements([incSrc + ';']);
+  }
+
+  const whileStmt: ASLStatement = {
+    kind: 'while',
+    condition: conditionExpr,
+    body: [...bodyStmts, ...incStmts],
+  };
+
+  resultStmts.push(whileStmt);
+
+  return { stmts: resultStmts, nextIndex: i };
+}
+
 function parseConditionExpr(src: string): ASLExpr {
   const trimmed = src.trim();
 
@@ -471,7 +547,7 @@ function parseConditionExpr(src: string): ASLExpr {
     };
   }
 
-  // Suporta: a == b, a != b
+  // Suporta: a == b, a != b, a < b, a <= b, a > b, a >= b
   const eqMatch = trimmed.match(/^(.+)==(.+)$/);
   if (eqMatch) {
     const leftToken = eqMatch[1].trim();
@@ -491,6 +567,54 @@ function parseConditionExpr(src: string): ASLExpr {
     return {
       kind: 'binary',
       op: '!=',
+      left: makeVarOrLiteral(leftToken),
+      right: makeVarOrLiteral(rightToken),
+    };
+  }
+
+  const lteMatch = trimmed.match(/^(.+)<=(.+)$/);
+  if (lteMatch) {
+    const leftToken = lteMatch[1].trim();
+    const rightToken = lteMatch[2].trim();
+    return {
+      kind: 'binary',
+      op: '<=',
+      left: makeVarOrLiteral(leftToken),
+      right: makeVarOrLiteral(rightToken),
+    };
+  }
+
+  const gteMatch = trimmed.match(/^(.+)>=(.+)$/);
+  if (gteMatch) {
+    const leftToken = gteMatch[1].trim();
+    const rightToken = gteMatch[2].trim();
+    return {
+      kind: 'binary',
+      op: '>=',
+      left: makeVarOrLiteral(leftToken),
+      right: makeVarOrLiteral(rightToken),
+    };
+  }
+
+  const ltMatch = trimmed.match(/^(.+)<(.+)$/);
+  if (ltMatch) {
+    const leftToken = ltMatch[1].trim();
+    const rightToken = ltMatch[2].trim();
+    return {
+      kind: 'binary',
+      op: '<',
+      left: makeVarOrLiteral(leftToken),
+      right: makeVarOrLiteral(rightToken),
+    };
+  }
+
+  const gtMatch = trimmed.match(/^(.+)>(.+)$/);
+  if (gtMatch) {
+    const leftToken = gtMatch[1].trim();
+    const rightToken = gtMatch[2].trim();
+    return {
+      kind: 'binary',
+      op: '>',
       left: makeVarOrLiteral(leftToken),
       right: makeVarOrLiteral(rightToken),
     };
