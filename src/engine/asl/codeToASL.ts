@@ -170,6 +170,25 @@ function cppLinesToASLStatements(lines: string[]): ASLStatement[] {
       throw new Error('ASL v1: for not yet supported via codeToASL');
     }
 
+    // Declaração local simples: int i = 0;
+    const localDeclMatch = line.match(
+      /^(?:int|byte|long|float|double|bool)\s+(\w+)\s*=\s*([^;]+);$/
+    );
+    if (localDeclMatch) {
+      const [, varName, exprSrc] = localDeclMatch;
+
+      // Passo 1: só literais/constantes simples (HIGH/LOW, true/false, números)
+      const valueExpr = makeVarOrLiteral(exprSrc.trim());
+
+      stmts.push({
+        kind: 'assign',
+        target: varName,
+        value: valueExpr,
+      });
+
+      continue;
+    }
+
     // pinMode(PIN, MODE)
     const pinModeMatch = line.match(/pinMode\s*\(\s*(\w+)\s*,\s*(\w+)\s*\)\s*;/);
     if (pinModeMatch) {
