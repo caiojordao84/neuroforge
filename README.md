@@ -314,6 +314,57 @@ Veja [server/test-firmware/esp32/README.md](server/test-firmware/esp32/README.md
 
 ---
 
+## 🧪 ASL Fake Simulation & C++ → ASL
+
+Além do modo QEMU real, o NeuroForge possui um modo de simulação **fake em JavaScript** baseado em um pequeno runtime (SimulationEngine) e em uma linguagem intermediária chamada ASL (Arduino Simulation Language). Este modo é pensado para feedback rápido no navegador, especialmente em exemplos didáticos de LED + botões.
+
+### ✅ O que já está implementado
+
+- **Inputs com INPUT_PULLUP corretos**  
+  - Pinos configurados como `INPUT_PULLUP` passam a iniciar em HIGH no motor de simulação fake, de forma alinhada com o comportamento do Arduino real.  
+  - Isso garante que `digitalRead(pin)` retorne HIGH por padrão enquanto o botão não está pressionado.
+
+- **Botão com auto-polaridade (Active-Low)**  
+  - O `ButtonNode` detecta automaticamente quando o pino da MCU está em `INPUT_PULLUP` e muda para comportamento *active-low*: pressionar → LOW, soltar → HIGH.  
+  - Isso evita o caso em que o botão "gruda" o pino em LOW e bloqueia cadeias `if / else if` como no exemplo clássico `BTN_ON` / `BTN_OFF`.
+
+- **Parser de controle de fluxo mais robusto (`if / else if / else`)**  
+  - O conversor C++ → ASL entende blocos com `if (...) { ... } else if (...) { ... } else { ... }`, mesmo quando há comentários e linhas em branco entre `}` e `else`.  
+  - `else if` é reescrito internamente como um `else { if (...) { ... } }`, preservando a semântica original.
+
+- **Declarações locais simples dentro de `setup`/`loop`**  
+  - Suporte a linhas como:  
+    - `int i = 0;`  
+    - `byte b = 10;`  
+    - `long l = 123;`  
+    - `float f = 0.5;`  
+    - `double d = 3.14;`  
+    - `bool flag = true;`  
+  - Essas declarações são convertidas para `ASLAssign` com literais, respeitando o ambiente de variáveis do runtime ASL.
+
+- **Incremento/decremento simples via atribuição**  
+  - Suporte a:  
+    - `i = i + 1;`  
+    - `i = i - 1;`  
+  - Quando a variável à esquerda e à direita é a mesma, o transpiler gera um `ASLAssign` com expressão binária (`+` ou `-`), usando o valor atual de `i` e um literal à direita.
+
+### 🎯 Próximos passos no ASL
+
+- **Atribuições gerais com expressões**  
+  - Estender o parser para entender casos como `x = y + 1;`, `x = sensorValue * 2;`, ainda dentro do perfil simples da ASL v0.
+
+- **Suporte incremental a `for`**  
+  - Converter `for (init; cond; inc) { ... }` para uma sequência equivalente de:  
+    - `init;`  
+    - `while (cond) { ...; inc; }`  
+  - Mantendo o foco inicial em padrões didáticos como `for (int i = 0; i < N; i = i + 1)`.
+
+- **Comentários como cidadãos de primeira classe (ASL v2)**  
+  - Evoluir o IR da ASL para carregar comentários junto com o AST, permitindo no futuro "traduções" entre linguagens que preservem comentários em posições razoáveis.  
+  - Revisitar depois os pontos onde hoje pulamos comentários (ex.: entre `}` e `else`) com essa infraestrutura pronta.
+
+---
+
 ## 📁 Estrutura do Projeto
 
 ```
@@ -413,6 +464,19 @@ neuroforge/
 - ✅ ESP-IDF 6.1 firmware support
 - ✅ Documentação completa + exemplo funcional
 
+### 🧪 Fase 3.7: ASL Fake Simulation & Transpiler (EM ANDAMENTO)
+- ✅ INPUT_PULLUP inicializando em HIGH na simulação fake (comportamento alinhado ao Arduino físico).
+- ✅ Botão com auto-polaridade (active-low) quando ligado em pinos `INPUT_PULLUP`.
+- ✅ Parser de `if / else if / else` tolerante a comentários e linhas vazias entre `}` e `else`.
+- ✅ Declarações locais simples dentro de `setup`/`loop`: `tipo nome = literal;`.
+- ✅ Incremento/decremento simples: `i = i + 1;` e `i = i - 1;`.
+
+- 🎯 Próximos passos imediatos:
+  - [ ] Atribuições com expressões gerais (`x = y + 1;`, `x = sensorValue * 2;`).
+  - [ ] Transformar `for (init; cond; inc)` em `init; while (cond) { body; inc; }`.
+  - [ ] Documentar exemplos didáticos de uso do modo fake (LED + botões, contador, etc.).
+  - [ ] Preparar terreno para preservação de comentários na ASL v2.
+
 ### 🎯 Fase 3.5: Botão STOP (PRÓXIMO - 1-2 dias)
 - 🎯 **Stop Button Toggle** (próximo)
 - ⏳ Loading states e feedback visual
@@ -448,7 +512,7 @@ npm run dev
 # Em outro terminal:
 curl -X POST http://localhost:3000/api/compile \
   -H "Content-Type: application/json" \
-  -d '{"code":"void setup() { pinMode(13, OUTPUT); Serial.begin(9600); Serial.println(\"LED Blink started!\"); } void loop() { digitalWrite(13, HIGH); Serial.println(\"LED ON\"); delay(500); digitalWrite(13, LOW); Serial.println(\"LED OFF\"); delay(500); }","board":"arduino-uno","mode":"qemu"}'
+  -d '{"code":"void setup() { pinMode(13, OUTPUT); Serial.begin(9600); Serial.println(\\"LED Blink started!\\"); } void loop() { digitalWrite(13, HIGH); Serial.println(\\"LED ON\\"); delay(500); digitalWrite(13, LOW); Serial.println(\\"LED OFF\\"); delay(500); }","board":"arduino-uno","mode":"qemu"}'
 
 curl -X POST http://localhost:3000/api/simulate/start \
   -H "Content-Type: application/json" \
