@@ -268,6 +268,30 @@ function cppLinesToASLStatements(lines: string[]): ASLStatement[] {
       continue;
     }
 
+    // Atribuição de incremento/decremento simples: i = i + 1; / i = i - 1;
+    const incDecMatch = line.match(/^(\w+)\s*=\s*(\w+)\s*([+-])\s*([^;]+);$/);
+    if (incDecMatch) {
+      const [, target, rightVar, op, rhsRaw] = incDecMatch;
+
+      // Apenas quando é a mesma variável dos dois lados
+      if (target === rightVar && (op === '+' || op === '-')) {
+        const rightExpr = makeVarOrLiteral(rhsRaw.trim());
+
+        stmts.push({
+          kind: 'assign',
+          target,
+          value: {
+            kind: 'binary',
+            op: op as '+' | '-',
+            left: { kind: 'var', name: target },
+            right: rightExpr,
+          },
+        });
+
+        continue;
+      }
+    }
+
     // Outras linhas são ignoradas silenciosamente na v1.
   }
 
