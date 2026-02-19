@@ -278,6 +278,33 @@ function transformBlock(nodes: BaseNode[]): ASLStatement[] {
     if (node.nodeType === 'ExpressionStatement') {
       const expr = node.children[0];
 
+      // Hardware nodes embrulhados em ExpressionStatement
+      if (expr.nodeType === 'GpioSet') {
+        stmts.push({
+          kind: 'digitalWrite',
+          pin: transformExpr(expr.children[0]),
+          value: transformExpr(expr.children[1]),
+        } as ASLStatement);
+        continue;
+      }
+
+      if (expr.nodeType === 'AnalogWrite') {
+        stmts.push({
+          kind: 'analogWrite',
+          pin: transformExpr(expr.children[0]),
+          value: transformExpr(expr.children[1]),
+        } as ASLStatement);
+        continue;
+      }
+
+      if (expr.nodeType === 'DelayMs') {
+        stmts.push({
+          kind: 'delay',
+          milliseconds: transformExpr(expr.children[0]),
+        } as ASLStatement);
+        continue;
+      }
+
       // Handle Assignments
       if (
         expr.nodeType === 'BinaryExpression' &&
