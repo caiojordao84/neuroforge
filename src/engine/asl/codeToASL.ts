@@ -2,7 +2,7 @@
 // Funil único: código textual (qualquer linguagem) → ProgramNode → ASLProgram.
 
 import type { Language } from '@/types';
-import type { ProgramNode, BaseNode } from '@/system/types';
+import type { ProgramNode, BaseNode } from '../../system/types';
 import type {
   ASLProgram,
   ASLGlobalVar,
@@ -28,23 +28,18 @@ export async function codeToASL(source: string, language: Language): Promise<ASL
  */
 async function parseToProgramNode(source: string, language: Language): Promise<ProgramNode> {
   switch (language) {
-    case 'c':
     case 'cpp': {
       const parser = new RecursiveDescentCParser();
-      const { ast /* symbols, errors */ } = parser.parse(source);
+      const { ast } = parser.parse(source);
       return ast;
     }
 
-    case 'micropython':
-    case 'python': {
+    case 'micropython': {
       const parser = new PythonParser();
       await parser.init();
-      const { ast /* errors */ } = parser.parse(source);
+      const { ast } = parser.parse(source);
       return ast;
     }
-
-    case 'rust':
-      throw new Error(`ASL codeToASL: language ${language} parser not wired yet`);
 
     default:
       throw new Error(`ASL codeToASL: language ${String(language)} not supported`);
@@ -186,11 +181,11 @@ function transformBlock(nodes: BaseNode[]): ASLStatement[] {
             update.nodeType === 'ExpressionStatement'
               ? update
               : ({
-                nodeType: 'ExpressionStatement',
-                id: 'u',
-                attributes: {},
-                children: [update],
-              } as BaseNode),
+                  nodeType: 'ExpressionStatement',
+                  id: 'u',
+                  attributes: {},
+                  children: [update],
+                } as BaseNode),
           ]),
         );
       }
