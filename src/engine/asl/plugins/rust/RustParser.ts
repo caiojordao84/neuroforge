@@ -1,0 +1,301 @@
+
+import Parser from 'web-tree-sitter';
+import { ProgramNode, BaseNode, AnalysisIssue } from '../../system/types';
+
+export class RustParser {
+    private parser: any = null;
+    private ready = false;
+
+    async init() {
+        if (this.ready) return;
+        try {
+            await (Parser as any).init({
+                locateFile(scriptName: string) {
+                    return `https://unpkg.com/web-tree-sitter@0.20.8/${scriptName}`;
+                },
+            });
+            this.parser = new (Parser as any)();
+            const Lang = await (Parser as any).Language.load('/tree-sitter-rust.wasm');
+            this.parser.setLanguage(Lang);
+            this.ready = true;
+        } catch (e) {
+            console.error("Failed to init tree-sitter. Make sure tree-sitter-rust.wasm is in public/", e);
+        }
+    }
+
+    isReady() { return this.ready; }
+
+    parse(code: string): { ast: ProgramNode, errors: AnalysisIssue[] } {
+        if (!this.ready || !this.parser) {
+            return { 
+                ast: { nodeType: 'Program', id: 'root', attributes: {}, children: [] }, 
+                errors: [{ severity: 'CRITICAL', message: 'Parser loading... or missing .wasm' }] 
+            };
+        }
+
+        const tree = this.parser.parse(code);
+        const converter = new RustCstToAst();
+        const ast = converter.convert(tree.rootNode);
+        
+        const errors: AnalysisIssue[] = [];
+        const findErrors = (n: any) => {
+            if (n.type === 'ERROR' || n.isMissing()) {
+                errors.push({ severity: 'CRITICAL', message: `Syntax error at line ${n.startPosition.row+1}: ${n.text}` });
+            }
+            n.children.forEach(findErrors);
+        };
+        findErrors(tree.rootNode);
+
+        return { ast, errors };
+    }
+}
+
+class RustCstToAst {
+    convert(node: any): ProgramNode {
+        const children = this.visitBlockChildren(node);
+        return { nodeType: 'Program', id: 'root', attributes: {}, children };
+    }
+
+    visit(node: any): BaseNode | null {
+        switch (node.type) {
+            case 'function_item': return this.visitFunction(node);
+            case 'expression_statement': return this.visitExpressionStatement(node);
+            case 'let_declaration': return this.visitLet(node);
+            case 'block': return this.visitBlock(node);
+            case 'if_expression': return this.visitIf(node);
+            case 'loop_expression': return this.visitLoop(node);
+            case 'while_expression': return this.visitWhile(node);
+            case 'for_expression': return this.visitFor(node);
+            case 'call_expression': 
+            case 'binary_expression': 
+            case 'assignment_expression':
+                return this.visitExpr(node);
+            default:
+                return null;
+        }
+    }
+
+    visitFunction(node: any): BaseNode {
+        const nameNode = node.childForFieldName('name');
+        const name = nameNode?.text || 'anon';
+        const bodyNode = node.childForFieldName('body');
+        const children = bodyNode ? this.visitBlockChildren(bodyNode) : [];
+        
+        return {
+            nodeType: 'Function',
+            id: `fn-${node.id}`,
+            attributes: { name },
+            children,
+            metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
+    visitExpressionStatement(node: any): BaseNode {
+        const expr = this.visit(node.firstChild!);
+        if (!expr) return { nodeType: 'Empty', id: 'e', attributes: {}, children: [] };
+        
+        return {
+            nodeType: 'ExpressionStatement',
+            id: `stmt-${node.id}`,
+            attributes: {},
+            children: [expr],
+            metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
+    visitLet(node: any): BaseNode {
+        const pattern = node.childForFieldName('pattern');
+        const name = pattern?.text.replace('mut ', '').trim() || 'unknown';
+        const valueNode = node.childForFieldName('value');
+        const value = valueNode ? this.visitExpr(valueNode) : { nodeType: 'Literal', id: 'l', attributes: { value: 0 }, children: [] };
+
+        return {
+            nodeType: 'VariableDeclaration',
+            id: `decl-${node.id}`,
+            attributes: { name, type: 'int' },
+            children: [value as BaseNode],
+            metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
+    visitBlock(node: any): BaseNode {
+        return {
+            nodeType: 'Block',
+            id: `blk-${node.id}`,
+            attributes: {},
+            children: this.visitBlockChildren(node),
+            metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
+    visitBlockChildren(node: any): BaseNode[] {
+        const result: BaseNode[] = [];
+        let pendingComments: string[] = [];
+        
+        node.children.forEach((c: any) => {
+            if (c.type === 'line_comment' || c.type === 'block_comment') {
+                pendingComments.push(c.text);
+                return;
+            }
+            if (c.type === '{' || c.type === '}') return;
+            
+            const visited = this.visit(c);
+            if (visited) {
+                 if (pendingComments.length > 0) {
+                    visited.leadingComments = [...pendingComments];
+                    pendingComments = [];
+                 }
+                 result.push(visited);
+            }
+        });
+        return result;
+    }
+
+    visitIf(node: any): BaseNode {
+        const conditionNode = node.childForFieldName('condition');
+        const consequenceNode = node.childForFieldName('consequence');
+        const alternativeNode = node.childForFieldName('alternative');
+
+        const condition = conditionNode ? this.visitExpr(conditionNode) : { nodeType: 'Literal', id: 'l', attributes: {value:1}, children:[]};
+        const consequence = consequenceNode ? this.visitBlockChildren(consequenceNode) : [];
+        const alternative = alternativeNode ? 
+            (alternativeNode.type === 'if_expression' ? [this.visitIf(alternativeNode)] : this.visitBlockChildren(alternativeNode)) 
+            : [];
+
+        return {
+            nodeType: 'IfStatement',
+            id: `if-${node.id}`,
+            attributes: {},
+            children: [condition as BaseNode, ...consequence, ...alternative as BaseNode[]],
+            metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
+    visitLoop(node: any): BaseNode {
+        const bodyNode = node.childForFieldName('body');
+        const children = bodyNode ? this.visitBlockChildren(bodyNode) : [];
+        const trueCond: BaseNode = { nodeType: 'Literal', id: 'true', attributes: { value: 1 }, children: [] };
+
+        return {
+            nodeType: 'WhileLoop',
+            id: `loop-${node.id}`,
+            attributes: {},
+            children: [trueCond, ...children],
+            metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
+    visitWhile(node: any): BaseNode {
+        const conditionNode = node.childForFieldName('condition');
+        const bodyNode = node.childForFieldName('body');
+        const condition = conditionNode ? this.visitExpr(conditionNode) : { nodeType: 'Literal', id: 'l', attributes: {value:1}, children:[]};
+        const children = bodyNode ? this.visitBlockChildren(bodyNode) : [];
+
+        return {
+            nodeType: 'WhileLoop',
+            id: `while-${node.id}`,
+            attributes: {},
+            children: [condition as BaseNode, ...children],
+            metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
+    visitFor(node: any): BaseNode {
+        const pattern = node.childForFieldName('pattern')?.text || 'i';
+        const iterator = node.childForFieldName('value'); 
+        const bodyNode = node.childForFieldName('body');
+        
+        let initVal: any = 0;
+        let maxVal: any = 10;
+        
+        if (iterator?.type === 'range_expression') {
+            const left = iterator.child(0);
+            const right = iterator.child(2); 
+            if (left) initVal = parseInt(left.text) || 0;
+            if (right) maxVal = parseInt(right.text) || 0;
+        }
+
+        const init: BaseNode = {
+            nodeType: 'VariableDeclaration', id: 'init', attributes: { name: pattern, type: 'int' },
+            children: [{ nodeType: 'Literal', id: 'l1', attributes: { value: initVal }, children: [] }]
+        };
+        const condition: BaseNode = {
+            nodeType: 'BinaryExpression', id: 'cond', attributes: { operator: '<' },
+            children: [
+                { nodeType: 'Identifier', id: 'id', attributes: { name: pattern }, children: [] },
+                { nodeType: 'Literal', id: 'l2', attributes: { value: maxVal }, children: [] }
+            ]
+        };
+        const update: BaseNode = {
+            nodeType: 'UnaryExpression', id: 'upd', attributes: { operator: '++', prefix: false },
+            children: [{ nodeType: 'Identifier', id: 'id', attributes: { name: pattern }, children: [] }]
+        };
+
+        const body = bodyNode ? this.visitBlockChildren(bodyNode) : [];
+
+        return {
+            nodeType: 'ForLoop',
+            id: `for-${node.id}`,
+            attributes: { hasInit: true, hasUpdate: true },
+            children: [init, condition, update, ...body],
+            metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
+    visitExpr(node: any): BaseNode {
+        const meta = { line: node.startPosition.row + 1 };
+        
+        if (node.type === 'integer_literal') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: parseInt(node.text) }, children: [], metadata: meta };
+        if (node.type === 'string_literal') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: node.text.replace(/"/g, ''), isString: true }, children: [], metadata: meta };
+        if (node.type === 'boolean_literal') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: node.text === 'true' ? 1 : 0 }, children: [], metadata: meta };
+        if (node.type === 'identifier') return { nodeType: 'Identifier', id: `i-${node.id}`, attributes: { name: node.text }, children: [], metadata: meta };
+        
+        if (node.type === 'binary_expression') {
+            const left = this.visitExpr(node.child(0)!);
+            const op = node.child(1)!.text;
+            const right = this.visitExpr(node.child(2)!);
+            return { nodeType: 'BinaryExpression', id: `bin-${node.id}`, attributes: { operator: op }, children: [left, right], metadata: meta };
+        }
+
+        if (node.type === 'assignment_expression') {
+             const left = this.visitExpr(node.childForFieldName('left')!);
+             const right = this.visitExpr(node.childForFieldName('right')!);
+             return { nodeType: 'BinaryExpression', id: `assign-${node.id}`, attributes: { operator: '=' }, children: [left, right], metadata: meta };
+        }
+
+        if (node.type === 'call_expression') return this.visitCall(node);
+        if (node.type === 'macro_invocation') return this.visitMacro(node);
+
+        return { nodeType: 'Empty', id: 'empty', attributes: {}, children: [] };
+    }
+
+    visitCall(node: any): BaseNode {
+        const funcNode = node.childForFieldName('function');
+        const funcName = funcNode?.text || '';
+        const argsNode = node.childForFieldName('arguments');
+        const args = argsNode ? argsNode.children.filter((c: any) => c.type !== '(' && c.type !== ')' && c.type !== ',').map((c: any) => this.visitExpr(c)) : [];
+
+        const meta = { line: node.startPosition.row + 1 };
+
+        if (funcName === 'gpio_set' || funcName === 'digitalWrite') return { nodeType: 'GpioSet', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+        if (funcName === 'delay' || funcName === 'delay_ms') return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+        
+        return { nodeType: 'CallExpression', id: `call-${node.id}`, attributes: { callee: funcName }, children: args, metadata: meta };
+    }
+
+    visitMacro(node: any): BaseNode {
+        const macroNode = node.childForFieldName('macro');
+        const name = macroNode?.text || '';
+        const tokenTree = node.childForFieldName('tokens');
+        let text = tokenTree?.text || '';
+        if (text.startsWith('(') && text.endsWith(')')) text = text.substring(1, text.length-1);
+        text = text.replace(/"/g, ''); 
+
+        const meta = { line: node.startPosition.row + 1 };
+        
+        if (name === 'println') {
+             return { nodeType: 'Print', id: `p-${node.id}`, attributes: {}, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: text, isString: true }, children: [] }], metadata: meta };
+        }
+        return { nodeType: 'Empty', id: 'e', attributes: {}, children: [] };
+    }
+}
