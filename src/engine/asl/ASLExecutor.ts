@@ -340,6 +340,12 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         const pin = await evalExpr(expr.args[0], env, ctx);
         return ctx.engine.analogRead(pin);
       }
+      if (expr.callee === 'millis') {
+        return ctx.engine.millis();
+      }
+      if (expr.callee === 'micros') {
+        return ctx.engine.micros();
+      }
 
       // Funções de usuário
       const funcDef = ctx.functions.get(expr.callee);
