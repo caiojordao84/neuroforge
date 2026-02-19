@@ -148,7 +148,7 @@ export const TopToolbar: React.FC = () => {
       // Experimento ASL: apenas para C++ por enquanto
       if (activeMCU.language === 'cpp') {
         try {
-          const aslProgram = codeToASL(processedCode, activeMCU.language);
+          const aslProgram = await codeToASL(processedCode, activeMCU.language);
           const runtime = createASLRuntime(aslProgram);
 
           startSimulation();

@@ -115,7 +115,7 @@ export interface WireConnection {
 
 export type SimulationStatus = 'idle' | 'running' | 'paused' | 'error';
 
-export type Language = 'cpp' | 'micropython' | 'circuitpython' | 'assembly';
+export type Language = 'cpp' | 'c' | 'micropython' | 'python' | 'rust' | 'circuitpython' | 'assembly';
 
 export interface SimulationState {
   status: SimulationStatus;

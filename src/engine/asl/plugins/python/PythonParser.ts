@@ -1,6 +1,5 @@
-
-import Parser from 'web-tree-sitter';
-import { ProgramNode, BaseNode, AnalysisIssue } from '../../system/types';
+import { TreeSitterLoader } from '../../TreeSitterLoader';
+import type { ProgramNode, BaseNode, AnalysisIssue } from '@/system/types';
 
 export class PythonParser {
     private parser: any = null;
@@ -9,14 +8,7 @@ export class PythonParser {
     async init() {
         if (this.ready) return;
         try {
-            await (Parser as any).init({
-                locateFile(scriptName: string) {
-                    return `https://unpkg.com/web-tree-sitter@0.20.8/${scriptName}`;
-                },
-            });
-            this.parser = new (Parser as any)();
-            const Lang = await (Parser as any).Language.load('/tree-sitter-python.wasm');
-            this.parser.setLanguage(Lang);
+            this.parser = await TreeSitterLoader.createParser('python');
             this.ready = true;
         } catch (e) {
             console.error("Failed to init tree-sitter-python", e);

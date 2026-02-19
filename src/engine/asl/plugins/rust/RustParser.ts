@@ -1,6 +1,5 @@
-
-import Parser from 'web-tree-sitter';
-import { ProgramNode, BaseNode, AnalysisIssue } from '../../system/types';
+import { TreeSitterLoader } from '../../TreeSitterLoader';
+import type { ProgramNode, BaseNode, AnalysisIssue } from '@/system/types';
 
 export class RustParser {
     private parser: any = null;
@@ -9,14 +8,7 @@ export class RustParser {
     async init() {
         if (this.ready) return;
         try {
-            await (Parser as any).init({
-                locateFile(scriptName: string) {
-                    return `https://unpkg.com/web-tree-sitter@0.20.8/${scriptName}`;
-                },
-            });
-            this.parser = new (Parser as any)();
-            const Lang = await (Parser as any).Language.load('/tree-sitter-rust.wasm');
-            this.parser.setLanguage(Lang);
+            this.parser = await TreeSitterLoader.createParser('rust');
             this.ready = true;
         } catch (e) {
             console.error("Failed to init tree-sitter. Make sure tree-sitter-rust.wasm is in public/", e);
@@ -27,20 +19,20 @@ export class RustParser {
 
     parse(code: string): { ast: ProgramNode, errors: AnalysisIssue[] } {
         if (!this.ready || !this.parser) {
-            return { 
-                ast: { nodeType: 'Program', id: 'root', attributes: {}, children: [] }, 
-                errors: [{ severity: 'CRITICAL', message: 'Parser loading... or missing .wasm' }] 
+            return {
+                ast: { nodeType: 'Program', id: 'root', attributes: {}, children: [] },
+                errors: [{ severity: 'CRITICAL', message: 'Parser loading... or missing .wasm' }]
             };
         }
 
         const tree = this.parser.parse(code);
         const converter = new RustCstToAst();
         const ast = converter.convert(tree.rootNode);
-        
+
         const errors: AnalysisIssue[] = [];
         const findErrors = (n: any) => {
             if (n.type === 'ERROR' || n.isMissing()) {
-                errors.push({ severity: 'CRITICAL', message: `Syntax error at line ${n.startPosition.row+1}: ${n.text}` });
+                errors.push({ severity: 'CRITICAL', message: `Syntax error at line ${n.startPosition.row + 1}: ${n.text}` });
             }
             n.children.forEach(findErrors);
         };
@@ -66,8 +58,8 @@ class RustCstToAst {
             case 'loop_expression': return this.visitLoop(node);
             case 'while_expression': return this.visitWhile(node);
             case 'for_expression': return this.visitFor(node);
-            case 'call_expression': 
-            case 'binary_expression': 
+            case 'call_expression':
+            case 'binary_expression':
             case 'assignment_expression':
                 return this.visitExpr(node);
             default:
@@ -80,7 +72,7 @@ class RustCstToAst {
         const name = nameNode?.text || 'anon';
         const bodyNode = node.childForFieldName('body');
         const children = bodyNode ? this.visitBlockChildren(bodyNode) : [];
-        
+
         return {
             nodeType: 'Function',
             id: `fn-${node.id}`,
@@ -93,7 +85,7 @@ class RustCstToAst {
     visitExpressionStatement(node: any): BaseNode {
         const expr = this.visit(node.firstChild!);
         if (!expr) return { nodeType: 'Empty', id: 'e', attributes: {}, children: [] };
-        
+
         return {
             nodeType: 'ExpressionStatement',
             id: `stmt-${node.id}`,
@@ -131,21 +123,21 @@ class RustCstToAst {
     visitBlockChildren(node: any): BaseNode[] {
         const result: BaseNode[] = [];
         let pendingComments: string[] = [];
-        
+
         node.children.forEach((c: any) => {
             if (c.type === 'line_comment' || c.type === 'block_comment') {
                 pendingComments.push(c.text);
                 return;
             }
             if (c.type === '{' || c.type === '}') return;
-            
+
             const visited = this.visit(c);
             if (visited) {
-                 if (pendingComments.length > 0) {
+                if (pendingComments.length > 0) {
                     visited.leadingComments = [...pendingComments];
                     pendingComments = [];
-                 }
-                 result.push(visited);
+                }
+                result.push(visited);
             }
         });
         return result;
@@ -156,10 +148,10 @@ class RustCstToAst {
         const consequenceNode = node.childForFieldName('consequence');
         const alternativeNode = node.childForFieldName('alternative');
 
-        const condition = conditionNode ? this.visitExpr(conditionNode) : { nodeType: 'Literal', id: 'l', attributes: {value:1}, children:[]};
+        const condition = conditionNode ? this.visitExpr(conditionNode) : { nodeType: 'Literal', id: 'l', attributes: { value: 1 }, children: [] };
         const consequence = consequenceNode ? this.visitBlockChildren(consequenceNode) : [];
-        const alternative = alternativeNode ? 
-            (alternativeNode.type === 'if_expression' ? [this.visitIf(alternativeNode)] : this.visitBlockChildren(alternativeNode)) 
+        const alternative = alternativeNode ?
+            (alternativeNode.type === 'if_expression' ? [this.visitIf(alternativeNode)] : this.visitBlockChildren(alternativeNode))
             : [];
 
         return {
@@ -188,7 +180,7 @@ class RustCstToAst {
     visitWhile(node: any): BaseNode {
         const conditionNode = node.childForFieldName('condition');
         const bodyNode = node.childForFieldName('body');
-        const condition = conditionNode ? this.visitExpr(conditionNode) : { nodeType: 'Literal', id: 'l', attributes: {value:1}, children:[]};
+        const condition = conditionNode ? this.visitExpr(conditionNode) : { nodeType: 'Literal', id: 'l', attributes: { value: 1 }, children: [] };
         const children = bodyNode ? this.visitBlockChildren(bodyNode) : [];
 
         return {
@@ -202,15 +194,15 @@ class RustCstToAst {
 
     visitFor(node: any): BaseNode {
         const pattern = node.childForFieldName('pattern')?.text || 'i';
-        const iterator = node.childForFieldName('value'); 
+        const iterator = node.childForFieldName('value');
         const bodyNode = node.childForFieldName('body');
-        
+
         let initVal: any = 0;
         let maxVal: any = 10;
-        
+
         if (iterator?.type === 'range_expression') {
             const left = iterator.child(0);
-            const right = iterator.child(2); 
+            const right = iterator.child(2);
             if (left) initVal = parseInt(left.text) || 0;
             if (right) maxVal = parseInt(right.text) || 0;
         }
@@ -244,12 +236,12 @@ class RustCstToAst {
 
     visitExpr(node: any): BaseNode {
         const meta = { line: node.startPosition.row + 1 };
-        
+
         if (node.type === 'integer_literal') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: parseInt(node.text) }, children: [], metadata: meta };
         if (node.type === 'string_literal') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: node.text.replace(/"/g, ''), isString: true }, children: [], metadata: meta };
         if (node.type === 'boolean_literal') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: node.text === 'true' ? 1 : 0 }, children: [], metadata: meta };
         if (node.type === 'identifier') return { nodeType: 'Identifier', id: `i-${node.id}`, attributes: { name: node.text }, children: [], metadata: meta };
-        
+
         if (node.type === 'binary_expression') {
             const left = this.visitExpr(node.child(0)!);
             const op = node.child(1)!.text;
@@ -258,9 +250,9 @@ class RustCstToAst {
         }
 
         if (node.type === 'assignment_expression') {
-             const left = this.visitExpr(node.childForFieldName('left')!);
-             const right = this.visitExpr(node.childForFieldName('right')!);
-             return { nodeType: 'BinaryExpression', id: `assign-${node.id}`, attributes: { operator: '=' }, children: [left, right], metadata: meta };
+            const left = this.visitExpr(node.childForFieldName('left')!);
+            const right = this.visitExpr(node.childForFieldName('right')!);
+            return { nodeType: 'BinaryExpression', id: `assign-${node.id}`, attributes: { operator: '=' }, children: [left, right], metadata: meta };
         }
 
         if (node.type === 'call_expression') return this.visitCall(node);
@@ -279,7 +271,7 @@ class RustCstToAst {
 
         if (funcName === 'gpio_set' || funcName === 'digitalWrite') return { nodeType: 'GpioSet', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
         if (funcName === 'delay' || funcName === 'delay_ms') return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
-        
+
         return { nodeType: 'CallExpression', id: `call-${node.id}`, attributes: { callee: funcName }, children: args, metadata: meta };
     }
 
@@ -288,13 +280,13 @@ class RustCstToAst {
         const name = macroNode?.text || '';
         const tokenTree = node.childForFieldName('tokens');
         let text = tokenTree?.text || '';
-        if (text.startsWith('(') && text.endsWith(')')) text = text.substring(1, text.length-1);
-        text = text.replace(/"/g, ''); 
+        if (text.startsWith('(') && text.endsWith(')')) text = text.substring(1, text.length - 1);
+        text = text.replace(/"/g, '');
 
         const meta = { line: node.startPosition.row + 1 };
-        
+
         if (name === 'println') {
-             return { nodeType: 'Print', id: `p-${node.id}`, attributes: {}, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: text, isString: true }, children: [] }], metadata: meta };
+            return { nodeType: 'Print', id: `p-${node.id}`, attributes: {}, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: text, isString: true }, children: [] }], metadata: meta };
         }
         return { nodeType: 'Empty', id: 'e', attributes: {}, children: [] };
     }

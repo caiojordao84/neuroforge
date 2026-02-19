@@ -451,6 +451,10 @@ export class SimulationEngine extends EventEmitter {
     this.emit('serialTransmit', { text });
   }
 
+  log(message: string): void {
+    this.serialPrintln(message);
+  }
+
   serialAvailable(): number {
     return 0;
   }

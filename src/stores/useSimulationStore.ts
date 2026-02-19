@@ -176,6 +176,9 @@ export const defaultCodeMap: Record<Language, string> = {
   'micropython': defaultMicroPythonCode,
   'circuitpython': defaultCircuitPythonCode,
   'assembly': defaultAssemblyCode,
+  'c': defaultCppCode,
+  'python': defaultMicroPythonCode,
+  'rust': '// Rust default code\nfn main() {\n    println!("Hello Rust!");\n}',
 };
 
 export const boardConfigs: Record<BoardType, BoardConfig> = {

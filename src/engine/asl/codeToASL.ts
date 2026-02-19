@@ -2,7 +2,7 @@
 // Funil único: código textual (qualquer linguagem) → ProgramNode → ASLProgram.
 
 import type { Language } from '@/types';
-import type { ProgramNode, BaseNode } from '../../system/types';
+import type { ProgramNode, BaseNode } from '@/system/types';
 import type {
   ASLProgram,
   ASLGlobalVar,
@@ -43,7 +43,6 @@ async function parseToProgramNode(source: string, language: Language): Promise<P
       return ast;
     }
 
-    case 'zig':
     case 'rust':
       throw new Error(`ASL codeToASL: language ${language} parser not wired yet`);
 
@@ -187,11 +186,11 @@ function transformBlock(nodes: BaseNode[]): ASLStatement[] {
             update.nodeType === 'ExpressionStatement'
               ? update
               : ({
-                  nodeType: 'ExpressionStatement',
-                  id: 'u',
-                  attributes: {},
-                  children: [update],
-                } as BaseNode),
+                nodeType: 'ExpressionStatement',
+                id: 'u',
+                attributes: {},
+                children: [update],
+              } as BaseNode),
           ]),
         );
       }

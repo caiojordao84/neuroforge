@@ -1,5 +1,5 @@
 
-import { ProgramNode, BaseNode, SourceMapEntry } from '../../system/types';
+import type { ProgramNode, BaseNode, SourceMapEntry } from '@/system/types';
 
 export class CGenerator {
     private sourceMap: SourceMapEntry[] = [];
