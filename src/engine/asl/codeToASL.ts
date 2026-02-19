@@ -11,61 +11,45 @@ import type {
   ASLFunction,
   ASLTask,
 } from './ASLTypes';
+import { RecursiveDescentCParser } from './plugins/c/CParser';
+import { PythonParser } from './plugins/python/PythonParser';
 
 /**
  * Ponto de entrada único para qualquer código textual.
- * Linguagens suportadas: controladas por `Language` e pelos parsers abaixo.
+ * Agora assíncrono, pois o parser de Python usa tree-sitter com init async.
  */
-export function codeToASL(source: string, language: Language): ASLProgram {
-  const programAst = parseToProgramNode(source, language);
+export async function codeToASL(source: string, language: Language): Promise<ASLProgram> {
+  const programAst = await parseToProgramNode(source, language);
   return astToASL(programAst);
 }
 
 /**
  * Delegador para os parsers por linguagem.
- * Aqui vamos ligar os plugins existentes em notyet/app/plugins/*.
  */
-function parseToProgramNode(source: string, language: Language): ProgramNode {
+async function parseToProgramNode(source: string, language: Language): Promise<ProgramNode> {
   switch (language) {
     case 'c':
-    case 'cpp':
-      // TODO: ligar ao parser C/C++ existente (notyet/app/plugins/*)
-      return parseCOrCppToAst(source);
+    case 'cpp': {
+      const parser = new RecursiveDescentCParser();
+      const { ast /* symbols, errors */ } = parser.parse(source);
+      return ast;
+    }
 
     case 'micropython':
-    case 'python':
-      // TODO: ligar ao parser MicroPython/Python existente
-      return parsePythonToAst(source);
+    case 'python': {
+      const parser = new PythonParser();
+      await parser.init();
+      const { ast /* errors */ } = parser.parse(source);
+      return ast;
+    }
 
     case 'zig':
-      // TODO: ligar ao ZigParser que você já fez
-      return parseZigToAst(source);
-
     case 'rust':
-      // TODO: ligar ao parser Rust
-      return parseRustToAst(source);
+      throw new Error(`ASL codeToASL: language ${language} parser not wired yet`);
 
-    // Adicionar aqui outras linguagens suportadas (lua, ada, etc.)
     default:
-      throw new Error(`ASL codeToASL: language ${String(language)} not supported yet`);
+      throw new Error(`ASL codeToASL: language ${String(language)} not supported`);
   }
-}
-
-// Stubs – serão substituídos por imports reais dos plugins.
-function parseCOrCppToAst(_source: string): ProgramNode {
-  throw new Error('parseCOrCppToAst not wired yet');
-}
-
-function parsePythonToAst(_source: string): ProgramNode {
-  throw new Error('parsePythonToAst not wired yet');
-}
-
-function parseZigToAst(_source: string): ProgramNode {
-  throw new Error('parseZigToAst not wired yet');
-}
-
-function parseRustToAst(_source: string): ProgramNode {
-  throw new Error('parseRustToAst not wired yet');
 }
 
 // -----------------------------------------------------------------------------
