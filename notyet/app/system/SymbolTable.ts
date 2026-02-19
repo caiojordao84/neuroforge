@@ -1,5 +1,4 @@
-
-import { Symbol } from './types';
+import type { Symbol } from './types';
 
 export class SymbolTable {
     private scopes: Map<string, Symbol>[] = [];
