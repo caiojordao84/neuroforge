@@ -1,650 +1,615 @@
 // src/engine/asl/codeToASL.ts
-// Conversão de um subconjunto de Arduino C++ para ASLProgram (v0/v1 controle de fluxo).
+// Funil único: código textual (qualquer linguagem) → ProgramNode → ASLProgram.
 
 import type { Language } from '@/types';
-import type { ASLProgram, ASLGlobalVar, ASLStatement, ASLExpr } from './ASLTypes';
+import type { ProgramNode, BaseNode } from '../../system/types';
+import type {
+  ASLProgram,
+  ASLGlobalVar,
+  ASLStatement,
+  ASLExpr,
+  ASLFunction,
+  ASLTask,
+} from './ASLTypes';
 
-export function codeToASL(code: string, language: Language): ASLProgram {
-  if (language !== 'cpp') {
-    throw new Error(`ASL codeToASL: language ${language} not supported yet`);
+/**
+ * Ponto de entrada único para qualquer código textual.
+ * Linguagens suportadas: controladas por `Language` e pelos parsers abaixo.
+ */
+export function codeToASL(source: string, language: Language): ASLProgram {
+  const programAst = parseToProgramNode(source, language);
+  return astToASL(programAst);
+}
+
+/**
+ * Delegador para os parsers por linguagem.
+ * Aqui vamos ligar os plugins existentes em notyet/app/plugins/*.
+ */
+function parseToProgramNode(source: string, language: Language): ProgramNode {
+  switch (language) {
+    case 'c':
+    case 'cpp':
+      // TODO: ligar ao parser C/C++ existente (notyet/app/plugins/*)
+      return parseCOrCppToAst(source);
+
+    case 'micropython':
+    case 'python':
+      // TODO: ligar ao parser MicroPython/Python existente
+      return parsePythonToAst(source);
+
+    case 'zig':
+      // TODO: ligar ao ZigParser que você já fez
+      return parseZigToAst(source);
+
+    case 'rust':
+      // TODO: ligar ao parser Rust
+      return parseRustToAst(source);
+
+    // Adicionar aqui outras linguagens suportadas (lua, ada, etc.)
+    default:
+      throw new Error(`ASL codeToASL: language ${String(language)} not supported yet`);
   }
-
-  return cppToASL(code);
 }
 
-function cppToASL(code: string): ASLProgram {
-  const globals = extractGlobalVarsToASL(code);
-  const setupBody = extractFunctionBody(code, 'setup');
-  const loopBody = extractFunctionBody(code, 'loop');
-
-  // Normalizações de controle de fluxo para facilitar o parser linha‑a‑linha
-  const normalizedSetup = normalizeElseBlocks(normalizeIfHeaders(setupBody));
-  const normalizedLoop = normalizeElseBlocks(normalizeIfHeaders(loopBody));
-
-  const setupStmts = cppLinesToASLStatements(normalizedSetup.split('\n'));
-  const loopStmts = cppLinesToASLStatements(normalizedLoop.split('\n'));
-
-  return {
-    metadata: {
-      name: 'From C++',
-      targetBoard: undefined,
-    },
-    globals,
-    functions: [
-      {
-        name: 'setup',
-        params: [],
-        body: setupStmts,
-      },
-    ],
-    tasks: [
-      {
-        name: 'mainLoop',
-        body: loopStmts,
-      },
-    ],
-  };
+// Stubs – serão substituídos por imports reais dos plugins.
+function parseCOrCppToAst(_source: string): ProgramNode {
+  throw new Error('parseCOrCppToAst not wired yet');
 }
 
-function extractGlobalVarsToASL(code: string): ASLGlobalVar[] {
+function parsePythonToAst(_source: string): ProgramNode {
+  throw new Error('parsePythonToAst not wired yet');
+}
+
+function parseZigToAst(_source: string): ProgramNode {
+  throw new Error('parseZigToAst not wired yet');
+}
+
+function parseRustToAst(_source: string): ProgramNode {
+  throw new Error('parseRustToAst not wired yet');
+}
+
+// -----------------------------------------------------------------------------
+// AST (ProgramNode) → ASLProgram
+// -----------------------------------------------------------------------------
+
+export function astToASL(program: ProgramNode): ASLProgram {
   const globals: ASLGlobalVar[] = [];
-  const lines = code.split('\n');
+  const functions: ASLFunction[] = [];
+  const tasks: ASLTask[] = [];
 
-  for (const raw of lines) {
-    const line = raw.trim();
-    if (!line || line.startsWith('//')) continue;
-    if (line.startsWith('void ') || line.startsWith('if') || line.startsWith('}')) continue;
+  program.children.forEach((node) => {
+    // 1. Globals
+    if (node.nodeType === 'VariableDeclaration') {
+      const name = node.attributes.name;
+      const type = node.attributes.type || 'int';
+      let initialValue: any = 0;
 
-    const m = line.match(/(?:const\s+)?(?:int|byte|long|float|double|bool)\s+(\w+)\s*=\s*([^;]+);/);
-    if (m) {
-      const name = m[1];
-      const valStr = m[2].trim();
-      const num = parseFloat(valStr);
-      const initialValue = Number.isNaN(num) ? 0 : num;
+      const valNode = node.children[0];
+      if (valNode) {
+        if (valNode.nodeType === 'ArrayInitializer') {
+          // Convert initializer list to literal array
+          initialValue = valNode.children.map((c) => {
+            const e = transformExpr(c);
+            if (e.kind === 'literal') return e.value;
+            return 0;
+          });
+        } else if (valNode.nodeType === 'Literal') {
+          initialValue = valNode.attributes.value;
+        }
+      }
 
       globals.push({
         name,
-        type: 'int',
+        type: type as any,
         initialValue,
-      });
+        // Requer ASLGlobalVar.comments?: string[]
+        comments: node.leadingComments,
+      } as any);
+    }
+
+    // 2. Functions
+    if (node.nodeType === 'Function') {
+      const name = node.attributes.name;
+      const params: any[] = node.attributes.params || [];
+      const body = transformBlock(node.children);
+
+      // Prepend function-level comments to body
+      if (node.leadingComments) {
+        for (let i = node.leadingComments.length - 1; i >= 0; i--) {
+          body.unshift({ kind: 'comment', text: node.leadingComments[i] } as ASLStatement);
+        }
+      }
+
+      if (name === 'loop') {
+        tasks.push({ name: 'mainLoop', body });
+      } else {
+        functions.push({
+          name,
+          params: params.map((p) => ({ name: p.name, type: p.type || 'int' })),
+          body,
+        });
+      }
+    }
+  });
+
+  // Fallback: se não houver 'loop' (ex.: Rust/Zig 'main'), usa 'main' como task
+  if (tasks.length === 0) {
+    const mainFunc = functions.find((f) => f.name === 'main');
+    if (mainFunc) {
+      tasks.push({ name: 'mainLoop', body: mainFunc.body });
+      const idx = functions.indexOf(mainFunc);
+      if (idx > -1) functions.splice(idx, 1);
     }
   }
 
-  return globals;
+  return {
+    metadata: { name: 'AST Generated' },
+    globals,
+    functions,
+    tasks,
+  };
 }
 
-function extractFunctionBody(code: string, functionName: string): string {
-  const funcRegex = new RegExp(`void\\s+${functionName}\\s*\\(\\s*\\)\\s*\\{`);
-  const match = code.match(funcRegex);
-
-  if (!match || match.index === undefined) {
-    throw new Error(`Could not find ${functionName}() function`);
-  }
-
-  const startIndex = match.index + match[0].length;
-  let braceCount = 1;
-  let endIndex = startIndex;
-
-  while (braceCount > 0 && endIndex < code.length) {
-    if (code[endIndex] === '{') {
-      braceCount++;
-    } else if (code[endIndex] === '}') {
-      braceCount--;
-    }
-    endIndex++;
-  }
-
-  if (braceCount !== 0) {
-    throw new Error(`Unbalanced braces in ${functionName}()`);
-  }
-
-  return code.substring(startIndex, endIndex - 1);
-}
-
-function normalizeElseBlocks(body: string): string {
-  // Transforma "} else" em duas linhas: "}" e "else"
-  // para que o scanner de linha encontre o else no índice seguinte.
-  return body.replace(/}\s*else\b/g, '}\nelse');
-}
-
-function normalizeIfHeaders(body: string): string {
-  // Transforma:
-  //   if (COND)
-  //   {
-  //     ...
-  //   }
-  // em:
-  //   if (COND) {
-  //     ...
-  //   }
-  return body.replace(/if\s*\(([^)]+)\)\s*\n\s*{/g, 'if ($1) {');
-}
-
-function cppLinesToASLStatements(lines: string[]): ASLStatement[] {
+function transformBlock(nodes: BaseNode[]): ASLStatement[] {
   const stmts: ASLStatement[] = [];
 
-  for (let i = 0; i < lines.length; i++) {
-    const raw = lines[i];
-    const line = raw.replace(/\/\/.*$/, '').trim();
-    if (!line) continue;
+  for (const node of nodes) {
+    if (!node) continue;
 
-    // If de uma linha: if (COND) STATEMENT;
-    const singleLineIf = line.match(/^if\s*\((.+)\)\s*([^;{]+);$/);
-    if (singleLineIf) {
-      const conditionSrc = singleLineIf[1].trim();
-      const stmtSrc = singleLineIf[2].trim();
+    // --- Comments ---
+    if (node.leadingComments) {
+      node.leadingComments.forEach((text: string) => {
+        stmts.push({ kind: 'comment', text } as ASLStatement);
+      });
+    }
 
-      const conditionExpr = parseConditionExpr(conditionSrc);
-      const thenBranch = cppLinesToASLStatements([stmtSrc + ';']);
-
+    // --- Control Flow ---
+    if (node.nodeType === 'IfStatement') {
       stmts.push({
         kind: 'if',
-        condition: conditionExpr,
-        thenBranch,
-      });
-
+        condition: transformExpr(node.children[0]),
+        thenBranch: transformBlock(node.children.slice(1)),
+      } as ASLStatement);
       continue;
     }
 
-    // If/else/else-if em bloco
-    if (line.startsWith('if')) {
-      const { stmt, nextIndex } = parseIfBlock(lines, i);
-      stmts.push(stmt);
-      i = nextIndex;
-      continue;
-    }
-
-    // While (COND) { ... } simples
-    if (line.startsWith('while')) {
-      const { stmt, nextIndex } = parseWhileBlock(lines, i);
-      stmts.push(stmt);
-      i = nextIndex;
-      continue;
-    }
-
-    // for (init; cond; inc) { ... } simples
-    if (line.startsWith('for')) {
-      const { stmts: forStmts, nextIndex } = parseForBlock(lines, i);
-      stmts.push(...forStmts);
-      i = nextIndex;
-      continue;
-    }
-
-    // Declaração local simples: int i = 0;
-    const localDeclMatch = line.match(
-      /^(?:int|byte|long|float|double|bool)\s+(\w+)\s*=\s*([^;]+);$/
-    );
-    if (localDeclMatch) {
-      const [, varName, exprSrc] = localDeclMatch;
-
-      // Passo 1: só literais/constantes simples (HIGH/LOW, true/false, números)
-      const valueExpr = makeVarOrLiteral(exprSrc.trim());
-
+    if (node.nodeType === 'WhileLoop') {
       stmts.push({
-        kind: 'assign',
-        target: varName,
-        value: valueExpr,
-      });
-
+        kind: 'while',
+        condition: transformExpr(node.children[0]),
+        body: transformBlock(node.children.slice(1)),
+      } as ASLStatement);
       continue;
     }
 
-    // pinMode(PIN, MODE)
-    const pinModeMatch = line.match(/pinMode\s*\(\s*(\w+)\s*,\s*(\w+)\s*\)\s*;/);
-    if (pinModeMatch) {
-      const [, pinToken, modeToken] = pinModeMatch;
-      stmts.push({
-        kind: 'pinMode',
-        pin: makeVarOrLiteral(pinToken),
-        mode: modeToken as 'INPUT' | 'OUTPUT' | 'INPUT_PULLUP',
-      });
-      continue;
-    }
-
-    // digitalWrite(PIN, VAL)
-    const digitalWriteMatch = line.match(/digitalWrite\s*\(\s*(\w+)\s*,\s*(\w+)\s*\)\s*;/);
-    if (digitalWriteMatch) {
-      const [, pinToken, valueToken] = digitalWriteMatch;
-      let value: 'HIGH' | 'LOW' | ASLExpr;
-      if (valueToken === 'HIGH' || valueToken === 'LOW') {
-        value = valueToken;
-      } else {
-        value = makeVarOrLiteral(valueToken);
+    if (node.nodeType === 'ForLoop') {
+      // Init
+      if (node.attributes.hasInit && node.children.length > 0) {
+        stmts.push(...transformBlock([node.children[0]]));
       }
+
+      // Loop
+      let idx = node.attributes.hasInit ? 1 : 0;
+      const cond = node.children[idx];
+      idx++;
+      const update = node.attributes.hasUpdate ? node.children[idx] : null;
+      if (node.attributes.hasUpdate) idx++;
+
+      const bodyNodes = node.children.slice(idx);
+      const bodyStmts = transformBlock(bodyNodes);
+      if (update) {
+        bodyStmts.push(
+          ...transformBlock([
+            update.nodeType === 'ExpressionStatement'
+              ? update
+              : ({
+                  nodeType: 'ExpressionStatement',
+                  id: 'u',
+                  attributes: {},
+                  children: [update],
+                } as BaseNode),
+          ]),
+        );
+      }
+
+      stmts.push({
+        kind: 'while',
+        condition: transformExpr(cond),
+        body: bodyStmts,
+      } as ASLStatement);
+      continue;
+    }
+
+    if (node.nodeType === 'ReturnStatement') {
+      stmts.push({
+        kind: 'return',
+        value: node.children[0] ? transformExpr(node.children[0]) : undefined,
+      } as ASLStatement);
+      continue;
+    }
+
+    if (node.nodeType === 'BreakStatement') {
+      stmts.push({ kind: 'break' } as ASLStatement);
+      continue;
+    }
+
+    if (node.nodeType === 'ContinueStatement') {
+      stmts.push({ kind: 'continue' } as ASLStatement);
+      continue;
+    }
+
+    // --- GPIO / Hardware ---
+    if (node.nodeType === 'GpioSet') {
       stmts.push({
         kind: 'digitalWrite',
-        pin: makeVarOrLiteral(pinToken),
-        value,
-      });
+        pin: transformExpr(node.children[0]),
+        value: transformExpr(node.children[1]),
+      } as ASLStatement);
       continue;
     }
 
-    // analogWrite(PIN, VAL)
-    const analogWriteMatch = line.match(/analogWrite\s*\(\s*(\w+)\s*,\s*(\w+)\s*\)\s*;/);
-    if (analogWriteMatch) {
-      const [, pinToken, valueToken] = analogWriteMatch;
+    if (node.nodeType === 'AnalogWrite') {
       stmts.push({
         kind: 'analogWrite',
-        pin: makeVarOrLiteral(pinToken),
-        value: makeVarOrLiteral(valueToken),
-      });
+        pin: transformExpr(node.children[0]),
+        value: transformExpr(node.children[1]),
+      } as ASLStatement);
       continue;
     }
 
-    // delay(MS)
-    const delayMatch = line.match(/delay\s*\(\s*(\w+)\s*\)\s*;/);
-    if (delayMatch) {
-      const [, msToken] = delayMatch;
+    if (node.nodeType === 'DelayMs') {
       stmts.push({
         kind: 'delay',
-        milliseconds: makeVarOrLiteral(msToken),
-      });
+        milliseconds: transformExpr(node.children[0]),
+      } as ASLStatement);
       continue;
     }
 
-    // int var = digitalRead(PIN);
-    const declReadMatch = line.match(/^(?:int|byte|long)\s+(\w+)\s*=\s*digitalRead\s*\(\s*(\w+)\s*\)\s*;/);
-    if (declReadMatch) {
-      const [, varName, pinToken] = declReadMatch;
-      stmts.push({
-        kind: 'read',
-        mode: 'DIGITAL',
-        pin: makeVarOrLiteral(pinToken),
-        target: varName,
-      });
+    // --- Assignments / Variables ---
+    if (node.nodeType === 'VariableDeclaration') {
+      const valNode = node.children[0];
+      const readStmt = tryTransformRead(node.attributes.name, valNode);
+      if (readStmt) {
+        stmts.push(readStmt);
+      } else if (valNode) {
+        // Handle array init in local scope
+        if (valNode.nodeType === 'ArrayInitializer') {
+          const arrayVal: ASLExpr = {
+            kind: 'literal',
+            value: valNode.children.map((c) => {
+              const e = transformExpr(c);
+              return e.kind === 'literal' ? e.value : 0;
+            }),
+          };
+          stmts.push({
+            kind: 'assign',
+            target: node.attributes.name,
+            value: arrayVal,
+          } as ASLStatement);
+        } else {
+          stmts.push({
+            kind: 'assign',
+            target: node.attributes.name,
+            value: transformExpr(valNode),
+          } as ASLStatement);
+        }
+      }
       continue;
     }
 
-    // var = digitalRead(PIN);
-    const assignReadMatch = line.match(/^(\w+)\s*=\s*digitalRead\s*\(\s*(\w+)\s*\)\s*;/);
-    if (assignReadMatch) {
-      const [, varName, pinToken] = assignReadMatch;
-      stmts.push({
-        kind: 'read',
-        mode: 'DIGITAL',
-        pin: makeVarOrLiteral(pinToken),
-        target: varName,
-      });
-      continue;
-    }
+    if (node.nodeType === 'ExpressionStatement') {
+      const expr = node.children[0];
 
-    // Atribuição de incremento/decremento simples: i = i + 1; / i = i - 1;
-    const incDecMatch = line.match(/^(\w+)\s*=\s*(\w+)\s*([+-])\s*([^;]+);$/);
-    if (incDecMatch) {
-      const [, target, rightVar, op, rhsRaw] = incDecMatch;
+      // Handle Assignments
+      if (
+        expr.nodeType === 'BinaryExpression' &&
+        ['=', '+=', '-=', '*=', '/='].includes(expr.attributes.operator)
+      ) {
+        const op = expr.attributes.operator as string;
+        const left = expr.children[0];
+        const right = expr.children[1];
 
-      // Apenas quando é a mesma variável dos dois lados
-      if (target === rightVar && (op === '+' || op === '-')) {
-        const rightExpr = makeVarOrLiteral(rhsRaw.trim());
+        // Identifier assignment: x = ...
+        if (left.nodeType === 'Identifier') {
+          const target = left.attributes.name;
+          if (op === '=') {
+            const readStmt = tryTransformRead(target, right);
+            if (readStmt) {
+              stmts.push(readStmt);
+              continue;
+            }
+            stmts.push({
+              kind: 'assign',
+              target,
+              value: transformExpr(right),
+            } as ASLStatement);
+          } else {
+            const binOp = op.charAt(0) as '+' | '-' | '*' | '/';
+            stmts.push({
+              kind: 'assign',
+              target,
+              value: {
+                kind: 'binary',
+                op: binOp,
+                left: { kind: 'var', name: target },
+                right: transformExpr(right),
+              },
+            } as ASLStatement);
+          }
+        }
+        // Array assignment: arr[i] = ...
+        else if (left.nodeType === 'SubscriptExpression') {
+          const targetArr = left.children[0];
+          const index = left.children[1];
+          if (targetArr.nodeType === 'Identifier') {
+            if (op === '=') {
+              stmts.push({
+                kind: 'setIndex',
+                target: targetArr.attributes.name,
+                index: transformExpr(index),
+                value: transformExpr(right),
+              } as ASLStatement);
+            } else {
+              const binOp = op.charAt(0) as '+' | '-' | '*' | '/';
+              const currentVal: ASLExpr = {
+                kind: 'index',
+                target: transformExpr(targetArr),
+                index: transformExpr(index),
+              };
+              stmts.push({
+                kind: 'setIndex',
+                target: targetArr.attributes.name,
+                index: transformExpr(index),
+                value: {
+                  kind: 'binary',
+                  op: binOp,
+                  left: currentVal,
+                  right: transformExpr(right),
+                },
+              } as ASLStatement);
+            }
+          }
+        }
+        // Member assignment: obj.prop = ...
+        else if (left.nodeType === 'MemberExpression') {
+          if (op === '=') {
+            stmts.push({
+              kind: 'setMember',
+              target: transformExpr(left.children[0]),
+              property: left.attributes.property,
+              value: transformExpr(right),
+            } as ASLStatement);
+          } else {
+            const binOp = op.charAt(0) as '+' | '-' | '*' | '/';
+            const currentVal: ASLExpr = {
+              kind: 'member',
+              target: transformExpr(left.children[0]),
+              property: left.attributes.property,
+            };
+            stmts.push({
+              kind: 'setMember',
+              target: transformExpr(left.children[0]),
+              property: left.attributes.property,
+              value: {
+                kind: 'binary',
+                op: binOp,
+                left: currentVal,
+                right: transformExpr(right),
+              },
+            } as ASLStatement);
+          }
+        }
+        continue;
+      }
 
+      // Handle Unary updates (i++, i--)
+      if (expr.nodeType === 'UnaryExpression' && ['++', '--'].includes(expr.attributes.operator)) {
+        const child = expr.children[0];
+        if (child.nodeType === 'Identifier') {
+          stmts.push({
+            kind: 'assign',
+            target: child.attributes.name,
+            value: {
+              kind: 'binary',
+              op: expr.attributes.operator === '++' ? '+' : '-',
+              left: { kind: 'var', name: child.attributes.name },
+              right: { kind: 'literal', value: 1 },
+            },
+          } as ASLStatement);
+        }
+        continue;
+      }
+
+      // Handle Calls as Statements (Serial.print, func calls)
+      if (expr.nodeType === 'CallExpression') {
+        const stmt = transformCallToStmt(expr);
+        if (stmt) stmts.push(stmt);
+        continue;
+      }
+
+      // Handle Print Node
+      if (expr.nodeType === 'Print') {
         stmts.push({
-          kind: 'assign',
-          target,
-          value: {
-            kind: 'binary',
-            op: op as '+' | '-',
-            left: { kind: 'var', name: target },
-            right: rightExpr,
-          },
-        });
-
+          kind: 'print',
+          args: expr.children.map(transformExpr),
+          newline: true,
+        } as ASLStatement);
         continue;
       }
     }
 
-    // Outras linhas são ignoradas silenciosamente na v1.
+    // Explicit Print Node
+    if (node.nodeType === 'Print') {
+      stmts.push({
+        kind: 'print',
+        args: node.children.map(transformExpr),
+        newline: true,
+      } as ASLStatement);
+      continue;
+    }
   }
 
   return stmts;
 }
 
-function parseIfBlock(
-  lines: string[],
-  startIndex: number
-): { stmt: ASLStatement; nextIndex: number } {
-  const headerRaw = lines[startIndex];
-  const header = headerRaw.replace(/\/\/.*$/, '').trim();
+function transformCallToStmt(node: BaseNode): ASLStatement | null {
+  const callee = node.attributes.callee;
 
-  // Suporta: if (COND) {
-  const m = header.match(/^if\s*\((.+)\)\s*\{/);
-  if (!m) {
-    throw new Error('ASL v1: unsupported if header format');
-  }
+  if (callee === 'pinMode') {
+    // Attempt to extract mode. If literal, easy.
+    // INPUT=0, OUTPUT=1, INPUT_PULLUP=2
+    const modeNode = node.children[1];
+    let mode: 'INPUT' | 'OUTPUT' | 'INPUT_PULLUP' = 'OUTPUT';
 
-  const conditionSrc = m[1].trim();
-  const conditionExpr = parseConditionExpr(conditionSrc);
-
-  // Encontrar fim do bloco THEN, respeitando blocos aninhados
-  let braceCount = 1;
-  let i = startIndex + 1;
-  for (; i < lines.length; i++) {
-    const raw = lines[i];
-    const stripped = raw.replace(/\/\/.*$/, '');
-    for (let j = 0; j < stripped.length; j++) {
-      const ch = stripped[j];
-      if (ch === '{') braceCount++;
-      else if (ch === '}') braceCount--;
-    }
-    if (braceCount === 0) {
-      break;
-    }
-  }
-
-  if (braceCount !== 0) {
-    throw new Error('ASL v1: unmatched braces in if block');
-  }
-
-  const thenLines = lines.slice(startIndex + 1, i);
-  const thenBranch = cppLinesToASLStatements(thenLines);
-
-  let elseBranch: ASLStatement[] | undefined;
-  let lastIndex = i;
-
-  // Verifica se há else ou else-if logo após o bloco THEN, pulando comentários e linhas vazias
-  let elseIndex = i + 1;
-  while (elseIndex < lines.length) {
-    const nextRaw = lines[elseIndex];
-    const nextLine = nextRaw.replace(/\/\/.*$/, '').trim();
-
-    if (!nextLine) {
-      elseIndex++;
-      continue;
+    if (modeNode.nodeType === 'Literal') {
+      const v = modeNode.attributes.value;
+      if (v === 0) mode = 'INPUT';
+      if (v === 2) mode = 'INPUT_PULLUP';
     }
 
-    if (nextLine.startsWith('else')) {
-      const elseIfMatch = nextLine.match(/^else\s+if\s*\((.+)\)\s*\{/);
-      if (elseIfMatch) {
-        // else if (COND) { ... }  ->  else { if (COND) { ... } ... }
-        const patchedLines = [...lines];
-        patchedLines[elseIndex] = nextRaw.replace(/else\s+if/, 'if');
-
-        const { stmt: nestedIf, nextIndex: nestedLastIndex } = parseIfBlock(
-          patchedLines,
-          elseIndex
-        );
-
-        elseBranch = [nestedIf];
-        lastIndex = nestedLastIndex;
-      } else {
-        // else { ... }
-        if (!nextLine.match(/^else\s*\{/)) {
-          throw new Error('ASL v1: unsupported else header format');
-        }
-
-        braceCount = 1;
-        let j = elseIndex + 1;
-        for (; j < lines.length; j++) {
-          const raw = lines[j];
-          const stripped = raw.replace(/\/\/.*$/, '');
-          for (let k = 0; k < stripped.length; k++) {
-            const ch = stripped[k];
-            if (ch === '{') braceCount++;
-            else if (ch === '}') braceCount--;
-          }
-          if (braceCount === 0) {
-            break;
-          }
-        }
-
-        if (braceCount !== 0) {
-          throw new Error('ASL v1: unmatched braces in else block');
-        }
-
-        const elseLines = lines.slice(elseIndex + 1, j);
-        elseBranch = cppLinesToASLStatements(elseLines);
-        lastIndex = j;
-      }
-    }
-    // Para no primeiro statement não-else encontrado fora do bloco
-    break;
+    return {
+      kind: 'pinMode',
+      pin: transformExpr(node.children[0]),
+      mode,
+    } as ASLStatement;
   }
 
-  const stmt: ASLStatement = {
-    kind: 'if',
-    condition: conditionExpr,
-    thenBranch,
-    elseBranch,
-  };
+  if (callee === 'digitalWrite') {
+    return {
+      kind: 'digitalWrite',
+      pin: transformExpr(node.children[0]),
+      value: transformExpr(node.children[1]),
+    } as ASLStatement;
+  }
 
-  // nextIndex deve ser o último índice de linha consumido
-  return { stmt, nextIndex: lastIndex };
+  // Serial
+  if (callee === 'Serial.print' || callee === 'Serial.println') {
+    return {
+      kind: 'print',
+      args: node.children.map(transformExpr),
+      newline: callee === 'Serial.println',
+    } as ASLStatement;
+  }
+
+  // Void Function Calls (genérico)
+  return {
+    kind: 'expr',
+    expr: {
+      kind: 'call',
+      callee,
+      args: node.children.map(transformExpr),
+    },
+  } as ASLStatement;
 }
 
-function parseWhileBlock(
-  lines: string[],
-  startIndex: number
-): { stmt: ASLStatement; nextIndex: number } {
-  const headerRaw = lines[startIndex];
-  const header = headerRaw.replace(/\/\/.*$/, '').trim();
+function tryTransformRead(targetVar: string, valueNode: BaseNode | undefined): ASLStatement | null {
+  if (!valueNode) return null;
 
-  // Suporta: while (COND) {
-  const m = header.match(/^while\s*\((.+)\)\s*\{/);
-  if (!m) {
-    throw new Error('ASL v1: unsupported while header format');
+  if (valueNode.nodeType === 'GpioRead') {
+    return {
+      kind: 'read',
+      mode: 'DIGITAL',
+      target: targetVar,
+      pin: transformExpr(valueNode.children[0]),
+    } as ASLStatement;
   }
-
-  const conditionSrc = m[1].trim();
-  const conditionExpr = parseConditionExpr(conditionSrc);
-
-  // Encontrar fim do bloco WHILE, respeitando blocos aninhados
-  let braceCount = 1;
-  let i = startIndex + 1;
-  for (; i < lines.length; i++) {
-    const raw = lines[i];
-    const stripped = raw.replace(/\/\/.*$/, '');
-    for (let j = 0; j < stripped.length; j++) {
-      const ch = stripped[j];
-      if (ch === '{') braceCount++;
-      else if (ch === '}') braceCount--;
+  if (valueNode.nodeType === 'AnalogRead') {
+    return {
+      kind: 'read',
+      mode: 'ANALOG',
+      target: targetVar,
+      pin: transformExpr(valueNode.children[0]),
+    } as ASLStatement;
+  }
+  if (valueNode.nodeType === 'CallExpression') {
+    if (valueNode.attributes.callee === 'digitalRead') {
+      return {
+        kind: 'read',
+        mode: 'DIGITAL',
+        target: targetVar,
+        pin: transformExpr(valueNode.children[0]),
+      } as ASLStatement;
     }
-    if (braceCount === 0) {
-      break;
+    if (valueNode.attributes.callee === 'analogRead') {
+      return {
+        kind: 'read',
+        mode: 'ANALOG',
+        target: targetVar,
+        pin: transformExpr(valueNode.children[0]),
+      } as ASLStatement;
     }
   }
-
-  if (braceCount !== 0) {
-    throw new Error('ASL v1: unmatched braces in while block');
-  }
-
-  const bodyLines = lines.slice(startIndex + 1, i);
-  const body = cppLinesToASLStatements(bodyLines);
-
-  const stmt: ASLStatement = {
-    kind: 'while',
-    condition: conditionExpr,
-    body,
-  };
-
-  return { stmt, nextIndex: i };
+  return null;
 }
 
-function parseForBlock(
-  lines: string[],
-  startIndex: number
-): { stmts: ASLStatement[]; nextIndex: number } {
-  const headerRaw = lines[startIndex];
-  const header = headerRaw.replace(/\/\/.*$/, '').trim();
+function transformExpr(node: BaseNode | undefined): ASLExpr {
+  if (!node) return { kind: 'literal', value: 0 };
 
-  // Suporta: for (init; cond; inc) {
-  const m = header.match(/^for\s*\((.+)\)\s*\{/);
-  if (!m) {
-    throw new Error('ASL v1: unsupported for header format');
+  if (node.nodeType === 'Literal') {
+    return { kind: 'literal', value: node.attributes.value };
   }
 
-  const parts = m[1].split(';');
-  if (parts.length !== 3) {
-    throw new Error('ASL v1: for header must have 3 parts: init; cond; inc');
+  if (node.nodeType === 'Identifier') {
+    return { kind: 'var', name: node.attributes.name };
   }
 
-  const initSrc = parts[0].trim();
-  const condSrc = parts[1].trim();
-  const incSrc = parts[2].trim();
-
-  const resultStmts: ASLStatement[] = [];
-
-  // init;
-  if (initSrc) {
-    const initStmts = cppLinesToASLStatements([initSrc + ';']);
-    resultStmts.push(...initStmts);
+  if (node.nodeType === 'BinaryExpression') {
+    return {
+      kind: 'binary',
+      op: node.attributes.operator,
+      left: transformExpr(node.children[0]),
+      right: transformExpr(node.children[1]),
+    } as ASLExpr;
   }
 
-  // cond
-  if (!condSrc) {
-    throw new Error('ASL v1: for without condition not supported yet');
-  }
-  const conditionExpr = parseConditionExpr(condSrc);
-
-  // Encontrar fim do bloco FOR/WHILE, respeitando blocos aninhados
-  let braceCount = 1;
-  let i = startIndex + 1;
-  for (; i < lines.length; i++) {
-    const raw = lines[i];
-    const stripped = raw.replace(/\/\/.*$/, '');
-    for (let j = 0; j < stripped.length; j++) {
-      const ch = stripped[j];
-      if (ch === '{') braceCount++;
-      else if (ch === '}') braceCount--;
-    }
-    if (braceCount === 0) {
-      break;
-    }
-  }
-
-  if (braceCount !== 0) {
-    throw new Error('ASL v1: unmatched braces in for block');
-  }
-
-  const bodyLines = lines.slice(startIndex + 1, i);
-  const bodyStmts = cppLinesToASLStatements(bodyLines);
-
-  // inc;
-  let incStmts: ASLStatement[] = [];
-  if (incSrc) {
-    incStmts = cppLinesToASLStatements([incSrc + ';']);
-  }
-
-  const whileStmt: ASLStatement = {
-    kind: 'while',
-    condition: conditionExpr,
-    body: [...bodyStmts, ...incStmts],
-  };
-
-  resultStmts.push(whileStmt);
-
-  return { stmts: resultStmts, nextIndex: i };
-}
-
-function parseConditionExpr(src: string): ASLExpr {
-  const trimmed = src.trim();
-
-  // !EXPR -> unary not
-  const notMatch = trimmed.match(/^!\s*(.+)$/);
-  if (notMatch) {
+  if (node.nodeType === 'UnaryExpression') {
     return {
       kind: 'unary',
-      op: '!',
-      expr: makeVarOrLiteral(notMatch[1].trim()),
-    };
+      op: node.attributes.operator as any,
+      expr: transformExpr(node.children[0]),
+    } as ASLExpr;
   }
 
-  // Suporta: a == b, a != b, a < b, a <= b, a > b, a >= b
-  const eqMatch = trimmed.match(/^(.+)==(.+)$/);
-  if (eqMatch) {
-    const leftToken = eqMatch[1].trim();
-    const rightToken = eqMatch[2].trim();
+  if (node.nodeType === 'CallExpression') {
+    const callee = node.attributes.callee;
     return {
-      kind: 'binary',
-      op: '==',
-      left: makeVarOrLiteral(leftToken),
-      right: makeVarOrLiteral(rightToken),
-    };
+      kind: 'call',
+      callee,
+      args: node.children.map(transformExpr),
+    } as ASLExpr;
   }
 
-  const neqMatch = trimmed.match(/^(.+)!=(.+)$/);
-  if (neqMatch) {
-    const leftToken = neqMatch[1].trim();
-    const rightToken = neqMatch[2].trim();
+  if (node.nodeType === 'GpioRead') {
     return {
-      kind: 'binary',
-      op: '!=',
-      left: makeVarOrLiteral(leftToken),
-      right: makeVarOrLiteral(rightToken),
-    };
+      kind: 'call',
+      callee: 'digitalRead',
+      args: [transformExpr(node.children[0])],
+    } as ASLExpr;
   }
 
-  const lteMatch = trimmed.match(/^(.+)<=(.+)$/);
-  if (lteMatch) {
-    const leftToken = lteMatch[1].trim();
-    const rightToken = lteMatch[2].trim();
+  if (node.nodeType === 'AnalogRead') {
     return {
-      kind: 'binary',
-      op: '<=',
-      left: makeVarOrLiteral(leftToken),
-      right: makeVarOrLiteral(rightToken),
-    };
+      kind: 'call',
+      callee: 'analogRead',
+      args: [transformExpr(node.children[0])],
+    } as ASLExpr;
   }
 
-  const gteMatch = trimmed.match(/^(.+)>=(.+)$/);
-  if (gteMatch) {
-    const leftToken = gteMatch[1].trim();
-    const rightToken = gteMatch[2].trim();
+  if (node.nodeType === 'SubscriptExpression') {
     return {
-      kind: 'binary',
-      op: '>=',
-      left: makeVarOrLiteral(leftToken),
-      right: makeVarOrLiteral(rightToken),
-    };
+      kind: 'index',
+      target: transformExpr(node.children[0]),
+      index: transformExpr(node.children[1]),
+    } as ASLExpr;
   }
 
-  const ltMatch = trimmed.match(/^(.+)<(.+)$/);
-  if (ltMatch) {
-    const leftToken = ltMatch[1].trim();
-    const rightToken = ltMatch[2].trim();
+  if (node.nodeType === 'MemberExpression') {
     return {
-      kind: 'binary',
-      op: '<',
-      left: makeVarOrLiteral(leftToken),
-      right: makeVarOrLiteral(rightToken),
-    };
+      kind: 'member',
+      target: transformExpr(node.children[0]),
+      property: node.attributes.property,
+    } as ASLExpr;
   }
 
-  const gtMatch = trimmed.match(/^(.+)>(.+)$/);
-  if (gtMatch) {
-    const leftToken = gtMatch[1].trim();
-    const rightToken = gtMatch[2].trim();
-    return {
-      kind: 'binary',
-      op: '>',
-      left: makeVarOrLiteral(leftToken),
-      right: makeVarOrLiteral(rightToken),
-    };
-  }
-
-  // Fallback: trata expressão inteira como algo a ser convertido diretamente
-  return makeVarOrLiteral(trimmed);
-}
-
-function makeVarOrLiteral(token: string): ASLExpr {
-  const t = token.trim();
-
-  // Constantes lógicas/Arduino comuns
-  if (t === 'LOW') {
-    return { kind: 'literal', value: 0 };
-  }
-  if (t === 'HIGH') {
-    return { kind: 'literal', value: 1 };
-  }
-  if (t === 'true') {
-    return { kind: 'literal', value: true };
-  }
-  if (t === 'false') {
-    return { kind: 'literal', value: false };
-  }
-
-  const num = parseFloat(t);
-  if (!Number.isNaN(num)) {
-    return { kind: 'literal', value: num };
-  }
-
-  return { kind: 'var', name: t };
+  return { kind: 'literal', value: 0 };
 }
