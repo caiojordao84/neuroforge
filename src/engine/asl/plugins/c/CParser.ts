@@ -1,4 +1,3 @@
-
 import { Lexer } from '@/system/Lexer';
 import type { Token } from '@/system/Lexer';
 import { SymbolTable } from '@/system/SymbolTable';
@@ -151,14 +150,43 @@ export class RecursiveDescentCParser {
         if (t.value === '(') { const expr = this.parseExpression(0); this.consume(')'); return expr; }
 
         // Handle Keywords acting as values (constants)
-        if (['true', 'false', 'HIGH', 'LOW', 'INPUT', 'OUTPUT', 'WL_CONNECTED', 'WL_IDLE_STATUS', 'FILE_WRITE', 'FILE_READ', 'FILE_APPEND'].includes(t.value)) {
+        if ([
+            'true',
+            'false',
+            'HIGH',
+            'LOW',
+            'INPUT',
+            'OUTPUT',
+            'INPUT_PULLUP',
+            'WL_CONNECTED',
+            'WL_IDLE_STATUS',
+            'FILE_WRITE',
+            'FILE_READ',
+            'FILE_APPEND',
+        ].includes(t.value)) {
             let v: any = 0;
+
+            // boolean / digital
             if (t.value === 'true' || t.value === 'HIGH') v = 1;
+            if (t.value === 'false' || t.value === 'LOW') v = 0;
+
+            // pinMode modes: INPUT=0, OUTPUT=1, INPUT_PULLUP=2
+            if (t.value === 'INPUT') v = 0;
+            if (t.value === 'OUTPUT') v = 1;
+            if (t.value === 'INPUT_PULLUP') v = 2;
+
             if (t.value === 'WL_CONNECTED') v = 3;
             if (t.value === 'FILE_WRITE') v = 'w';
             if (t.value === 'FILE_READ') v = 'r';
             if (t.value === 'FILE_APPEND') v = 'a';
-            return { nodeType: 'Literal', id: this.genId(), attributes: { value: v, isString: typeof v === 'string' }, children: [], metadata: { line } };
+
+            return {
+                nodeType: 'Literal',
+                id: this.genId(),
+                attributes: { value: v, isString: typeof v === 'string' },
+                children: [],
+                metadata: { line },
+            };
         }
 
         if (t.type === 'IDENTIFIER') {
