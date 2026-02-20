@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { WindowState } from '@/types';
 
 // Export WindowId type - includes properties window for FEATURE 2.4
-export type WindowId = 'codeEditor' | 'componentsLibrary' | 'serialMonitor' | 'terminal' | 'properties' | 'libraries';
+export type WindowId = 'codeEditor' | 'componentsLibrary' | 'serialMonitor' | 'terminal' | 'properties' | 'libraries' | 'aslViewer';
 
 interface UIStore {
   windows: Record<WindowId, WindowState>;
@@ -76,6 +76,15 @@ const defaultWindows: Record<WindowId, WindowState> = {
     size: { width: 600, height: 500 },
     zIndex: 10,
     title: 'Libraries Management',
+  },
+  aslViewer: {
+    id: 'aslViewer',
+    isOpen: false,
+    isMinimized: false,
+    position: { x: 100, y: 120 },
+    size: { width: 540, height: 480 },
+    zIndex: 10,
+    title: 'ASL Viewer',
   },
 };
 

@@ -12,6 +12,7 @@ import { CanvasArea } from '@/components/CanvasArea';
 import { TopToolbar } from '@/components/TopToolbar';
 import { PropertiesPanel } from '@/components/PropertiesPanel';
 import { LibrariesPanel } from '@/components/LibrariesPanel';
+import { ASLViewer } from '@/components/ASLViewer';
 
 // Stores
 import { useSerialStore } from '@/stores/useSerialStore';
@@ -71,6 +72,10 @@ const AppContent: React.FC = () => {
 
       <FloatingWindow windowId="libraries" minWidth={400} minHeight={300}>
         <LibrariesPanel />
+      </FloatingWindow>
+
+      <FloatingWindow windowId="aslViewer" minWidth={400} minHeight={350}>
+        <ASLViewer />
       </FloatingWindow>
 
       {/* App Initializer */}

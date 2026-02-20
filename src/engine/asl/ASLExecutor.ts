@@ -26,10 +26,10 @@ export interface ASLRuntimeOptions {
 
 // Sinais de controle internos
 class ReturnSignal {
-  constructor(public value: any) {}
+  constructor(public value: any) { }
 }
-class BreakSignal {}
-class ContinueSignal {}
+class BreakSignal { }
+class ContinueSignal { }
 
 export function createASLRuntime(
   program: ASLProgram,
@@ -67,12 +67,14 @@ export function createASLRuntime(
 
   const setup = async () => {
     if (setupFuncDef) {
+      runContext.engine.log('🎬 [ASL] Running setup...');
       await executeStatements(setupFuncDef.body, globalEnv, runContext);
     }
   };
 
   const loop = async () => {
     if (mainTask) {
+      // runContext.engine.log('🔄 [ASL] Running mainLoop iteration...');
       await executeStatements(mainTask.body, globalEnv, runContext);
     }
   };
@@ -129,6 +131,8 @@ async function executeStatements(
           typeof s.value === 'string' ? s.value : await evalExpr(s.value, localEnv, ctx);
         const value =
           valRaw === 'HIGH' || valRaw === 1 || valRaw === true ? 'HIGH' : 'LOW';
+
+        ctx.engine.log(`🔌 [ASL] digitalWrite: pin=${pin}, value=${value}`);
         ctx.engine.digitalWrite(pin, value);
         break;
       }
@@ -199,6 +203,7 @@ async function executeStatements(
 
       case 'assign': {
         const val = await evalExpr(s.value, localEnv, ctx);
+        ctx.engine.log(`📝 [ASL] assign: ${s.target} = ${val}`);
         setVar(s.target, val, localEnv, ctx.globals);
         break;
       }
@@ -326,6 +331,38 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
 
     case 'call': {
       // Builtins específicos
+      if (expr.callee === 'Pin') {
+        const pinNum = await evalExpr(expr.args[0], env, ctx);
+        const modeRaw = expr.args[1] ? await evalExpr(expr.args[1], env, ctx) : 1;
+        const mode = modeRaw === 0 ? 'INPUT' : 'OUTPUT';
+        ctx.engine.pinMode(pinNum, mode);
+        return pinNum;
+      }
+      if (expr.callee === 'Pin.on') {
+        const pin = await evalExpr(expr.args[0], env, ctx);
+        ctx.engine.log(`🔌 [ASL] digitalWrite: pin=${pin}, value=HIGH`);
+        ctx.engine.digitalWrite(pin, 'HIGH');
+        return 0;
+      }
+      if (expr.callee === 'Pin.off') {
+        const pin = await evalExpr(expr.args[0], env, ctx);
+        ctx.engine.log(`🔌 [ASL] digitalWrite: pin=${pin}, value=LOW`);
+        ctx.engine.digitalWrite(pin, 'LOW');
+        return 0;
+      }
+      if (expr.callee === 'Pin.value') {
+        const pin = await evalExpr(expr.args[0], env, ctx);
+        if (expr.args.length > 1) {
+          const valRaw = await evalExpr(expr.args[1], env, ctx);
+          const value = (valRaw === 'HIGH' || valRaw === 1 || valRaw === true) ? 'HIGH' : 'LOW';
+          ctx.engine.log(`🔌 [ASL] digitalWrite: pin=${pin}, value=${value}`);
+          ctx.engine.digitalWrite(pin, value);
+          return 0;
+        } else {
+          return ctx.engine.digitalRead(pin) === 'HIGH' ? 1 : 0;
+        }
+      }
+
       if (expr.callee === 'Serial.begin') return 0; // ignorar
       if (expr.callee === 'random') {
         const min = expr.args[0] ? await evalExpr(expr.args[0], env, ctx) : 0;

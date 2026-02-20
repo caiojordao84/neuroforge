@@ -20,7 +20,7 @@ import { PythonParser } from './plugins/python/PythonParser';
  */
 export async function codeToASL(source: string, language: Language): Promise<ASLProgram> {
   const programAst = await parseToProgramNode(source, language);
-  return astToASL(programAst);
+  return astToASL(programAst, language);
 }
 
 /**
@@ -34,7 +34,9 @@ async function parseToProgramNode(source: string, language: Language): Promise<P
       return ast;
     }
 
-    case 'micropython': {
+    case 'micropython':
+    case 'circuitpython':
+    case 'python': {
       const parser = new PythonParser();
       await parser.init();
       const { ast } = parser.parse(source);
@@ -42,7 +44,8 @@ async function parseToProgramNode(source: string, language: Language): Promise<P
     }
 
     default:
-      throw new Error(`ASL codeToASL: language ${String(language)} not supported`);
+      // Return empty program for unsupported languages
+      return { nodeType: 'Program', id: 'root', attributes: {}, children: [] };
   }
 }
 
@@ -50,42 +53,18 @@ async function parseToProgramNode(source: string, language: Language): Promise<P
 // AST (ProgramNode) → ASLProgram
 // -----------------------------------------------------------------------------
 
-export function astToASL(program: ProgramNode): ASLProgram {
+export function astToASL(program: ProgramNode, language?: Language): ASLProgram {
   const globals: ASLGlobalVar[] = [];
   const functions: ASLFunction[] = [];
   const tasks: ASLTask[] = [];
 
+  const topLevelNodes: BaseNode[] = [];
+  const isPython = language === 'micropython' || language === 'circuitpython' || language === 'python';
+
   program.children.forEach((node) => {
-    // 1. Globals
-    if (node.nodeType === 'VariableDeclaration') {
-      const name = node.attributes.name;
-      const type = node.attributes.type || 'int';
-      let initialValue: any = 0;
+    if (!node) return;
 
-      const valNode = node.children[0];
-      if (valNode) {
-        if (valNode.nodeType === 'ArrayInitializer') {
-          // Convert initializer list to literal array
-          initialValue = valNode.children.map((c) => {
-            const e = transformExpr(c);
-            if (e.kind === 'literal') return e.value;
-            return 0;
-          });
-        } else if (valNode.nodeType === 'Literal') {
-          initialValue = valNode.attributes.value;
-        }
-      }
-
-      globals.push({
-        name,
-        type: type as any,
-        initialValue,
-        // Requer ASLGlobalVar.comments?: string[]
-        comments: node.leadingComments,
-      } as any);
-    }
-
-    // 2. Functions
+    // 1. Functions / Tasks
     if (node.nodeType === 'Function') {
       const name = node.attributes.name;
       const params: any[] = node.attributes.params || [];
@@ -107,8 +86,68 @@ export function astToASL(program: ProgramNode): ASLProgram {
           body,
         });
       }
+    } else {
+      // 2. Top-level statements (Loops, assignments, calls, etc.)
+      topLevelNodes.push(node);
+
+      // Still identify globals for the ASL meta-info
+      if (node.nodeType === 'VariableDeclaration') {
+        const name = node.attributes.name;
+        const type = node.attributes.type || 'int';
+        let initialValue: any = 0;
+
+        const valNode = node.children[0];
+        if (valNode) {
+          if (valNode.nodeType === 'ArrayInitializer') {
+            initialValue = valNode.children.map((c) => {
+              const e = transformExpr(c);
+              if (e.kind === 'literal') return e.value;
+              return 0;
+            });
+          } else if (valNode.nodeType === 'Literal') {
+            initialValue = valNode.attributes.value;
+          }
+        }
+
+        globals.push({
+          name,
+          type: type as any,
+          initialValue,
+          comments: node.leadingComments,
+        } as any);
+      }
     }
   });
+
+  // 3. Process top-level code into the main task
+  if (topLevelNodes.length > 0) {
+    const topLevelStmts = transformBlock(topLevelNodes);
+    const existingLoop = tasks.find((t) => t.name === 'mainLoop');
+
+    if (isPython) {
+      // For Python, top-level code IS the unified task (often containing its own while loop)
+      if (existingLoop) {
+        existingLoop.body.unshift(...topLevelStmts);
+      } else {
+        tasks.push({ name: 'mainLoop', body: topLevelStmts });
+      }
+    } else {
+      // For C++, root level code that is NOT a function is usually illegal or setup-like.
+      // However, we should check if there's a setup() function.
+      const setupFunc = functions.find(f => f.name === 'setup');
+      if (setupFunc) {
+        // Prepend any illegal root statements to setup
+        setupFunc.body.unshift(...topLevelStmts);
+      } else if (existingLoop) {
+        // If no setup, prepend to loop (this is where it was going before, causing regression)
+        // But for C++, we should be careful. We only prepend if it's NOT a repeat.
+        // Actually, let's NO LONGER prepend root nodes to existingLoop for C++ 
+        // because root nodes in C are GLOBALS which are already in 'globals' section.
+      } else {
+        tasks.push({ name: 'mainLoop', body: topLevelStmts });
+      }
+    }
+  }
 
   // Fallback: se não houver 'loop' (ex.: Rust/Zig 'main'), usa 'main' como task
   if (tasks.length === 0) {
@@ -539,6 +578,24 @@ function transformCallToStmt(node: BaseNode): ASLStatement | null {
       kind: 'digitalWrite',
       pin: transformExpr(node.children[0]),
       value: transformExpr(node.children[1]),
+    } as ASLStatement;
+  }
+
+  // MicroPython led.on() -> digitalWrite(pin, HIGH)
+  if (callee === 'Pin.on') {
+    return {
+      kind: 'digitalWrite',
+      pin: transformExpr(node.children[0]),
+      value: { kind: 'literal', value: 1 } as ASLExpr,
+    } as ASLStatement;
+  }
+
+  // MicroPython led.off() -> digitalWrite(pin, LOW)
+  if (callee === 'Pin.off') {
+    return {
+      kind: 'digitalWrite',
+      pin: transformExpr(node.children[0]),
+      value: { kind: 'literal', value: 0 } as ASLExpr,
     } as ASLStatement;
   }
 

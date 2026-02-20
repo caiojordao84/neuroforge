@@ -3,6 +3,8 @@ import { Handle, Position } from '@xyflow/react';
 import { simulationEngine } from '@/engine/SimulationEngine';
 import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useSerialStore } from '@/stores/useSerialStore';
+import { useSimulationStore } from '@/stores/useSimulationStore';
 import { cn } from '@/lib/utils';
 import {
   ledProfiles,
@@ -90,15 +92,31 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
 
       setIsProperlyWired(hasAnodeConnection && hasCathodeConnection);
 
+      if (hasAnodeConnection && !hasCathodeConnection) {
+        const serialStore = (useSerialStore as any).getState();
+        if (serialStore && serialStore.addTerminalLine) {
+          // We only log if simulation is actually starting or running to avoid spam
+          const simStatus = (useSimulationStore as any).getState().status;
+          if (simStatus === 'running') {
+            serialStore.addTerminalLine(`⚠️ LED (${label}): Anode connected to pin, but Cathode is NOT connected to GND. It won't light up!`, 'warning');
+          }
+        }
+      }
+
       if (anodeConnection) {
         const otherEnd =
           anodeConnection.source === `${id}:anode`
             ? anodeConnection.target
             : anodeConnection.source;
 
-        const pinMatch = otherEnd.match(/D(\d+)/);
+        // Isolating the handle ID (e.g., 'mcu-1:D13' -> 'D13')
+        const handleParts = otherEnd.split(':');
+        const handleId = handleParts.length > 1 ? handleParts[handleParts.length - 1] : otherEnd;
+
+        // Match only number in the specific handle ID
+        const pinMatch = handleId.match(/(\d+)/);
         if (pinMatch) {
-          const pinNumber = parseInt(pinMatch[1], 10);
+          const pinNumber = Number(pinMatch[1]);
           setConnectedPin(pinNumber);
         }
       } else {
@@ -165,7 +183,7 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
         value: 'HIGH' | 'LOW' | number;
       };
 
-      if (connectedPin === null || connectedPin !== pinEvent.pin) {
+      if (connectedPin === null || Number(connectedPin) !== Number(pinEvent.pin)) {
         return;
       }
 

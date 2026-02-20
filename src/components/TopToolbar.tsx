@@ -89,17 +89,18 @@ export const TopToolbar: React.FC = () => {
    * Handle START simulation
    */
   const handleStart = useCallback(async () => {
-    if (mode === 'qemu') {
-      // QEMU Mode with auto-detection
+    const activeMCU = getActiveMCU();
+    if (!activeMCU) {
+      addTerminalLine('❌ No MCU found on canvas. Drag an MCU from Components Library.', 'error');
+      return;
+    }
+
+    const isPython = ['micropython', 'circuitpython', 'python'].includes(activeMCU.language);
+
+    if (mode === 'qemu' && !isPython) {
+      // QEMU Mode with auto-detection (C++ only for now)
       if (!isBackendConnected) {
         addTerminalLine('❌ QEMU Backend is not connected. Start server: cd server && npm run dev', 'error');
-        return;
-      }
-
-      const activeMCU = getActiveMCU();
-
-      if (!activeMCU) {
-        addTerminalLine('❌ No MCU found on canvas. Drag an MCU from Components Library.', 'error');
         return;
       }
 
@@ -132,12 +133,9 @@ export const TopToolbar: React.FC = () => {
       await compileAndStart(codeToCompile, activeMCU.type);
 
     } else {
-      // Fake Mode with MCU detection
-      const activeMCU = getActiveMCU();
-
-      if (!activeMCU) {
-        addTerminalLine('❌ No MCU found on canvas. Drag an MCU from Components Library.', 'error');
-        return;
+      // Fake Mode (ASL) or forcing ASL for Python/Micropython
+      if (mode === 'qemu' && isPython) {
+        addTerminalLine(`ℹ️ Python is simulated locally (ASL Engine) instead of QEMU.`, 'info');
       }
 
       // Preprocess code to inject libraries
@@ -145,8 +143,13 @@ export const TopToolbar: React.FC = () => {
 
       let startedWithASL = false;
 
-      // Experimento ASL: para C++ e MicroPython
-      if (activeMCU.language === 'cpp' || activeMCU.language === 'micropython') {
+      addTerminalLine(`🚀 Starting simulation (Language: ${activeMCU.language}, Mode: ${isPython ? 'local' : mode})`, 'info');
+
+
+      // Experimento ASL: para C++ e MicroPython/CircuitPython/Python
+      const isASLSupported = ['cpp', 'micropython', 'circuitpython', 'python'].includes(activeMCU.language);
+
+      if (isASLSupported) {
         try {
           const aslProgram = await codeToASL(processedCode, activeMCU.language);
           addTerminalLine(`✅ ASL Program generated (${aslProgram.globals.length} globals, ${aslProgram.tasks.length} tasks)`, 'success');

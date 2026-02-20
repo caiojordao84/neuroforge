@@ -7,7 +7,6 @@ import { useSimulationStore } from '@/stores/useSimulationStore';
 import { useSerialStore } from '@/stores/useSerialStore';
 import { simulationEngine } from '@/engine/SimulationEngine';
 import { codeParser } from '@/engine/CodeParser';
-import { transpiler } from '@/engine/Transpiler';
 import type { Language } from '@/types';
 import { cn } from '@/lib/utils';
 import {
@@ -25,7 +24,9 @@ import {
   Plus,
   FileCode,
   Microchip,
-  MoreVertical
+  MoreVertical,
+  X,
+  ArrowRightLeft,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -75,8 +76,6 @@ export const CodeEditorWithTabs: React.FC = () => {
 
   const { addTerminalLine } = useSerialStore();
 
-  const [showTranspileConfirm, setShowTranspileConfirm] = useState(false);
-  const [pendingLanguage, setPendingLanguage] = useState<Language | null>(null);
   const [showNewFileDialog, setShowNewFileDialog] = useState(false);
   const [newFileName, setNewFileName] = useState('');
   const [newFileLanguage, setNewFileLanguage] = useState<Language>('cpp');
@@ -120,39 +119,36 @@ export const CodeEditorWithTabs: React.FC = () => {
     [activeFileId, updateFileCode]
   );
 
-  // Handle language change
+  // Map language to file extension
+  const getExtensionForLanguage = (lang: Language): string => {
+    switch (lang) {
+      case 'cpp': return '.ino';
+      case 'micropython':
+      case 'circuitpython': return '.py';
+      case 'assembly': return '.asm';
+      default: return '.ino';
+    }
+  };
+
+  // Handle language change — directly update language and rename file extension
   const handleLanguageChange = useCallback(
     (newLanguage: Language) => {
-      if (!activeFile || newLanguage === activeFile.language) return;
+      if (!activeFile || !activeFileId || newLanguage === activeFile.language) return;
 
-      setPendingLanguage(newLanguage);
-      setShowTranspileConfirm(true);
+      updateFileLanguage(activeFileId, newLanguage);
+
+      // Rename file extension to match new language
+      const baseName = activeFile.name.replace(/\.[^.]+$/, '');
+      const newExt = getExtensionForLanguage(newLanguage);
+      renameFile(activeFileId, `${baseName}${newExt}`);
+
+      addTerminalLine(
+        `🔤 Language changed to ${newLanguage.toUpperCase()} — file renamed to ${baseName}${newExt}`,
+        'info'
+      );
     },
-    [activeFile]
+    [activeFile, activeFileId, updateFileLanguage, renameFile, addTerminalLine]
   );
-
-  // Confirm transpilation
-  const confirmTranspile = useCallback(() => {
-    if (!activeFile || !pendingLanguage || !activeFileId) return;
-
-    const newCode = transpiler.transpile(activeFile.code, activeFile.language, pendingLanguage);
-    updateFileCode(activeFileId, newCode);
-    updateFileLanguage(activeFileId, pendingLanguage);
-
-    addTerminalLine(
-      `🔄 Code transpiled from ${activeFile.language.toUpperCase()} to ${pendingLanguage.toUpperCase()}`,
-      'info'
-    );
-
-    setShowTranspileConfirm(false);
-    setPendingLanguage(null);
-  }, [activeFile, activeFileId, pendingLanguage, updateFileCode, updateFileLanguage, addTerminalLine]);
-
-  // Cancel transpilation
-  const cancelTranspile = useCallback(() => {
-    setShowTranspileConfirm(false);
-    setPendingLanguage(null);
-  }, []);
 
   // Handle create new file
   const handleCreateFile = useCallback(() => {
@@ -184,23 +180,7 @@ export const CodeEditorWithTabs: React.FC = () => {
     }
   }, [renamingFile, renameValue, renameFile]);
 
-  // Global Keyboard Shortcuts
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+W: Close active file
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w') {
-        const currentFile = files.find(f => f.id === activeFileId);
-        if (currentFile && !currentFile.isMain && files.length > 1) {
-          e.preventDefault();
-          e.stopPropagation();
-          handleDeleteFile(currentFile.id, currentFile.name);
-        }
-      }
-    };
 
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [activeFileId, files, handleDeleteFile]);
 
   // Handle run button
   const handleRun = useCallback(() => {
@@ -328,6 +308,16 @@ export const CodeEditorWithTabs: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
+            disabled
+            title="Transpile: not implemented yet"
+            className="h-8 px-3 bg-transparent border-[rgba(0,217,255,0.15)] text-[#5a6472] cursor-not-allowed opacity-50"
+          >
+            <ArrowRightLeft className="w-4 h-4 mr-1" />
+            Transpile
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleReset}
             disabled={status === 'idle'}
             className="h-8 px-3 bg-transparent border-[rgba(0,217,255,0.3)] text-[#9ca3af] hover:text-[#00d9ff] hover:bg-[rgba(0,217,255,0.1)]"
@@ -395,6 +385,21 @@ export const CodeEditorWithTabs: React.FC = () => {
               />
             ) : (
               <span className="truncate flex-1">{file.name}</span>
+            )}
+
+            {/* Inline close ✕ button */}
+            {!file.isMain && files.length > 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteFile(file.id, file.name);
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+                title="Close tab"
+                className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-[rgba(255,80,80,0.25)] hover:text-red-400 transition-all"
+              >
+                <X className="w-3 h-3" />
+              </button>
             )}
 
             {file.mcuId && (
@@ -477,39 +482,6 @@ export const CodeEditorWithTabs: React.FC = () => {
         </Button>
       </Reorder.Group>
 
-      {/* Transpile confirmation dialog */}
-      {
-        showTranspileConfirm && (
-          <div
-            className={cn(
-              'absolute top-24 left-1/2 -translate-x-1/2 z-50',
-              'bg-[#151b24] border border-[rgba(0,217,255,0.3)] rounded-lg',
-              'p-4 shadow-xl'
-            )}
-          >
-            <p className="text-[#e6e6e6] text-sm mb-3">
-              Transpile code from {activeFile?.language.toUpperCase()} to {pendingLanguage?.toUpperCase()}?
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={cancelTranspile}
-                className="bg-transparent border-[rgba(0,217,255,0.3)] text-[#9ca3af]"
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={confirmTranspile}
-                className="bg-[#00d9ff] text-[#0a0e14] hover:bg-[#00a8cc]"
-              >
-                Transpile
-              </Button>
-            </div>
-          </div>
-        )
-      }
 
       {/* New file dialog */}
       <Dialog open={showNewFileDialog} onOpenChange={setShowNewFileDialog}>

@@ -61,11 +61,6 @@ const CanvasInner: React.FC = () => {
   const { addTerminalLine } = useSerialStore();
   const { openWindow } = useUIStore();
 
-  // Handle node click to open properties window
-  const onNodeClick = useCallback((_event: React.MouseEvent, _node: Node) => {
-    openWindow('properties');
-  }, [openWindow]);
-
   // Handle node double-click to open properties window
   const onNodeDoubleClick = useCallback((_event: React.MouseEvent, _node: Node) => {
     openWindow('properties');
@@ -356,7 +351,6 @@ const CanvasInner: React.FC = () => {
         onNodesDelete={onNodesDelete}
         onDrop={onDrop}
         onDragOver={onDragOver}
-        onNodeClick={onNodeClick}
         onNodeDoubleClick={onNodeDoubleClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}

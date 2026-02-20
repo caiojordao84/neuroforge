@@ -6,6 +6,7 @@ import {
   Zap,
   PanelTopOpen,
   Book,
+  BrainCircuit,
 } from 'lucide-react';
 import { useUIStore, type WindowId } from '@/stores/useUIStore';
 import { cn } from '@/lib/utils';
@@ -21,6 +22,7 @@ const tabs: SidebarTab[] = [
   { id: 'componentsLibrary', icon: Cpu, label: 'Components' },
   { id: 'libraries', icon: Book, label: 'Libraries' },
   { id: 'properties', icon: PanelTopOpen, label: 'Properties' },
+  { id: 'aslViewer', icon: BrainCircuit, label: 'ASL Viewer' },
   { id: 'serialMonitor', icon: Terminal, label: 'Serial Monitor' },
   { id: 'terminal', icon: Zap, label: 'Terminal' },
 ];

@@ -13,10 +13,8 @@ export class TreeSitterLoader {
             try {
                 await Parser.init({
                     locateFile(scriptName: string) {
-                        if (scriptName === 'tree-sitter.wasm') {
-                            return '/tree-sitter.wasm';
-                        }
-                        return scriptName;
+                        if (scriptName === 'web-tree-sitter.wasm') return '/tree-sitter.wasm';
+                        return `/${scriptName}`;
                     }
                 });
                 this.initialized = true;

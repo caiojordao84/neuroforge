@@ -29,10 +29,15 @@ export class CppParser {
 
         const errors: AnalysisIssue[] = [];
         const findErrors = (n: any) => {
-            if (n.type === 'ERROR' || n.isMissing()) {
-                errors.push({ severity: 'CRITICAL', message: `Syntax error at line ${n.startPosition.row + 1}: ${n.text}` });
+            if (!n) return;
+            const isMissing = typeof n.isMissing === 'function' ? n.isMissing() : !!n.isMissing;
+            if (n.type === 'ERROR' || isMissing) {
+                const row = n.startPosition ? n.startPosition.row + 1 : '?';
+                errors.push({ severity: 'CRITICAL', message: `Syntax error at line ${row}: ${n.text || ''}` });
             }
-            n.children.forEach(findErrors);
+            if (n.children && Array.isArray(n.children)) {
+                n.children.forEach(findErrors);
+            }
         };
         findErrors(tree.rootNode);
 

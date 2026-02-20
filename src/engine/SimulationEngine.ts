@@ -306,6 +306,7 @@ export class SimulationEngine extends EventEmitter {
   }
 
   digitalWrite(pin: number, value: 'HIGH' | 'LOW'): void {
+    this.log(`📡 [Engine] digitalWrite(pin=${pin}, value=${value})`);
     const simulationStore = useSimulationStore.getState();
     const pinState = simulationStore.getPinState(pin);
 
