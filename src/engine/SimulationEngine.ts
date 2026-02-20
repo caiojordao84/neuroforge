@@ -117,6 +117,7 @@ export class SimulationEngine extends EventEmitter {
   private speedMultiplier = 1;
   private pinCache: Map<number, PinState> = new Map();
   private isLoopExecuting = false;
+  private simulationStartTime = 0;
 
   constructor() {
     super();
@@ -136,6 +137,7 @@ export class SimulationEngine extends EventEmitter {
     this.isPaused = false;
     this.setupExecuted = false;
     this.loopFunction = loopFn;
+    this.simulationStartTime = Date.now();
 
     const simulationStore = useSimulationStore.getState();
     const serialStore = useSerialStore.getState();
@@ -168,6 +170,7 @@ export class SimulationEngine extends EventEmitter {
     this.setupExecuted = false;
     this.loopFunction = null;
     this.isLoopExecuting = false;
+    this.simulationStartTime = 0;
 
     this.timeoutIds.forEach((id) => clearTimeout(id));
     this.timeoutIds = [];
@@ -422,11 +425,13 @@ export class SimulationEngine extends EventEmitter {
   }
 
   millis(): number {
-    return Date.now();
+    if (this.simulationStartTime === 0) return 0;
+    return Date.now() - this.simulationStartTime;
   }
 
   micros(): number {
-    return Date.now() * 1000;
+    if (this.simulationStartTime === 0) return 0;
+    return (Date.now() - this.simulationStartTime) * 1000;
   }
 
   serialBegin(baudRate: number): void {
