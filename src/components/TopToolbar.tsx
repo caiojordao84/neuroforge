@@ -145,10 +145,12 @@ export const TopToolbar: React.FC = () => {
 
       let startedWithASL = false;
 
-      // Experimento ASL: apenas para C++ por enquanto
-      if (activeMCU.language === 'cpp') {
+      // Experimento ASL: para C++ e MicroPython
+      if (activeMCU.language === 'cpp' || activeMCU.language === 'micropython') {
         try {
           const aslProgram = await codeToASL(processedCode, activeMCU.language);
+          addTerminalLine(`✅ ASL Program generated (${aslProgram.globals.length} globals, ${aslProgram.tasks.length} tasks)`, 'success');
+
           const runtime = createASLRuntime(aslProgram);
 
           startSimulation();
@@ -156,11 +158,10 @@ export const TopToolbar: React.FC = () => {
           addTerminalLine(`▶️ Simulation (ASL) started on ${activeMCU.label}`, 'info');
           startedWithASL = true;
         } catch (err) {
-          console.error('[ASL] Failed to run via ASL, falling back to legacy parser', err);
-          addTerminalLine(
-            '⚠️ ASL path not supported for this sketch, falling back to legacy parser',
-            'warning'
-          );
+          console.error('[ASL] Failed to run via ASL', err);
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          addTerminalLine(`❌ ASL Error: ${errorMsg}`, 'error');
+          addTerminalLine('⚠️ Falling back to legacy parser...', 'warning');
         }
       }
 

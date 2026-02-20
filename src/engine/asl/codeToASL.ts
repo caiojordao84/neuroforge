@@ -143,10 +143,19 @@ function transformBlock(nodes: BaseNode[]): ASLStatement[] {
 
     // --- Control Flow ---
     if (node.nodeType === 'IfStatement') {
+      const condition = transformExpr(node.children[0]);
+      const thenBlock = node.children[1];
+      const elseBranch = node.children[2];
+
       stmts.push({
         kind: 'if',
-        condition: transformExpr(node.children[0]),
-        thenBranch: transformBlock(node.children.slice(1)),
+        condition,
+        thenBranch: thenBlock && thenBlock.nodeType === 'Block' ? transformBlock(thenBlock.children) : [],
+        elseBranch: elseBranch
+          ? (elseBranch.nodeType === 'IfStatement'
+            ? transformBlock([elseBranch])
+            : (elseBranch.nodeType === 'Block' ? transformBlock(elseBranch.children) : []))
+          : undefined,
       } as ASLStatement);
       continue;
     }
@@ -181,11 +190,11 @@ function transformBlock(nodes: BaseNode[]): ASLStatement[] {
             update.nodeType === 'ExpressionStatement'
               ? update
               : ({
-                  nodeType: 'ExpressionStatement',
-                  id: 'u',
-                  attributes: {},
-                  children: [update],
-                } as BaseNode),
+                nodeType: 'ExpressionStatement',
+                id: 'u',
+                attributes: {},
+                children: [update],
+              } as BaseNode),
           ]),
         );
       }
@@ -246,6 +255,34 @@ function transformBlock(nodes: BaseNode[]): ASLStatement[] {
     // --- Assignments / Variables ---
     if (node.nodeType === 'VariableDeclaration') {
       const valNode = node.children[0];
+
+      // MicroPython Pin Init: x = Pin(pin, mode)
+      if (valNode && valNode.nodeType === 'CallExpression' && valNode.attributes.callee === 'Pin') {
+        const pinExpr = transformExpr(valNode.children[0]);
+        const modeNode = valNode.children[1];
+        let mode: 'INPUT' | 'OUTPUT' | 'INPUT_PULLUP' = 'INPUT';
+        if (modeNode && modeNode.nodeType === 'Literal') {
+          const v = modeNode.attributes.value;
+          if (v === 1) mode = 'OUTPUT';
+          if (v === 2) mode = 'INPUT_PULLUP';
+        }
+
+        // 1. Emit pinMode
+        stmts.push({
+          kind: 'pinMode',
+          pin: pinExpr,
+          mode,
+        } as ASLStatement);
+
+        // 2. Emit assignment so x stores the pin number
+        stmts.push({
+          kind: 'assign',
+          target: node.attributes.name,
+          value: pinExpr,
+        } as ASLStatement);
+        continue;
+      }
+
       const readStmt = tryTransformRead(node.attributes.name, valNode);
       if (readStmt) {
         stmts.push(readStmt);
@@ -496,6 +533,15 @@ function transformCallToStmt(node: BaseNode): ASLStatement | null {
     } as ASLStatement;
   }
 
+  // MicroPython Pin.value(v) -> digitalWrite
+  if (callee === 'Pin.value' && node.children.length === 2) {
+    return {
+      kind: 'digitalWrite',
+      pin: transformExpr(node.children[0]),
+      value: transformExpr(node.children[1]),
+    } as ASLStatement;
+  }
+
   // Void Function Calls (genérico)
   return {
     kind: 'expr',
@@ -543,6 +589,15 @@ function tryTransformRead(targetVar: string, valueNode: BaseNode | undefined): A
         pin: transformExpr(valueNode.children[0]),
       } as ASLStatement;
     }
+    // MicroPython Pin.value() -> digitalRead
+    if (valueNode.attributes.callee === 'Pin.value') {
+      return {
+        kind: 'read',
+        mode: 'DIGITAL',
+        target: targetVar,
+        pin: transformExpr(valueNode.children[0]),
+      } as ASLStatement;
+    }
   }
   return null;
 }
@@ -577,6 +632,16 @@ function transformExpr(node: BaseNode | undefined): ASLExpr {
 
   if (node.nodeType === 'CallExpression') {
     const callee = node.attributes.callee;
+
+    // MicroPython Pin.value() in expressions -> digitalRead
+    if (callee === 'Pin.value') {
+      return {
+        kind: 'call',
+        callee: 'digitalRead',
+        args: [transformExpr(node.children[0])],
+      } as ASLExpr;
+    }
+
     return {
       kind: 'call',
       callee,

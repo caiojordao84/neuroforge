@@ -53,7 +53,7 @@ class PythonCstToAst {
             if (c.nodeType === 'WhileLoop') {
                 const cond = c.children[0];
                 const isTrueLit = cond.nodeType === 'Literal' && cond.attributes.value === 1;
-                const isTrueId = cond.nodeType === 'Identifier' && cond.attributes.name === 'True';
+                const isTrueId = cond.nodeType === 'Identifier' && (cond.attributes.name === 'True' || cond.attributes.name === '1');
 
                 if (isTrueLit || isTrueId) {
                     loopChildren.push(...c.children.slice(1));
@@ -64,10 +64,11 @@ class PythonCstToAst {
             if (c.nodeType === 'Function') {
                 // Keep functions separate
             } else if (c.nodeType === 'VariableDeclaration') {
-                // Lift vars to Global scope
+                // Global vars: keep in globals for scope, but ALSO put in setup to run initialization
                 globals.push(c);
+                setupChildren.push(c);
             } else {
-                // Everything else goes to setup
+                // Everything else (initializations, calls) goes to setup
                 setupChildren.push(c);
             }
         });
@@ -95,8 +96,23 @@ class PythonCstToAst {
             case 'while_statement': return this.visitWhile(node);
             case 'for_statement': return this.visitFor(node);
             case 'assignment': return this.visitAssignment(node);
-            default: return null;
+            case 'augmented_assignment': return this.visitAssignment(node);
+            case 'return_statement': return this.visitReturn(node);
+            case 'import_statement':
+            case 'import_from_statement':
+                return { nodeType: 'Empty', id: `imp-${node.id}`, attributes: {}, children: [] };
+            default:
+                // Return Empty node for safe filtering instead of null to avoid accidental crashes
+                return { nodeType: 'Empty', id: `e-${node.id}`, attributes: {}, children: [] };
         }
+    }
+
+    visitReturn(node: any): BaseNode {
+        const val = node.child(1) ? this.visitExpr(node.child(1)) : null;
+        return {
+            nodeType: 'ReturnStatement', id: `ret-${node.id}`, attributes: {}, children: val ? [val] : [],
+            metadata: { line: node.startPosition.row + 1 }
+        };
     }
 
     visitFunction(node: any): BaseNode {
@@ -110,60 +126,74 @@ class PythonCstToAst {
     }
 
     visitExprStmt(node: any): BaseNode {
-        const expr = this.visitExpr(node.firstChild!);
+        const exprNode = node.namedChild(0);
+        const expr = exprNode ? this.visitExpr(exprNode) : { nodeType: 'Empty', id: 'e', attributes: {}, children: [] } as BaseNode;
         return {
             nodeType: 'ExpressionStatement', id: `stmt-${node.id}`, attributes: {}, children: [expr],
             metadata: { line: node.startPosition.row + 1 }
-        };
+        } as BaseNode;
     }
 
     visitAssignment(node: any): BaseNode {
-        const left = this.visitExpr(node.childForFieldName('left')!);
-        const right = this.visitExpr(node.childForFieldName('right')!);
+        const leftExpr = node.childForFieldName('left');
+        const rightExpr = node.childForFieldName('right');
+        const operator = node.childForFieldName('operator')?.text || '=';
 
-        // Handle direct GPIO assignment: p2.value(1) -> handled in Call usually, but if p2.value = 1
-        if (node.childForFieldName('left').type === 'attribute') {
-            const attrNode = node.childForFieldName('left');
-            const obj = attrNode.childForFieldName('object')?.text;
-            const attr = attrNode.childForFieldName('attribute')?.text;
+        const left = this.visitExpr(leftExpr!);
+        const right = this.visitExpr(rightExpr!);
+        const meta = { line: node.startPosition.row + 1 };
 
+        // Handle augmented assignments: x += 1 -> x = x + 1
+        if (operator !== '=') {
+            const simpleOp = operator.replace('=', '');
+            return {
+                nodeType: 'ExpressionStatement', id: `assign-${node.id}`, attributes: {},
+                children: [{
+                    nodeType: 'BinaryExpression', id: `op-${node.id}`, attributes: { operator: '=' },
+                    children: [
+                        left,
+                        {
+                            nodeType: 'BinaryExpression', id: `aug-${node.id}`, attributes: { operator: simpleOp },
+                            children: [left, right]
+                        } as BaseNode
+                    ]
+                } as BaseNode],
+                metadata: meta
+            } as BaseNode;
+        }
+
+        // Handle direct GPIO assignment: p2.value = 1
+        if (leftExpr && leftExpr.type === 'attribute') {
+            const attr = leftExpr.childForFieldName('attribute')?.text;
             if (attr === 'value') {
-                if (obj && /^p\d+$/.test(obj)) {
-                    const pin = parseInt(obj.substring(1));
-                    return {
-                        nodeType: 'GpioSet',
-                        id: `set-${node.id}`,
-                        attributes: {},
-                        children: [
-                            { nodeType: 'Literal', id: 'l', attributes: { value: pin }, children: [] },
-                            right
-                        ],
-                        metadata: { line: node.startPosition.row + 1 }
-                    };
-                }
+                return {
+                    nodeType: 'ExpressionStatement', id: `set-${node.id}`, attributes: {},
+                    children: [{
+                        nodeType: 'CallExpression', id: `v-${node.id}`, attributes: { callee: 'Pin.value' },
+                        children: [this.visitExpr(leftExpr.childForFieldName('object')), right]
+                    } as BaseNode],
+                    metadata: meta
+                } as BaseNode;
             }
         }
 
-        // Convert to VariableDeclaration if it looks like a new var definition (simple heuristic)
-        // In full python, assignment can be decl or update. For ASL, treating simple 'x = 1' as decl if not seen?
-        // Actually, PythonParser returns Assignment/ExprStmt. 
-        // We will map simple identifiers on LHS to VariableDeclaration for the top-level hoist logic.
+        // Top-level variable definition (hoistable)
         if (left.nodeType === 'Identifier') {
             return {
                 nodeType: 'VariableDeclaration', id: `decl-${node.id}`,
                 attributes: { name: left.attributes.name, type: 'auto' },
                 children: [right],
-                metadata: { line: node.startPosition.row + 1 }
-            };
+                metadata: meta
+            } as BaseNode;
         }
 
         return {
             nodeType: 'ExpressionStatement', id: `assign-${node.id}`, attributes: {},
             children: [{
                 nodeType: 'BinaryExpression', id: `op-${node.id}`, attributes: { operator: '=' }, children: [left, right]
-            }],
-            metadata: { line: node.startPosition.row + 1 }
-        };
+            } as BaseNode],
+            metadata: meta
+        } as BaseNode;
     }
 
     visitIf(node: any): BaseNode {
@@ -171,16 +201,37 @@ class PythonCstToAst {
         const cons = node.childForFieldName('consequence');
         const alt = node.childForFieldName('alternative');
 
-        const thenChildren = cons ? this.visitBlockChildren(cons) : [];
-        let elseChildren: BaseNode[] = [];
+        const thenBlock: BaseNode = {
+            nodeType: 'Block',
+            id: `blk-${node.id}-then`,
+            attributes: {},
+            children: cons ? this.visitBlockChildren(cons) : [],
+            metadata: { line: node.startPosition.row + 1 }
+        };
+
+        const children = [cond, thenBlock];
+
         if (alt) {
+            // Check if it's an 'elif' (if_statement)
             const body = alt.child(1);
-            if (body) elseChildren = this.visitBlockChildren(body);
+            if (body && body.type === 'if_statement') {
+                const nestedIf = this.visitIf(body);
+                if (nestedIf) children.push(nestedIf);
+            } else if (body) {
+                const elseBlock: BaseNode = {
+                    nodeType: 'Block',
+                    id: `blk-${node.id}-else`,
+                    attributes: {},
+                    children: this.visitBlockChildren(body),
+                    metadata: { line: alt.startPosition.row + 1 }
+                };
+                children.push(elseBlock);
+            }
         }
 
         return {
             nodeType: 'IfStatement', id: `if-${node.id}`, attributes: {},
-            children: [cond, ...thenChildren, ...elseChildren],
+            children: children,
             metadata: { line: node.startPosition.row + 1 }
         };
     }
@@ -261,13 +312,36 @@ class PythonCstToAst {
         if (node.type === 'float') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: parseFloat(node.text) }, children: [], metadata: meta };
         if (node.type === 'string') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: node.text.replace(/['"]/g, ''), isString: true }, children: [], metadata: meta };
         if (node.type === 'identifier') return { nodeType: 'Identifier', id: `i-${node.id}`, attributes: { name: node.text }, children: [], metadata: meta };
-        if (node.type === 'true') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: 1 }, children: [], metadata: meta };
-        if (node.type === 'false') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: 0 }, children: [], metadata: meta };
 
-        if (node.type === 'binary_operator') {
+        // True/False handling (Python nodes can be 'true', 'false' or identifiers True, False)
+        if (node.type === 'true' || node.type === 'True' || (node.type === 'identifier' && node.text === 'True'))
+            return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: 1 }, children: [], metadata: meta };
+        if (node.type === 'false' || node.type === 'False' || (node.type === 'identifier' && node.text === 'False'))
+            return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: 0 }, children: [], metadata: meta };
+        if (node.type === 'none' || node.type === 'None' || (node.type === 'identifier' && node.text === 'None'))
+            return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: 0 }, children: [], metadata: meta };
+
+        if (node.type === 'parenthesized_expression') {
+            const inner = node.namedChild(0);
+            return inner ? this.visitExpr(inner) : { nodeType: 'Empty', id: 'e', attributes: {}, children: [] };
+        }
+
+        if (node.type === 'unary_operator' || node.type === 'not_operator') {
+            const op = node.childForFieldName('operator')?.text || (node.type === 'not_operator' ? 'not' : '-');
+            const arg = this.visitExpr(node.childForFieldName('argument') || node.namedChild(0));
+            return {
+                nodeType: 'UnaryExpression', id: `un-${node.id}`,
+                attributes: { operator: op === 'not' ? '!' : op, prefix: true },
+                children: [arg], metadata: meta
+            };
+        }
+
+        if (node.type === 'binary_operator' || node.type === 'boolean_operator') {
             const left = this.visitExpr(node.childForFieldName('left')!);
             const right = this.visitExpr(node.childForFieldName('right')!);
-            const op = node.childForFieldName('operator')?.text || '+';
+            let op = node.childForFieldName('operator')?.text || 'and';
+            if (op === 'and') op = '&&';
+            if (op === 'or') op = '||';
             return { nodeType: 'BinaryExpression', id: `bin-${node.id}`, attributes: { operator: op }, children: [left, right], metadata: meta };
         }
 
@@ -283,32 +357,43 @@ class PythonCstToAst {
                 const attr = func.childForFieldName('attribute')?.text || '';
                 callee = `${obj}.${attr}`;
 
-                if (/^p\d+$/.test(obj) && attr === 'value' && args.length === 1) {
-                    const pin = parseInt(obj.substring(1));
-                    return {
-                        nodeType: 'GpioSet',
-                        id: `gpio-${node.id}`,
-                        attributes: {},
-                        children: [{ nodeType: 'Literal', id: 'p', attributes: { value: pin }, children: [] }, args[0]],
-                        metadata: meta
-                    };
+                // MicroPython Pin.value() / Pin.value(val)
+                if (attr === 'value') {
+                    if (args.length === 1) {
+                        return { nodeType: 'CallExpression', id: `set-${node.id}`, attributes: { callee: 'Pin.value' }, children: [this.visitExpr(func.childForFieldName('object')), args[0]], metadata: meta };
+                    } else if (args.length === 0) {
+                        return { nodeType: 'CallExpression', id: `get-${node.id}`, attributes: { callee: 'Pin.value' }, children: [this.visitExpr(func.childForFieldName('object'))], metadata: meta };
+                    }
                 }
             }
 
             if (callee === 'print') return { nodeType: 'Print', id: `p-${node.id}`, attributes: {}, children: args, metadata: meta };
-            if (callee === 'time.sleep_ms') return { nodeType: 'DelayMs', id: `d-${node.id}`, attributes: {}, children: args, metadata: meta };
-            if (callee === 'time.sleep') {
+            if (callee === 'time.sleep_ms' || callee === 'sleep_ms') return { nodeType: 'DelayMs', id: `d-${node.id}`, attributes: {}, children: args, metadata: meta };
+            if (callee === 'time.sleep' || callee === 'sleep') {
                 if (args.length > 0 && args[0].nodeType === 'Literal') {
                     const secs = args[0].attributes.value;
                     return { nodeType: 'DelayMs', id: `d-${node.id}`, attributes: {}, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: secs * 1000 }, children: [] }], metadata: meta };
                 }
             }
+            // machine.Pin or Pin
+            if (callee === 'Pin' || callee === 'machine.Pin') {
+                return { nodeType: 'CallExpression', id: `pin-${node.id}`, attributes: { callee: 'Pin' }, children: args, metadata: meta };
+            }
+
             return { nodeType: 'CallExpression', id: `call-${node.id}`, attributes: { callee }, children: args, metadata: meta };
         }
 
         if (node.type === 'attribute') {
             const obj = node.childForFieldName('object')?.text;
             const attr = node.childForFieldName('attribute')?.text;
+
+            // MicroPython Pin constants
+            if (obj === 'Pin' || obj === 'machine.Pin') {
+                if (attr === 'IN') return { nodeType: 'Literal', id: 'in', attributes: { value: 0 }, children: [], metadata: meta };
+                if (attr === 'OUT') return { nodeType: 'Literal', id: 'out', attributes: { value: 1 }, children: [], metadata: meta };
+                if (attr === 'PULL_UP') return { nodeType: 'Literal', id: 'pullup', attributes: { value: 2 }, children: [], metadata: meta };
+            }
+
             if (obj === 'board' && attr) {
                 const match = attr.match(/\d+/);
                 if (match) {

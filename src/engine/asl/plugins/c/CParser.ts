@@ -7,13 +7,23 @@ export class RecursiveDescentCParser {
     private tokens: Token[] = []; private pos: number = 0;
     private symbols = new SymbolTable(); private semanticErrors: AnalysisIssue[] = [];
 
+    private isType(token: Token): boolean {
+        return token.type === 'KEYWORD' && [
+            'int', 'float', 'bool', 'boolean', 'String', 'File', 'char', 'byte', 'short', 'long',
+            'unsigned', 'uint8_t', 'uint16_t', 'uint32_t', 'int8_t', 'int16_t', 'int32_t'
+        ].includes(token.value);
+    }
+
     parse(code: string): { ast: ProgramNode, symbols: Symbol[], errors: AnalysisIssue[] } {
         this.tokens = new Lexer(code).tokenize(); this.pos = 0;
         this.symbols = new SymbolTable(); this.semanticErrors = [];
         const program: ProgramNode = { nodeType: 'Program', id: 'root', attributes: {}, children: [] };
         while (this.peek().type !== 'EOF') {
+            const t = this.peek();
+            if (t.value === 'const') this.consume(); // ignore const for now
+
             if (this.peek().value === 'void') program.children.push(this.parseFunction());
-            else if (this.peek().type === 'KEYWORD' && ['int', 'float', 'String', 'File'].includes(this.peek().value)) {
+            else if (this.isType(this.peek())) {
                 const decl = this.parseVarDecl(); if (decl) program.children.push(decl);
             } else {
                 // Skip unknown tokens at top level to recover
@@ -39,10 +49,13 @@ export class RecursiveDescentCParser {
     private parseStatement(): BaseNode | null {
         const t = this.peek();
         const line = t.line;
+
+        if (t.value === 'const') this.consume(); // ignore const
+
         if (t.value === 'if') return this.parseIf();
         if (t.value === 'while') return this.parseWhile();
         if (t.value === 'for') return this.parseFor();
-        if (t.type === 'KEYWORD' && ['int', 'float', 'bool', 'String', 'File'].includes(t.value)) return this.parseVarDecl();
+        if (this.isType(t)) return this.parseVarDecl();
         if (t.value === ';') { this.consume(); return null; }
         if (t.value === '}') return null; // Should be handled by parseBlock, but safe guard
 
@@ -65,13 +78,33 @@ export class RecursiveDescentCParser {
     private parseIf(): BaseNode {
         const line = this.peek().line;
         this.consume('if'); this.consume('('); const condition = this.parseExpression(0); this.consume(')');
-        const children = this.parseBlock();
+
+        const thenBlock: BaseNode = {
+            nodeType: 'Block',
+            id: this.genId(),
+            attributes: {},
+            children: this.parseBlock(),
+            metadata: { line }
+        };
+
+        const children = [condition, thenBlock];
+
         if (this.peek().value === 'else') {
             this.consume('else');
-            if (this.peek().value === 'if') children.push(this.parseIf());
-            else children.push(...this.parseBlock());
+            if (this.peek().value === 'if') {
+                children.push(this.parseIf());
+            } else {
+                const elseBlock: BaseNode = {
+                    nodeType: 'Block',
+                    id: this.genId(),
+                    attributes: {},
+                    children: this.parseBlock(),
+                    metadata: { line: this.peek().line }
+                };
+                children.push(elseBlock);
+            }
         }
-        return { nodeType: 'IfStatement', id: this.genId(), attributes: {}, children: [condition, ...children], metadata: { line } };
+        return { nodeType: 'IfStatement', id: this.genId(), attributes: {}, children: children, metadata: { line } };
     }
 
     private parseWhile(): BaseNode {
@@ -97,7 +130,14 @@ export class RecursiveDescentCParser {
 
     private parseVarDecl(): BaseNode {
         const line = this.peek().line;
-        const type = this.consume().value; const name = this.consume().value;
+        let type = this.consume().value;
+
+        // Multi-token types: unsigned long, long long, etc.
+        while (this.isType(this.peek()) && this.peek().type === 'KEYWORD') {
+            type += ' ' + this.consume().value;
+        }
+
+        const name = this.consume().value;
         if (!this.symbols.define(name, type, this.peek().line)) this.semanticErrors.push({ severity: 'WARNING', message: `Redeclaration of '${name}'` });
         let value: BaseNode = { nodeType: 'Literal', id: this.genId(), attributes: { value: 0 }, children: [] };
         if (this.peek().value === '=') { this.consume('='); value = this.parseExpression(0); }

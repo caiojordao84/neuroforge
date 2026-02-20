@@ -2,24 +2,32 @@ import { Parser, Language } from 'web-tree-sitter';
 
 export class TreeSitterLoader {
     private static initialized = false;
+    private static initPromise: Promise<void> | null = null;
     private static languages = new Map<string, Language>();
 
     static async init() {
         if (this.initialized) return;
-        try {
-            await Parser.init({
-                locateFile(scriptName: string) {
-                    if (scriptName === 'tree-sitter.wasm') {
-                        return '/tree-sitter.wasm';
+        if (this.initPromise) return this.initPromise;
+
+        this.initPromise = (async () => {
+            try {
+                await Parser.init({
+                    locateFile(scriptName: string) {
+                        if (scriptName === 'tree-sitter.wasm') {
+                            return '/tree-sitter.wasm';
+                        }
+                        return scriptName;
                     }
-                    return scriptName;
-                }
-            });
-            this.initialized = true;
-        } catch (e) {
-            console.error("Failed to initialize web-tree-sitter", e);
-            throw e;
-        }
+                });
+                this.initialized = true;
+            } catch (e) {
+                console.error("Failed to initialize web-tree-sitter", e);
+                this.initPromise = null;
+                throw e;
+            }
+        })();
+
+        return this.initPromise;
     }
 
     static async loadLanguage(lang: string): Promise<Language> {
