@@ -14,6 +14,21 @@ export class RecursiveDescentCParser {
         ].includes(token.value);
     }
 
+    /**
+     * Lookahead: tipo retorno → IDENTIFIER → '('
+     * Distingue função de varDecl quando o tipo de retorno não é void.
+     * Avança sobre múltiplos keywords de tipo (ex: unsigned long).
+     */
+    private isFunctionDecl(): boolean {
+        if (!this.isType(this.peek())) return false;
+        let offset = 1;
+        // Avança sobre qualificadores de tipo adicionais (unsigned long, etc.)
+        while (this.isType(this.peek(offset))) offset++;
+        // peek(offset) deve ser o nome da função (IDENTIFIER)
+        // peek(offset+1) deve ser '('
+        return this.peek(offset).type === 'IDENTIFIER' && this.peek(offset + 1).value === '(';
+    }
+
     parse(code: string): { ast: ProgramNode, symbols: Symbol[], errors: AnalysisIssue[] } {
         this.tokens = new Lexer(code).tokenize(); this.pos = 0;
         this.symbols = new SymbolTable(); this.semanticErrors = [];
@@ -22,8 +37,9 @@ export class RecursiveDescentCParser {
             const t = this.peek();
             if (t.value === 'const') this.consume(); // ignore const for now
 
-            if (this.peek().value === 'void') program.children.push(this.parseFunction());
-            else if (this.isType(this.peek())) {
+            if (this.peek().value === 'void' || this.isFunctionDecl()) {
+                program.children.push(this.parseFunction());
+            } else if (this.isType(this.peek())) {
                 const decl = this.parseVarDecl(); if (decl) program.children.push(decl);
             } else {
                 // Skip unknown tokens at top level to recover
@@ -33,12 +49,47 @@ export class RecursiveDescentCParser {
         return { ast: program, symbols: this.symbols.getAllSymbols(), errors: this.semanticErrors };
     }
 
+    /**
+     * Faz parse de uma função: [tipo_retorno] nome([params]) { body }
+     * Suporta void, bool, int, float, etc. como tipo de retorno.
+     * Suporta lista de parâmetros tipados: (int idx, float x, bool flag)
+     */
     private parseFunction(): BaseNode {
-        this.consume('void'); const name = this.consume().value;
-        const line = this.peek(-2).line;
-        this.consume('('); this.consume(')'); this.consume('{');
+        // Consome tipo de retorno (void ou qualquer tipo)
+        let returnType = this.consume().value;
+        while (this.isType(this.peek())) returnType += ' ' + this.consume().value;
+
+        const name = this.consume().value;
+        const line = this.peek(-1).line;
+
+        // Parse de parâmetros
+        this.consume('(');
+        const params: string[] = [];
+        while (this.peek().value !== ')' && this.peek().type !== 'EOF') {
+            // Consome tipo do parâmetro (pode ser multi-keyword: unsigned long)
+            let paramType = this.consume().value;
+            while (this.isType(this.peek())) paramType += ' ' + this.consume().value;
+            // Nome do parâmetro
+            const paramName = this.consume().value;
+            params.push(paramName);
+            // Suporte a array param: int arr[]
+            if (this.peek().value === '[') { this.consume('['); this.consume(']'); }
+            if (this.peek().value === ',') this.consume(',');
+        }
+        this.consume(')');
+        this.consume('{');
+
         this.symbols.pushScope();
-        const funcNode: BaseNode = { nodeType: 'Function', id: `func-${name}`, attributes: { name }, children: [], metadata: { line } };
+        // Regista parâmetros no scope local
+        for (const p of params) this.symbols.define(p, 'param', line);
+
+        const funcNode: BaseNode = {
+            nodeType: 'Function',
+            id: `func-${name}`,
+            attributes: { name, returnType, params },
+            children: [],
+            metadata: { line },
+        };
         while (this.peek().value !== '}' && this.peek().type !== 'EOF') {
             const stmt = this.parseStatement(); if (stmt) funcNode.children.push(stmt);
         }
@@ -55,6 +106,13 @@ export class RecursiveDescentCParser {
         if (t.value === 'if') return this.parseIf();
         if (t.value === 'while') return this.parseWhile();
         if (t.value === 'for') return this.parseFor();
+        if (t.value === 'return') {
+            this.consume('return');
+            if (this.peek().value === ';') { this.consume(';'); return null; }
+            const val = this.parseExpression(0);
+            this.consume(';');
+            return { nodeType: 'ReturnStatement', id: this.genId(), attributes: {}, children: [val], metadata: { line } };
+        }
         if (this.isType(t)) return this.parseVarDecl();
         if (t.value === ';') { this.consume(); return null; }
         if (t.value === '}') return null;
@@ -210,7 +268,6 @@ export class RecursiveDescentCParser {
         let left = this.parsePrefix();
         while (true) {
             const t = this.peek();
-            // '}' adicionado: impede consumo do fecho do ArrayInitializer
             if (t.type === 'EOF' || [';', ')', ',', ']', '}'].includes(t.value)) break;
             const prec = this.getPrecedence(t.value);
             if (prec < minPrec) break;
@@ -244,7 +301,6 @@ export class RecursiveDescentCParser {
                     metadata: { line: node.metadata?.line },
                 };
             } else if (this.peek().value === '[') {
-                // Subscript: arr[expr] — encadeável (ex: matriz[i][j])
                 const line = this.peek().line;
                 this.consume('[');
                 const index = this.parseExpression(0);
@@ -342,7 +398,7 @@ export class RecursiveDescentCParser {
                         this.consume('(');
                         if (this.peek().value !== ')') { this.parseExpression(0); }
                         this.consume(')');
-                        return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'Serial.begin' }, children: [], metadata: meta };
+                        return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: .begin' }, children: [], metadata: meta };
                     }
                     if (member.startsWith('print')) {
                         const newline = member === 'println';
@@ -366,7 +422,6 @@ export class RecursiveDescentCParser {
                         this.consume('('); this.consume(')');
                         return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'Serial.readString' }, children: [], metadata: meta };
                     }
-                    // Fallback genérico para outros métodos Serial não mapeados
                     if (this.peek().value === '(') {
                         this.consume('(');
                         const args2: BaseNode[] = [];
