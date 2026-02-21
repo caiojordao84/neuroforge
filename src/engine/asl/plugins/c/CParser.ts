@@ -118,6 +118,19 @@ export class RecursiveDescentCParser {
         if (t.value === 'if') return this.parseIf();
         if (t.value === 'while') return this.parseWhile();
         if (t.value === 'for') return this.parseFor();
+        if (t.value === 'switch') return this.parseSwitch();
+
+        if (t.value === 'break') {
+            this.consume('break');
+            if (this.peek().value === ';') this.consume(';');
+            return { nodeType: 'BreakStatement', id: this.genId(), attributes: {}, children: [], metadata: { line } };
+        }
+        if (t.value === 'continue') {
+            this.consume('continue');
+            if (this.peek().value === ';') this.consume(';');
+            return { nodeType: 'ContinueStatement', id: this.genId(), attributes: {}, children: [], metadata: { line } };
+        }
+
         if (t.value === 'return') {
             this.consume('return');
             if (this.peek().value === ';') { this.consume(';'); return { nodeType: 'ReturnStatement', id: this.genId(), attributes: {}, children: [], metadata: { line } }; }
@@ -145,6 +158,97 @@ export class RecursiveDescentCParser {
         }
         this.consume('}'); this.symbols.popScope();
         return nodes;
+    }
+
+    // Converte switch/case para cadeia if/else if — sem novo nodeType, 100% compatível com pipeline
+    private parseSwitch(): BaseNode {
+        const line = this.peek().line;
+        this.consume('switch');
+        this.consume('(');
+        const discriminant = this.parseExpression(0);
+        this.consume(')');
+        this.consume('{');
+
+        // Recolhe todos os cases: { test: BaseNode | null (default), body: BaseNode[] }
+        const cases: { test: BaseNode | null, body: BaseNode[] }[] = [];
+
+        while (this.peek().value !== '}' && this.peek().type !== 'EOF') {
+            if (this.peek().value === 'case') {
+                this.consume('case');
+                const test = this.parseExpression(0);
+                this.consume(':');
+                const body: BaseNode[] = [];
+                while (!['case', 'default', '}'].includes(this.peek().value) && this.peek().type !== 'EOF') {
+                    const s = this.parseStatement();
+                    if (s) body.push(s);
+                }
+                cases.push({ test, body });
+            } else if (this.peek().value === 'default') {
+                this.consume('default');
+                this.consume(':');
+                const body: BaseNode[] = [];
+                while (!['case', 'default', '}'].includes(this.peek().value) && this.peek().type !== 'EOF') {
+                    const s = this.parseStatement();
+                    if (s) body.push(s);
+                }
+                cases.push({ test: null, body });
+            } else {
+                this.consume(); // segurança
+            }
+        }
+        this.consume('}');
+
+        // Constrói cadeia if/else if a partir do fim para o início
+        // default vira o else final, cases viram if/else if
+        // A condição de cada case é: discriminant == test
+        let elseNode: BaseNode | null = null;
+
+        // Separa default dos cases normais
+        const defaultCase = cases.find(c => c.test === null);
+        const normalCases = cases.filter(c => c.test !== null);
+
+        if (defaultCase && defaultCase.body.length > 0) {
+            elseNode = {
+                nodeType: 'Block',
+                id: this.genId(),
+                attributes: {},
+                children: defaultCase.body,
+                metadata: { line },
+            };
+        }
+
+        // Constrói de trás para a frente para encadear correctamente
+        let result: BaseNode | null = elseNode;
+        for (let i = normalCases.length - 1; i >= 0; i--) {
+            const c = normalCases[i];
+            const condition: BaseNode = {
+                nodeType: 'BinaryExpression',
+                id: this.genId(),
+                attributes: { operator: '==' },
+                children: [discriminant, c.test!],
+                metadata: { line },
+            };
+            const thenBlock: BaseNode = {
+                nodeType: 'Block',
+                id: this.genId(),
+                attributes: {},
+                children: c.body,
+                metadata: { line },
+            };
+            const children: BaseNode[] = [condition, thenBlock];
+            if (result) children.push(result);
+            result = {
+                nodeType: 'IfStatement',
+                id: this.genId(),
+                attributes: {},
+                children,
+                metadata: { line },
+            };
+        }
+
+        // Se só tinha default, devolve um Block simples
+        if (!result) return { nodeType: 'Block', id: this.genId(), attributes: {}, children: [], metadata: { line } };
+        return result;
     }
 
     private parseIf(): BaseNode {
@@ -243,15 +347,29 @@ export class RecursiveDescentCParser {
         if (!this.symbols.define(name, type, this.peek().line))
             this.semanticErrors.push({ severity: 'WARNING', message: `Redeclaration of '${name}'` });
 
+        // --- Arrays (1D e 2D) ---
         let isArray = false;
-        let arraySize: BaseNode | null = null;
+        let isArray2D = false;
+        let arraySizeExpr: BaseNode | null = null;   // dimensão 1 como BaseNode (pode ser Identifier ou Literal)
+        let arraySize2Expr: BaseNode | null = null;  // dimensão 2 (se 2D)
+
         if (this.peek().value === '[') {
             isArray = true;
             this.consume('[');
-            if (this.peek().type === 'NUMBER' || this.peek().type === 'IDENTIFIER') {
-                arraySize = this.parseExpression(0);
+            if (this.peek().value !== ']') {
+                arraySizeExpr = this.parseExpression(0);
             }
             this.consume(']');
+
+            // 2D: int m[N][M]
+            if (this.peek().value === '[') {
+                isArray2D = true;
+                this.consume('[');
+                if (this.peek().value !== ']') {
+                    arraySize2Expr = this.parseExpression(0);
+                }
+                this.consume(']');
+            }
         }
 
         let value: BaseNode = {
@@ -264,37 +382,56 @@ export class RecursiveDescentCParser {
         if (this.peek().value === '=') {
             this.consume('=');
             if (isArray && this.peek().value === '{') {
+                // 1D: int arr[] = {1,2,3}  /  2D: int m[][M] = {{1,2},{3,4}}
                 this.consume('{');
                 const elements: BaseNode[] = [];
                 while (this.peek().value !== '}' && this.peek().type !== 'EOF') {
-                    elements.push(this.parseExpression(0));
+                    if (this.peek().value === '{') {
+                        // Linha de array 2D
+                        this.consume('{');
+                        const row: BaseNode[] = [];
+                        while (this.peek().value !== '}' && this.peek().type !== 'EOF') {
+                            row.push(this.parseExpression(0));
+                            if (this.peek().value === ',') this.consume(',');
+                        }
+                        this.consume('}');
+                        elements.push({
+                            nodeType: 'ArrayInitializer',
+                            id: this.genId(),
+                            attributes: { isRow: true },
+                            children: row,
+                        });
+                    } else {
+                        elements.push(this.parseExpression(0));
+                    }
                     if (this.peek().value === ',') this.consume(',');
                 }
                 this.consume('}');
                 value = {
                     nodeType: 'ArrayInitializer',
                     id: this.genId(),
-                    attributes: {},
+                    attributes: { isArray2D },
                     children: elements,
                 };
             } else {
                 value = this.parseExpression(0);
             }
-        } else if (isArray && arraySize) {
-            value = {
-                nodeType: 'ArrayInitializer',
-                id: this.genId(),
-                attributes: {},
-                children: [arraySize], // Representing size as a child if no initializer
-            };
         }
 
         this.consume(';');
         return {
             nodeType: 'VariableDeclaration',
             id: this.genId(),
-            attributes: { name, type, isArray },
-            children: [value, ...(arraySize && !value.children.includes(arraySize) ? [arraySize] : [])],
+            attributes: {
+                name,
+                type,
+                isArray,
+                isArray2D,
+                // Guarda expressões de tamanho para o codeToASL resolver
+                arraySizeExpr: arraySizeExpr ?? undefined,
+                arraySize2Expr: arraySize2Expr ?? undefined,
+            },
+            children: [value],
             metadata: { line },
         };
     }
