@@ -51,6 +51,54 @@ async function parseToProgramNode(source: string, language: Language): Promise<P
 }
 
 // -----------------------------------------------------------------------------
+// Helpers para resolução de tamanho de arrays
+// -----------------------------------------------------------------------------
+
+/**
+ * Resolve uma expressão de tamanho (Literal ou Identifier) para número.
+ * globalsMap: mapa name → initialValue dos globals já processados.
+ */
+function resolveSize(expr: BaseNode | undefined, globalsMap: Map<string, any>): number {
+  if (!expr) return 0;
+  if (expr.nodeType === 'Literal') {
+    const v = expr.attributes.value;
+    return typeof v === 'number' ? Math.floor(v) : 0;
+  }
+  if (expr.nodeType === 'Identifier') {
+    const val = globalsMap.get(expr.attributes.name);
+    if (typeof val === 'number') return Math.floor(val);
+  }
+  return 0;
+}
+
+/**
+ * Constrói array JS vazio com o tamanho correcto.
+ * 1D: Array(N).fill(0)
+ * 2D: Array(N).fill(null).map(() => Array(M).fill(0))
+ */
+function buildEmptyArray(
+  sizeExpr: BaseNode | undefined,
+  size2Expr: BaseNode | undefined,
+  globalsMap: Map<string, any>,
+): any {
+  const n = resolveSize(sizeExpr, globalsMap) || 0;
+  if (size2Expr) {
+    const m = resolveSize(size2Expr, globalsMap) || 0;
+    return Array(n).fill(null).map(() => Array(m).fill(0));
+  }
+  return Array(n).fill(0);
+}
+
+/**
+ * Deep copy segura para arrays (1D e 2D).
+ * Evita referências partilhadas entre chamadas de função.
+ */
+function deepCopyValue(val: any): any {
+  if (Array.isArray(val)) return JSON.parse(JSON.stringify(val));
+  return val;
+}
+
+// -----------------------------------------------------------------------------
 // AST (ProgramNode) → ASLProgram
 // -----------------------------------------------------------------------------
 
@@ -58,6 +106,9 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
   const globals: ASLGlobalVar[] = [];
   const functions: ASLFunction[] = [];
   const tasks: ASLTask[] = [];
+
+  // Mapa name → initialValue para resolver arraySizeExpr que referencia constantes globais
+  const globalsMap = new Map<string, any>();
 
   function mapToASLType(cppType: string): any {
     const lower = cppType.toLowerCase();
@@ -83,6 +134,7 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
           type: 'int',
           initialValue: m.value,
         });
+        globalsMap.set(m.name, m.value);
       });
       return;
     }
@@ -91,7 +143,7 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
     if (node.nodeType === 'Function') {
       const name = node.attributes.name;
       const params: any[] = node.attributes.params || [];
-      const body = transformBlock(node.children);
+      const body = transformBlock(node.children, globalsMap);
 
       // Prepend function-level comments to body
       if (node.leadingComments) {
@@ -117,34 +169,72 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
       if (node.nodeType === 'VariableDeclaration') {
         const name = node.attributes.name;
         const type = mapToASLType(node.attributes.type || 'int');
+        const isArray = node.attributes.isArray;
+        const isArray2D = node.attributes.isArray2D;
         let initialValue: any = 0;
 
         const valNode = node.children[0];
         if (valNode) {
           if (valNode.nodeType === 'ArrayInitializer') {
-            initialValue = valNode.children.map((c) => {
-              const e = transformExpr(c);
-              if (e.kind === 'literal') return e.value;
-              return 0;
-            });
+            if (isArray2D && valNode.attributes.isArray2D) {
+              // 2D com inicializador: int m[N][M] = {{1,2},{3,4}}
+              initialValue = valNode.children.map((rowNode) => {
+                if (rowNode.nodeType === 'ArrayInitializer' && rowNode.attributes.isRow) {
+                  return rowNode.children.map((c) => {
+                    const e = transformExpr(c);
+                    return e.kind === 'literal' ? e.value : 0;
+                  });
+                }
+                const e = transformExpr(rowNode);
+                return e.kind === 'literal' ? e.value : 0;
+              });
+            } else {
+              // 1D com inicializador
+              initialValue = valNode.children.map((c) => {
+                const e = transformExpr(c);
+                if (e.kind === 'literal') return e.value;
+                return 0;
+              });
+            }
           } else if (valNode.nodeType === 'Literal') {
-            initialValue = valNode.attributes.value;
+            if (isArray) {
+              // Array sem inicializador: int arr[N] → zeros com tamanho resolvido
+              initialValue = buildEmptyArray(
+                node.attributes.arraySizeExpr,
+                node.attributes.arraySize2Expr,
+                globalsMap,
+              );
+            } else {
+              initialValue = valNode.attributes.value;
+            }
           }
+        } else if (isArray) {
+          // Sem children: fallback para array vazio com tamanho resolvido
+          initialValue = buildEmptyArray(
+            node.attributes.arraySizeExpr,
+            node.attributes.arraySize2Expr,
+            globalsMap,
+          );
         }
+
+        // Deep copy para evitar referências partilhadas
+        const safeInitialValue = deepCopyValue(initialValue);
 
         globals.push({
           name,
           type: type as any,
-          initialValue,
+          initialValue: safeInitialValue,
           comments: node.leadingComments,
         } as any);
+
+        globalsMap.set(name, safeInitialValue);
       }
     }
   });
 
   // 3. Process top-level code into the main task
   if (topLevelNodes.length > 0) {
-    const topLevelStmts = transformBlock(topLevelNodes);
+    const topLevelStmts = transformBlock(topLevelNodes, globalsMap);
     const existingLoop = tasks.find((t) => t.name === 'mainLoop');
 
     if (isPython) {
@@ -190,7 +280,7 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
   };
 }
 
-function transformBlock(nodes: BaseNode[]): ASLStatement[] {
+function transformBlock(nodes: BaseNode[], globalsMap: Map<string, any> = new Map()): ASLStatement[] {
   const stmts: ASLStatement[] = [];
 
   for (const node of nodes) {
@@ -212,11 +302,11 @@ function transformBlock(nodes: BaseNode[]): ASLStatement[] {
       stmts.push({
         kind: 'if',
         condition,
-        thenBranch: thenBlock && thenBlock.nodeType === 'Block' ? transformBlock(thenBlock.children) : [],
+        thenBranch: thenBlock && thenBlock.nodeType === 'Block' ? transformBlock(thenBlock.children, globalsMap) : [],
         elseBranch: elseBranch
           ? (elseBranch.nodeType === 'IfStatement'
-            ? transformBlock([elseBranch])
-            : (elseBranch.nodeType === 'Block' ? transformBlock(elseBranch.children) : []))
+            ? transformBlock([elseBranch], globalsMap)
+            : (elseBranch.nodeType === 'Block' ? transformBlock(elseBranch.children, globalsMap) : []))
           : undefined,
       } as ASLStatement);
       continue;
@@ -226,7 +316,7 @@ function transformBlock(nodes: BaseNode[]): ASLStatement[] {
       stmts.push({
         kind: 'while',
         condition: transformExpr(node.children[0]),
-        body: transformBlock(node.children.slice(1)),
+        body: transformBlock(node.children.slice(1), globalsMap),
       } as ASLStatement);
       continue;
     }
@@ -234,7 +324,7 @@ function transformBlock(nodes: BaseNode[]): ASLStatement[] {
     if (node.nodeType === 'ForLoop') {
       // Init
       if (node.attributes.hasInit && node.children.length > 0) {
-        stmts.push(...transformBlock([node.children[0]]));
+        stmts.push(...transformBlock([node.children[0]], globalsMap));
       }
 
       // Loop
@@ -245,7 +335,7 @@ function transformBlock(nodes: BaseNode[]): ASLStatement[] {
       if (node.attributes.hasUpdate) idx++;
 
       const bodyNodes = node.children.slice(idx);
-      const bodyStmts = transformBlock(bodyNodes);
+      const bodyStmts = transformBlock(bodyNodes, globalsMap);
       if (update) {
         bodyStmts.push(
           ...transformBlock([
@@ -257,7 +347,7 @@ function transformBlock(nodes: BaseNode[]): ASLStatement[] {
                 attributes: {},
                 children: [update],
               } as BaseNode),
-          ]),
+          ], globalsMap),
         );
       }
 
@@ -317,6 +407,8 @@ function transformBlock(nodes: BaseNode[]): ASLStatement[] {
     // --- Assignments / Variables ---
     if (node.nodeType === 'VariableDeclaration') {
       const valNode = node.children[0];
+      const isArray = node.attributes.isArray;
+      const isArray2D = node.attributes.isArray2D;
 
       // MicroPython Pin Init: x = Pin(pin, mode)
       if (valNode && valNode.nodeType === 'CallExpression' && valNode.attributes.callee === 'Pin') {
@@ -349,19 +441,49 @@ function transformBlock(nodes: BaseNode[]): ASLStatement[] {
       if (readStmt) {
         stmts.push(readStmt);
       } else if (valNode) {
-        // Handle array init in local scope
         if (valNode.nodeType === 'ArrayInitializer') {
-          const arrayVal: ASLExpr = {
-            kind: 'literal',
-            value: valNode.children.map((c) => {
-              const e = transformExpr(c);
-              return e.kind === 'literal' ? e.value : 0;
-            }),
-          };
+          let arrayVal: ASLExpr;
+          if (isArray2D && valNode.attributes.isArray2D) {
+            // 2D local com inicializador
+            arrayVal = {
+              kind: 'literal',
+              value: valNode.children.map((rowNode) => {
+                if (rowNode.nodeType === 'ArrayInitializer' && rowNode.attributes.isRow) {
+                  return rowNode.children.map((c) => {
+                    const e = transformExpr(c);
+                    return e.kind === 'literal' ? e.value : 0;
+                  });
+                }
+                const e = transformExpr(rowNode);
+                return e.kind === 'literal' ? e.value : 0;
+              }),
+            };
+          } else {
+            // 1D local com inicializador
+            arrayVal = {
+              kind: 'literal',
+              value: valNode.children.map((c) => {
+                const e = transformExpr(c);
+                return e.kind === 'literal' ? e.value : 0;
+              }),
+            };
+          }
           stmts.push({
             kind: 'assign',
             target: node.attributes.name,
-            value: arrayVal,
+            value: { kind: 'literal', value: deepCopyValue((arrayVal as any).value) },
+          } as ASLStatement);
+        } else if (isArray && valNode.nodeType === 'Literal' && Array.isArray(valNode.attributes.value) && valNode.attributes.value.length === 0) {
+          // Array local sem inicializador: int arr[N] → zeros com tamanho resolvido
+          const emptyArr = buildEmptyArray(
+            node.attributes.arraySizeExpr,
+            node.attributes.arraySize2Expr,
+            globalsMap,
+          );
+          stmts.push({
+            kind: 'assign',
+            target: node.attributes.name,
+            value: { kind: 'literal', value: emptyArr },
           } as ASLStatement);
         } else {
           stmts.push({
@@ -441,11 +563,26 @@ function transformBlock(nodes: BaseNode[]): ASLStatement[] {
             } as ASLStatement);
           }
         }
-        // Array assignment: arr[i] = ...
+        // Array assignment: arr[i] = ... ou arr[i][j] = ...
         else if (left.nodeType === 'SubscriptExpression') {
           const targetArr = left.children[0];
           const index = left.children[1];
-          if (targetArr.nodeType === 'Identifier') {
+
+          // 2D: arr[i][j] = val — targetArr é SubscriptExpression(Identifier, i)
+          if (targetArr.nodeType === 'SubscriptExpression' && targetArr.children[0].nodeType === 'Identifier') {
+            const arrName = targetArr.children[0].attributes.name;
+            const rowIndex = transformExpr(targetArr.children[1]);
+            const colIndex = transformExpr(index);
+            stmts.push({
+              kind: 'setIndex2D',
+              target: arrName,
+              rowIndex,
+              colIndex,
+              value: transformExpr(right),
+            } as ASLStatement);
+          }
+          // 1D: arr[i] = val
+          else if (targetArr.nodeType === 'Identifier') {
             if (op === '=') {
               stmts.push({
                 kind: 'setIndex',
@@ -800,10 +937,21 @@ function transformExpr(node: BaseNode | undefined): ASLExpr {
   }
 
   if (node.nodeType === 'SubscriptExpression') {
+    const arrayNode = node.children[0];
+    const indexNode = node.children[1];
+    // 2D: arr[i][j] → SubscriptExpression(SubscriptExpression(Identifier, i), j)
+    if (arrayNode.nodeType === 'SubscriptExpression') {
+      return {
+        kind: 'index2D',
+        array: transformExpr(arrayNode.children[0]),
+        rowIndex: transformExpr(arrayNode.children[1]),
+        colIndex: transformExpr(indexNode),
+      } as ASLExpr;
+    }
     return {
       kind: 'index',
-      target: transformExpr(node.children[0]),
-      index: transformExpr(node.children[1]),
+      target: transformExpr(arrayNode),
+      index: transformExpr(indexNode),
     } as ASLExpr;
   }
 
