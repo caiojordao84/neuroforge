@@ -76,6 +76,7 @@ export type ASLStatement =
   | ASLDelay
   | ASLAssign
   | ASLSetIndex
+  | ASLSetIndex2D
   | ASLSetMember
   | ASLExpressionStmt
   | ASLReturn
@@ -172,12 +173,23 @@ export interface ASLAssign {
 }
 
 /**
- * Escrita em índice de array: target[index] = value;
+ * Escrita em índice de array 1D: target[index] = value;
  */
 export interface ASLSetIndex {
   kind: 'setIndex';
   target: string;
   index: ASLExpr;
+  value: ASLExpr;
+}
+
+/**
+ * Escrita em índice de array 2D: target[rowIndex][colIndex] = value;
+ */
+export interface ASLSetIndex2D {
+  kind: 'setIndex2D';
+  target: string;
+  rowIndex: ASLExpr;
+  colIndex: ASLExpr;
   value: ASLExpr;
 }
 
@@ -237,6 +249,7 @@ export type ASLExpr =
   | ASLLiteral
   | ASLVarRef
   | ASLIndex
+  | ASLIndex2D
   | ASLMember
   | ASLUnary
   | ASLBinary
@@ -259,12 +272,22 @@ export interface ASLVarRef {
 }
 
 /**
- * Indexação de array: target[index].
+ * Indexação de array 1D: target[index].
  */
 export interface ASLIndex {
   kind: 'index';
   target: ASLExpr;
   index: ASLExpr;
+}
+
+/**
+ * Indexação de array 2D: array[rowIndex][colIndex].
+ */
+export interface ASLIndex2D {
+  kind: 'index2D';
+  array: ASLExpr;
+  rowIndex: ASLExpr;
+  colIndex: ASLExpr;
 }
 
 /**
