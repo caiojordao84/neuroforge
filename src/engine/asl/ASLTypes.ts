@@ -281,7 +281,7 @@ export interface ASLMember {
  */
 export interface ASLUnary {
   kind: 'unary';
-  op: '-' | '!';
+  op: '-' | '!' | '~' | '+';
   expr: ASLExpr;
 }
 
@@ -291,19 +291,24 @@ export interface ASLUnary {
 export interface ASLBinary {
   kind: 'binary';
   op:
-    | '+'
-    | '-'
-    | '*'
-    | '/'
-    | '%'
-    | '=='
-    | '!='
-    | '<'
-    | '<='
-    | '>'
-    | '>='
-    | '&&'
-    | '||';
+  | '+'
+  | '-'
+  | '*'
+  | '/'
+  | '%'
+  | '=='
+  | '!='
+  | '<'
+  | '<='
+  | '>'
+  | '>='
+  | '&&'
+  | '||'
+  | '&'
+  | '|'
+  | '^'
+  | '<<'
+  | '>>';
   left: ASLExpr;
   right: ASLExpr;
 }

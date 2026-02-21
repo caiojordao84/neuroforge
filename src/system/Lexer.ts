@@ -83,7 +83,7 @@ export class Lexer {
       }
 
       // Multi-char Symbols
-      const symbols = ['<=', '>=', '==', '!=', '&&', '||', '++', '--', '+=', '-=', '->'];
+      const symbols = ['<=', '>=', '==', '!=', '&&', '||', '++', '--', '+=', '-=', '*=', '/=', '<<=', '>>=', '<<', '>>', '&=', '|=', '^=', '->'];
       let matchedSym = symbols.find(s => this.src.substr(this.cursor, s.length) === s);
       if (matchedSym) {
         tokens.push({ type: 'SYMBOL', value: matchedSym, line: this.line });
@@ -91,8 +91,8 @@ export class Lexer {
         continue;
       }
 
-      // Single-char Symbols — '[' e ']' adicionados para suporte a arrays
-      const singleSymbols = ['(', ')', '{', '}', '[', ']', ';', ',', '=', '<', '>', '+', '-', '*', '/', '!', '.', '&', '|', '%'];
+      // Single-char Symbols
+      const singleSymbols = ['(', ')', '{', '}', '[', ']', ';', ',', '=', '<', '>', '+', '-', '*', '/', '!', '.', '&', '|', '^', '~', '%'];
       if (singleSymbols.includes(char)) {
         tokens.push({ type: 'SYMBOL', value: char, line: this.line });
         this.cursor++;

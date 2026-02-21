@@ -295,7 +295,10 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
 
     case 'unary': {
       const v = await evalExpr(expr.expr, env, ctx);
-      return expr.op === '!' ? !v : -v;
+      if (expr.op === '!') return !v;
+      if (expr.op === '~') return ~v;
+      if (expr.op === '+') return +v;
+      return -v;
     }
 
     case 'binary': {
@@ -315,6 +318,11 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         case '>=': return l >= r;
         case '&&': return l && r;
         case '||': return l || r;
+        case '&': return l & r;
+        case '|': return l | r;
+        case '^': return l ^ r;
+        case '<<': return l << r;
+        case '>>': return l >> r;
         default: return 0;
       }
     }
@@ -368,6 +376,42 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       }
       if (expr.callee === 'micros') {
         return ctx.engine.micros();
+      }
+      if (expr.callee === 'tone' || expr.callee === 'noTone' || expr.callee === 'servo') {
+        const args = [];
+        for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
+        if (expr.callee === 'tone') ctx.engine.tone(args[0], args[1], args[2]);
+        if (expr.callee === 'noTone') ctx.engine.noTone(args[0]);
+        if (expr.callee === 'servo') ctx.engine.emit('tone', { pin: args[0], frequency: 1000, angle: args[1] }); // Servo placeholder or specific emit
+        return 0;
+      }
+      if (expr.callee === 'random') {
+        const args = [];
+        for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
+        return ctx.engine.random(args[0], args[1]);
+      }
+      if (expr.callee === 'map') {
+        const args = [];
+        for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
+        return ctx.engine.map(args[0], args[1], args[2], args[3], args[4]);
+      }
+      if (expr.callee === 'constrain') {
+        const args = [];
+        for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
+        return ctx.engine.constrain(args[0], args[1], args[2]);
+      }
+
+      // Conversores de tipo e utilitários padrão
+      if (expr.callee === 'String') return String(await evalExpr(expr.args[0] || { kind: 'literal', value: '' }, env, ctx));
+      if (expr.callee === 'int') return Math.floor(Number(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx)) || 0);
+      if (expr.callee === 'float') return Number(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx)) || 0;
+
+      // Hardware / Library Calls (Event-based)
+      if (expr.callee.includes('.') || expr.callee === 'KeypadRead') {
+        const args = [];
+        for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
+        ctx.engine.emit('hardwareCall', { callee: expr.callee, args });
+        return 0;
       }
 
       // Funções de usuário

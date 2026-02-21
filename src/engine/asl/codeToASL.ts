@@ -514,10 +514,56 @@ function transformBlock(nodes: BaseNode[]): ASLStatement[] {
         stmts.push({
           kind: 'print',
           args: expr.children.map(transformExpr),
-          newline: true,
+          newline: !!expr.attributes.newline,
         } as ASLStatement);
         continue;
       }
+
+      // Handle Specialized Hardware Nodes
+      if (['LcdPrint', 'LcdCursor', 'LcdClear', 'OledText', 'OledShow', 'OledClear', 'SevSegPrint', 'KeypadRead'].includes(expr.nodeType)) {
+        const calleeMap: Record<string, string> = {
+          'LcdPrint': 'lcd.print',
+          'LcdCursor': 'lcd.setCursor',
+          'LcdClear': 'lcd.clear',
+          'OledText': 'oled.text',
+          'OledShow': 'oled.show',
+          'OledClear': 'oled.clear',
+          'SevSegPrint': 'sevseg.print',
+          'KeypadRead': 'KeypadRead'
+        };
+        stmts.push({
+          kind: 'expr',
+          expr: {
+            kind: 'call',
+            callee: calleeMap[expr.nodeType],
+            args: expr.children.map(transformExpr)
+          }
+        } as ASLStatement);
+        continue;
+      }
+    }
+
+    // Explicit Nodes at Block Level
+    if (['LcdPrint', 'LcdCursor', 'LcdClear', 'OledText', 'OledShow', 'OledClear', 'SevSegPrint', 'KeypadRead'].includes(node.nodeType)) {
+      const calleeMap: Record<string, string> = {
+        'LcdPrint': 'lcd.print',
+        'LcdCursor': 'lcd.setCursor',
+        'LcdClear': 'lcd.clear',
+        'OledText': 'oled.text',
+        'OledShow': 'oled.show',
+        'OledClear': 'oled.clear',
+        'SevSegPrint': 'sevseg.print',
+        'KeypadRead': 'KeypadRead'
+      };
+      stmts.push({
+        kind: 'expr',
+        expr: {
+          kind: 'call',
+          callee: calleeMap[node.nodeType],
+          args: node.children.map(transformExpr)
+        }
+      } as ASLStatement);
+      continue;
     }
 
     // Explicit Print Node
@@ -525,7 +571,7 @@ function transformBlock(nodes: BaseNode[]): ASLStatement[] {
       stmts.push({
         kind: 'print',
         args: node.children.map(transformExpr),
-        newline: true,
+        newline: !!node.attributes.newline,
       } as ASLStatement);
       continue;
     }
@@ -720,6 +766,14 @@ function transformExpr(node: BaseNode | undefined): ASLExpr {
       kind: 'call',
       callee: 'analogRead',
       args: [transformExpr(node.children[0])],
+    } as ASLExpr;
+  }
+
+  if (node.nodeType === 'KeypadRead') {
+    return {
+      kind: 'call',
+      callee: 'KeypadRead',
+      args: [],
     } as ASLExpr;
   }
 
