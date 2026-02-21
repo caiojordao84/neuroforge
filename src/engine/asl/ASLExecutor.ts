@@ -221,6 +221,17 @@ async function executeStatements(
         break;
       }
 
+      case 'setIndex2D': {
+        const row = await evalExpr(s.rowIndex, localEnv, ctx);
+        const col = await evalExpr(s.colIndex, localEnv, ctx);
+        const val = await evalExpr(s.value, localEnv, ctx);
+        const arr = getVar(s.target, localEnv, ctx.globals);
+        if (Array.isArray(arr) && Array.isArray(arr[row])) {
+          arr[row][col] = val;
+        }
+        break;
+      }
+
       case 'setMember': {
         const targetObj = await evalExpr(s.target, localEnv, ctx);
         const val = await evalExpr(s.value, localEnv, ctx);
@@ -292,6 +303,14 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       const arr = await evalExpr(expr.target, env, ctx);
       const idx = await evalExpr(expr.index, env, ctx);
       if (Array.isArray(arr)) return arr[idx];
+      return 0;
+    }
+
+    case 'index2D': {
+      const arr = await evalExpr(expr.array, env, ctx);
+      const row = await evalExpr(expr.rowIndex, env, ctx);
+      const col = await evalExpr(expr.colIndex, env, ctx);
+      if (Array.isArray(arr) && Array.isArray(arr[row])) return arr[row][col];
       return 0;
     }
 
@@ -390,13 +409,8 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
         if (expr.callee === 'tone') ctx.engine.tone(args[0], args[1], args[2]);
         if (expr.callee === 'noTone') ctx.engine.noTone(args[0]);
-        if (expr.callee === 'servo') ctx.engine.emit('tone', { pin: args[0], frequency: 1000, angle: args[1] }); // Servo placeholder or specific emit
+        if (expr.callee === 'servo') ctx.engine.emit('tone', { pin: args[0], frequency: 1000, angle: args[1] });
         return 0;
-      }
-      if (expr.callee === 'random') {
-        const args = [];
-        for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
-        return ctx.engine.random(args[0], args[1]);
       }
       if (expr.callee === 'map') {
         const args = [];
