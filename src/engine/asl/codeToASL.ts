@@ -28,6 +28,7 @@ export async function codeToASL(source: string, language: Language): Promise<ASL
  */
 async function parseToProgramNode(source: string, language: Language): Promise<ProgramNode> {
   switch (language) {
+    case 'c':
     case 'cpp': {
       const parser = new RecursiveDescentCParser();
       const { ast } = parser.parse(source);

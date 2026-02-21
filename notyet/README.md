@@ -121,9 +121,9 @@ Language-specific: nós que não têm equivalente universal (escape hatch contro
 [ ] Plugin system: API de plugin (entry points, ciclo de vida, comunicação entre plugins).
 
 ### 1.3. Parser technology
-[ ] Avaliar web-tree-sitter para C, C++, Python, Rust, JS/TS, Lua no browser.
+[x] Avaliar web-tree-sitter para C, C++, Python... (Utilizado para Python/MicroPython).
 [ ] Definir onde parsers customizados são necessários: Assembly, Ada, Forth, Zig.
-[ ] Estratégia de fallback: erro com localização (linha/coluna) ou degradação para parser legado.
+[x] Estratégia de fallback: erro com localização (linha/coluna) ou degradação para parser legado (Implementado no TopToolbar).
 
 ### 1.4. Executor e runtime
 [ ] Confirmar ASLExecutor como o único runtime oficial para simulação fake.
@@ -150,6 +150,7 @@ src/
       ASLTypes.ts           (fonte única de verdade do schema)
       ASLExecutor.ts
       codeToASL.ts
+      LanguageRegistry.ts   (registro central de linguagens)
 
     tools/
       lexer/
@@ -259,6 +260,7 @@ Este é um eixo central do produto. Os dois sentidos devem ser tratados como cap
 
 ### 7.1. C / Arduino C++
 [x] Subset básico v0 (veja seção 0.2 para detalhamento completo).
+[x] Suporte para linguagem 'c' pura em codeToASL.ts.
 [~] Controle de fluxo completo (v1): while e for simples já funcionam; faltam break, continue, switch.
 [ ] Expressões gerais no RHS de atribuições.
 [ ] Arrays e indexação.
@@ -266,9 +268,9 @@ Este é um eixo central do produto. Os dois sentidos devem ser tratados como cap
 [ ] Parser via Tree-sitter C/C++.
 
 ### 7.2. MicroPython / CircuitPython
-[~] Execução via CodeParser legado.
-[ ] pythonToASL.ts: Pin, value(), time.sleep(), if/else, while.
-[ ] Parser via Tree-sitter Python.
+[x] Execução via ASL (MicroPython/CircuitPython/Python).
+[x] Python support: Pin, value(), on(), off(), time.sleep_ms(), if/else, while True.
+[x] Parser via Tree-sitter Python (web-tree-sitter).
 
 ### 7.3. JavaScript / TypeScript
 [ ] Subset com setup()/loop(), IO ops, if/else, while, for.
@@ -413,6 +415,8 @@ Para cada generator:
 [ ] Lexer.ts integrado em src/engine/tools/lexer/, usado em pelo menos um pipeline.
 [ ] SymbolTable.ts integrado em src/engine/tools/symbols/, conectado ao Pass 3 (análise de tipos e escopos).
 [ ] SimulatorInterpreter.ts integrado com papel formal definido (debug/compat vs. executor alternativo).
+[x] LanguageRegistry.ts integrado em src/engine/asl/, centralizando labels, extensões e suporte ASL.
+[x] Limpeza de logs verbosos no Serial Monitor (foco em output do usuário).
 
 ## 13. UX, documentação e teaching mode
 

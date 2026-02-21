@@ -4,8 +4,9 @@ import { useSimulationStore } from '@/stores/useSimulationStore';
 import { useSerialStore } from '@/stores/useSerialStore';
 import { transpiler } from '@/engine/Transpiler';
 import type { Language } from '@/types';
+import { LANGUAGE_REGISTRY, getLanguageInfo } from '@/engine/asl/LanguageRegistry';
 import { cn } from '@/lib/utils';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -16,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Play, RotateCcw, Languages } from 'lucide-react';
 
 export const CodeEditor: React.FC = () => {
-  const { 
+  const {
     getAllMCUs,
     activeMCUId,
     updateMCUCode,
@@ -36,12 +37,12 @@ export const CodeEditor: React.FC = () => {
   const getActiveMCU = useCallback(() => {
     const allMCUs = getAllMCUs();
     if (allMCUs.length === 0) return null;
-    
+
     if (activeMCUId) {
       const mcu = allMCUs.find(m => m.id === activeMCUId);
       if (mcu) return mcu;
     }
-    
+
     return allMCUs[0];
   }, [getAllMCUs, activeMCUId]);
 
@@ -77,7 +78,7 @@ export const CodeEditor: React.FC = () => {
     const newCode = transpiler.transpile(code, activeLanguage, pendingLanguage);
     updateMCUCode(activeMCU.id, newCode);
     updateMCULanguage(activeMCU.id, pendingLanguage);
-    
+
     addTerminalLine(
       `🔄 Code transpiled from ${activeLanguage.toUpperCase()} to ${pendingLanguage.toUpperCase()}`,
       'info'
@@ -111,17 +112,7 @@ export const CodeEditor: React.FC = () => {
 
   // Get editor language for Monaco
   const getEditorLanguage = (lang: Language): string => {
-    switch (lang) {
-      case 'cpp':
-        return 'cpp';
-      case 'micropython':
-      case 'circuitpython':
-        return 'python';
-      case 'assembly':
-        return 'asm';
-      default:
-        return 'cpp';
-    }
+    return getLanguageInfo(lang)?.monacoLanguage || 'cpp';
   };
 
   const editorLanguage = getEditorLanguage(activeLanguage);
@@ -162,30 +153,15 @@ export const CodeEditor: React.FC = () => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-[#151b24] border-[rgba(0,217,255,0.3)]">
-              <SelectItem 
-                value="cpp" 
-                className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)]"
-              >
-                C++ (Arduino)
-              </SelectItem>
-              <SelectItem 
-                value="micropython"
-                className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)]"
-              >
-                MicroPython
-              </SelectItem>
-              <SelectItem 
-                value="circuitpython"
-                className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)]"
-              >
-                CircuitPython
-              </SelectItem>
-              <SelectItem 
-                value="assembly"
-                className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)]"
-              >
-                Assembly (AVR)
-              </SelectItem>
+              {LANGUAGE_REGISTRY.filter(l => l.isASLSupported).map((lang) => (
+                <SelectItem
+                  key={lang.id}
+                  value={lang.id}
+                  className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)]"
+                >
+                  {lang.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -284,10 +260,7 @@ export const CodeEditor: React.FC = () => {
       >
         <div className="flex items-center gap-4">
           <span>
-            {activeLanguage === 'cpp' && 'C++ (Arduino)'}
-            {activeLanguage === 'micropython' && 'MicroPython'}
-            {activeLanguage === 'circuitpython' && 'CircuitPython'}
-            {activeLanguage === 'assembly' && 'Assembly (AVR)'}
+            {getLanguageInfo(activeLanguage)?.label || activeLanguage}
           </span>
           <span>UTF-8</span>
           {activeMCU && (

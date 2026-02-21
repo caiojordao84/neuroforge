@@ -7,6 +7,7 @@ import { simulationEngine } from '@/engine/SimulationEngine';
 import { codeParser } from '@/engine/CodeParser';
 import { createASLRuntime } from '@/engine/asl/ASLExecutor';
 import { codeToASL } from '@/engine/asl/codeToASL';
+import { LANGUAGE_REGISTRY, getASLSupportedLanguages, getLanguageInfo } from '@/engine/asl/LanguageRegistry';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { SimulationModeToggle } from '@/components/SimulationModeToggle';
@@ -95,7 +96,7 @@ export const TopToolbar: React.FC = () => {
       return;
     }
 
-    const isPython = ['micropython', 'circuitpython', 'python'].includes(activeMCU.language);
+    const isPython = getLanguageInfo(activeMCU.language)?.monacoLanguage === 'python';
 
     if (mode === 'qemu' && !isPython) {
       // QEMU Mode with auto-detection (C++ only for now)
@@ -147,7 +148,7 @@ export const TopToolbar: React.FC = () => {
 
 
       // Experimento ASL: para C++ e MicroPython/CircuitPython/Python
-      const isASLSupported = ['cpp', 'micropython', 'circuitpython', 'python'].includes(activeMCU.language);
+      const isASLSupported = getASLSupportedLanguages().includes(activeMCU.language);
 
       if (isASLSupported) {
         try {

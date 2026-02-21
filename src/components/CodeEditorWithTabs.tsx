@@ -8,6 +8,7 @@ import { useSerialStore } from '@/stores/useSerialStore';
 import { simulationEngine } from '@/engine/SimulationEngine';
 import { codeParser } from '@/engine/CodeParser';
 import type { Language } from '@/types';
+import { LANGUAGE_REGISTRY, getLanguageInfo } from '@/engine/asl/LanguageRegistry';
 import { cn } from '@/lib/utils';
 import {
   Select,
@@ -67,6 +68,7 @@ export const CodeEditorWithTabs: React.FC = () => {
     status,
     mcus,
     updateMCUCode,
+    updateMCULanguage,
     startSimulation,
     stopSimulation,
     resetSimulation,
@@ -84,11 +86,12 @@ export const CodeEditorWithTabs: React.FC = () => {
 
   const activeFile = files.find((f) => f.id === activeFileId);
 
-  // Sync file code with MCU store
+  // Sync file code AND language with MCU store
   useEffect(() => {
     // 1. If file is explicitly assigned to an MCU, sync it
     if (activeFile?.mcuId) {
       updateMCUCode(activeFile.mcuId, activeFile.code);
+      updateMCULanguage(activeFile.mcuId, activeFile.language);
       return;
     }
 
@@ -105,9 +108,12 @@ export const CodeEditorWithTabs: React.FC = () => {
         if (singleMCU.code !== activeFile.code) {
           updateMCUCode(singleMCU.id, activeFile.code);
         }
+        if (singleMCU.language !== activeFile.language) {
+          updateMCULanguage(singleMCU.id, activeFile.language);
+        }
       }
     }
-  }, [activeFile?.id, activeFile?.mcuId, activeFile?.code, updateMCUCode, getAllMCUs, files]);
+  }, [activeFile?.id, activeFile?.mcuId, activeFile?.code, activeFile?.language, updateMCUCode, updateMCULanguage, getAllMCUs, files]);
 
   // Handle code change
   const handleCodeChange = useCallback(
@@ -121,13 +127,7 @@ export const CodeEditorWithTabs: React.FC = () => {
 
   // Map language to file extension
   const getExtensionForLanguage = (lang: Language): string => {
-    switch (lang) {
-      case 'cpp': return '.ino';
-      case 'micropython':
-      case 'circuitpython': return '.py';
-      case 'assembly': return '.asm';
-      default: return '.ino';
-    }
+    return getLanguageInfo(lang)?.extension || '.ino';
   };
 
   // Handle language change — directly update language and rename file extension
@@ -220,17 +220,7 @@ export const CodeEditorWithTabs: React.FC = () => {
 
   // Get editor language for Monaco
   const getEditorLanguage = (lang: Language): string => {
-    switch (lang) {
-      case 'cpp':
-        return 'cpp';
-      case 'micropython':
-      case 'circuitpython':
-        return 'python';
-      case 'assembly':
-        return 'asm';
-      default:
-        return 'cpp';
-    }
+    return getLanguageInfo(lang)?.monacoLanguage || 'cpp';
   };
 
   const editorLanguage = activeFile ? getEditorLanguage(activeFile.language) : 'cpp';
@@ -275,30 +265,15 @@ export const CodeEditorWithTabs: React.FC = () => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-[#151b24] border-[rgba(0,217,255,0.3)]">
-              <SelectItem
-                value="cpp"
-                className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)]"
-              >
-                C++ (Arduino)
-              </SelectItem>
-              <SelectItem
-                value="micropython"
-                className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)]"
-              >
-                MicroPython
-              </SelectItem>
-              <SelectItem
-                value="circuitpython"
-                className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)]"
-              >
-                CircuitPython
-              </SelectItem>
-              <SelectItem
-                value="assembly"
-                className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)]"
-              >
-                Assembly (AVR)
-              </SelectItem>
+              {LANGUAGE_REGISTRY.filter(l => l.isASLSupported).map((lang) => (
+                <SelectItem
+                  key={lang.id}
+                  value={lang.id}
+                  className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)]"
+                >
+                  {lang.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
