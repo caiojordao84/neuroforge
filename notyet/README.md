@@ -29,11 +29,11 @@ Marcadores de status:
     - Único lugar onde decidimos se uma linguagem suporta ASL ou cai no parser legado.
 
 [x] TopToolbar.tsx:
-    - Botão Run em modo fake:
+    - Botão Run em modo JS:
       - Obtém código atual do CodeEditorWithTabs.
       - Resolve a linguagem via LanguageRegistry.
       - Chama o pipeline de transpilação → ASL (codeToASL).
-      - Cria um ASLRuntime (ASLExecutor) e inicializa o SimulationEngine em modo fake.
+      - Cria um ASLRuntime (ASLExecutor) e inicializa o SimulationEngine em modo JS.
     - Fallback: se a linguagem/board não suportar ASL, usa o fluxo CodeParser legado.
 
 [x] codeToASL.ts:

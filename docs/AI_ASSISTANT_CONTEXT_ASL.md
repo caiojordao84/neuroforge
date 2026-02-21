@@ -3,7 +3,7 @@
 > **Data de Atualização:** 21/02/2026  
 > **Branch:** `ASL_Integration`  
 > **Commit Base:** `488221ac` (21/02/2026) — notyet/README.md atualizado  
-> **Foco Atual:** Pipeline ASL fake-mode (C++ Arduino + MicroPython → ASL → SimulationEngine)
+> **Foco Atual:** Pipeline ASL JS-mode (C++ Arduino + MicroPython → ASL → SimulationEngine)
 
 ---
 
@@ -12,7 +12,7 @@
 Tu és um assistente técnico ajudando o desenvolvedor **Caio** a construir o subsistema **ASL (Abstract Simulation Language)** do projeto **NeuroForge**. O ASL é uma Representação Intermediária (IR) universal que serve de pivô entre:
 
 - **Entradas**: código-fonte (C++ Arduino, MicroPython, futuramente JS, Rust, Zig, Ada, Forth, Assembly, Lua) e editores visuais (Blockly, Flowchart, Ladder).
-- **Saídas**: execução no SimulationEngine (modo fake, browser), geradores de código para outras linguagens, e representações visuais.
+- **Saídas**: execução no SimulationEngine (modo JS, browser), geradores de código para outras linguagens, e representações visuais.
 
 O objetivo é que qualquer sketch ou programa embarcado, de qualquer linguagem, passe sempre pelo ASL antes de ser executado ou convertido — ASL como pivô universal.
 
@@ -46,7 +46,7 @@ O objetivo é que qualquer sketch ou programa embarcado, de qualquer linguagem, 
 ```
 src/
   engine/
-    SimulationEngine.ts          # Engine de simulação (fake mode): GPIO, delay, millis, Serial
+    SimulationEngine.ts          # Engine de simulação (JS mode): GPIO, delay, millis, Serial
     asl/
       ASLTypes.ts                # ✅ Fonte única de verdade do schema ASL
       ASLExecutor.ts             # ✅ Interpreter/runtime ASL → SimulationEngine
@@ -147,36 +147,36 @@ interface ASLProgram {
 
 ### Statements suportados (ASLStatement)
 
-| kind | Descrição | Campos chave |
-|---|---|---|
-| `pinMode` | Configurar modo de pino | `pin: ASLExpr`, `mode: INPUT\|OUTPUT\|INPUT_PULLUP` |
-| `digitalWrite` | Escrever valor digital | `pin: ASLExpr`, `value: 'HIGH'\|'LOW'\|ASLExpr` |
-| `analogWrite` | Escrever valor analógico/PWM | `pin: ASLExpr`, `value: ASLExpr` |
-| `read` | Leitura de pino para variável | `pin`, `target: string`, `mode: DIGITAL\|ANALOG` |
-| `if` | Condicional | `condition`, `thenBranch`, `elseBranch?` |
-| `while` | Loop while | `condition`, `body` |
-| `delay` | Espera bloqueante | `milliseconds: ASLExpr` |
-| `assign` | Atribuição simples | `target: string`, `value: ASLExpr` |
-| `setIndex` | Atribuição em array | `target: string`, `index`, `value` |
-| `setMember` | Atribuição em propriedade | `target: ASLExpr`, `property: string`, `value` |
-| `expr` | Expressão como statement | `expr: ASLExpr` |
-| `return` | Retorno de função | `value?: ASLExpr` |
-| `print` | Serial.print / log | `args: ASLExpr[]`, `newline: boolean` |
-| `break` | Interrompe loop | — |
-| `continue` | Próxima iteração | — |
-| `comment` | Preservação de contexto | `text: string` |
+| kind           | Descrição                     | Campos chave                                        |
+| -------------- | ----------------------------- | --------------------------------------------------- |
+| `pinMode`      | Configurar modo de pino       | `pin: ASLExpr`, `mode: INPUT\|OUTPUT\|INPUT_PULLUP` |
+| `digitalWrite` | Escrever valor digital        | `pin: ASLExpr`, `value: 'HIGH'\|'LOW'\|ASLExpr`     |
+| `analogWrite`  | Escrever valor analógico/PWM  | `pin: ASLExpr`, `value: ASLExpr`                    |
+| `read`         | Leitura de pino para variável | `pin`, `target: string`, `mode: DIGITAL\|ANALOG`    |
+| `if`           | Condicional                   | `condition`, `thenBranch`, `elseBranch?`            |
+| `while`        | Loop while                    | `condition`, `body`                                 |
+| `delay`        | Espera bloqueante             | `milliseconds: ASLExpr`                             |
+| `assign`       | Atribuição simples            | `target: string`, `value: ASLExpr`                  |
+| `setIndex`     | Atribuição em array           | `target: string`, `index`, `value`                  |
+| `setMember`    | Atribuição em propriedade     | `target: ASLExpr`, `property: string`, `value`      |
+| `expr`         | Expressão como statement      | `expr: ASLExpr`                                     |
+| `return`       | Retorno de função             | `value?: ASLExpr`                                   |
+| `print`        | Serial.print / log            | `args: ASLExpr[]`, `newline: boolean`               |
+| `break`        | Interrompe loop               | —                                                   |
+| `continue`     | Próxima iteração              | —                                                   |
+| `comment`      | Preservação de contexto       | `text: string`                                      |
 
 ### Expressões suportadas (ASLExpr)
 
-| kind | Descrição | Exemplo |
-|---|---|---|
-| `literal` | Valor constante | `{ kind:'literal', value: 42 }` |
-| `var` | Referência a variável | `{ kind:'var', name:'ledState' }` |
-| `index` | Indexação de array | `pins[i]` |
-| `member` | Acesso a propriedade | `obj.property` |
-| `unary` | Operador unário | `!flag`, `-x` |
-| `binary` | Operador binário | `a + b`, `i < 10`, `a && b` |
-| `call` | Chamada de função/builtin | `millis()`, `digitalRead(pin)` |
+| kind      | Descrição                 | Exemplo                           |
+| --------- | ------------------------- | --------------------------------- |
+| `literal` | Valor constante           | `{ kind:'literal', value: 42 }`   |
+| `var`     | Referência a variável     | `{ kind:'var', name:'ledState' }` |
+| `index`   | Indexação de array        | `pins[i]`                         |
+| `member`  | Acesso a propriedade      | `obj.property`                    |
+| `unary`   | Operador unário           | `!flag`, `-x`                     |
+| `binary`  | Operador binário          | `a + b`, `i < 10`, `a && b`       |
+| `call`    | Chamada de função/builtin | `millis()`, `digitalRead(pin)`    |
 
 **Operadores binários suportados:** `+`, `-`, `*`, `/`, `%`, `==`, `!=`, `<`, `<=`, `>`, `>=`, `&&`, `||`
 
@@ -204,11 +204,11 @@ await runtime.loop();    // executa tasks[0] em cada iteração
 
 ### Sinais de controlo de fluxo
 
-| Classe | Lançada em | Capturada em |
-|---|---|---|
-| `ReturnSignal(value)` | statement `return` | execução de função (`call`) |
-| `BreakSignal` | statement `break` | loop `while` |
-| `ContinueSignal` | statement `continue` | loop `while` |
+| Classe                | Lançada em           | Capturada em                |
+| --------------------- | -------------------- | --------------------------- |
+| `ReturnSignal(value)` | statement `return`   | execução de função (`call`) |
+| `BreakSignal`         | statement `break`    | loop `while`                |
+| `ContinueSignal`      | statement `continue` | loop `while`                |
 
 > ⚠️ Estes são mecanismos de controlo de fluxo internos — não são erros. **Nunca** os remova sem substituto.
 
@@ -226,20 +226,20 @@ A cada **10 iterações** do `while`, o executor faz yield com `setTimeout(r, 0)
 
 ### Builtins reconhecidos no `evalExpr` (kind: 'call')
 
-| callee | Acção |
-|---|---|
-| `millis` | `engine.millis()` → ms desde início da simulação |
-| `micros` | `engine.micros()` → μs desde início da simulação |
-| `digitalRead(pin)` | `engine.digitalRead(pin)` → `'HIGH'` ou `'LOW'` convertido para `1`/`0` |
-| `analogRead(pin)` | `engine.analogRead(pin)` → `0–1023` |
-| `random(min, max)` | `Math.floor(Math.random() * (max - min)) + min` |
-| `Pin(num, mode)` | `engine.pinMode(num, mode)` (MicroPython) |
-| `Pin.on(pin)` | `engine.digitalWrite(pin, 'HIGH')` |
-| `Pin.off(pin)` | `engine.digitalWrite(pin, 'LOW')` |
-| `Pin.value(pin[, v])` | leitura ou escrita conforme nº de args |
-| `Serial.begin` | no-op |
-| funções do user | executa com novo localEnv, params passados por posição |
-| desconhecida | retorna `0` sem erro |
+| callee                | Acção                                                                   |
+| --------------------- | ----------------------------------------------------------------------- |
+| `millis`              | `engine.millis()` → ms desde início da simulação                        |
+| `micros`              | `engine.micros()` → μs desde início da simulação                        |
+| `digitalRead(pin)`    | `engine.digitalRead(pin)` → `'HIGH'` ou `'LOW'` convertido para `1`/`0` |
+| `analogRead(pin)`     | `engine.analogRead(pin)` → `0–1023`                                     |
+| `random(min, max)`    | `Math.floor(Math.random() * (max - min)) + min`                         |
+| `Pin(num, mode)`      | `engine.pinMode(num, mode)` (MicroPython)                               |
+| `Pin.on(pin)`         | `engine.digitalWrite(pin, 'HIGH')`                                      |
+| `Pin.off(pin)`        | `engine.digitalWrite(pin, 'LOW')`                                       |
+| `Pin.value(pin[, v])` | leitura ou escrita conforme nº de args                                  |
+| `Serial.begin`        | no-op                                                                   |
+| funções do user       | executa com novo localEnv, params passados por posição                  |
+| desconhecida          | retorna `0` sem erro                                                    |
 
 ---
 
@@ -267,23 +267,23 @@ function codeToASL(source: string, language: Language): ASLProgram
 
 ### Regras de transformBlock (C++)
 
-| Input AST | Output ASL |
-|---|---|
-| `GpioSet(pin, val)` | `{ kind:'digitalWrite', pin, value }` |
-| `AnalogWrite(pin, val)` | `{ kind:'analogWrite', pin, value }` |
-| `DelayMs(ms)` | `{ kind:'delay', milliseconds }` |
-| `GpioRead(pin)` / `AnalogRead(pin)` em assign | `{ kind:'read', ... }` |
-| `IfStatement` | `{ kind:'if', condition, thenBranch, elseBranch? }` |
-| `WhileStatement` | `{ kind:'while', condition, body }` |
-| `ForStatement` | `init-assign` + `{ kind:'while', ... }` com `inc` no fim do body |
-| `ReturnStatement` | `{ kind:'return', value? }` |
-| `BreakStatement` | `{ kind:'break' }` |
-| `ContinueStatement` | `{ kind:'continue' }` |
-| `Print(args)` | `{ kind:'print', args, newline }` |
-| `AssignExpression` | `{ kind:'assign', target, value }` |
-| `UnaryExpression (++/--)` | `{ kind:'assign', target, value: binary(target ± 1) }` |
-| `CallExpression` genérica | `{ kind:'expr', expr: { kind:'call', callee, args } }` |
-| `VariableDeclaration` local | `{ kind:'assign', target, value }` |
+| Input AST                                     | Output ASL                                                       |
+| --------------------------------------------- | ---------------------------------------------------------------- |
+| `GpioSet(pin, val)`                           | `{ kind:'digitalWrite', pin, value }`                            |
+| `AnalogWrite(pin, val)`                       | `{ kind:'analogWrite', pin, value }`                             |
+| `DelayMs(ms)`                                 | `{ kind:'delay', milliseconds }`                                 |
+| `GpioRead(pin)` / `AnalogRead(pin)` em assign | `{ kind:'read', ... }`                                           |
+| `IfStatement`                                 | `{ kind:'if', condition, thenBranch, elseBranch? }`              |
+| `WhileStatement`                              | `{ kind:'while', condition, body }`                              |
+| `ForStatement`                                | `init-assign` + `{ kind:'while', ... }` com `inc` no fim do body |
+| `ReturnStatement`                             | `{ kind:'return', value? }`                                      |
+| `BreakStatement`                              | `{ kind:'break' }`                                               |
+| `ContinueStatement`                           | `{ kind:'continue' }`                                            |
+| `Print(args)`                                 | `{ kind:'print', args, newline }`                                |
+| `AssignExpression`                            | `{ kind:'assign', target, value }`                               |
+| `UnaryExpression (++/--)`                     | `{ kind:'assign', target, value: binary(target ± 1) }`           |
+| `CallExpression` genérica                     | `{ kind:'expr', expr: { kind:'call', callee, args } }`           |
+| `VariableDeclaration` local                   | `{ kind:'assign', target, value }`                               |
 
 ---
 
@@ -296,29 +296,29 @@ function codeToASL(source: string, language: Language): ASLProgram
 
 Esta tabela é crítica. O parser mapeia constantes textuais para valores numéricos antes de qualquer transformação:
 
-| Constante | Valor |
-|---|---|
-| `HIGH`, `true` | `1` |
-| `LOW`, `false` | `0` |
-| `INPUT` | `0` |
-| `OUTPUT` | `1` |
-| `INPUT_PULLUP` | `2` |
-| `WL_CONNECTED` | `3` |
-| `FILE_WRITE` | `1` |
-| `FILE_READ` | `0` |
+| Constante      | Valor |
+| -------------- | ----- |
+| `HIGH`, `true` | `1`   |
+| `LOW`, `false` | `0`   |
+| `INPUT`        | `0`   |
+| `OUTPUT`       | `1`   |
+| `INPUT_PULLUP` | `2`   |
+| `WL_CONNECTED` | `3`   |
+| `FILE_WRITE`   | `1`   |
+| `FILE_READ`    | `0`   |
 
 ### Builtins reconhecidos como nós semânticos
 
-| Chamada | Nó AST produzido |
-|---|---|
-| `pinMode(pin, mode)` | `ASLPinMode` |
-| `digitalWrite(pin, val)` | `GpioSet` → `ASLDigitalWrite` |
-| `analogWrite(pin, val)` | `AnalogWrite` → `ASLAnalogWrite` |
-| `delay(ms)` | `DelayMs` → `ASLDelay` |
-| `digitalRead(pin)` | `GpioRead` → `ASLRead` ou `ASLCall` |
-| `analogRead(pin)` | `AnalogRead` → `ASLRead` ou `ASLCall` |
-| `Serial.print(x)` / `Serial.println(x)` | `Print` → `ASLPrint` |
-| Outros (`tone`, `noTone`, `servo.*`, etc.) | `CallExpression` genérica |
+| Chamada                                    | Nó AST produzido                      |
+| ------------------------------------------ | ------------------------------------- |
+| `pinMode(pin, mode)`                       | `ASLPinMode`                          |
+| `digitalWrite(pin, val)`                   | `GpioSet` → `ASLDigitalWrite`         |
+| `analogWrite(pin, val)`                    | `AnalogWrite` → `ASLAnalogWrite`      |
+| `delay(ms)`                                | `DelayMs` → `ASLDelay`                |
+| `digitalRead(pin)`                         | `GpioRead` → `ASLRead` ou `ASLCall`   |
+| `analogRead(pin)`                          | `AnalogRead` → `ASLRead` ou `ASLCall` |
+| `Serial.print(x)` / `Serial.println(x)`    | `Print` → `ASLPrint`                  |
+| Outros (`tone`, `noTone`, `servo.*`, etc.) | `CallExpression` genérica             |
 
 ---
 
@@ -367,22 +367,22 @@ Esta tabela é crítica. O parser mapeia constantes textuais para valores numér
 
 ### Primitivos expostos ao ASLExecutor
 
-| Método | Descrição |
-|---|---|
-| `pinMode(pin, mode)` | Configura pino. Mode: `'INPUT'\|'OUTPUT'\|'INPUT_PULLUP'` |
-| `digitalWrite(pin, value)` | Escreve `'HIGH'` ou `'LOW'` em pino OUTPUT |
-| `analogWrite(pin, value)` | Escreve valor PWM 0–255 |
-| `digitalRead(pin)` | Retorna `'HIGH'` ou `'LOW'` |
-| `analogRead(pin)` | Retorna `0–1023` |
-| `delay(ms)` | Promise que resolve após ms/speedMultiplier ms |
-| `millis()` | ms desde `simulationStartTime` ← **CRÍTICO** |
-| `micros()` | μs desde `simulationStartTime` ← **CRÍTICO** |
-| `log(msg)` | Emite para SerialStore (terminal) |
-| `serialPrint(text)` | Serial.print sem newline |
-| `serialPrintln(text)` | Serial.print com newline |
-| `random(min?, max?)` | Random helpers |
-| `map(v, fl, fh, tl, th)` | Arduino map() |
-| `constrain(v, min, max)` | Arduino constrain() |
+| Método                     | Descrição                                                 |
+| -------------------------- | --------------------------------------------------------- |
+| `pinMode(pin, mode)`       | Configura pino. Mode: `'INPUT'\|'OUTPUT'\|'INPUT_PULLUP'` |
+| `digitalWrite(pin, value)` | Escreve `'HIGH'` ou `'LOW'` em pino OUTPUT                |
+| `analogWrite(pin, value)`  | Escreve valor PWM 0–255                                   |
+| `digitalRead(pin)`         | Retorna `'HIGH'` ou `'LOW'`                               |
+| `analogRead(pin)`          | Retorna `0–1023`                                          |
+| `delay(ms)`                | Promise que resolve após ms/speedMultiplier ms            |
+| `millis()`                 | ms desde `simulationStartTime` ← **CRÍTICO**              |
+| `micros()`                 | μs desde `simulationStartTime` ← **CRÍTICO**              |
+| `log(msg)`                 | Emite para SerialStore (terminal)                         |
+| `serialPrint(text)`        | Serial.print sem newline                                  |
+| `serialPrintln(text)`      | Serial.print com newline                                  |
+| `random(min?, max?)`       | Random helpers                                            |
+| `map(v, fl, fh, tl, th)`   | Arduino map()                                             |
+| `constrain(v, min, max)`   | Arduino constrain()                                       |
 
 ### ⚠️ Regra do tempo relativo (millis/micros)
 
@@ -824,7 +824,7 @@ O estado detalhado do que está feito/pendente está em:
 - [`src/engine/asl/ASLTypes.ts`](../src/engine/asl/ASLTypes.ts) — Schema ASL (fonte única de verdade)
 - [`src/engine/asl/ASLExecutor.ts`](../src/engine/asl/ASLExecutor.ts) — Runtime
 - [`src/engine/asl/codeToASL.ts`](../src/engine/asl/codeToASL.ts) — Transpiler
-- [`src/engine/SimulationEngine.ts`](../src/engine/SimulationEngine.ts) — Engine fake-mode
+- [`src/engine/SimulationEngine.ts`](../src/engine/SimulationEngine.ts) — Engine JS-mode
 
 ---
 
