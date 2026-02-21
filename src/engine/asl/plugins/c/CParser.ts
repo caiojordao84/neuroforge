@@ -210,7 +210,7 @@ export class RecursiveDescentCParser {
         let left = this.parsePrefix();
         while (true) {
             const t = this.peek();
-            if (t.type === 'EOF' || [';', ')', ',', ']'].includes(t.value)) break;
+            if (t.type === 'EOF' || [';', ')', ',', ']', '}'].includes(t.value)) break;
             const prec = this.getPrecedence(t.value);
             if (prec < minPrec) break;
             const op = this.consume().value;
