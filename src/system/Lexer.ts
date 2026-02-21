@@ -60,7 +60,7 @@ export class Lexer {
       // Identifiers and Keywords
       if (/[a-zA-Z_]/.test(char)) {
         let word = '';
-        while (/[a-zA-Z0-9_\.]/.test(this.src[this.cursor])) word += this.src[this.cursor++];
+        while (/[a-zA-Z0-9_]/.test(this.src[this.cursor])) word += this.src[this.cursor++];
         const keywords = ['void', 'int', 'float', 'bool', 'boolean', 'unsigned', 'long', 'short', 'char', 'byte', 'uint8_t', 'uint16_t', 'uint32_t', 'int8_t', 'int16_t', 'int32_t', 'String', 'File', 'if', 'else', 'while', 'for', 'return', 'true', 'false', 'HIGH', 'LOW', 'INPUT', 'OUTPUT', 'INPUT_PULLUP', 'WL_CONNECTED', 'WL_IDLE_STATUS', 'FILE_WRITE', 'FILE_READ', 'FILE_APPEND', 'const'];
         tokens.push({ type: keywords.includes(word) ? 'KEYWORD' : 'IDENTIFIER', value: word, line: this.line });
         continue;
