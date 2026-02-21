@@ -63,6 +63,7 @@ export function createASLRuntime(
     functions: functionMap,
     globals: globalEnv,
     abortSignal: options.abortSignal,
+    printBuffer: '',
   };
 
   const setup = async () => {
@@ -73,7 +74,6 @@ export function createASLRuntime(
 
   const loop = async () => {
     if (mainTask) {
-      // runContext.engine.log('🔄 [ASL] Running mainLoop iteration...');
       await executeStatements(mainTask.body, globalEnv, runContext);
     }
   };
@@ -86,6 +86,8 @@ interface RunContext {
   functions: Map<string, ASLFunction>;
   globals: Map<string, any>;
   abortSignal?: AbortSignal;
+  /** Buffer para Serial.print() sem newline — flush em Serial.println() */
+  printBuffer: string;
 }
 
 function defaultValueForType(type: string): any {
@@ -108,14 +110,13 @@ async function executeStatements(
   localEnv: Map<string, any>,
   ctx: RunContext,
 ): Promise<void> {
-  if (ctx.abortSignal?.aborted) return; // check rápido
+  if (ctx.abortSignal?.aborted) return;
 
   for (const s of stmts) {
-    if (ctx.abortSignal?.aborted) return; // check granular
+    if (ctx.abortSignal?.aborted) return;
 
     switch (s.kind) {
       case 'comment':
-        // No-op em runtime, mas preservado no AST/ASL
         break;
 
       case 'pinMode': {
@@ -130,7 +131,6 @@ async function executeStatements(
           typeof s.value === 'string' ? s.value : await evalExpr(s.value, localEnv, ctx);
         const value =
           valRaw === 'HIGH' || valRaw === 1 || valRaw === true ? 'HIGH' : 'LOW';
-
         ctx.engine.digitalWrite(pin, value);
         break;
       }
@@ -168,7 +168,7 @@ async function executeStatements(
       case 'while': {
         let cycles = 0;
         while (await evalExpr(s.condition, localEnv, ctx)) {
-          if (ctx.abortSignal?.aborted) return; // interrompe loops infinitos
+          if (ctx.abortSignal?.aborted) return;
           try {
             await executeStatements(s.body, localEnv, ctx);
           } catch (e) {
@@ -178,7 +178,6 @@ async function executeStatements(
           }
           cycles++;
           if (cycles % 10 === 0) {
-            // yield para UI não travar
             await new Promise((r) => setTimeout(r, 0));
           }
         }
@@ -187,7 +186,6 @@ async function executeStatements(
 
       case 'delay': {
         const ms = await evalExpr(s.milliseconds, localEnv, ctx);
-        // Quebra o delay em pedaços para poder abortar
         const total = Math.max(0, Number(ms) || 0);
         const chunk = 50;
         const chunks = Math.ceil(total / chunk);
@@ -241,12 +239,21 @@ async function executeStatements(
         throw new ContinueSignal();
 
       case 'print': {
-        const args: any[] = [];
+        // Avalia argumentos (pode ser 0 para Serial.println() sem args)
+        const parts: string[] = [];
         for (const a of s.args) {
-          args.push(await evalExpr(a, localEnv, ctx));
+          parts.push(String(await evalExpr(a, localEnv, ctx) ?? ''));
         }
-        const msg = args.join(' ');
-        ctx.engine.log(msg);
+        const msg = parts.join('');
+
+        if (s.newline !== false) {
+          // println (ou print legado sem atributo) — flush do buffer
+          ctx.engine.log(ctx.printBuffer + msg);
+          ctx.printBuffer = '';
+        } else {
+          // print sem newline — acumula no buffer
+          ctx.printBuffer += msg;
+        }
         break;
       }
     }
@@ -295,39 +302,24 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       const l = await evalExpr(expr.left, env, ctx);
       const r = await evalExpr(expr.right, env, ctx);
       switch (expr.op) {
-        case '+':
-          return l + r;
-        case '-':
-          return l - r;
-        case '*':
-          return l * r;
-        case '/':
-          return l / r;
-        case '%':
-          return l % r;
-        case '==':
-          return l == r;
-        case '!=':
-          return l != r;
-        case '<':
-          return l < r;
-        case '<=':
-          return l <= r;
-        case '>':
-          return l > r;
-        case '>=':
-          return l >= r;
-        case '&&':
-          return l && r;
-        case '||':
-          return l || r;
-        default:
-          return 0;
+        case '+': return l + r;
+        case '-': return l - r;
+        case '*': return l * r;
+        case '/': return l / r;
+        case '%': return l % r;
+        case '==': return l == r;
+        case '!=': return l != r;
+        case '<': return l < r;
+        case '<=': return l <= r;
+        case '>': return l > r;
+        case '>=': return l >= r;
+        case '&&': return l && r;
+        case '||': return l || r;
+        default: return 0;
       }
     }
 
     case 'call': {
-      // Builtins específicos
       if (expr.callee === 'Pin') {
         const pinNum = await evalExpr(expr.args[0], env, ctx);
         const modeRaw = expr.args[1] ? await evalExpr(expr.args[1], env, ctx) : 1;
@@ -357,7 +349,7 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         }
       }
 
-      if (expr.callee === 'Serial.begin') return 0; // ignorar
+      if (expr.callee === 'Serial.begin') return 0;
       if (expr.callee === 'random') {
         const min = expr.args[0] ? await evalExpr(expr.args[0], env, ctx) : 0;
         const max = expr.args[1] ? await evalExpr(expr.args[1], env, ctx) : 100;
@@ -395,7 +387,6 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         return 0;
       }
 
-      // Função desconhecida → 0
       return 0;
     }
   }
