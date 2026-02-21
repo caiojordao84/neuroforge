@@ -16,6 +16,57 @@ Marcadores de status:
 [x] codeToASL.ts: transpiler C++ Arduino subset → ASL (v0).
 [x] Integração na TopToolbar: modo JS em C++ tenta ASL primeiro, fallback para CodeParser legado.
 
+### 0.3. Fluxo de trabalho atual (C++ / MicroPython → ASL → SimulationEngine)
+
+[x] CodeEditorWithTabs.tsx:
+    - Gerencia múltiplas abas de código e a linguagem ativa (C++, MicroPython).
+    - Expõe o conteúdo atual e metadados (linguagem, placa) para a TopToolbar.
+
+[x] LanguageRegistry.ts:
+    - Registro central de linguagens: mapeia labels ("C++ Arduino", "MicroPython") para:
+      - extensões / ids internos,
+      - função de parsing/transpilação → ASL (ex.: CParser + codeToASL, PythonParser + codeToASL).
+    - Único lugar onde decidimos se uma linguagem suporta ASL ou cai no parser legado.
+
+[x] TopToolbar.tsx:
+    - Botão Run em modo fake:
+      - Obtém código atual do CodeEditorWithTabs.
+      - Resolve a linguagem via LanguageRegistry.
+      - Chama o pipeline de transpilação → ASL (codeToASL).
+      - Cria um ASLRuntime (ASLExecutor) e inicializa o SimulationEngine em modo fake.
+    - Fallback: se a linguagem/board não suportar ASL, usa o fluxo CodeParser legado.
+
+[x] codeToASL.ts:
+    - Converte AST de entrada (CParser para C++, PythonParser para MicroPython) em ASLProgram:
+      - Preenche globals, functions e tasks (setup/loop → functions/tasks, outras funções → ASLFunction).
+      - Converte statements (if/while/for/return/break/continue, pinMode/digitalWrite/delay, Serial.print* etc.).
+      - Converte expressões (aritméticas, lógicas, chamadas, leituras de pinos).
+
+[x] ASLTypes.ts:
+    - Fonte única de verdade do schema ASL: ASLProgram, ASLStatement, ASLExpr, ASLFunction, tasks.
+
+[x] ASLExecutor.ts:
+    - Interpreta um ASLProgram:
+      - Mantém ambiente de variáveis globais/locais.
+      - Executa controle de fluxo (if, while, for lowerizado, break, continue, return).
+      - Avalia expressões (aritméticas, lógicas, chamadas de função).
+      - Faz ponte com o SimulationEngine para GPIO, delays, Serial/log, random, digitalRead/analogRead, millis/micros.
+
+[x] SimulationEngine.ts:
+    - Gerencia o ciclo de simulação (start/pause/stop, loop assíncrono sem sobreposição).
+    - Expõe primitivos de hardware:
+      - pinMode/digitalWrite/analogWrite/digitalRead/analogRead.
+      - delay(ms) com speedMultiplier.
+      - millis()/micros() relativos ao início da simulação.
+      - Serial.begin / Serial.print* / log.
+    - Notifica UI via eventos (pinChange, serialTransmit, simulationStopped).
+
+[x] ASLViewer.tsx:
+    - Exibe o ASL gerado para o código atual:
+      - Visualização da estrutura (globals, functions, tasks).
+      - Útil para debugging e ensino (ver exatamente o que o transpiler entendeu).
+
+
 ### 0.2. Subset C++ suportado (v0) - Detalhamento completo
 
 #### Statements
@@ -25,11 +76,11 @@ Marcadores de status:
 [x] Declaração local simples: `int i = 0;` em setup/loop (vira assign com literal/constante HIGH/LOW/true/false/número).
 [ ] Declaração global de array: `const int LED_PINS[6] = {3, 4, 5, 6, 7, 8};` (regex não reconhece [tamanho] nem inicializador {...}).
 [ ] Declaração local de array: `int valores[5] = {1, 2, 3, 4, 5};` (sem parser para arrays).
-[ ] Declaração local com expressão: `int delayTime = 1000 - (i * 100);` (makeVarOrLiteral não parseia expressões, vira variável inválida).
+[~] Declaração local com expressão: `int delayTime = 1000 - (i * 100);` (parser de expressões já existe, mas ainda não cobrimos todos os casos no roadmap/fixtures).
 
 **Atribuições:**
 [x] Incremento/decremento: `i = i + 1;`, `i = i - 1;` (quando variável é a mesma dos dois lados, gera binary +/-).
-[ ] Atribuição simples genérica: `x = expr;` (só há casos especiais: digitalRead e incremento/decremento).
+[x] Atribuição simples genérica: `x = expr;` (CParser parseia = como operador binário com precedência baixa e codeToASL gera assign com RHS arbitrário).
 [ ] Atribuição a elemento de array: `LED_PINS[2] = 10;` (sem suporte a indexação no transpiler nem executor).
 
 **Operações de hardware:**
@@ -43,14 +94,14 @@ Marcadores de status:
 [x] Leitura digital (assign): `v = digitalRead(PIN);` (mesmo read, sem nova declaração).
 
 **Controle de fluxo:**
-[x] if de uma linha: `if (COND) stmt;` (condição passa por parseConditionExpr, corpo vira 1 statement).
+[x] if de uma linha: `if (COND) stmt;` (condição passa pelo parser de expressões e corpo vira 1 statement).
 [x] if/else simples: blocos { ... } aninhados.
 [x] else if em cascata: reescrito como else { if (...) { ... } }.
 [x] Normalização: } else { e if (cond)\n{ tratados corretamente.
 [x] while: `while (COND) { ... }` (usa parseConditionExpr para a condição).
 [x] for simples: `for (init; cond; inc) { body }` (convertido para init; while (cond) { body; inc; }).
 [ ] for sem cond: `for(;;)` ou `for(;;inc)` (hoje lança erro "for without condition not supported yet").
-[ ] Outros statements: return, break, continue, funções customizadas (ainda ignorados ou nem parseados).
+[~] Outros statements: return, break, continue, funções customizadas (CParser + codeToASL + ASLExecutor já suportam return/break/continue e funções void sem parâmetros, mas ainda falta consolidar o subset e fixtures no roadmap).
 
 #### Expressões em condições
 
@@ -62,15 +113,15 @@ Marcadores de status:
 [x] Maior que: `i > 0` (binary '>').
 [x] Maior ou igual: `i >= 0` (binary '>=').
 [x] Literais/variáveis nuas: `flag`, `10` (vão direto para makeVarOrLiteral, interpretado como truthy/falsy).
-[ ] Expressões lógicas compostas: `a && b`, `a || b` (vão cair no fallback e viram uma "var" com nome estranho, não funcionam como esperado).
+[x] Expressões lógicas compostas: `a && b`, `a || b` (CParser usa parseExpression com precedência para &&/||, executor já avalia).
 
 #### Expressões no lado direito de `=` / declarações
 
 [x] Literal/constante simples: `int i = 0;` (vira literal numérica/booleana ou HIGH/LOW).
-[~] Var simples: `x = y;` (só aparece via makeVarOrLiteral em alguns casos especiais, não há case geral ainda).
+[~] Var simples: `x = y;` (CParser e executor suportam, mas ainda falta consolidar o subset/fixtures).
 [x] Binário simples: `i = i + 1;`, `i = i - 1;` (incremento/decremento quando variável é a mesma dos dois lados).
-[ ] Multiplicação: `x = i * 100;` (precisa parser de expressão aritmética; executor já tem *).
-[ ] Expressão composta: `int delayTime = 1000 - (i * 100);` (makeVarOrLiteral não parseia expressões, vira variável inválida).
+[ ] Multiplicação: `x = i * 100;` (precisa fixtures e validação, executor já tem *).
+[ ] Expressão composta: `int delayTime = 1000 - (i * 100);` (parser de expressões já existe, falta fechar o subset/fixtures).
 [ ] Indexação de array: `int pin = LED_PINS[i];` (sem suporte a arrays: não há AST para indexação, nem avaliação no executor).
 [ ] Inicializador de array: `int arr[3] = {1, 2, 3};` (parser não reconhece sintaxe [tamanho] nem {...}).
 [ ] Expressões complexas: `x = a + b * c / 2;` (ainda fora do escopo da ASL v0).
@@ -89,7 +140,7 @@ Marcadores de status:
 [x] `-`: binary('-', a, b) - já funciona.
 [x] `*`: binary('*', a, b) - já funciona.
 [x] `/`: binary('/', a, b) - já funciona.
-[ ] `%`: binary('%', a, b) - não está no switch do executor (fácil adicionar).
+[x] `%`: binary('%', a, b) - já funciona.
 [x] `&&`: binary('&&', a, b) - já funciona.
 [x] `||`: binary('||', a, b) - já funciona.
 
@@ -207,17 +258,17 @@ Este é um eixo central do produto. Os dois sentidos devem ser tratados como cap
 [x] if aninhado dentro de blocos then/else.
 [x] while (cond) { ... } end-to-end.
 [x] for contador simples: lowering para init-assign + ASLWhile + increment.
-[ ] break e continue dentro de loops.
+[x] break e continue dentro de loops.
 [ ] switch/case simples.
 
 ### 4.2. Expressões
 [x] Operadores relacionais: <, >, <=, >=.
 [x] Operadores booleanos básicos em executor: &&, ||.
-[ ] Operadores lógicos compostos no parser de condições: `a && b`, `a || b` como AST aninhado.
+[x] Operadores lógicos compostos no parser de condições: `a && b`, `a || b` como AST aninhado.
 [x] Expressões aritméticas simples em assign: `i = i + 1`, `i = i - 1`.
 [ ] Expressões aritméticas gerais: `x = y + 1`, `x = a * b`, `x = 1000 - (i * 100)` (parser de expressões no RHS).
-[ ] Operador `%` (módulo) no executor.
-[ ] Operadores unários: `++i`, `--i`, `i++`, `i--`.
+[x] Operador `%` (módulo) no executor.
+[x] Operadores unários: `++i`, `--i`, `i++`, `i--`.
 
 ### 4.3. Arrays e indexação
 [ ] Declaração de arrays globais: `const int pins[6] = {3,4,5,6,7,8};`.
@@ -264,7 +315,7 @@ Este é um eixo central do produto. Os dois sentidos devem ser tratados como cap
 [~] Controle de fluxo completo (v1): while e for simples já funcionam; faltam break, continue, switch.
 [ ] Expressões gerais no RHS de atribuições.
 [ ] Arrays e indexação.
-[ ] APIs adicionais: analogRead, tone, millis, micros, Serial.print.
+[~] APIs adicionais: analogRead, millis, micros, Serial.print já suportadas em ASLExecutor/SimulationEngine; tone ainda sem simulação dedicada.
 [ ] Parser via Tree-sitter C/C++.
 
 ### 7.2. MicroPython / CircuitPython
