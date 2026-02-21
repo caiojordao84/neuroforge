@@ -39,7 +39,7 @@ O objetivo é que qualquer sketch ou programa embarcado, de qualquer linguagem, 
 
 **Repositório:** [`caiojordao84/neuroforge`](https://github.com/caiojordao84/neuroforge)  
 **Branch de trabalho:** `ASL_Integration`  
-**Merge target:** `main` (apenas quando ASL v1 estiver estável para C++ Arduino comum)
+**Merge target:** `main` (apenas quando ASL v1 estiver estável — ver Checklist de PR abaixo)
 
 ### Estrutura dos Arquivos ASL
 
@@ -58,6 +58,23 @@ src/
           CParser.ts             # ✅ Parser recursivo descendente para C/C++ Arduino subset
         python/
           PythonParser.ts        # ✅ Parser MicroPython/CircuitPython via tree-sitter
+        rust/
+          RustParser.ts          # 🔜 Parser Rust (Embassy)
+        assembly/
+          AsmParser.ts           # 🔜 Parser Assembly (AVR / ARM Thumb)
+        st/
+          STParser.ts            # 🔜 Parser Structured Text IEC 61131-3
+      generators/
+        CGenerator.ts            # 🔜 ASL → C
+        CppGenerator.ts          # 🔜 ASL → C++
+        MicroPythonGenerator.ts  # 🔜 ASL → MicroPython
+        CircuitPythonGenerator.ts# 🔜 ASL → CircuitPython
+        RustGenerator.ts         # 🔜 ASL → Rust (Embassy)
+        AsmGenerator.ts          # 🔜 ASL → Assembly (AVR/ARM Thumb)
+        STGenerator.ts           # 🔜 ASL → Structured Text IEC 61131-3
+        BlocklyGenerator.ts      # 🔜 ASL → Blockly XML
+        FlowchartGenerator.ts    # 🔜 ASL → Flowchart JSON (React Flow)
+        LadderGenerator.ts       # 🔜 ASL → Ladder Diagram
   components/
     TopToolbar.tsx               # ✅ Controles Run/Stop/Pause + integração do pipeline ASL
     CodeEditorWithTabs.tsx       # ✅ Editor Monaco multi-abas, expõe código + metadados
@@ -83,29 +100,30 @@ docs/
 ## 🏗️ Arquitetura Mental do Pipeline ASL
 
 ```
- CodeEditorWithTabs
-        │  código-fonte + linguagem ativa
+ CodeEditorWithTabs / Blockly Editor / Flowchart Editor / Ladder Editor
+        │  código-fonte ou representação visual + linguagem ativa
         ▼
-   TopToolbar (Run)
+   TopToolbar (Run / Transpile)
         │  resolve linguagem via LanguageRegistry
         ▼
    LanguageRegistry
-        │  decide: suporta ASL? qual parser?
+        │  decide: suporta ASL? qual parser? qual gerador?
         ▼
-   CParser / PythonParser
+   Parser (CParser / PythonParser / RustParser / AsmParser / STParser /
+           BlocklyParser / FlowchartParser / LadderParser)
         │  produz ProgramNode (AST proprietário)
         ▼
    codeToASL (astToASL)
         │  converte ProgramNode → ASLProgram
         ▼
-   ASLProgram (JSON)
-        │  globals, functions, tasks
-        ▼
-   createASLRuntime (ASLExecutor)
-        │  setup() + loop() assíncronos
-        ▼
-   SimulationEngine
-        │  GPIO, delay, millis, Serial
+   ASLProgram (JSON) ─────────────────────────────────────────────────────► Generators
+        │  globals, functions, tasks                                      C / C++ /
+        ▼                                                                  MicroPython /
+   createASLRuntime (ASLExecutor)                                          CircuitPython /
+        │  setup() + loop() assíncronos                                   Rust / Assembly /
+        ▼                                                                  ST IEC 61131-3 /
+   SimulationEngine                                                        Blockly / Flowchart /
+        │  GPIO, delay, millis, Serial                                    Ladder
         ▼
    UI React (pinChange events, terminal, ASLViewer)
 ```
@@ -442,11 +460,11 @@ stop() → isRunning=false → clearAll timeouts → simulationStartTime=0
 - Arrays: declaração, indexação, atribuição por índice
 - `switch/case`
 - `for(;;)` sem condição
-- Expressões aritméticas genéricas no RHS de declarações locais: `int x = 1000 - (i * 100)`
-- Operadores lógicos compostos no parser de condições (executor suporta, parser ainda limitado em alguns casos)
+- Expressões aritméticas genéricas no RHS de declarações locais
 - `tone()` sem simulação dedicada
-- Code generators (ASL → outra linguagem)
+- Code generators (ASL → qualquer outra linguagem)
 - Round-trip Visual ↔ ASL (Blockly, Flow, Ladder)
+- Parsers: Rust, Assembly, Structured Text IEC 61131-3
 
 ---
 
@@ -505,6 +523,9 @@ Nunca misturar lógica de parsing de C com Python ou outra linguagem. Cada lingu
 ### 7. Antes de modificar, ler o ficheiro atual do GitHub
 Sempre buscar o conteúdo atual via MCP GitHub antes de propor alterações. O código local pode estar desatualizado em relação ao branch remoto.
 
+### 8. Equivalente semântico em todas as saídas
+Qualquer transformação (transpile ou parse) deve preservar a **equivalência semântica**: o comportamento observável da lógica de controlo (sequência de estados, temporização, condições) deve ser idêntico em todos os outputs. Os Casos de Teste de Integração da PR Checklist são a prova formal desta propriedade.
+
 ---
 
 ## 🔍 Como Interpretar o ASLProgram (debug)
@@ -533,12 +554,8 @@ Sempre buscar o conteúdo atual via MCP GitHub antes de propor alterações. O c
         { "kind": "assign", "target": "tempoAtual",
           "value": { "kind": "call", "callee": "millis", "args": [] } },
         { "kind": "if",
-          "condition": { "kind": "binary", "op": ">=",
-            "left": { "kind": "binary", "op": "-",
-              "left": { "kind": "var", "name": "tempoAtual" },
-              "right": { "kind": "var", "name": "tempoAnterior" } },
-            "right": { "kind": "var", "name": "intervalo" } },
-          "thenBranch": [ ...toggle LED... ]
+          "condition": { "kind": "binary", "op": ">=", ... },
+          "thenBranch": [ "...toggle LED..." ]
         }
       ]
     }
@@ -551,7 +568,7 @@ Se `functions` não tiver `setup` → o `setup()` não foi reconhecido.
 
 ---
 
-## 🧪 Fixtures de Teste de Referência
+## 🧪 Fixtures de Teste de Referência (Smoke Tests)
 
 ### T1 — Blink com delay (smoke test)
 ```cpp
@@ -617,17 +634,179 @@ while True:
 
 ---
 
-## 📋 Checklist antes de qualquer PR para main
+## 📋 Checklist de PR para main — Integração Total do ASL
 
-- [ ] T1 (blink delay) funciona
-- [ ] T2 (blink millis) funciona
-- [ ] T3 (botão + serial) funciona
-- [ ] T4 (MicroPython) funciona
-- [ ] `ASLViewer` mostra ASLProgram correto para cada fixture
+> [!IMPORTANT]
+> **O merge para `main` só deverá ocorrer quando TODOS os itens abaixo estiverem verificados.**  
+> O ASL deve estar totalmente integrado: todos os parsers de entrada, todos os geradores de saída, e todos os caminhos visuais (Blockly, Flowchart, Ladder) funcionais em ambas as direções (parse → ASL e ASL → representação).
+
+### 🔧 Infraestrutura Base
+- [ ] T1 (blink delay C++) funciona
+- [ ] T2 (blink millis C++) funciona
+- [ ] T3 (botão + Serial C++) funciona
+- [ ] T4 (MicroPython blink) funciona
+- [ ] `ASLViewer` mostra ASLProgram correto para cada smoke test
 - [ ] `millis()` retorna valor < 60 000 após 1 minuto de simulação
 - [ ] `stop()` limpa todos os timeouts e reseta `simulationStartTime = 0`
-- [ ] Nenhum console.error em nenhum dos fixtures
+- [ ] Nenhum `console.error` em nenhum dos smoke tests
 - [ ] `notyet/README.md` atualizado com estado real dos checkboxes
+
+### 🔄 Parsers de Entrada (todos os caminhos Text → ASL)
+- [ ] Parser C (código C puro, sem libs Arduino)
+- [ ] Parser C++ Arduino (subset completo incl. arrays, switch/case, structs simples)
+- [ ] Parser MicroPython (machine.Pin, time, UART, I2C, SPI)
+- [ ] Parser CircuitPython (board, digitalio, analogio, busio)
+- [ ] Parser Rust (Embassy: async/await, GPIO, ADC, UART, I2C, SPI)
+- [ ] Parser Assembly AVR (instruções GPIO, timers, interrupções)
+- [ ] Parser Assembly ARM Thumb (GPIO, timers, interrupções)
+- [ ] Parser Structured Text IEC 61131-3 (IF/THEN/ELSE, FOR, WHILE, CASE, TON, TOF, CTU, FB)
+- [ ] Parser Blockly XML → ASL
+- [ ] Parser Flowchart JSON (React Flow) → ASL
+- [ ] Parser Ladder Diagram → ASL
+
+### 🚀 Geradores de Saída (todos os caminhos ASL → Text/Visual)
+- [ ] Gerador C
+- [ ] Gerador C++ (Arduino-style)
+- [ ] Gerador MicroPython
+- [ ] Gerador CircuitPython
+- [ ] Gerador Rust (Embassy)
+- [ ] Gerador Assembly (AVR e/ou ARM Thumb)
+- [ ] Gerador Structured Text IEC 61131-3
+- [ ] Gerador Blockly XML
+- [ ] Gerador Flowchart JSON
+- [ ] Gerador Ladder Diagram
+
+---
+
+### 🧪 Casos de Teste de Integração (CI-1 a CI-21)
+
+Estes casos validam que **a equivalência semântica é preservada** em todas as transformações.
+
+#### CI-1 — Nível de tanque (MicroPython → multi-output)
+> **Input:** código MicroPython para verificação do nível de um tanque de água (sensor analógico, bomba, alarme).  
+> **Saídas obrigatórias:** C, C++, CircuitPython, Rust, Assembly, Structured Text (ST) IEC 61131-3.  
+> **Representações visuais:** Blockly, Flowchart, Ladder (já disponíveis via parse).  
+> **Validação:** limiares de nível e lógica de ativação de bomba idênticos em todos os outputs.
+
+#### CI-2 — Iluminação doméstica (Flowchart → multi-output)
+> **Input:** Flowchart para sistema de controlo de iluminação de uma casa por zonas.  
+> **Saídas obrigatórias:** C, C++, MicroPython, CircuitPython, Rust, Assembly, ST IEC 61131-3.  
+> **Representações visuais:** Blockly, Ladder (já disponíveis via parse).  
+> **Validação:** lógica de zona e transições de estado preservadas em todos os outputs.
+
+#### CI-3 — PID de temperatura estufa (MicroPython → multi-output)
+> **Input:** código MicroPython com PID simples, sensor DHT22, ventoinha e resistência.  
+> **Saídas obrigatórias:** C, C++, CircuitPython, Rust, Assembly, ST IEC 61131-3.  
+> **Representações visuais:** Blockly, Flowchart, Ladder.  
+> **Validação:** coeficientes PID e lógica de atuadores preservados; equivalência numérica do cálculo de erro.
+
+#### CI-4 — Esteira industrial (Ladder → multi-output)
+> **Input:** Ladder Diagram para controlo de esteira com sensores de presença, botões de emergência e motor trifásico.  
+> **Saídas obrigatórias:** C, C++, MicroPython, CircuitPython, Rust, Assembly, ST IEC 61131-3.  
+> **Representações visuais:** Blockly, Flowchart.  
+> **Validação:** lógica de emergência (normally-closed) corretamente invertida em todos os outputs.
+
+#### CI-5 — Portão automático (ST IEC 61131-3 → multi-output)
+> **Input:** código ST com sensor de presença, encoder de posição e motor DC com PWM.  
+> **Saídas obrigatórias:** C, C++, MicroPython, CircuitPython, Rust, Assembly.  
+> **Representações visuais:** Blockly, Flowchart, Ladder.  
+> **Validação:** FSM de estados do portão (aberto/fechado/em-movimento/obstáculo) preservada em todos os outputs.
+
+#### CI-6 — Rega automática por zonas (Blockly → multi-output)
+> **Input:** Blockly para rega com sensor de humidade, válvulas solenoides e agenda horária.  
+> **Saídas obrigatórias:** C, C++, MicroPython, CircuitPython, Rust, Assembly, ST IEC 61131-3.  
+> **Representações visuais:** Flowchart, Ladder.  
+> **Validação:** lógica de agenda e limiares de humidade preservados; zonas não se sobrepõem.
+
+#### CI-7 — Qualidade do ar interior (C++ Arduino → multi-output)
+> **Input:** código C++ com CO₂, DHT22, display OLED, alerta sonoro e registo em SD.  
+> **Saídas obrigatórias:** C, MicroPython, CircuitPython, Rust, Assembly, ST IEC 61131-3.  
+> **Representações visuais:** Blockly, Flowchart, Ladder.  
+> **Validação:** limiares de CO₂/temperatura/humidade e lógica de alerta preservados; APIs de display/SD mapeadas para builtins ASL genéricos.
+
+#### CI-8 — Gestão de energia solar (Flowchart → multi-output)
+> **Input:** Flowchart para gestão de bateria, painel fotovoltaico, carga prioritária e corte por tensão mínima.  
+> **Saídas obrigatórias:** C, C++, MicroPython, CircuitPython, Rust, Assembly, ST IEC 61131-3.  
+> **Representações visuais:** Blockly, Ladder.  
+> **Validação:** lógica de histerese de tensão preservada; prioridade de cargas mantida em todos os outputs.
+
+#### CI-9 — Controlo de acesso RFID (Rust Embassy → multi-output)
+> **Input:** código Rust (Embassy) com RFID, teclado matricial, servo e log UART.  
+> **Saídas obrigatórias:** C, C++, MicroPython, CircuitPython, Assembly, ST IEC 61131-3.  
+> **Representações visuais:** Blockly, Flowchart, Ladder.  
+> **Validação:** lógica de autorização (UID válido + PIN) preservada; serialização do async/await Embassy para loop cooperativo ASL correto.
+
+#### CI-10 — Temporizador industrial 7-segmentos (Assembly AVR/ARM → multi-output)
+> **Input:** Assembly (AVR ou ARM Thumb) para temporizador com display multiplexado, DIP switch e relé.  
+> **Saídas obrigatórias:** C, C++, MicroPython, CircuitPython, Rust, ST IEC 61131-3.  
+> **Representações visuais:** Blockly, Flowchart, Ladder.  
+> **Validação:** lógica de multiplexagem e preset preservadas; temporização sem drift em todos os outputs.
+
+#### CI-11 — Pesagem com HX711 e Modbus RTU (CircuitPython → multi-output)
+> **Input:** código CircuitPython com célula de carga HX711, calibração, LCD e Modbus RTU RS-485.  
+> **Saídas obrigatórias:** C, C++, MicroPython, Rust, Assembly, ST IEC 61131-3.  
+> **Representações visuais:** Blockly, Flowchart, Ladder.  
+> **Validação:** fórmula de calibração e registos Modbus preservados; precisão float mantida.
+
+#### CI-12 — SCADA múltiplos tanques ESP32 (MicroPython + Blockly + Flowchart → multi-output, 3 inputs simultâneos)
+> **Inputs simultâneos:** MicroPython + Blockly + Flowchart para sistema SCADA de até 8 tanques com dashboard web (ESP32 WebServer).  
+> **Saídas obrigatórias:** C, C++, CircuitPython, Rust, Assembly, ST IEC 61131-3.  
+> **Parse cruzado:** Blockly ↔ Flowchart ↔ Ladder.  
+> **Validação:** consistência do transpiler — os 3 inputs devem produzir ASLPrograms semanticamente equivalentes; a lógica de polling dos tanques deve ser idêntica em todos os outputs.
+
+#### CI-13 — Bomba de pressão com histerese (C++ + Ladder + Flowchart → multi-output, 3 inputs simultâneos)
+> **Inputs simultâneos:** C++ Arduino + Ladder + Flowchart para bomba com sensor 4–20 mA, pressostato e arranque suave.  
+> **Saídas obrigatórias:** MicroPython, CircuitPython, Rust, Assembly, ST IEC 61131-3.  
+> **Parse cruzado:** Blockly ↔ Flowchart ↔ Ladder.  
+> **Validação:** lógica de histerese (limiares de arranque e paragem) preservada em todas as representações.
+
+#### CI-14 — AVAC multi-zona (MicroPython + ST + Blockly → multi-output, 3 inputs simultâneos)
+> **Inputs simultâneos:** MicroPython + ST IEC 61131-3 + Blockly para AVAC com múltiplos DHT22, setpoints por zona e agenda semanal.  
+> **Saídas obrigatórias:** C, C++, CircuitPython, Rust, Assembly.  
+> **Parse cruzado:** Flowchart ↔ Ladder.  
+> **Validação:** consistência de lógica multi-zona — setpoints e agenda idênticos nos 3 inputs e em todos os outputs.
+
+#### CI-15 — Motor BLDC com encoder e PID (Rust + Flowchart + Assembly ARM → multi-output, 3 inputs simultâneos)
+> **Inputs simultâneos:** Rust (Embassy) + Flowchart + Assembly (ARM Thumb) para motor BLDC com encoder, PID de velocidade e proteção de sobre-corrente.  
+> **Saídas obrigatórias:** C, C++, MicroPython, CircuitPython, ST IEC 61131-3.  
+> **Parse cruzado:** Blockly ↔ Flowchart ↔ Ladder.  
+> **Validação:** lógica de interrupção e loop de controlo semanticamente equivalentes; ISR corretamente serializada nas representações visuais.
+
+#### CI-16 — Semáforo inteligente FSM (CircuitPython + Blockly + Ladder → multi-output, 3 inputs simultâneos)
+> **Inputs simultâneos:** CircuitPython + Blockly + Ladder para semáforo com deteção de veículos, modo noturno e override manual.  
+> **Saídas obrigatórias:** C, C++, MicroPython, Rust, Assembly, ST IEC 61131-3.  
+> **Parse cruzado:** Flowchart ↔ Ladder.  
+> **Validação:** máquina de estados finitos (FSM) corretamente representada e preservada em todos os outputs; transições de modo noturno/manual testadas.
+
+#### CI-17 — Pasteurização com timers encadeados (MicroPython + Flowchart + Ladder → multi-output, 3 inputs simultâneos)
+> **Inputs simultâneos:** MicroPython + Flowchart + Ladder para pasteurização com perfil de temperatura (ramp-up, hold, cool-down), registo em EEPROM e alarme de desvio.  
+> **Saídas obrigatórias:** C, C++, CircuitPython, Rust, Assembly, ST IEC 61131-3.  
+> **Parse cruzado:** Blockly ↔ Ladder.  
+> **Validação:** sequências temporizadas (timers encadeados) preservadas; perfil de temperatura idêntico em todos os outputs.
+
+#### CI-18 — Controlo de piscina com Modbus TCP (ST + Blockly + Assembly AVR → multi-output, 3 inputs simultâneos)
+> **Inputs simultâneos:** ST IEC 61131-3 + Blockly + Assembly (AVR) para controlo de pH/cloro, bombas peristálticas e Modbus TCP.  
+> **Saídas obrigatórias:** C, C++, MicroPython, CircuitPython, Rust.  
+> **Parse cruzado:** Flowchart ↔ Ladder.  
+> **Validação:** precisão numérica REAL/float e registos Modbus preservados; dosagem calculada corretamente em todos os outputs.
+
+#### CI-19 — Monitorização de frota com GPS e MQTT (C++ ESP32 + Flowchart + ST → multi-output, 3 inputs simultâneos)
+> **Inputs simultâneos:** C++ (ESP32) + Flowchart + ST IEC 61131-3 para frota com GPS NMEA, MPU-6050, MQTT via LTE e deteção de condução agressiva.  
+> **Saídas obrigatórias:** MicroPython, CircuitPython, Rust, Assembly.  
+> **Parse cruzado:** Blockly ↔ Flowchart.  
+> **Validação:** lógica assíncrona (ISR + tasks concorrentes) corretamente serializada nas representações visuais; eventos de condução detetados de forma idêntica.
+
+#### CI-20 — AGV de armazém com 4 inputs (MicroPython + Rust + Blockly + Ladder → multi-output, 4 inputs simultâneos)
+> **Inputs simultâneos:** MicroPython + Rust (Embassy) + Blockly + Ladder para AGV com sensores de linha, controlo diferencial e estação de carga automática.  
+> **Saídas obrigatórias:** C, C++, CircuitPython, Assembly, ST IEC 61131-3.  
+> **Parse cruzado:** Flowchart ↔ Ladder.  
+> **Validação:** maior caso de teste do pipeline (4 inputs) — equivalência semântica entre todos os inputs e entre todos os outputs; lógica de navegação e carga preservadas.
+
+#### CI-21 — Segurança perimetral máximo (Flowchart + Blockly + Assembly ARM + ST → multi-output, 4 inputs simultâneos)
+> **Inputs simultâneos:** Flowchart + Blockly + Assembly (ARM Thumb) + ST IEC 61131-3 para segurança perimetral com PIR múltiplos, câmara OpenMV, sirene zoneada, MQTT e log em SD.  
+> **Saídas obrigatórias:** C, C++, MicroPython, CircuitPython, Rust.  
+> **Parse cruzado:** Flowchart ↔ Blockly ↔ Ladder (todos os formatos visuais).  
+> **Validação:** caso de teste máximo de consistência — lógica de eventos assíncronos, concorrência e persistência de dados semanticamente equivalentes em todos os inputs e outputs.
 
 ---
 
