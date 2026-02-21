@@ -20,13 +20,12 @@ export class RecursiveDescentCParser {
         const program: ProgramNode = { nodeType: 'Program', id: 'root', attributes: {}, children: [] };
         while (this.peek().type !== 'EOF') {
             const t = this.peek();
-            if (t.value === 'const') this.consume(); // ignore const for now
+            if (t.value === 'const') this.consume();
 
             if (this.peek().value === 'void') program.children.push(this.parseFunction());
             else if (this.isType(this.peek())) {
                 const decl = this.parseVarDecl(); if (decl) program.children.push(decl);
             } else {
-                // Skip unknown tokens at top level to recover
                 this.consume();
             }
         }
@@ -50,7 +49,7 @@ export class RecursiveDescentCParser {
         const t = this.peek();
         const line = t.line;
 
-        if (t.value === 'const') this.consume(); // ignore const
+        if (t.value === 'const') this.consume();
 
         if (t.value === 'if') return this.parseIf();
         if (t.value === 'while') return this.parseWhile();
@@ -59,7 +58,6 @@ export class RecursiveDescentCParser {
         if (t.value === ';') { this.consume(); return null; }
         if (t.value === '}') return null;
 
-        // Expression Statement (Assignments, Calls, Postfix ops)
         const expr = this.parseExpression(0);
         this.consume(';');
         return { nodeType: 'ExpressionStatement', id: this.genId(), attributes: {}, children: [expr], metadata: { line } };
@@ -78,33 +76,17 @@ export class RecursiveDescentCParser {
     private parseIf(): BaseNode {
         const line = this.peek().line;
         this.consume('if'); this.consume('('); const condition = this.parseExpression(0); this.consume(')');
-
-        const thenBlock: BaseNode = {
-            nodeType: 'Block',
-            id: this.genId(),
-            attributes: {},
-            children: this.parseBlock(),
-            metadata: { line }
-        };
-
+        const thenBlock: BaseNode = { nodeType: 'Block', id: this.genId(), attributes: {}, children: this.parseBlock(), metadata: { line } };
         const children = [condition, thenBlock];
-
         if (this.peek().value === 'else') {
             this.consume('else');
             if (this.peek().value === 'if') {
                 children.push(this.parseIf());
             } else {
-                const elseBlock: BaseNode = {
-                    nodeType: 'Block',
-                    id: this.genId(),
-                    attributes: {},
-                    children: this.parseBlock(),
-                    metadata: { line: this.peek().line }
-                };
-                children.push(elseBlock);
+                children.push({ nodeType: 'Block', id: this.genId(), attributes: {}, children: this.parseBlock(), metadata: { line: this.peek().line } });
             }
         }
-        return { nodeType: 'IfStatement', id: this.genId(), attributes: {}, children: children, metadata: { line } };
+        return { nodeType: 'IfStatement', id: this.genId(), attributes: {}, children, metadata: { line } };
     }
 
     private parseWhile(): BaseNode {
@@ -117,30 +99,70 @@ export class RecursiveDescentCParser {
         const line = this.peek().line;
         this.consume('for'); this.consume('('); this.symbols.pushScope();
         let init: BaseNode | null = null;
-        if (this.peek().type === 'KEYWORD') init = this.parseVarDecl();
-        else if (this.peek().type === 'IDENTIFIER') init = this.parseStatement();
-        else this.consume(';');
-        const condition = this.peek().value !== ';' ? this.parseExpression(0) : { nodeType: 'Literal', id: 'true', attributes: { value: 1 }, children: [] };
+        if (this.peek().type === 'KEYWORD') {
+            // Usa parseVarDeclNoSemi: o ';' do for(init;cond;update) NAO e fim de declaracao
+            init = this.parseVarDeclNoSemi();
+            this.consume(';');
+        } else if (this.peek().type === 'IDENTIFIER') {
+            init = this.parseStatement();
+        } else {
+            this.consume(';');
+        }
+        const condition = this.peek().value !== ';'
+            ? this.parseExpression(0)
+            : { nodeType: 'Literal', id: 'true', attributes: { value: 1 }, children: [] };
         this.consume(';');
         const update = this.peek().value !== ')' ? this.parseExpression(0) : null;
         this.consume(')');
         const body = this.parseBlock(); this.symbols.popScope();
-        return { nodeType: 'ForLoop', id: this.genId(), attributes: { hasInit: !!init, hasUpdate: !!update }, children: [...(init ? [init] : []), condition as BaseNode, ...(update ? [update as BaseNode] : []), ...body], metadata: { line } };
+        return {
+            nodeType: 'ForLoop',
+            id: this.genId(),
+            attributes: { hasInit: !!init, hasUpdate: !!update },
+            children: [...(init ? [init] : []), condition as BaseNode, ...(update ? [update as BaseNode] : []), ...body],
+            metadata: { line },
+        };
+    }
+
+    /**
+     * Declara uma variavel sem consumir o ';' final.
+     * Usado exclusivamente pelo parseFor para o segmento init: for(int i=0; ...)
+     */
+    private parseVarDeclNoSemi(): BaseNode {
+        const line = this.peek().line;
+        let type = this.consume().value;
+        while (this.isType(this.peek()) && this.peek().type === 'KEYWORD') {
+            type += ' ' + this.consume().value;
+        }
+        const name = this.consume().value;
+        if (!this.symbols.define(name, type, this.peek().line))
+            this.semanticErrors.push({ severity: 'WARNING', message: `Redeclaration of '${name}'` });
+
+        let value: BaseNode = { nodeType: 'Literal', id: this.genId(), attributes: { value: 0 }, children: [] };
+        if (this.peek().value === '=') {
+            this.consume('=');
+            value = this.parseExpression(0);
+        }
+        return {
+            nodeType: 'VariableDeclaration',
+            id: this.genId(),
+            attributes: { name, type, isArray: false, arraySize: null },
+            children: [value],
+            metadata: { line },
+        };
     }
 
     private parseVarDecl(): BaseNode {
         const line = this.peek().line;
         let type = this.consume().value;
-
         while (this.isType(this.peek()) && this.peek().type === 'KEYWORD') {
             type += ' ' + this.consume().value;
         }
-
         const name = this.consume().value;
         if (!this.symbols.define(name, type, this.peek().line))
             this.semanticErrors.push({ severity: 'WARNING', message: `Redeclaration of '${name}'` });
 
-        // Detectar declaração de array: int arr[N]
+        // Detectar declaracao de array: int arr[N]
         let isArray = false;
         let arraySize: number | null = null;
         if (this.peek().value === '[') {
@@ -163,7 +185,6 @@ export class RecursiveDescentCParser {
         if (this.peek().value === '=') {
             this.consume('=');
             if (isArray && this.peek().value === '{') {
-                // Inicializador de array: = { 3, 5, 6, 9 }
                 this.consume('{');
                 const elements: BaseNode[] = [];
                 while (this.peek().value !== '}' && this.peek().type !== 'EOF') {
@@ -181,7 +202,6 @@ export class RecursiveDescentCParser {
                 value = this.parseExpression(0);
             }
         } else if (isArray) {
-            // Array sem inicializador: preencher com zeros
             const size = arraySize ?? 0;
             value = {
                 nodeType: 'ArrayInitializer',
@@ -210,6 +230,7 @@ export class RecursiveDescentCParser {
         let left = this.parsePrefix();
         while (true) {
             const t = this.peek();
+            // '}' adicionado: fix developer — impede consumo do fecho do ArrayInitializer
             if (t.type === 'EOF' || [';', ')', ',', ']', '}'].includes(t.value)) break;
             const prec = this.getPrecedence(t.value);
             if (prec < minPrec) break;
@@ -243,7 +264,6 @@ export class RecursiveDescentCParser {
                     metadata: { line: node.metadata?.line },
                 };
             } else if (this.peek().value === '[') {
-                // Subscript: arr[expr] — encadeável (ex: matriz[i][j])
                 const line = this.peek().line;
                 this.consume('[');
                 const index = this.parseExpression(0);
@@ -291,7 +311,6 @@ export class RecursiveDescentCParser {
                 this.consume('('); const args: BaseNode[] = [];
                 if (this.peek().value !== ')') { do { args.push(this.parseExpression(0)); } while (this.peek().value === ',' && this.consume()); }
                 this.consume(')');
-
                 const meta = { line };
                 if (t.value === 'digitalWrite') return { nodeType: 'GpioSet', id: this.genId(), attributes: {}, children: args, metadata: meta };
                 if (t.value === 'analogWrite') return { nodeType: 'AnalogWrite', id: this.genId(), attributes: {}, children: args, metadata: meta };
@@ -301,7 +320,6 @@ export class RecursiveDescentCParser {
                 if (t.value === 'delay') return { nodeType: 'DelayMs', id: this.genId(), attributes: {}, children: args, metadata: meta };
                 if (t.value === 'digitalRead') return { nodeType: 'GpioRead', id: this.genId(), attributes: {}, children: args, metadata: meta };
                 if (t.value === 'analogRead') return { nodeType: 'AnalogRead', id: this.genId(), attributes: {}, children: args, metadata: meta };
-
                 return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: t.value }, children: args, metadata: meta };
             }
 
@@ -309,7 +327,6 @@ export class RecursiveDescentCParser {
                 this.consume('.'); const member = this.consume().value;
                 const meta = { line };
 
-                // SPIFFS
                 if (t.value === 'SPIFFS') {
                     if (member === 'begin') { this.consume('('); this.consume(')'); return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'SPIFFS.begin' }, children: [], metadata: meta }; }
                     if (member === 'remove') { this.consume('('); const p = this.parseExpression(0); this.consume(')'); return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'SPIFFS.remove' }, children: [p], metadata: meta }; }
@@ -335,12 +352,10 @@ export class RecursiveDescentCParser {
                     return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'file.close', varName: t.value }, children: [], metadata: meta };
                 }
 
-                // Serial — todos os métodos conhecidos
                 if (t.value === 'Serial') {
                     if (member === 'begin') {
-                        // Serial.begin(baud) — consome argumento e ignora
                         this.consume('(');
-                        if (this.peek().value !== ')') { this.parseExpression(0); } // consome baud rate
+                        if (this.peek().value !== ')') { this.parseExpression(0); }
                         this.consume(')');
                         return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'Serial.begin' }, children: [], metadata: meta };
                     }
@@ -356,7 +371,6 @@ export class RecursiveDescentCParser {
                         this.consume('('); this.consume(')');
                         return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'Serial.readString' }, children: [], metadata: meta };
                     }
-                    // Fallback genérico para outros métodos Serial não mapeados
                     if (this.peek().value === '(') {
                         this.consume('(');
                         const args2: BaseNode[] = [];
@@ -366,115 +380,29 @@ export class RecursiveDescentCParser {
                     }
                 }
 
-                if (t.value === 'lcd' && member.startsWith('print')) {
-                    this.consume('('); const arg = this.parseExpression(0); this.consume(')');
-                    return { nodeType: 'LcdPrint', id: this.genId(), attributes: {}, children: [arg], metadata: meta };
-                }
-                if (t.value === 'lcd' && member === 'clear') {
-                    this.consume('('); this.consume(')');
-                    return { nodeType: 'LcdClear', id: this.genId(), attributes: {}, children: [], metadata: meta };
-                }
-                if (t.value === 'lcd' && member === 'setCursor') {
-                    this.consume('('); const col = this.parseExpression(0); this.consume(','); const row = this.parseExpression(0); this.consume(')');
-                    return { nodeType: 'LcdCursor', id: this.genId(), attributes: {}, children: [col, row], metadata: meta };
-                }
-                if (t.value === 'oled' && member === 'text') {
-                    this.consume('(');
-                    const str = this.parseExpression(0); this.consume(',');
-                    const x = this.parseExpression(0); this.consume(',');
-                    const y = this.parseExpression(0); this.consume(',');
-                    const c = this.parseExpression(0);
-                    this.consume(')');
-                    return { nodeType: 'OledText', id: this.genId(), attributes: {}, children: [str, x, y, c], metadata: meta };
-                }
-                if (t.value === 'oled' && member === 'show') {
-                    this.consume('('); this.consume(')');
-                    return { nodeType: 'OledShow', id: this.genId(), attributes: {}, children: [], metadata: meta };
-                }
-                if (t.value === 'oled' && member === 'clear') {
-                    this.consume('('); this.consume(')');
-                    return { nodeType: 'OledClear', id: this.genId(), attributes: {}, children: [], metadata: meta };
-                }
-                if (t.value === 'dht' && member === 'readTemperature') {
-                    this.consume('('); this.consume(')');
-                    return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'dht.readTemp' }, children: [], metadata: meta };
-                }
-                if (t.value === 'dht' && member === 'readHumidity') {
-                    this.consume('('); this.consume(')');
-                    return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'dht.readHum' }, children: [], metadata: meta };
-                }
-                if (t.value === 'ultrasonic' && member === 'read') {
-                    this.consume('('); this.consume(')');
-                    return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'ultrasonic.read' }, children: [], metadata: meta };
-                }
-                if (t.value === 'ldr' && member === 'read') {
-                    this.consume('('); this.consume(')');
-                    return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'ldr.read' }, children: [], metadata: meta };
-                }
-                if (t.value === 'ir' && member === 'read') {
-                    this.consume('('); this.consume(')');
-                    return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'ir.read' }, children: [], metadata: meta };
-                }
-                if (t.value === 'motors' && member === 'move') {
-                    this.consume('(');
-                    const l = this.parseExpression(0); this.consume(',');
-                    const r = this.parseExpression(0);
-                    this.consume(')');
-                    return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'motors.move' }, children: [l, r], metadata: meta };
-                }
-                if (t.value === 'mpu' && member.startsWith('get')) {
-                    this.consume('('); this.consume(')');
-                    const axis = member.replace('get', '');
-                    return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'mpu.get', axis }, children: [], metadata: meta };
-                }
-                if (t.value === 'rgb' && member === 'setColor') {
-                    this.consume('(');
-                    const r = this.parseExpression(0); this.consume(',');
-                    const g = this.parseExpression(0); this.consume(',');
-                    const b = this.parseExpression(0);
-                    this.consume(')');
-                    return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'rgb.setColor' }, children: [r, g, b], metadata: meta };
-                }
-                if (t.value === 'neopixel' && member === 'setPixelColor') {
-                    this.consume('(');
-                    const i = this.parseExpression(0); this.consume(',');
-                    const r = this.parseExpression(0); this.consume(',');
-                    const g = this.parseExpression(0); this.consume(',');
-                    const b = this.parseExpression(0);
-                    this.consume(')');
-                    return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'neopixel.set' }, children: [i, r, g, b], metadata: meta };
-                }
-                if (t.value === 'neopixel' && member === 'show') {
-                    this.consume('('); this.consume(')');
-                    return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'neopixel.show' }, children: [], metadata: meta };
-                }
-                if (t.value === 'neopixel' && member === 'clear') {
-                    this.consume('('); this.consume(')');
-                    return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'neopixel.clear' }, children: [], metadata: meta };
-                }
-                if (t.value === 'keypad' && member === 'getKey') {
-                    this.consume('('); this.consume(')');
-                    return { nodeType: 'KeypadRead', id: this.genId(), attributes: {}, children: [], metadata: meta };
-                }
-                if (t.value === 'WiFi' && member === 'begin') {
-                    this.consume('(');
-                    const ssid = this.parseExpression(0); this.consume(',');
-                    const pass = this.parseExpression(0);
-                    this.consume(')');
-                    return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'WiFi.begin' }, children: [ssid, pass], metadata: meta };
-                }
-                if (t.value === 'WiFi' && member === 'status') {
-                    this.consume('('); this.consume(')');
-                    return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'WiFi.status' }, children: [], metadata: meta };
-                }
-                if (t.value === 'HTTP' && member === 'get') {
-                    this.consume('(');
-                    const url = this.parseExpression(0);
-                    this.consume(')');
-                    return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'HTTP.get' }, children: [url], metadata: meta };
-                }
+                if (t.value === 'lcd' && member.startsWith('print')) { this.consume('('); const arg = this.parseExpression(0); this.consume(')'); return { nodeType: 'LcdPrint', id: this.genId(), attributes: {}, children: [arg], metadata: meta }; }
+                if (t.value === 'lcd' && member === 'clear') { this.consume('('); this.consume(')'); return { nodeType: 'LcdClear', id: this.genId(), attributes: {}, children: [], metadata: meta }; }
+                if (t.value === 'lcd' && member === 'setCursor') { this.consume('('); const col = this.parseExpression(0); this.consume(','); const row = this.parseExpression(0); this.consume(')'); return { nodeType: 'LcdCursor', id: this.genId(), attributes: {}, children: [col, row], metadata: meta }; }
+                if (t.value === 'oled' && member === 'text') { this.consume('('); const str = this.parseExpression(0); this.consume(','); const x = this.parseExpression(0); this.consume(','); const y = this.parseExpression(0); this.consume(','); const c = this.parseExpression(0); this.consume(')'); return { nodeType: 'OledText', id: this.genId(), attributes: {}, children: [str, x, y, c], metadata: meta }; }
+                if (t.value === 'oled' && member === 'show') { this.consume('('); this.consume(')'); return { nodeType: 'OledShow', id: this.genId(), attributes: {}, children: [], metadata: meta }; }
+                if (t.value === 'oled' && member === 'clear') { this.consume('('); this.consume(')'); return { nodeType: 'OledClear', id: this.genId(), attributes: {}, children: [], metadata: meta }; }
+                if (t.value === 'dht' && member === 'readTemperature') { this.consume('('); this.consume(')'); return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'dht.readTemp' }, children: [], metadata: meta }; }
+                if (t.value === 'dht' && member === 'readHumidity') { this.consume('('); this.consume(')'); return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'dht.readHum' }, children: [], metadata: meta }; }
+                if (t.value === 'ultrasonic' && member === 'read') { this.consume('('); this.consume(')'); return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'ultrasonic.read' }, children: [], metadata: meta }; }
+                if (t.value === 'ldr' && member === 'read') { this.consume('('); this.consume(')'); return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'ldr.read' }, children: [], metadata: meta }; }
+                if (t.value === 'ir' && member === 'read') { this.consume('('); this.consume(')'); return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'ir.read' }, children: [], metadata: meta }; }
+                if (t.value === 'motors' && member === 'move') { this.consume('('); const l = this.parseExpression(0); this.consume(','); const r = this.parseExpression(0); this.consume(')'); return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'motors.move' }, children: [l, r], metadata: meta }; }
+                if (t.value === 'mpu' && member.startsWith('get')) { this.consume('('); this.consume(')'); return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'mpu.get', axis: member.replace('get', '') }, children: [], metadata: meta }; }
+                if (t.value === 'rgb' && member === 'setColor') { this.consume('('); const r = this.parseExpression(0); this.consume(','); const g = this.parseExpression(0); this.consume(','); const b = this.parseExpression(0); this.consume(')'); return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'rgb.setColor' }, children: [r, g, b], metadata: meta }; }
+                if (t.value === 'neopixel' && member === 'setPixelColor') { this.consume('('); const i = this.parseExpression(0); this.consume(','); const r = this.parseExpression(0); this.consume(','); const g = this.parseExpression(0); this.consume(','); const b = this.parseExpression(0); this.consume(')'); return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'neopixel.set' }, children: [i, r, g, b], metadata: meta }; }
+                if (t.value === 'neopixel' && member === 'show') { this.consume('('); this.consume(')'); return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'neopixel.show' }, children: [], metadata: meta }; }
+                if (t.value === 'neopixel' && member === 'clear') { this.consume('('); this.consume(')'); return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'neopixel.clear' }, children: [], metadata: meta }; }
+                if (t.value === 'keypad' && member === 'getKey') { this.consume('('); this.consume(')'); return { nodeType: 'KeypadRead', id: this.genId(), attributes: {}, children: [], metadata: meta }; }
+                if (t.value === 'WiFi' && member === 'begin') { this.consume('('); const ssid = this.parseExpression(0); this.consume(','); const pass = this.parseExpression(0); this.consume(')'); return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'WiFi.begin' }, children: [ssid, pass], metadata: meta }; }
+                if (t.value === 'WiFi' && member === 'status') { this.consume('('); this.consume(')'); return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'WiFi.status' }, children: [], metadata: meta }; }
+                if (t.value === 'HTTP' && member === 'get') { this.consume('('); const url = this.parseExpression(0); this.consume(')'); return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'HTTP.get' }, children: [url], metadata: meta }; }
 
-                // Fallback genérico para obj.method() não mapeados
+                // Fallback generico: obj.method(args)
                 if (this.peek().value === '(') {
                     this.consume('(');
                     const args2: BaseNode[] = [];
@@ -482,7 +410,6 @@ export class RecursiveDescentCParser {
                     this.consume(')');
                     return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: `${t.value}.${member}` }, children: args2, metadata: meta };
                 }
-
                 // obj.property (sem chamada)
                 return { nodeType: 'MemberExpression', id: this.genId(), attributes: { property: member }, children: [{ nodeType: 'Identifier', id: this.genId(), attributes: { name: t.value }, children: [], metadata: meta }], metadata: meta };
             }
@@ -505,9 +432,7 @@ export class RecursiveDescentCParser {
     }
     private consume(e?: string): Token {
         const t = this.tokens[this.pos];
-        if (e && t.value !== e) {
-            throw new Error(`Expected '${e}' but found '${t.value}' at line ${t.line}`);
-        }
+        if (e && t.value !== e) { throw new Error(`Expected '${e}' but found '${t.value}' at line ${t.line}`); }
         this.pos++; return t;
     }
     private peek(o: number = 0): Token { return this.tokens[this.pos + o] || { type: 'EOF', value: 'EOF', line: 0 }; }
