@@ -22,10 +22,7 @@ export class RecursiveDescentCParser {
     private isFunctionDecl(): boolean {
         if (!this.isType(this.peek())) return false;
         let offset = 1;
-        // Avança sobre qualificadores de tipo adicionais (unsigned long, etc.)
         while (this.isType(this.peek(offset))) offset++;
-        // peek(offset) deve ser o nome da função (IDENTIFIER)
-        // peek(offset+1) deve ser '('
         return this.peek(offset).type === 'IDENTIFIER' && this.peek(offset + 1).value === '(';
     }
 
@@ -42,37 +39,26 @@ export class RecursiveDescentCParser {
             } else if (this.isType(this.peek())) {
                 const decl = this.parseVarDecl(); if (decl) program.children.push(decl);
             } else {
-                // Skip unknown tokens at top level to recover
                 this.consume();
             }
         }
         return { ast: program, symbols: this.symbols.getAllSymbols(), errors: this.semanticErrors };
     }
 
-    /**
-     * Faz parse de uma função: [tipo_retorno] nome([params]) { body }
-     * Suporta void, bool, int, float, etc. como tipo de retorno.
-     * Suporta lista de parâmetros tipados: (int idx, float x, bool flag)
-     */
     private parseFunction(): BaseNode {
-        // Consome tipo de retorno (void ou qualquer tipo)
         let returnType = this.consume().value;
         while (this.isType(this.peek())) returnType += ' ' + this.consume().value;
 
         const name = this.consume().value;
         const line = this.peek(-1).line;
 
-        // Parse de parâmetros
         this.consume('(');
         const params: string[] = [];
         while (this.peek().value !== ')' && this.peek().type !== 'EOF') {
-            // Consome tipo do parâmetro (pode ser multi-keyword: unsigned long)
             let paramType = this.consume().value;
             while (this.isType(this.peek())) paramType += ' ' + this.consume().value;
-            // Nome do parâmetro
             const paramName = this.consume().value;
             params.push(paramName);
-            // Suporte a array param: int arr[]
             if (this.peek().value === '[') { this.consume('['); this.consume(']'); }
             if (this.peek().value === ',') this.consume(',');
         }
@@ -80,7 +66,6 @@ export class RecursiveDescentCParser {
         this.consume('{');
 
         this.symbols.pushScope();
-        // Regista parâmetros no scope local
         for (const p of params) this.symbols.define(p, 'param', line);
 
         const funcNode: BaseNode = {
@@ -101,7 +86,7 @@ export class RecursiveDescentCParser {
         const t = this.peek();
         const line = t.line;
 
-        if (t.value === 'const') this.consume(); // ignore const
+        if (t.value === 'const') this.consume();
 
         if (t.value === 'if') return this.parseIf();
         if (t.value === 'while') return this.parseWhile();
@@ -117,7 +102,6 @@ export class RecursiveDescentCParser {
         if (t.value === ';') { this.consume(); return null; }
         if (t.value === '}') return null;
 
-        // Expression Statement (Assignments, Calls, Postfix ops)
         const expr = this.parseExpression(0);
         this.consume(';');
         return { nodeType: 'ExpressionStatement', id: this.genId(), attributes: {}, children: [expr], metadata: { line } };
@@ -198,7 +182,6 @@ export class RecursiveDescentCParser {
         if (!this.symbols.define(name, type, this.peek().line))
             this.semanticErrors.push({ severity: 'WARNING', message: `Redeclaration of '${name}'` });
 
-        // Detectar declaração de array: int arr[N]
         let isArray = false;
         let arraySize: number | null = null;
         if (this.peek().value === '[') {
@@ -221,7 +204,6 @@ export class RecursiveDescentCParser {
         if (this.peek().value === '=') {
             this.consume('=');
             if (isArray && this.peek().value === '{') {
-                // Inicializador de array: = { 3, 5, 6, 9 }
                 this.consume('{');
                 const elements: BaseNode[] = [];
                 while (this.peek().value !== '}' && this.peek().type !== 'EOF') {
@@ -239,7 +221,6 @@ export class RecursiveDescentCParser {
                 value = this.parseExpression(0);
             }
         } else if (isArray) {
-            // Array sem inicializador: preencher com zeros
             const size = arraySize ?? 0;
             value = {
                 nodeType: 'ArrayInitializer',
@@ -398,7 +379,7 @@ export class RecursiveDescentCParser {
                         this.consume('(');
                         if (this.peek().value !== ')') { this.parseExpression(0); }
                         this.consume(')');
-                        return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: .begin' }, children: [], metadata: meta };
+                        return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'Serial.begin' }, children: [], metadata: meta };
                     }
                     if (member.startsWith('print')) {
                         const newline = member === 'println';
@@ -422,6 +403,7 @@ export class RecursiveDescentCParser {
                         this.consume('('); this.consume(')');
                         return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'Serial.readString' }, children: [], metadata: meta };
                     }
+                    // Fallback genérico para outros métodos Serial não mapeados
                     if (this.peek().value === '(') {
                         this.consume('(');
                         const args2: BaseNode[] = [];
