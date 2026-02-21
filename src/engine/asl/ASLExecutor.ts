@@ -68,13 +68,21 @@ export function createASLRuntime(
 
   const setup = async () => {
     if (setupFuncDef) {
-      await executeStatements(setupFuncDef.body, globalEnv, runContext);
+      try {
+        await executeStatements(setupFuncDef.body, globalEnv, runContext);
+      } catch (e) {
+        if (!(e instanceof ReturnSignal)) throw e;
+      }
     }
   };
 
   const loop = async () => {
     if (mainTask) {
-      await executeStatements(mainTask.body, globalEnv, runContext);
+      try {
+        await executeStatements(mainTask.body, globalEnv, runContext);
+      } catch (e) {
+        if (!(e instanceof ReturnSignal)) throw e;
+      }
     }
   };
 

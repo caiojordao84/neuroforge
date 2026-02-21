@@ -11,7 +11,8 @@ export type NodeType =
     | 'Identifier' | 'Literal' | 'Empty'
     | 'ExpressionStatement'
     // Optimization Nodes
-    | 'HardwarePwm' | 'GpioBatch';
+    | 'HardwarePwm' | 'GpioBatch'
+    | 'EnumDeclaration';
 
 export interface BaseNode {
     nodeType: NodeType;

@@ -8,10 +8,17 @@ export class RecursiveDescentCParser {
     private symbols = new SymbolTable(); private semanticErrors: AnalysisIssue[] = [];
 
     private isType(token: Token): boolean {
-        return token.type === 'KEYWORD' && [
+        if (token.type === 'KEYWORD' && [
             'int', 'float', 'bool', 'boolean', 'String', 'File', 'char', 'byte', 'short', 'long',
             'unsigned', 'uint8_t', 'uint16_t', 'uint32_t', 'int8_t', 'int16_t', 'int32_t'
-        ].includes(token.value);
+        ].includes(token.value)) return true;
+
+        // Dynamic types (like enums)
+        if (token.type === 'IDENTIFIER') {
+            const sym = this.symbols.resolve(token.value);
+            return sym?.type === 'type';
+        }
+        return false;
     }
 
     private isFunctionDecl(): boolean {
@@ -28,7 +35,9 @@ export class RecursiveDescentCParser {
         while (this.peek().type !== 'EOF') {
             const t = this.peek();
             if (t.value === 'const') this.consume(); // ignore const
-            if (this.peek().value === 'void' || this.isFunctionDecl()) {
+            if (t.value === 'enum') {
+                program.children.push(this.parseEnum());
+            } else if (this.peek().value === 'void' || this.isFunctionDecl()) {
                 program.children.push(this.parseFunction());
             } else if (this.isType(this.peek())) {
                 const decl = this.parseVarDecl(); if (decl) program.children.push(decl);
@@ -37,6 +46,28 @@ export class RecursiveDescentCParser {
             }
         }
         return { ast: program, symbols: this.symbols.getAllSymbols(), errors: this.semanticErrors };
+    }
+
+    private parseEnum(): BaseNode {
+        this.consume('enum');
+        const name = this.consume().value;
+        this.symbols.define(name, 'type', this.peek(-1).line);
+        this.consume('{');
+        let val = 0;
+        const members: { name: string, value: number }[] = [];
+        do {
+            if (this.peek().value === '}') break;
+            const mName = this.consume().value;
+            if (this.peek().value === '=') {
+                this.consume('=');
+                val = parseInt(this.consume().value);
+            }
+            members.push({ name: mName, value: val });
+            this.symbols.define(mName, 'int', this.peek(-1).line, val++);
+        } while (this.peek().value === ',' && this.consume());
+        this.consume('}');
+        if (this.peek().value === ';') this.consume(';');
+        return { nodeType: 'EnumDeclaration', id: this.genId(), attributes: { name, members }, children: [] };
     }
 
     private parseFunction(): BaseNode {

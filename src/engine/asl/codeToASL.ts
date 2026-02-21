@@ -59,11 +59,33 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
   const functions: ASLFunction[] = [];
   const tasks: ASLTask[] = [];
 
+  function mapToASLType(cppType: string): any {
+    const lower = cppType.toLowerCase();
+    if (lower.includes('int') || lower.includes('long') || lower === 'short' || lower === 'byte' || lower === 'char') return 'int';
+    if (lower.includes('float') || lower === 'double') return 'float';
+    if (lower === 'bool' || lower === 'boolean') return 'bool';
+    if (lower === 'string') return 'string';
+    return 'int'; // Enum values etc
+  }
+
   const topLevelNodes: BaseNode[] = [];
   const isPython = language === 'micropython' || language === 'circuitpython' || language === 'python';
 
   program.children.forEach((node) => {
     if (!node) return;
+
+    // 0. Enums
+    if (node.nodeType === 'EnumDeclaration') {
+      const members = node.attributes.members || [];
+      members.forEach((m: { name: string, value: number }) => {
+        globals.push({
+          name: m.name,
+          type: 'int',
+          initialValue: m.value,
+        });
+      });
+      return;
+    }
 
     // 1. Functions / Tasks
     if (node.nodeType === 'Function') {
@@ -94,7 +116,7 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
       // Still identify globals for the ASL meta-info
       if (node.nodeType === 'VariableDeclaration') {
         const name = node.attributes.name;
-        const type = node.attributes.type || 'int';
+        const type = mapToASLType(node.attributes.type || 'int');
         let initialValue: any = 0;
 
         const valNode = node.children[0];
