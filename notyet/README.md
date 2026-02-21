@@ -14,7 +14,7 @@ Marcadores de status:
 [x] ASLTypes.ts: definição do AST — ASLProgram, globals, functions, tasks, statements, expressions.
 [x] ASLExecutor.ts: executor JS que percorre o ASL e chama SimulationEngine.
 [x] codeToASL.ts: transpiler C++ Arduino subset → ASL (v0).
-[x] Integração na TopToolbar: modo fake em C++ tenta ASL primeiro, fallback para CodeParser legado.
+[x] Integração na TopToolbar: modo JS em C++ tenta ASL primeiro, fallback para CodeParser legado.
 
 ### 0.2. Subset C++ suportado (v0) - Detalhamento completo
 
@@ -126,7 +126,7 @@ Language-specific: nós que não têm equivalente universal (escape hatch contro
 [x] Estratégia de fallback: erro com localização (linha/coluna) ou degradação para parser legado (Implementado no TopToolbar).
 
 ### 1.4. Executor e runtime
-[ ] Confirmar ASLExecutor como o único runtime oficial para simulação fake.
+[ ] Confirmar ASLExecutor como o único runtime oficial para simulação JS.
 [ ] Definir papel do SimulatorInterpreter (vindo de notyet/).
 [ ] Garantir que SimulationEngine.reset() zera todos os estados antes de cada execução.
 
