@@ -1,4 +1,3 @@
-
 export type TokenType = 'KEYWORD' | 'IDENTIFIER' | 'NUMBER' | 'SYMBOL' | 'STRING' | 'EOF';
 
 export interface Token { type: TokenType; value: string; line: number; }
@@ -92,8 +91,8 @@ export class Lexer {
         continue;
       }
 
-      // Single-char Symbols
-      const singleSymbols = ['(', ')', '{', '}', ';', ',', '=', '<', '>', '+', '-', '*', '/', '!', '.', '&', '|', '%'];
+      // Single-char Symbols — '[' e ']' adicionados para suporte a arrays
+      const singleSymbols = ['(', ')', '{', '}', '[', ']', ';', ',', '=', '<', '>', '+', '-', '*', '/', '!', '.', '&', '|', '%'];
       if (singleSymbols.includes(char)) {
         tokens.push({ type: 'SYMBOL', value: char, line: this.line });
         this.cursor++;

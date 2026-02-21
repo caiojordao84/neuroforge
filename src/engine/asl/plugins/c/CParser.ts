@@ -138,18 +138,82 @@ export class RecursiveDescentCParser {
         }
 
         const name = this.consume().value;
-        if (!this.symbols.define(name, type, this.peek().line)) this.semanticErrors.push({ severity: 'WARNING', message: `Redeclaration of '${name}'` });
-        let value: BaseNode = { nodeType: 'Literal', id: this.genId(), attributes: { value: 0 }, children: [] };
-        if (this.peek().value === '=') { this.consume('='); value = this.parseExpression(0); }
+        if (!this.symbols.define(name, type, this.peek().line))
+            this.semanticErrors.push({ severity: 'WARNING', message: `Redeclaration of '${name}'` });
+
+        // Detectar declaração de array: int arr[N]
+        let isArray = false;
+        let arraySize: number | null = null;
+        if (this.peek().value === '[') {
+            isArray = true;
+            this.consume('[');
+            if (this.peek().value !== ']') {
+                // Tamanho pode ser número literal ou constante identificador — consumir sem avaliar
+                const sizeTok = this.consume();
+                arraySize = parseFloat(sizeTok.value) || null;
+            }
+            this.consume(']');
+        }
+
+        let value: BaseNode = {
+            nodeType: 'Literal',
+            id: this.genId(),
+            attributes: { value: isArray ? [] : 0 },
+            children: [],
+        };
+
+        if (this.peek().value === '=') {
+            this.consume('=');
+            if (isArray && this.peek().value === '{') {
+                // Inicializador de array: = { 3, 5, 6, 9 }
+                this.consume('{');
+                const elements: BaseNode[] = [];
+                while (this.peek().value !== '}' && this.peek().type !== 'EOF') {
+                    elements.push(this.parseExpression(0));
+                    if (this.peek().value === ',') this.consume(',');
+                }
+                this.consume('}');
+                value = {
+                    nodeType: 'ArrayInitializer',
+                    id: this.genId(),
+                    attributes: { size: arraySize },
+                    children: elements,
+                };
+            } else {
+                value = this.parseExpression(0);
+            }
+        } else if (isArray) {
+            // Array sem inicializador: preencher com zeros
+            const size = arraySize ?? 0;
+            value = {
+                nodeType: 'ArrayInitializer',
+                id: this.genId(),
+                attributes: { size },
+                children: Array.from({ length: size }, () => ({
+                    nodeType: 'Literal',
+                    id: this.genId(),
+                    attributes: { value: 0 },
+                    children: [],
+                })),
+            };
+        }
+
         this.consume(';');
-        return { nodeType: 'VariableDeclaration', id: this.genId(), attributes: { name, type }, children: [value], metadata: { line } };
+        return {
+            nodeType: 'VariableDeclaration',
+            id: this.genId(),
+            attributes: { name, type, isArray, arraySize },
+            children: [value],
+            metadata: { line },
+        };
     }
 
     private parseExpression(minPrec: number): BaseNode {
         let left = this.parsePrefix();
         while (true) {
             const t = this.peek();
-            if (t.type === 'EOF' || [';', ')', ','].includes(t.value)) break;
+            // ']' adicionado como terminador: evita consumo incorreto dentro de subscripts
+            if (t.type === 'EOF' || [';', ')', ',', ']'].includes(t.value)) break;
             const prec = this.getPrecedence(t.value);
             if (prec < minPrec) break;
             const op = this.consume().value;
@@ -174,7 +238,26 @@ export class RecursiveDescentCParser {
         while (true) {
             if (this.peek().value === '++' || this.peek().value === '--') {
                 const op = this.consume().value;
-                node = { nodeType: 'UnaryExpression', id: this.genId(), attributes: { operator: op, prefix: false }, children: [node], metadata: { line: node.metadata?.line } };
+                node = {
+                    nodeType: 'UnaryExpression',
+                    id: this.genId(),
+                    attributes: { operator: op, prefix: false },
+                    children: [node],
+                    metadata: { line: node.metadata?.line },
+                };
+            } else if (this.peek().value === '[') {
+                // Subscript: arr[expr] — encadeável (ex: matriz[i][j])
+                const line = this.peek().line;
+                this.consume('[');
+                const index = this.parseExpression(0);
+                this.consume(']');
+                node = {
+                    nodeType: 'SubscriptExpression',
+                    id: this.genId(),
+                    attributes: {},
+                    children: [node, index],
+                    metadata: { line },
+                };
             } else {
                 break;
             }
