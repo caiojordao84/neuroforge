@@ -10,10 +10,10 @@ export class SymbolTable {
     pushScope() { this.scopes.push(new Map()); }
     popScope() { this.scopes.pop(); }
 
-    define(name: string, type: string, line: number, initialValue: any = 0): boolean {
+    define(name: string, type: string, line: number, initialValue: any = 0, isMacro: boolean = false): boolean {
         const currentScope = this.scopes[this.scopes.length - 1];
         if (currentScope.has(name)) return false;
-        const sym: Symbol = { name, type, scopeLevel: this.scopes.length - 1, declaredLine: line, usageCount: 0, value: initialValue };
+        const sym: Symbol = { name, type, scopeLevel: this.scopes.length - 1, declaredLine: line, usageCount: 0, value: initialValue, isMacro };
         currentScope.set(name, sym);
         this.allSymbols.push(sym);
         return true;

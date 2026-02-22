@@ -12,7 +12,8 @@ export type NodeType =
     | 'ExpressionStatement'
     // Optimization Nodes
     | 'HardwarePwm' | 'GpioBatch'
-    | 'EnumDeclaration';
+    | 'EnumDeclaration'
+    | 'SizeofExpression';
 
 export interface BaseNode {
     nodeType: NodeType;
@@ -35,6 +36,7 @@ export interface Symbol {
     declaredLine: number;
     usageCount: number;
     value?: any;
+    isMacro?: boolean;
 }
 
 export interface AnalysisIssue {

@@ -258,25 +258,37 @@ async function executeStatements(
         throw new ContinueSignal();
 
       case 'print': {
-        // Avalia argumentos (pode ser 0 para Serial.println() sem args)
         const parts: string[] = [];
         for (const a of s.args) {
-          parts.push(String(await evalExpr(a, localEnv, ctx) ?? ''));
+          parts.push(asString(await evalExpr(a, localEnv, ctx)));
         }
         const msg = parts.join('');
 
         if (s.newline !== false) {
-          // println (ou print legado sem atributo) — flush do buffer
           ctx.engine.log(ctx.printBuffer + msg);
           ctx.printBuffer = '';
         } else {
-          // print sem newline — acumula no buffer
           ctx.printBuffer += msg;
         }
         break;
       }
     }
   }
+}
+
+function asString(val: any): string {
+  if (Array.isArray(val)) {
+    if (val.length > 0 && typeof val[0] === 'number') {
+      let s = '';
+      for (const b of val) {
+        if (b === 0) break;
+        s += String.fromCharCode(b);
+      }
+      return s;
+    }
+    return JSON.stringify(val);
+  }
+  return String(val ?? '');
 }
 
 // Helpers de ambiente
@@ -302,6 +314,11 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
     case 'index': {
       const arr = await evalExpr(expr.target, env, ctx);
       const idx = await evalExpr(expr.index, env, ctx);
+      if (arr && (arr as any).__isPtr) {
+        const base = getVar((arr as any).target, env, ctx.globals);
+        const baseIdx = (arr as any).index || 0;
+        return base[baseIdx + idx];
+      }
       if (Array.isArray(arr)) return arr[idx];
       return 0;
     }
@@ -321,11 +338,28 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
     }
 
     case 'unary': {
+      if (expr.op === '&') {
+        const sub = expr.expr;
+        if (sub.kind === 'var') return { __isPtr: true, target: sub.name };
+        if (sub.kind === 'index') {
+          const idx = await evalExpr(sub.index, env, ctx);
+          const target = (sub.target as any).name;
+          return { __isPtr: true, target, index: idx };
+        }
+      }
       const v = await evalExpr(expr.expr, env, ctx);
       if (expr.op === '!') return !v;
       if (expr.op === '~') return ~v;
       if (expr.op === '+') return +v;
-      return -v;
+      if (expr.op === '-') return -v;
+      if (expr.op === '*') {
+        if (v && (v as any).__isPtr) {
+          const base = getVar((v as any).target, env, ctx.globals);
+          const idx = (v as any).index || 0;
+          return base[idx];
+        }
+      }
+      return v;
     }
 
     case 'binary': {
@@ -421,6 +455,18 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         const args = [];
         for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
         return ctx.engine.constrain(args[0], args[1], args[2]);
+      }
+
+      if (expr.callee === '__sizeof') {
+        const arr = await evalExpr(expr.args[0], env, ctx);
+        if (Array.isArray(arr)) {
+          const firstRow = arr[0];
+          if (Array.isArray(firstRow)) {
+            return firstRow.length;
+          }
+          return arr.length;
+        }
+        return 1; // Default size for non-arrays (e.g. sizeof(int))
       }
 
       // Conversores de tipo e utilitários padrão

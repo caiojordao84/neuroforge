@@ -27,7 +27,8 @@ async function parseToProgramNode(source: string, language: Language): Promise<P
     case 'c':
     case 'cpp': {
       const parser = new RecursiveDescentCParser();
-      const { ast } = parser.parse(source);
+      const { ast, symbols } = parser.parse(source);
+      (globalThis as any).__cpParserSymbols = symbols;
       return ast;
     }
 
@@ -45,14 +46,64 @@ async function parseToProgramNode(source: string, language: Language): Promise<P
   }
 }
 
+/**
+ * Simple evaluator for constant global initializers.
+ * Supports literals, references to other globals, and basic arithmetic.
+ */
+function evaluateInitializer(node: BaseNode | undefined, globalsMap: Map<string, any>): any {
+  if (!node) return 0;
+
+  if (node.nodeType === 'Literal') {
+    return node.attributes.value;
+  }
+
+  if (node.nodeType === 'Identifier') {
+    return globalsMap.get(node.attributes.name) ?? 0;
+  }
+
+  if (node.nodeType === 'BinaryExpression') {
+    const left = evaluateInitializer(node.children[0], globalsMap);
+    const right = evaluateInitializer(node.children[1], globalsMap);
+    const op = node.attributes.operator;
+    switch (op) {
+      case '+': return left + right;
+      case '-': return left - right;
+      case '*': return left * right;
+      case '/': return left / right;
+      default: return 0;
+    }
+  }
+
+  if (node.nodeType === 'ArrayInitializer') {
+    return node.children.map(c => evaluateInitializer(c, globalsMap));
+  }
+
+  return 0;
+}
+
 export function astToASL(program: ProgramNode, language?: Language): ASLProgram {
   const ctx = createTransformContext(language);
   const globals: ASLGlobalVar[] = [];
   const functions: ASLFunction[] = [];
   const tasks: ASLTask[] = [];
 
-  const topLevelNodes: BaseNode[] = [];
+  // Add macros from the parser (not in AST as nodes)
+  const cParserSymbols = (globalThis as any).__cpParserSymbols;
+  if (cParserSymbols) {
+    cParserSymbols.forEach((sym: any) => {
+      if (sym.isMacro && sym.value !== undefined) {
+        ctx.globalsMap.set(sym.name, sym.value);
+        globals.push({
+          name: sym.name,
+          type: 'int',
+          initialValue: sym.value,
+        });
+      }
+    });
+  }
+
   const isPython = language === 'micropython' || language === 'circuitpython' || language === 'python';
+  const topLevelNodes: BaseNode[] = [];
 
   program.children.forEach((node) => {
     if (!node) return;
@@ -90,67 +141,41 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
           body,
         });
       }
+    } else if (node.nodeType === 'VariableDeclaration') {
+      const name = node.attributes.name;
+      const type = mapToASLType(node.attributes.type || 'int');
+      const isArray = node.attributes.isArray;
+      const isArray2D = node.attributes.isArray2D;
+
+      let initialValue: any = 0;
+      const valNode = node.children[0];
+
+      if (valNode) {
+        if (isArray && valNode.nodeType === 'ArrayInitializer') {
+          initialValue = evaluateInitializer(valNode, ctx.globalsMap);
+        } else {
+          initialValue = evaluateInitializer(valNode, ctx.globalsMap);
+        }
+      } else if (isArray) {
+        initialValue = buildEmptyArray(
+          node.attributes.arraySizeExpr,
+          node.attributes.arraySize2Expr,
+          ctx.globalsMap,
+        );
+      }
+
+      const safeInitialValue = deepCopyValue(initialValue);
+      globals.push({
+        name,
+        type: type as any,
+        initialValue: safeInitialValue,
+        comments: node.leadingComments,
+        progmem: node.attributes.isProgmem,
+      } as any);
+
+      ctx.globalsMap.set(name, safeInitialValue);
     } else {
       topLevelNodes.push(node);
-
-      if (node.nodeType === 'VariableDeclaration') {
-        const name = node.attributes.name;
-        const type = mapToASLType(node.attributes.type || 'int');
-        const isArray = node.attributes.isArray;
-        const isArray2D = node.attributes.isArray2D;
-        let initialValue: any = 0;
-
-        const valNode = node.children[0];
-        if (valNode) {
-          if (valNode.nodeType === 'ArrayInitializer') {
-            if (isArray2D && valNode.attributes.isArray2D) {
-              initialValue = valNode.children.map((rowNode) => {
-                if (rowNode.nodeType === 'ArrayInitializer' && rowNode.attributes.isRow) {
-                  return rowNode.children.map((c) => {
-                    const e = transformExpr(c);
-                    return e.kind === 'literal' ? e.value : 0;
-                  });
-                }
-                const e = transformExpr(rowNode);
-                return e.kind === 'literal' ? e.value : 0;
-              });
-            } else {
-              initialValue = valNode.children.map((c) => {
-                const e = transformExpr(c);
-                if (e.kind === 'literal') return e.value;
-                return 0;
-              });
-            }
-          } else if (valNode.nodeType === 'Literal') {
-            if (isArray) {
-              initialValue = buildEmptyArray(
-                node.attributes.arraySizeExpr,
-                node.attributes.arraySize2Expr,
-                ctx.globalsMap,
-              );
-            } else {
-              initialValue = valNode.attributes.value;
-            }
-          }
-        } else if (isArray) {
-          initialValue = buildEmptyArray(
-            node.attributes.arraySizeExpr,
-            node.attributes.arraySize2Expr,
-            ctx.globalsMap,
-          );
-        }
-
-        const safeInitialValue = deepCopyValue(initialValue);
-
-        globals.push({
-          name,
-          type: type as any,
-          initialValue: safeInitialValue,
-          comments: node.leadingComments,
-        } as any);
-
-        ctx.globalsMap.set(name, safeInitialValue);
-      }
     }
   });
 
@@ -168,9 +193,7 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
       const setupFunc = functions.find(f => f.name === 'setup');
       if (setupFunc) {
         setupFunc.body.unshift(...topLevelStmts);
-      } else if (existingLoop) {
-        // C++ root nodes are typically globals
-      } else {
+      } else if (!existingLoop) {
         tasks.push({ name: 'mainLoop', body: topLevelStmts });
       }
     }

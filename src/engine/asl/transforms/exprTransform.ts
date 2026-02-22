@@ -97,5 +97,26 @@ export function transformExpr(node: BaseNode | undefined): ASLExpr {
     } as ASLExpr;
   }
 
+  if (node.nodeType === 'SizeofExpression') {
+    const child = node.children[0];
+
+    if (child) {
+      return {
+        kind: 'call',
+        callee: '__sizeof',
+        args: [transformExpr(child)],
+      } as ASLExpr;
+    }
+
+    return { kind: 'literal', value: 1 } as ASLExpr;
+  }
+
+  if (node.nodeType === 'ArrayInitializer') {
+    return {
+      kind: 'literal',
+      value: node.children.map(c => (transformExpr(c) as any).value ?? 0)
+    } as ASLExpr;
+  }
+
   return { kind: 'literal', value: 0 };
 }

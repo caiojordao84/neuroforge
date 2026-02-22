@@ -34,6 +34,11 @@ export interface ASLGlobalVar {
    * Comentários associados à declaração global (por ex. docs extraídas do código fonte).
    */
   comments?: string[];
+  /**
+   * Indica que a variável está armazenada em flash (PROGMEM) no AVR/Arduino.
+   * Em simulação, PROGMEM é transparente (flash = RAM).
+   */
+  progmem?: boolean;
 }
 
 /**
@@ -304,7 +309,7 @@ export interface ASLMember {
  */
 export interface ASLUnary {
   kind: 'unary';
-  op: '-' | '!' | '~' | '+';
+  op: '-' | '!' | '~' | '+' | '*' | '&';
   expr: ASLExpr;
 }
 
