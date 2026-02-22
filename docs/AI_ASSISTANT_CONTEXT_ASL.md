@@ -1,302 +1,370 @@
 # 🤖 AI Assistant Context — NeuroForge ASL Subsystem
 
-> **Data de Atualização:** 21/02/2026  
-> **Branch:** `ASL_Integration`  
-> **Commit Base:** `488221ac` (21/02/2026) — notyet/README.md atualizado  
-> **Foco Atual:** Pipeline ASL JS-mode (C++ Arduino + MicroPython → ASL → SimulationEngine)
+> **Last Updated:** 22/02/2026
+> **Branch:** `ASL_Integration_codeToASL_Modular`
+> **Current Focus:** ASL JS-mode Pipeline (C++ Arduino + MicroPython → ASL → SimulationEngine)
 
 ---
 
-## 📋 Instruções para Assistentes de IA
+## 📋 Instructions for AI Assistants
 
-Tu és um assistente técnico ajudando o desenvolvedor **Caio** a construir o subsistema **ASL (Abstract Simulation Language)** do projeto **NeuroForge**. O ASL é uma Representação Intermediária (IR) universal que serve de pivô entre:
+You are a technical assistant helping developer **Caio** build the **ASL (Abstract Simulation Language)** subsystem of the **NeuroForge** project. ASL is a universal Intermediate Representation (IR) that acts as a pivot between:
 
-- **Entradas**: código-fonte (C++ Arduino, MicroPython, futuramente JS, Rust, Zig, Ada, Forth, Assembly, Lua) e editores visuais (Blockly, Flowchart, Ladder).
-- **Saídas**: execução no SimulationEngine (modo JS, browser), geradores de código para outras linguagens, e representações visuais.
+- **Inputs**: source code (C++ Arduino, MicroPython, JS, Rust, Zig, Ada, Forth, Assembly, Lua) and visual editors (Blockly, Flowchart, Ladder).
+- **Outputs**: execution in SimulationEngine (JS mode, browser), code generators for other languages, and visual representations.
 
-O objetivo é que qualquer sketch ou programa embarcado, de qualquer linguagem, passe sempre pelo ASL antes de ser executado ou convertido — ASL como pivô universal.
+The goal is that any embedded sketch or program, in any language, always passes through ASL before being executed or converted — ASL as the universal pivot.
 
 ---
 
-## 🚨 REGRA CRÍTICA DE INTEGRAÇÃO (ASL)
+## 🚨 CRITICAL INTEGRATION RULE (ASL)
 
 > [!CAUTION]
-> **ANTES de qualquer integração de código:**
-> 1. **MOSTRAR TODO o código atual** dos arquivos que serão modificados
-> 2. **MOSTRAR TODAS as entradas** (tipos, interfaces, variáveis) que serão afetadas
-> 3. **EXPLICAR detalhadamente** o que será alterado e porquê
-> 4. **Aguardar aprovação** do desenvolvedor
-> 5. **A integração deverá ser feita em um ÚNICO COMMIT no GitHub** com mensagem descritiva
+> **BEFORE any code integration:**
+> 1. **SHOW ALL current code** from the files that will be modified
+> 2. **SHOW ALL inputs** (types, interfaces, variables) that will be affected
+> 3. **EXPLAIN in detail** what will be changed and why
+> 4. **WAIT for developer approval**
+> 5. **Integration must be done in a SINGLE COMMIT on GitHub** with a descriptive message
 >
-> **NUNCA altere** `ASLTypes.ts` sem analisar o impacto em `codeToASL.ts`, `ASLExecutor.ts`, e todos os parsers.  
-> **NUNCA altere** `SimulationEngine.ts` sem verificar o contrato de `millis()/micros()` (tempo relativo desde `simulationStartTime`).  
-> **NUNCA altere** `CParser.ts` sem manter a tabela de constantes Arduino (`HIGH/LOW/INPUT/OUTPUT/INPUT_PULLUP`).  
-> **NUNCA remova** sinais de controlo (`BreakSignal`, `ContinueSignal`, `ReturnSignal`) do executor sem substituição adequada.
+> **NEVER modify** `ASLTypes.ts` without analyzing the impact on `codeToASL.ts`, `ASLExecutor.ts`, and all parsers.
+> **NEVER modify** `SimulationEngine.ts` without verifying the `millis()/micros()` contract (relative time since `simulationStartTime`).
+> **NEVER modify** `CParser.ts` without maintaining the Arduino constants table (`HIGH/LOW/INPUT/OUTPUT/INPUT_PULLUP`).
+> **NEVER remove** flow control signals (`BreakSignal`, `ContinueSignal`, `ReturnSignal`) from the executor without an adequate replacement.
 
 ---
 
-## 📁 Contexto do Repositório
+## 📁 Repository Context
 
-**Repositório:** [`caiojordao84/neuroforge`](https://github.com/caiojordao84/neuroforge)  
-**Branch de trabalho:** `ASL_Integration`  
-**Merge target:** `main` (apenas quando ASL v1 estiver estável — ver Checklist de PR abaixo)
+**Repository:** [`caiojordao84/neuroforge`](https://github.com/caiojordao84/neuroforge)
+**Working branch:** `ASL_Integration`
+**Merge target:** `main` (only when ASL v1 is stable — see PR Checklist below)
 
-### Estrutura dos Arquivos ASL
+### ASL File Structure
 
 ```
 src/
   engine/
-    SimulationEngine.ts          # Engine de simulação (JS mode): GPIO, delay, millis, Serial
+    SimulationEngine.ts          # Simulation engine (JS mode): GPIO, delay, millis, Serial
     asl/
-      ASLTypes.ts                # ✅ Fonte única de verdade do schema ASL
-      ASLExecutor.ts             # ✅ Interpreter/runtime ASL → SimulationEngine
-      codeToASL.ts               # ✅ Transpiler: AST (C++/Python) → ASLProgram
-      LanguageRegistry.ts        # ✅ Registro central de linguagens suportadas
-      TreeSitterLoader.ts        # ✅ Loader lazy de web-tree-sitter (para Python/MicroPython)
+      ASLTypes.ts                # ✅ Single source of truth for the ASL schema
+      ASLExecutor.ts             # ✅ ASL interpreter/runtime → SimulationEngine
+      codeToASL.ts               # ✅ Transpiler: AST (C++/Python) → ASLProgram (modularized)
+      LanguageRegistry.ts        # ✅ Central registry of supported languages
+      TreeSitterLoader.ts        # ✅ Lazy loader for web-tree-sitter (for Python/MicroPython)
+      transforms/                # ✅ codeToASL modules (Handler Registry pattern)
+      │   index.ts              # Barrel exports
+      │   context.ts            # TransformContext interface
+      │   statementRegistry.ts  # Handler registry by nodeType
+      │   blockTransform.ts     # Orchestrator using registry
+      │   exprTransform.ts      # Expression transformation
+      │   callTransform.ts      # Function call transformation
+      helpers/                   # ✅ Shared utilities
+      │   index.ts
+      │   arrayUtils.ts         # resolveSize, buildEmptyArray, deepCopyValue
+      │   typeUtils.ts          # mapToASLType
       plugins/
         c/
-          CParser.ts             # ✅ Parser recursivo descendente para C/C++ Arduino subset
+          CParser.ts             # ✅ Recursive descent parser for C/C++ Arduino subset
+          Lexer.ts               # ✅ Integrated from notyet/
+          SymbolTable.ts         # ✅ Integrated from notyet/
         python/
-          PythonParser.ts        # ✅ Parser MicroPython/CircuitPython via tree-sitter
+          PythonParser.ts        # ✅ MicroPython/CircuitPython parser via tree-sitter
         rust/
-          RustParser.ts          # 🔜 Parser Rust (Embassy)
-        assembly/
-          AsmParser.ts           # 🔜 Parser Assembly (AVR / ARM Thumb)
-        st/
-          STParser.ts            # 🔜 Parser Structured Text IEC 61131-3
-      generators/
+          RustParser.ts          # 🔜 Rust parser (Embassy)
+        cpp/
+          CppParser.ts           # 🔜 Full C++ parser
+      generators/               # (formerly plugins/*/ - moving)
         CGenerator.ts            # 🔜 ASL → C
         CppGenerator.ts          # 🔜 ASL → C++
         MicroPythonGenerator.ts  # 🔜 ASL → MicroPython
-        CircuitPythonGenerator.ts# 🔜 ASL → CircuitPython
         RustGenerator.ts         # 🔜 ASL → Rust (Embassy)
-        AsmGenerator.ts          # 🔜 ASL → Assembly (AVR/ARM Thumb)
-        STGenerator.ts           # 🔜 ASL → Structured Text IEC 61131-3
-        BlocklyGenerator.ts      # 🔜 ASL → Blockly XML
-        FlowchartGenerator.ts    # 🔜 ASL → Flowchart JSON (React Flow)
-        LadderGenerator.ts       # 🔜 ASL → Ladder Diagram
   components/
-    TopToolbar.tsx               # ✅ Controles Run/Stop/Pause + integração do pipeline ASL
-    CodeEditorWithTabs.tsx       # ✅ Editor Monaco multi-abas, expõe código + metadados
-    ASLViewer.tsx                # ✅ Visualizador do ASLProgram gerado (debug/teaching)
+    TopToolbar.tsx               # ✅ Run/Stop/Pause controls + ASL pipeline integration
+    CodeEditorWithTabs.tsx       # ✅ Multi-tab Monaco editor, exposes code + metadata
+    ASLViewer.tsx                # ✅ Viewer for the generated ASLProgram (debug/teaching)
 
 notyet/
-  README.md                     # Roadmap detalhado (fonte de verdade do estado ASL)
+  README.md                     # Detailed roadmap (source of truth for ASL state)
   app/system/
-    Lexer.ts                     # 🔜 A integrar em src/engine/tools/lexer/
-    SymbolTable.ts               # 🔜 A integrar em src/engine/tools/symbols/
+    Lexer.ts                     # 🔜 To integrate into src/engine/tools/lexer/
+    SymbolTable.ts               # 🔜 To integrate into src/engine/tools/symbols/
     flow/                        # 🔜 CfgBuilder, FlowValidator, FlowToASL
     blockly/                     # 🔜 BlocklyParser, CodeToBlockly
     simulator/
-      SimulatorInterpreter.ts   # 🔜 A integrar com papel formal definido
+      SimulatorInterpreter.ts   # 🔜 To integrate with a formally defined role
 
 docs/
-  AI_ASSISTANT_CONTEXT.md       # Contexto geral NeuroForge (QEMU, AVR, ESP32)
-  AI_ASSISTANT_CONTEXT_ASL.md   # Este arquivo (contexto específico do ASL)
+  AI_ASSISTANT_CONTEXT.md       # General NeuroForge context (QEMU, AVR, ESP32)
+  AI_ASSISTANT_CONTEXT_ASL.md   # This file (ASL-specific context)
 ```
 
 ---
 
-## 🏗️ Arquitetura Mental do Pipeline ASL
+## 🏗️ ASL Pipeline Mental Architecture
 
 ```
  CodeEditorWithTabs / Blockly Editor / Flowchart Editor / Ladder Editor
-        │  código-fonte ou representação visual + linguagem ativa
+        │  source code or visual representation + active language
         ▼
    TopToolbar (Run / Transpile)
-        │  resolve linguagem via LanguageRegistry
+        │  resolves language via LanguageRegistry
         ▼
    LanguageRegistry
-        │  decide: suporta ASL? qual parser? qual gerador?
+        │  decides: supports ASL? which parser? which generator?
         ▼
    Parser (CParser / PythonParser / RustParser / AsmParser / STParser /
            BlocklyParser / FlowchartParser / LadderParser)
-        │  produz ProgramNode (AST proprietário)
+        │  produces ProgramNode (proprietary AST)
         ▼
    codeToASL (astToASL)
-        │  converte ProgramNode → ASLProgram
+        │  converts ProgramNode → ASLProgram
         ▼
    ASLProgram (JSON) ─────────────────────────────────────────────────────► Generators
         │  globals, functions, tasks                                      C / C++ /
         ▼                                                                  MicroPython /
    createASLRuntime (ASLExecutor)                                          CircuitPython /
-        │  setup() + loop() assíncronos                                   Rust / Assembly /
+        │  async setup() + loop()                                          Rust / Assembly /
         ▼                                                                  ST IEC 61131-3 /
    SimulationEngine                                                        Blockly / Flowchart /
         │  GPIO, delay, millis, Serial                                    Ladder
         ▼
-   UI React (pinChange events, terminal, ASLViewer)
+   React UI (pinChange events, terminal, ASLViewer)
 ```
 
 ---
 
-## 📐 Schema ASL (ASLTypes.ts)
+## 📐 ASL Schema (ASLTypes.ts)
 
-`ASLTypes.ts` é a **fonte única de verdade**. Nunca duplicar tipos noutros ficheiros.
+`ASLTypes.ts` is the **single source of truth**. Never duplicate types in other files.
 
-### Estrutura raiz
+### Root structure
 
 ```typescript
 interface ASLProgram {
   metadata: { name?, description?, version?, targetBoard? };
-  globals: ASLGlobalVar[];   // variáveis globais declaradas fora de setup/loop
-  functions: ASLFunction[];  // setup + funções de utilizador
-  tasks: ASLTask[];          // [0] = mainLoop (derivado de loop())
+  globals: ASLGlobalVar[];   // global variables declared outside setup/loop
+  functions: ASLFunction[];  // setup + user functions
+  tasks: ASLTask[];          // [0] = mainLoop (derived from loop())
 }
 ```
 
-### Statements suportados (ASLStatement)
+### Supported Statements (ASLStatement)
 
-| kind           | Descrição                     | Campos chave                                        |
-| -------------- | ----------------------------- | --------------------------------------------------- |
-| `pinMode`      | Configurar modo de pino       | `pin: ASLExpr`, `mode: INPUT\|OUTPUT\|INPUT_PULLUP` |
-| `digitalWrite` | Escrever valor digital        | `pin: ASLExpr`, `value: 'HIGH'\|'LOW'\|ASLExpr`     |
-| `analogWrite`  | Escrever valor analógico/PWM  | `pin: ASLExpr`, `value: ASLExpr`                    |
-| `read`         | Leitura de pino para variável | `pin`, `target: string`, `mode: DIGITAL\|ANALOG`    |
-| `if`           | Condicional                   | `condition`, `thenBranch`, `elseBranch?`            |
-| `while`        | Loop while                    | `condition`, `body`                                 |
-| `delay`        | Espera bloqueante             | `milliseconds: ASLExpr`                             |
-| `assign`       | Atribuição simples            | `target: string`, `value: ASLExpr`                  |
-| `setIndex`     | Atribuição em array           | `target: string`, `index`, `value`                  |
-| `setMember`    | Atribuição em propriedade     | `target: ASLExpr`, `property: string`, `value`      |
-| `expr`         | Expressão como statement      | `expr: ASLExpr`                                     |
-| `return`       | Retorno de função             | `value?: ASLExpr`                                   |
-| `print`        | Serial.print / log            | `args: ASLExpr[]`, `newline: boolean`               |
-| `break`        | Interrompe loop               | —                                                   |
-| `continue`     | Próxima iteração              | —                                                   |
-| `comment`      | Preservação de contexto       | `text: string`                                      |
+| kind           | Description             | Key fields                                          |
+| -------------- | ----------------------- | --------------------------------------------------- |
+| `pinMode`      | Configure pin mode      | `pin: ASLExpr`, `mode: INPUT\|OUTPUT\|INPUT_PULLUP` |
+| `digitalWrite` | Write digital value     | `pin: ASLExpr`, `value: 'HIGH'\|'LOW'\|ASLExpr`     |
+| `analogWrite`  | Write analog/PWM value  | `pin: ASLExpr`, `value: ASLExpr`                    |
+| `read`         | Read pin into variable  | `pin`, `target: string`, `mode: DIGITAL\|ANALOG`    |
+| `if`           | Conditional             | `condition`, `thenBranch`, `elseBranch?`            |
+| `while`        | While loop              | `condition`, `body`                                 |
+| `delay`        | Blocking wait           | `milliseconds: ASLExpr`                             |
+| `assign`       | Simple assignment       | `target: string`, `value: ASLExpr`                  |
+| `setIndex`     | Array assignment        | `target: string`, `index`, `value`                  |
+| `setMember`    | Property assignment     | `target: ASLExpr`, `property: string`, `value`      |
+| `expr`         | Expression as statement | `expr: ASLExpr`                                     |
+| `return`       | Function return         | `value?: ASLExpr`                                   |
+| `print`        | Serial.print / log      | `args: ASLExpr[]`, `newline: boolean`               |
+| `break`        | Break out of loop       | —                                                   |
+| `continue`     | Next iteration          | —                                                   |
+| `comment`      | Context preservation    | `text: string`                                      |
 
-### Expressões suportadas (ASLExpr)
+### Supported Expressions (ASLExpr)
 
-| kind      | Descrição                 | Exemplo                           |
-| --------- | ------------------------- | --------------------------------- |
-| `literal` | Valor constante           | `{ kind:'literal', value: 42 }`   |
-| `var`     | Referência a variável     | `{ kind:'var', name:'ledState' }` |
-| `index`   | Indexação de array        | `pins[i]`                         |
-| `member`  | Acesso a propriedade      | `obj.property`                    |
-| `unary`   | Operador unário           | `!flag`, `-x`                     |
-| `binary`  | Operador binário          | `a + b`, `i < 10`, `a && b`       |
-| `call`    | Chamada de função/builtin | `millis()`, `digitalRead(pin)`    |
+| kind      | Description           | Example                           |
+| --------- | --------------------- | --------------------------------- |
+| `literal` | Constant value        | `{ kind:'literal', value: 42 }`   |
+| `var`     | Variable reference    | `{ kind:'var', name:'ledState' }` |
+| `index`   | Array indexing        | `pins[i]`                         |
+| `member`  | Property access       | `obj.property`                    |
+| `unary`   | Unary operator        | `!flag`, `-x`                     |
+| `binary`  | Binary operator       | `a + b`, `i < 10`, `a && b`       |
+| `call`    | Function/builtin call | `millis()`, `digitalRead(pin)`    |
 
-**Operadores binários suportados:** `+`, `-`, `*`, `/`, `%`, `==`, `!=`, `<`, `<=`, `>`, `>=`, `&&`, `||`
+**Supported binary operators:** `+`, `-`, `*`, `/`, `%`, `==`, `!=`, `<`, `<=`, `>`, `>=`, `&&`, `||`
 
 ---
 
 ## ⚙️ ASLExecutor — Runtime
 
-**Ficheiro:** `src/engine/asl/ASLExecutor.ts`
+**File:** `src/engine/asl/ASLExecutor.ts`
 
-### Como criar e usar
+### How to create and use
 
 ```typescript
 const program: ASLProgram = codeToASL(sourceCode, 'cpp');
 const runtime = createASLRuntime(program, { engine: simulationEngine });
-// O SimulationEngine.start() chama:
-await runtime.setup();   // executa funções.find('setup')
-await runtime.loop();    // executa tasks[0] em cada iteração
+// SimulationEngine.start() calls:
+await runtime.setup();   // executes functions.find('setup')
+await runtime.loop();    // executes tasks[0] on each iteration
 ```
 
-### Ambiente de variáveis
+### Variable environment
 
-- **Globais**: `Map<string, any>` inicializado com deep copy dos `program.globals`.
-- **Locais** (por chamada de função): novo `Map<string, any>` criado a cada call.
-- **Resolução**: `setVar` e `getVar` procuram em **local primeiro**, depois em **global**.
+- **Globals**: `Map<string, any>` initialized with a deep copy of `program.globals`.
+- **Locals** (per function call): a new `Map<string, any>` created on each call.
+- **Resolution**: `setVar` and `getVar` look in **local first**, then **global**.
 
-### Sinais de controlo de fluxo
+### Flow control signals
 
-| Classe                | Lançada em           | Capturada em                |
+| Class                 | Thrown in            | Caught in                   |
 | --------------------- | -------------------- | --------------------------- |
-| `ReturnSignal(value)` | statement `return`   | execução de função (`call`) |
-| `BreakSignal`         | statement `break`    | loop `while`                |
-| `ContinueSignal`      | statement `continue` | loop `while`                |
+| `ReturnSignal(value)` | `return` statement   | function execution (`call`) |
+| `BreakSignal`         | `break` statement    | `while` loop                |
+| `ContinueSignal`      | `continue` statement | `while` loop                |
 
-> ⚠️ Estes são mecanismos de controlo de fluxo internos — não são erros. **Nunca** os remova sem substituto.
+> ⚠️ These are internal flow control mechanisms — they are not errors. **Never** remove them without a replacement.
 
-### Delay interrompível
+### Interruptible delay
 
-O `delay` é partido em chunks de **50 ms** para permitir abort via `AbortSignal`:
+`delay` is split into chunks of **50 ms** to allow abort via `AbortSignal`:
 
 ```typescript
-// delay(1000) → 20 chunks de 50ms, cada um verifica abortSignal.aborted
+// delay(1000) → 20 chunks of 50ms, each one checks abortSignal.aborted
 ```
 
-### Yield do loop para não travar a UI
+### Loop yield to avoid blocking the UI
 
-A cada **10 iterações** do `while`, o executor faz yield com `setTimeout(r, 0)` para não bloquear o thread do browser.
+Every **10 iterations** of `while`, the executor yields with `setTimeout(r, 0)` to avoid blocking the browser thread.
 
-### Builtins reconhecidos no `evalExpr` (kind: 'call')
+### Builtins recognized in `evalExpr` (kind: 'call')
 
-| callee                | Acção                                                                   |
-| --------------------- | ----------------------------------------------------------------------- |
-| `millis`              | `engine.millis()` → ms desde início da simulação                        |
-| `micros`              | `engine.micros()` → μs desde início da simulação                        |
-| `digitalRead(pin)`    | `engine.digitalRead(pin)` → `'HIGH'` ou `'LOW'` convertido para `1`/`0` |
-| `analogRead(pin)`     | `engine.analogRead(pin)` → `0–1023`                                     |
-| `random(min, max)`    | `Math.floor(Math.random() * (max - min)) + min`                         |
-| `Pin(num, mode)`      | `engine.pinMode(num, mode)` (MicroPython)                               |
-| `Pin.on(pin)`         | `engine.digitalWrite(pin, 'HIGH')`                                      |
-| `Pin.off(pin)`        | `engine.digitalWrite(pin, 'LOW')`                                       |
-| `Pin.value(pin[, v])` | leitura ou escrita conforme nº de args                                  |
-| `Serial.begin`        | no-op                                                                   |
-| funções do user       | executa com novo localEnv, params passados por posição                  |
-| desconhecida          | retorna `0` sem erro                                                    |
+| callee                | Action                                                               |
+| --------------------- | -------------------------------------------------------------------- |
+| `millis`              | `engine.millis()` → ms since simulation start                        |
+| `micros`              | `engine.micros()` → μs since simulation start                        |
+| `digitalRead(pin)`    | `engine.digitalRead(pin)` → `'HIGH'` or `'LOW'` converted to `1`/`0` |
+| `analogRead(pin)`     | `engine.analogRead(pin)` → `0–1023`                                  |
+| `random(min, max)`    | `Math.floor(Math.random() * (max - min)) + min`                      |
+| `Pin(num, mode)`      | `engine.pinMode(num, mode)` (MicroPython)                            |
+| `Pin.on(pin)`         | `engine.digitalWrite(pin, 'HIGH')`                                   |
+| `Pin.off(pin)`        | `engine.digitalWrite(pin, 'LOW')`                                    |
+| `Pin.value(pin[, v])` | read or write depending on number of args                            |
+| `Serial.begin`        | no-op                                                                |
+| user functions        | executes with new localEnv, params passed by position                |
+| unknown               | returns `0` without error                                            |
 
 ---
 
-## 🔄 codeToASL — Transpiler
+## 🔄 codeToASL — Transpiler (Modularized)
 
-**Ficheiro:** `src/engine/asl/codeToASL.ts`
+**File:** `src/engine/asl/codeToASL.ts`
+**Pattern:** Handler Registry pattern (statementRegistry.ts)
 
-### Assinatura pública
+### Public signature
 
 ```typescript
 function codeToASL(source: string, language: Language): ASLProgram
 // language: 'cpp' | 'c' | 'micropython' | 'circuitpython' | 'python'
 ```
 
-### Fluxo interno
+### Modular Architecture
 
-1. Para `cpp`/`c`: instancia `RecursiveDescentCParser(source)` → `ProgramNode`.
-2. Para `micropython`/`circuitpython`/`python`: usa `PythonParser` (tree-sitter) → `ProgramNode`.
-3. Chama `astToASL(program)` que percorre `ProgramNode.children`:
-   - Nós `Function` com nome `setup` → `ASLFunction { name: 'setup', ... }`
-   - Nós `Function` com nome `loop` ou `main` → `ASLTask { name: 'mainLoop', ... }`
-   - Outras `Function` → `ASLFunction` indexada para chamadas cruzadas
-   - `VariableDeclaration` de topo → `ASLGlobalVar`
-4. `transformBlock(nodes)` converte cada statement do AST em `ASLStatement[]`.
+`codeToASL` was refactored from ~967 lines to ~194 lines using the **Handler Registry** pattern:
 
-### Regras de transformBlock (C++)
+```
+transforms/
+├── index.ts              # Barrel exports
+├── context.ts            # TransformContext interface
+├── statementRegistry.ts  # Handler registry (Record<string, StatementHandler>)
+├── blockTransform.ts     # Orchestrator - uses registry to process nodes
+├── exprTransform.ts      # Expression transformation
+└── callTransform.ts      # Function call transformation
+```
 
-| Input AST                                     | Output ASL                                                       |
-| --------------------------------------------- | ---------------------------------------------------------------- |
-| `GpioSet(pin, val)`                           | `{ kind:'digitalWrite', pin, value }`                            |
-| `AnalogWrite(pin, val)`                       | `{ kind:'analogWrite', pin, value }`                             |
-| `DelayMs(ms)`                                 | `{ kind:'delay', milliseconds }`                                 |
-| `GpioRead(pin)` / `AnalogRead(pin)` em assign | `{ kind:'read', ... }`                                           |
-| `IfStatement`                                 | `{ kind:'if', condition, thenBranch, elseBranch? }`              |
-| `WhileStatement`                              | `{ kind:'while', condition, body }`                              |
-| `ForStatement`                                | `init-assign` + `{ kind:'while', ... }` com `inc` no fim do body |
-| `ReturnStatement`                             | `{ kind:'return', value? }`                                      |
-| `BreakStatement`                              | `{ kind:'break' }`                                               |
-| `ContinueStatement`                           | `{ kind:'continue' }`                                            |
-| `Print(args)`                                 | `{ kind:'print', args, newline }`                                |
-| `AssignExpression`                            | `{ kind:'assign', target, value }`                               |
-| `UnaryExpression (++/--)`                     | `{ kind:'assign', target, value: binary(target ± 1) }`           |
-| `CallExpression` genérica                     | `{ kind:'expr', expr: { kind:'call', callee, args } }`           |
-| `VariableDeclaration` local                   | `{ kind:'assign', target, value }`                               |
+### TransformContext
+
+```typescript
+interface TransformContext {
+  globalsMap: Map<string, ASLGlobalVar>;
+  language: Language;
+  transformBlock: (nodes: ProgramNode[]) => ASLStatement[];
+}
+```
+
+### Handler Registry
+
+Each AST node type has a registered handler in `statementRegistry.ts`:
+
+```typescript
+type StatementHandler = (node: ProgramNode, ctx: TransformContext) => ASLStatement | ASLStatement[];
+
+const statementHandlers: Record<string, StatementHandler> = {
+  'Function': handleFunction,
+  'VariableDeclaration': handleVariableDeclaration,
+  'IfStatement': handleIfStatement,
+  'WhileStatement': handleWhileStatement,
+  'ForStatement': handleForStatement,
+  'ReturnStatement': handleReturnStatement,
+  'BreakStatement': handleBreakStatement,
+  'ContinueStatement': handleContinueStatement,
+  'PrintStatement': handlePrintStatement,
+  'ExpressionStatement': handleExpressionStatement,
+  'AssignmentExpression': handleAssignment,
+  // ... +30 handlers
+};
+```
+
+`blockTransform.ts` iterates over nodes and fires the appropriate handler:
+
+```typescript
+export function transformBlock(nodes: ProgramNode[], ctx: TransformContext): ASLStatement[] {
+  const result: ASLStatement[] = [];
+  for (const node of nodes) {
+    const handler = statementHandlers[node.type];
+    if (handler) {
+      const statements = handler(node, ctx);
+      result.push(...(Array.isArray(statements) ? statements : [statements]));
+    }
+  }
+  return result;
+}
+```
+
+### Internal flow
+
+1. For `cpp`/`c`: instantiates `RecursiveDescentCParser(source)` → `ProgramNode`.
+2. For `micropython`/`circuitpython`/`python`: uses `PythonParser` (tree-sitter) → `ProgramNode`.
+3. Calls `astToASL(program)` which traverses `ProgramNode.children`:
+   - `Function` nodes named `setup` → `ASLFunction { name: 'setup', ... }`
+   - `Function` nodes named `loop` or `main` → `ASLTask { name: 'mainLoop', ... }`
+   - Other `Function` nodes → `ASLFunction` indexed for cross-calls
+   - Top-level `VariableDeclaration` → `ASLGlobalVar`
+4. `transformBlock(nodes)` uses the Handler Registry to convert each statement.
+
+### transformBlock Rules (C++)
+
+| Input AST                                     | Output ASL                                                        |
+| --------------------------------------------- | ----------------------------------------------------------------- |
+| `GpioSet(pin, val)`                           | `{ kind:'digitalWrite', pin, value }`                             |
+| `AnalogWrite(pin, val)`                       | `{ kind:'analogWrite', pin, value }`                              |
+| `DelayMs(ms)`                                 | `{ kind:'delay', milliseconds }`                                  |
+| `GpioRead(pin)` / `AnalogRead(pin)` in assign | `{ kind:'read', ... }`                                            |
+| `IfStatement`                                 | `{ kind:'if', condition, thenBranch, elseBranch? }`               |
+| `WhileStatement`                              | `{ kind:'while', condition, body }`                               |
+| `ForStatement`                                | `init-assign` + `{ kind:'while', ... }` with `inc` at end of body |
+| `ReturnStatement`                             | `{ kind:'return', value? }`                                       |
+| `BreakStatement`                              | `{ kind:'break' }`                                                |
+| `ContinueStatement`                           | `{ kind:'continue' }`                                             |
+| `Print(args)`                                 | `{ kind:'print', args, newline }`                                 |
+| `AssignExpression`                            | `{ kind:'assign', target, value }`                                |
+| `UnaryExpression (++/--)`                     | `{ kind:'assign', target, value: binary(target ± 1) }`            |
+| Generic `CallExpression`                      | `{ kind:'expr', expr: { kind:'call', callee, args } }`            |
+| Local `VariableDeclaration`                   | `{ kind:'assign', target, value }`                                |
 
 ---
 
-## 🔤 CParser — Parser C/Arduino
+## 🔤 CParser — C/Arduino Parser
 
-**Ficheiro:** `src/engine/asl/plugins/c/CParser.ts`  
-**Classe:** `RecursiveDescentCParser`
+**File:** `src/engine/asl/plugins/c/CParser.ts`
+**Class:** `RecursiveDescentCParser`
 
-### Constantes Arduino → valores numéricos
+### Arduino Constants → Numeric Values
 
-Esta tabela é crítica. O parser mapeia constantes textuais para valores numéricos antes de qualquer transformação:
+This table is critical. The parser maps textual constants to numeric values before any transformation:
 
-| Constante      | Valor |
+| Constant       | Value |
 | -------------- | ----- |
 | `HIGH`, `true` | `1`   |
 | `LOW`, `false` | `0`   |
@@ -307,47 +375,47 @@ Esta tabela é crítica. O parser mapeia constantes textuais para valores numér
 | `FILE_WRITE`   | `1`   |
 | `FILE_READ`    | `0`   |
 
-### Builtins reconhecidos como nós semânticos
+### Builtins Recognized as Semantic Nodes
 
-| Chamada                                    | Nó AST produzido                      |
+| Call                                       | Produced AST node                     |
 | ------------------------------------------ | ------------------------------------- |
 | `pinMode(pin, mode)`                       | `ASLPinMode`                          |
 | `digitalWrite(pin, val)`                   | `GpioSet` → `ASLDigitalWrite`         |
 | `analogWrite(pin, val)`                    | `AnalogWrite` → `ASLAnalogWrite`      |
 | `delay(ms)`                                | `DelayMs` → `ASLDelay`                |
-| `digitalRead(pin)`                         | `GpioRead` → `ASLRead` ou `ASLCall`   |
-| `analogRead(pin)`                          | `AnalogRead` → `ASLRead` ou `ASLCall` |
+| `digitalRead(pin)`                         | `GpioRead` → `ASLRead` or `ASLCall`   |
+| `analogRead(pin)`                          | `AnalogRead` → `ASLRead` or `ASLCall` |
 | `Serial.print(x)` / `Serial.println(x)`    | `Print` → `ASLPrint`                  |
-| Outros (`tone`, `noTone`, `servo.*`, etc.) | `CallExpression` genérica             |
+| Others (`tone`, `noTone`, `servo.*`, etc.) | Generic `CallExpression`              |
 
 ---
 
 ## 🐍 PythonParser + TreeSitterLoader
 
-**Ficheiros:**
+**Files:**
 - `src/engine/asl/plugins/python/PythonParser.ts`
 - `src/engine/asl/TreeSitterLoader.ts`
 
-### Fluxo
+### Flow
 
-1. `TreeSitterLoader` faz import dinâmico de `web-tree-sitter` e carrega a grammar Python (lazy, uma vez só).
-2. `PythonParser` usa tree-sitter para produzir `ProgramNode` compatível com `astToASL`.
-3. Mapeamentos MicroPython equivalentes aos do CParser:
-   - `Pin(n, Pin.OUT)` → `pinMode` + referência ao pin
+1. `TreeSitterLoader` dynamically imports `web-tree-sitter` and loads the Python grammar (lazy, only once).
+2. `PythonParser` uses tree-sitter to produce a `ProgramNode` compatible with `astToASL`.
+3. MicroPython mappings equivalent to CParser:
+   - `Pin(n, Pin.OUT)` → `pinMode` + pin reference
    - `led.on()` / `led.off()` / `led.value(x)` → `digitalWrite`
    - `time.sleep_ms(n)` → `delay`
    - `print(x)` → `ASLPrint`
-   - `if`/`while`/`for` Python → statements ASL equivalentes
+   - Python `if`/`while`/`for` → equivalent ASL statements
 
 ---
 
 ## 🏭 LanguageRegistry
 
-**Ficheiro:** `src/engine/asl/LanguageRegistry.ts`
+**File:** `src/engine/asl/LanguageRegistry.ts`
 
-É o **único ponto** onde se decide se uma linguagem suporta ASL ou cai no parser legado (`CodeParser.ts`). Nunca fazer essa decisão em `TopToolbar` ou noutro componente.
+This is the **single point** where it is decided if a language supports ASL or falls back to the legacy parser (`CodeParser.ts`). Never make this decision in `TopToolbar` or any other component.
 
-### Estrutura típica de uma entrada
+### Typical entry structure
 
 ```typescript
 {
@@ -361,59 +429,59 @@ Esta tabela é crítica. O parser mapeia constantes textuais para valores numér
 
 ---
 
-## ⚡ SimulationEngine — Contrato Crítico
+## ⚡ SimulationEngine — Critical Contract
 
-**Ficheiro:** `src/engine/SimulationEngine.ts`
+**File:** `src/engine/SimulationEngine.ts`
 
-### Primitivos expostos ao ASLExecutor
+### Primitives Exposed to ASLExecutor
 
-| Método                     | Descrição                                                 |
+| Method                     | Description                                               |
 | -------------------------- | --------------------------------------------------------- |
-| `pinMode(pin, mode)`       | Configura pino. Mode: `'INPUT'\|'OUTPUT'\|'INPUT_PULLUP'` |
-| `digitalWrite(pin, value)` | Escreve `'HIGH'` ou `'LOW'` em pino OUTPUT                |
-| `analogWrite(pin, value)`  | Escreve valor PWM 0–255                                   |
-| `digitalRead(pin)`         | Retorna `'HIGH'` ou `'LOW'`                               |
-| `analogRead(pin)`          | Retorna `0–1023`                                          |
-| `delay(ms)`                | Promise que resolve após ms/speedMultiplier ms            |
-| `millis()`                 | ms desde `simulationStartTime` ← **CRÍTICO**              |
-| `micros()`                 | μs desde `simulationStartTime` ← **CRÍTICO**              |
-| `log(msg)`                 | Emite para SerialStore (terminal)                         |
-| `serialPrint(text)`        | Serial.print sem newline                                  |
-| `serialPrintln(text)`      | Serial.print com newline                                  |
+| `pinMode(pin, mode)`       | Configures pin. Mode: `'INPUT'\|'OUTPUT'\|'INPUT_PULLUP'` |
+| `digitalWrite(pin, value)` | Writes `'HIGH'` or `'LOW'` to an OUTPUT pin               |
+| `analogWrite(pin, value)`  | Writes PWM value 0–255                                    |
+| `digitalRead(pin)`         | Returns `'HIGH'` or `'LOW'`                               |
+| `analogRead(pin)`          | Returns `0–1023`                                          |
+| `delay(ms)`                | Promise that resolves after ms/speedMultiplier ms         |
+| `millis()`                 | ms since `simulationStartTime` ← **CRITICAL**             |
+| `micros()`                 | μs since `simulationStartTime` ← **CRITICAL**             |
+| `log(msg)`                 | Emits to SerialStore (terminal)                           |
+| `serialPrint(text)`        | Serial.print without newline                              |
+| `serialPrintln(text)`      | Serial.print with newline                                 |
 | `random(min?, max?)`       | Random helpers                                            |
 | `map(v, fl, fh, tl, th)`   | Arduino map()                                             |
 | `constrain(v, min, max)`   | Arduino constrain()                                       |
 
-### ⚠️ Regra do tempo relativo (millis/micros)
+### ⚠️ Relative Time Rule (millis/micros)
 
 ```typescript
-// CORRETO — tempo desde início da simulação:
-private simulationStartTime = 0;  // inicializado em start() com Date.now()
+// CORRECT — time since simulation start:
+private simulationStartTime = 0;  // initialized in start() with Date.now()
 millis(): number {
   if (this.simulationStartTime === 0) return 0;
-  return Date.now() - this.simulationStartTime; // RELATIVO
+  return Date.now() - this.simulationStartTime; // RELATIVE
 }
 
-// ERRADO — nunca usar diretamente:
-return Date.now(); // retorna timestamp Unix ~1.7 × 10¹² ms → quebra millis()-patterns
+// WRONG — never use directly:
+return Date.now(); // returns Unix timestamp ~1.7 × 10¹² ms → breaks millis()-patterns
 ```
 
-> Esta regra foi o motivo de um bug inteiro: sketches com `millis()` não acendiam LEDs porque `tempoAtual - tempoAnterior` nunca ultrapassava o intervalo (ambos eram ~1.7 trilhão ms).
+> This rule was the cause of an entire bug: sketches using `millis()` did not blink LEDs because `currentTime - previousTime` never exceeded the interval (both were ~1.7 trillion ms).
 
-### Loop assíncrono (scheduleLoop)
+### Async loop (scheduleLoop)
 
-- O loop chama `loopFunction()` (o `runtime.loop`) e ao terminar agenda a próxima iteração via `setTimeout(..., 0)`.
-- `isLoopExecuting` impede sobreposição de iterações.
-- `stop()` limpa todos os timeouts e reseta `simulationStartTime = 0`.
+- The loop calls `loopFunction()` (the `runtime.loop`) and when it finishes, schedules the next iteration via `setTimeout(..., 0)`.
+- `isLoopExecuting` prevents overlapping iterations.
+- `stop()` clears all timeouts and resets `simulationStartTime = 0`.
 
-### Ciclo de vida completo
+### Full lifecycle
 
 ```
 start() → simulationStartTime = Date.now() → setup() → scheduleLoop()
                                                               │
                                           loop() ←───── setTimeout(0)
                                               │
-                                     (iteração completa)
+                                     (iteration complete)
                                               │
                                          setTimeout(0)
                                               │
@@ -424,119 +492,122 @@ stop() → isRunning=false → clearAll timeouts → simulationStartTime=0
 
 ---
 
-## ✅ Estado de Implementação (Fevereiro 2026)
+## ✅ Implementation Status (February 2026)
 
-### ✅ Funcional (C++ Arduino subset)
+### ✅ Functional (C++ Arduino subset)
 
 - `pinMode` / `digitalWrite` / `analogWrite` / `delay`
 - `digitalRead` / `analogRead`
-- `millis()` / `micros()` relativos
-- `Serial.print` / `Serial.println` no terminal
-- Controlo de fluxo: `if/else` (incluindo `else if` em cascata), `while`, `for` (lowerizado para while)
+- Relative `millis()` / `micros()`
+- `Serial.print` / `Serial.println` in terminal
+- Flow control: `if/else` (including cascading `else if`), `while`, `for` (lowered to while)
 - `break` / `continue` / `return`
-- Funções de utilizador void sem e com parâmetros escalares
-- Variáveis globais e locais escalares (`int`, `float`, `bool`)
-- Operadores: `+`, `-`, `*`, `/`, `%`, `==`, `!=`, `<`, `<=`, `>`, `>=`, `&&`, `||`, `!`
-- Constantes: `HIGH`, `LOW`, `INPUT`, `OUTPUT`, `INPUT_PULLUP`, `true`, `false`
-- Incremento/decremento: `i++`, `i--`, `++i`, `--i` (lowerizado para assign)
+- User void functions with and without scalar parameters
+- Global and local scalar variables (`int`, `float`, `bool`)
+- Operators: `+`, `-`, `*`, `/`, `%`, `==`, `!=`, `<`, `<=`, `>`, `>=`, `&&`, `||`, `!`
+- Constants: `HIGH`, `LOW`, `INPUT`, `OUTPUT`, `INPUT_PULLUP`, `true`, `false`
+- Increment/decrement: `i++`, `i--`, `++i`, `--i` (lowered to assign)
+- **1D and 2D Arrays**: declaration, indexing, index-based assignment
+- **Enum**: declaration and usage
+- **Integrated hardware**: LCD, OLED, Seven Segment, Keypad
+- **Utility functions**: `random(min, max)`, `map()`, `constrain()`
+- **`for(;;)` with no condition**: infinite loop supported
+- **Arithmetic expressions**: multiplication and compound operations
 
-### ✅ Funcional (MicroPython)
+### ✅ Functional (MicroPython)
 
 - `Pin`, `Pin.on()`, `Pin.off()`, `Pin.value()`
 - `time.sleep_ms()`
 - `if`/`else`, `while True`, `print()`
 - Parser via `web-tree-sitter` (Python grammar)
 
-### ✅ Infraestrutura
+### ✅ Infrastructure
 
-- `LanguageRegistry` centraliza linguagens + supportsASL
-- `ASLViewer` exibe ASLProgram gerado (debug/teaching)
-- `CodeEditorWithTabs` expõe código + linguagem ativa
-- `TopToolbar` orquestra: código → LanguageRegistry → codeToASL → createASLRuntime → SimulationEngine.start()
-- `simulationStartTime` corretamente relativo (fix 20/02/2026)
+- `LanguageRegistry` centralizes languages + supportsASL
+- `ASLViewer` displays the generated ASLProgram (debug/teaching)
+- `CodeEditorWithTabs` exposes code + active language
+- `TopToolbar` orchestrates: code → LanguageRegistry → codeToASL → createASLRuntime → SimulationEngine.start()
+- `simulationStartTime` correctly relative (fix 20/02/2026)
 
-### 🔜 Não suportado ainda
+### 🔜 Not yet supported
 
-- Arrays: declaração, indexação, atribuição por índice
 - `switch/case`
-- `for(;;)` sem condição
-- Expressões aritméticas genéricas no RHS de declarações locais
-- `tone()` sem simulação dedicada
-- Code generators (ASL → qualquer outra linguagem)
-- Round-trip Visual ↔ ASL (Blockly, Flow, Ladder)
+- `tone()` without dedicated simulation
+- Code generators (ASL → any other language)
+- Visual round-trip ↔ ASL (Blockly, Flow, Ladder)
 - Parsers: Rust, Assembly, Structured Text IEC 61131-3
 
 ---
 
-## 🐛 Bugs Conhecidos e Soluções
+## 🐛 Known Bugs and Solutions
 
-### Bug 1: millis() retornava timestamp Unix absoluto
-**Sintoma:** Sketch com `millis()` não acendia LED, sem log de erro.  
-**Causa:** `millis()` retornava `Date.now()` (~1.7 × 10¹² ms).  
-**Solução:** Introduzir `simulationStartTime` capturado em `start()`, fazer `millis()` retornar `Date.now() - simulationStartTime`.  
+### Bug 1: millis() returned absolute Unix timestamp
+**Symptom:** Sketch using `millis()` did not blink LED, no error log.
+**Cause:** `millis()` returned `Date.now()` (~1.7 × 10¹² ms).
+**Fix:** Introduce `simulationStartTime` captured in `start()`, make `millis()` return `Date.now() - simulationStartTime`.
 **Commit:** `2d50650aa21bd2cbf9a56f3aa33671c0110ef688`
 
-### Bug 2: Constante OUTPUT não reconhecida pelo CParser
-**Sintoma:** `pinMode(13, OUTPUT)` não executava ou gerava aviso.  
-**Causa:** `OUTPUT` não estava na tabela de constantes do CParser.  
-**Solução:** Adicionar mapeamento `OUTPUT → 1`, `INPUT → 0`, `INPUT_PULLUP → 2` em `parseAtom()`.  
+### Bug 2: OUTPUT constant not recognized by CParser
+**Symptom:** `pinMode(13, OUTPUT)` did not execute or generated a warning.
+**Cause:** `OUTPUT` was not in the CParser constants table.
+**Fix:** Add mapping `OUTPUT → 1`, `INPUT → 0`, `INPUT_PULLUP → 2` in `parseAtom()`.
 
-### Bug 3: loop() não tinha delay — UI travava
-**Sintoma:** Simulação travava/não respondia com loops ocupados (`while(true)` sem delay).  
-**Causa:** Loop síncrono bloqueava o thread do browser.  
-**Solução:** `scheduleLoop` usa `setTimeout(..., 0)` entre iterações; `delay()` usa chunks de 50ms com yield.
+### Bug 3: loop() had no delay — UI froze
+**Symptom:** Simulation froze/became unresponsive with busy loops (`while(true)` without delay).
+**Cause:** Synchronous loop was blocking the browser thread.
+**Fix:** `scheduleLoop` uses `setTimeout(..., 0)` between iterations; `delay()` uses 50ms chunks with yield.
 
-### Padrão para debugar: sketch não executa sem log
-1. Verificar se `TopToolbar` detectou a linguagem corretamente via `LanguageRegistry`.
-2. Abrir `ASLViewer` e confirmar que o `ASLProgram` gerado tem `tasks[0].body` não vazio.
-3. Confirmar que `setup` está em `functions` (não em `tasks`).
-4. Confirmar que `simulationEngine.millis()` retorna valor pequeno (< 60000), não trilhões.
-5. Adicionar `Serial.println` no sketch e verificar se aparece no terminal.
+### Debug pattern: sketch does not execute without log
+1. Verify that `TopToolbar` correctly detected the language via `LanguageRegistry`.
+2. Open `ASLViewer` and confirm that the generated `ASLProgram` has a non-empty `tasks[0].body`.
+3. Confirm that `setup` is in `functions` (not in `tasks`).
+4. Confirm that `simulationEngine.millis()` returns a small value (< 60000), not trillions.
+5. Add `Serial.println` to the sketch and check if it appears in the terminal.
 
 ---
 
-## 📋 Regras de Ouro para este Subsistema
+## 📋 Golden Rules for This Subsystem
 
-### 1. ASLTypes.ts é sagrado
-Qualquer novo statement ou expressão começa por adicionar o tipo em `ASLTypes.ts`, depois `codeToASL`, depois `ASLExecutor`. Nunca o inverso.
+### 1. ASLTypes.ts is sacred
+Any new statement or expression starts by adding the type in `ASLTypes.ts`, then `codeToASL`, then `ASLExecutor`. Never the reverse.
 
-### 2. Não quebre o loop blink
-O sketch de referência mínima deve sempre funcionar:
+### 2. Do not break the blink loop
+The minimal reference sketch must always work:
 ```cpp
 void setup() { pinMode(13, OUTPUT); }
 void loop() { digitalWrite(13, HIGH); delay(500); digitalWrite(13, LOW); delay(500); }
 ```
-Se este sketch deixar de funcionar, há uma regressão crítica.
+If this sketch stops working, there is a critical regression.
 
-### 3. millis() é relativo, sempre
-Nunca alterar `millis()` para retornar `Date.now()` diretamente. Sempre usar `Date.now() - this.simulationStartTime`.
+### 3. millis() is always relative
+Never change `millis()` to return `Date.now()` directly. Always use `Date.now() - this.simulationStartTime`.
 
-### 4. for → while, sempre
-`for` nunca existe em ASL. `codeToASL` converte sempre para: `assign init` + `while(cond) { body + inc }`.
+### 4. for → while, always
+`for` never exists in ASL. `codeToASL` always converts it to: `assign init` + `while(cond) { body + inc }`.
 
-### 5. break/continue/return usam exceções internas
-`BreakSignal`, `ContinueSignal`, `ReturnSignal` são classes internas ao `ASLExecutor`. São lançadas e capturadas na mesma execução. Não são erros de runtime.
+### 5. break/continue/return use internal exceptions
+`BreakSignal`, `ContinueSignal`, `ReturnSignal` are classes internal to `ASLExecutor`. They are thrown and caught within the same execution. They are not runtime errors.
 
-### 6. Novo parser → novo ficheiro
-Nunca misturar lógica de parsing de C com Python ou outra linguagem. Cada linguagem tem o seu ficheiro em `src/engine/asl/plugins/<lang>/`.
+### 6. New parser → new file
+Never mix C parsing logic with Python or any other language. Each language has its own file in `src/engine/asl/plugins/<lang>/`.
 
-### 7. Antes de modificar, ler o ficheiro atual do GitHub
-Sempre buscar o conteúdo atual via MCP GitHub antes de propor alterações. O código local pode estar desatualizado em relação ao branch remoto.
+### 7. Before modifying, read the current file from GitHub
+Always fetch the current content via MCP GitHub before proposing changes. The local code may be outdated relative to the remote branch.
 
-### 8. Equivalente semântico em todas as saídas
-Qualquer transformação (transpile ou parse) deve preservar a **equivalência semântica**: o comportamento observável da lógica de controlo (sequência de estados, temporização, condições) deve ser idêntico em todos os outputs. Os Casos de Teste de Integração da PR Checklist são a prova formal desta propriedade.
+### 8. Semantic equivalence in all outputs
+Any transformation (transpile or parse) must preserve **semantic equivalence**: the observable behavior of the control logic (state sequence, timing, conditions) must be identical across all outputs. The Integration Test Cases in the PR Checklist are the formal proof of this property.
 
 ---
 
-## 🔍 Como Interpretar o ASLProgram (debug)
+## 🔍 How to Interpret ASLProgram (debug)
 
 ```json
 {
   "metadata": { "targetBoard": "Arduino Uno" },
   "globals": [
-    { "name": "estadoLed", "type": "int", "initialValue": 0 },
-    { "name": "tempoAnterior", "type": "int", "initialValue": 0 },
-    { "name": "intervalo", "type": "int", "initialValue": 1000 }
+    { "name": "ledState", "type": "int", "initialValue": 0 },
+    { "name": "previousTime", "type": "int", "initialValue": 0 },
+    { "name": "interval", "type": "int", "initialValue": 1000 }
   ],
   "functions": [
     {
@@ -551,10 +622,10 @@ Qualquer transformação (transpile ou parse) deve preservar a **equivalência s
     {
       "name": "mainLoop",
       "body": [
-        { "kind": "assign", "target": "tempoAtual",
+        { "kind": "assign", "target": "currentTime",
           "value": { "kind": "call", "callee": "millis", "args": [] } },
         { "kind": "if",
-          "condition": { "kind": "binary", "op": ">=", ... },
+          "condition": { "kind": "binary", "op": ">=", "...": "..." },
           "thenBranch": [ "...toggle LED..." ]
         }
       ]
@@ -563,14 +634,14 @@ Qualquer transformação (transpile ou parse) deve preservar a **equivalência s
 }
 ```
 
-Se `tasks[0].body` estiver vazio → o parser não encontrou `loop()` no código.  
-Se `functions` não tiver `setup` → o `setup()` não foi reconhecido.
+If `tasks[0].body` is empty → the parser did not find `loop()` in the code.
+If `functions` does not have `setup` → `setup()` was not recognized.
 
 ---
 
-## 🧪 Fixtures de Teste de Referência (Smoke Tests)
+## 🧪 Reference Test Fixtures (Smoke Tests)
 
-### T1 — Blink com delay (smoke test)
+### T1 — Blink with delay (smoke test)
 ```cpp
 void setup() { pinMode(13, OUTPUT); }
 void loop() {
@@ -578,46 +649,46 @@ void loop() {
   digitalWrite(13, LOW);  delay(500);
 }
 ```
-**Esperado:** LED no pino 13 pisca a 1 Hz.
+**Expected:** LED on pin 13 blinks at 1 Hz.
 
-### T2 — Blink com millis() (smoke test timing)
+### T2 — Blink with millis() (timing smoke test)
 ```cpp
-const int pinoLed = 13;
-int estadoLed = LOW;
-int tempoAnterior = 0;
-const int intervalo = 1000;
-void setup() { pinMode(pinoLed, OUTPUT); }
+const int ledPin = 13;
+int ledState = LOW;
+int previousTime = 0;
+const int interval = 1000;
+void setup() { pinMode(ledPin, OUTPUT); }
 void loop() {
-  int tempoAtual = millis();
-  if (tempoAtual - tempoAnterior >= intervalo) {
-    tempoAnterior = tempoAtual;
-    estadoLed = (estadoLed == LOW) ? HIGH : LOW;
-    digitalWrite(pinoLed, estadoLed);
+  int currentTime = millis();
+  if (currentTime - previousTime >= interval) {
+    previousTime = currentTime;
+    ledState = (ledState == LOW) ? HIGH : LOW;
+    digitalWrite(ledPin, ledState);
   }
 }
 ```
-**Esperado:** LED pisca a 0.5 Hz sem uso de `delay()`.
+**Expected:** LED blinks at 0.5 Hz without using `delay()`.
 
-### T3 — Botão com Serial
+### T3 — Button with Serial
 ```cpp
-const int botao = 2;
+const int button = 2;
 const int led = 13;
 void setup() {
   Serial.begin(9600);
-  pinMode(botao, INPUT);
+  pinMode(button, INPUT);
   pinMode(led, OUTPUT);
 }
 void loop() {
-  int estado = digitalRead(botao);
-  if (estado == HIGH) {
+  int state = digitalRead(button);
+  if (state == HIGH) {
     digitalWrite(led, HIGH);
-    Serial.println("Botao pressionado");
+    Serial.println("Button pressed");
   } else {
     digitalWrite(led, LOW);
   }
 }
 ```
-**Esperado:** LED acende com botão; "Botao pressionado" aparece no terminal.
+**Expected:** LED turns on with button; "Button pressed" appears in terminal.
 
 ### T4 — MicroPython blink
 ```python
@@ -630,202 +701,202 @@ while True:
     led.off()
     time.sleep_ms(500)
 ```
-**Esperado:** LED no pino 13 pisca a 1 Hz em modo MicroPython.
+**Expected:** LED on pin 13 blinks at 1 Hz in MicroPython mode.
 
 ---
 
-## 📋 Checklist de PR para main — Integração Total do ASL
+## 📋 PR Checklist for main — Full ASL Integration
 
 > [!IMPORTANT]
-> **O merge para `main` só deverá ocorrer quando TODOS os itens abaixo estiverem verificados.**  
-> O ASL deve estar totalmente integrado: todos os parsers de entrada, todos os geradores de saída, e todos os caminhos visuais (Blockly, Flowchart, Ladder) funcionais em ambas as direções (parse → ASL e ASL → representação).
+> **Merge to `main` should only happen when ALL items below are verified.**
+> ASL must be fully integrated: all input parsers, all output generators, and all visual paths (Blockly, Flowchart, Ladder) functional in both directions (parse → ASL and ASL → representation).
 
-### 🔧 Infraestrutura Base
-- [ ] T1 (blink delay C++) funciona
-- [ ] T2 (blink millis C++) funciona
-- [ ] T3 (botão + Serial C++) funciona
-- [ ] T4 (MicroPython blink) funciona
-- [ ] `ASLViewer` mostra ASLProgram correto para cada smoke test
-- [ ] `millis()` retorna valor < 60 000 após 1 minuto de simulação
-- [ ] `stop()` limpa todos os timeouts e reseta `simulationStartTime = 0`
-- [ ] Nenhum `console.error` em nenhum dos smoke tests
-- [ ] `notyet/README.md` atualizado com estado real dos checkboxes
+### 🔧 Base Infrastructure
+- [ ] T1 (C++ delay blink) works
+- [ ] T2 (C++ millis blink) works
+- [ ] T3 (C++ button + Serial) works
+- [ ] T4 (MicroPython blink) works
+- [ ] `ASLViewer` shows correct ASLProgram for each smoke test
+- [ ] `millis()` returns value < 60,000 after 1 minute of simulation
+- [ ] `stop()` clears all timeouts and resets `simulationStartTime = 0`
+- [ ] No `console.error` in any of the smoke tests
+- [ ] `notyet/README.md` updated with real checkbox state
 
-### 🔄 Parsers de Entrada (todos os caminhos Text → ASL)
-- [ ] Parser C (código C puro, sem libs Arduino)
-- [ ] Parser C++ Arduino (subset completo incl. arrays, switch/case, structs simples)
-- [ ] Parser MicroPython (machine.Pin, time, UART, I2C, SPI)
-- [ ] Parser CircuitPython (board, digitalio, analogio, busio)
-- [ ] Parser Rust (Embassy: async/await, GPIO, ADC, UART, I2C, SPI)
-- [ ] Parser Assembly AVR (instruções GPIO, timers, interrupções)
-- [ ] Parser Assembly ARM Thumb (GPIO, timers, interrupções)
-- [ ] Parser Structured Text IEC 61131-3 (IF/THEN/ELSE, FOR, WHILE, CASE, TON, TOF, CTU, FB)
-- [ ] Parser Blockly XML → ASL
-- [ ] Parser Flowchart JSON (React Flow) → ASL
-- [ ] Parser Ladder Diagram → ASL
+### 🔄 Input Parsers (all Text → ASL paths)
+- [ ] C parser (pure C code, no Arduino libs)
+- [ ] C++ Arduino parser (full subset incl. arrays, switch/case, simple structs)
+- [ ] MicroPython parser (machine.Pin, time, UART, I2C, SPI)
+- [ ] CircuitPython parser (board, digitalio, analogio, busio)
+- [ ] Rust parser (Embassy: async/await, GPIO, ADC, UART, I2C, SPI)
+- [ ] AVR Assembly parser (GPIO instructions, timers, interrupts)
+- [ ] ARM Thumb Assembly parser (GPIO, timers, interrupts)
+- [ ] Structured Text IEC 61131-3 parser (IF/THEN/ELSE, FOR, WHILE, CASE, TON, TOF, CTU, FB)
+- [ ] Blockly XML → ASL parser
+- [ ] Flowchart JSON (React Flow) → ASL parser
+- [ ] Ladder Diagram → ASL parser
 
-### 🚀 Geradores de Saída (todos os caminhos ASL → Text/Visual)
-- [ ] Gerador C
-- [ ] Gerador C++ (Arduino-style)
-- [ ] Gerador MicroPython
-- [ ] Gerador CircuitPython
-- [ ] Gerador Rust (Embassy)
-- [ ] Gerador Assembly (AVR e/ou ARM Thumb)
-- [ ] Gerador Structured Text IEC 61131-3
-- [ ] Gerador Blockly XML
-- [ ] Gerador Flowchart JSON
-- [ ] Gerador Ladder Diagram
-
----
-
-### 🧪 Casos de Teste de Integração (CI-1 a CI-21)
-
-Estes casos validam que **a equivalência semântica é preservada** em todas as transformações.
-
-#### CI-1 — Nível de tanque (MicroPython → multi-output)
-> **Input:** código MicroPython para verificação do nível de um tanque de água (sensor analógico, bomba, alarme).  
-> **Saídas obrigatórias:** C, C++, CircuitPython, Rust, Assembly, Structured Text (ST) IEC 61131-3.  
-> **Representações visuais:** Blockly, Flowchart, Ladder (já disponíveis via parse).  
-> **Validação:** limiares de nível e lógica de ativação de bomba idênticos em todos os outputs.
-
-#### CI-2 — Iluminação doméstica (Flowchart → multi-output)
-> **Input:** Flowchart para sistema de controlo de iluminação de uma casa por zonas.  
-> **Saídas obrigatórias:** C, C++, MicroPython, CircuitPython, Rust, Assembly, ST IEC 61131-3.  
-> **Representações visuais:** Blockly, Ladder (já disponíveis via parse).  
-> **Validação:** lógica de zona e transições de estado preservadas em todos os outputs.
-
-#### CI-3 — PID de temperatura estufa (MicroPython → multi-output)
-> **Input:** código MicroPython com PID simples, sensor DHT22, ventoinha e resistência.  
-> **Saídas obrigatórias:** C, C++, CircuitPython, Rust, Assembly, ST IEC 61131-3.  
-> **Representações visuais:** Blockly, Flowchart, Ladder.  
-> **Validação:** coeficientes PID e lógica de atuadores preservados; equivalência numérica do cálculo de erro.
-
-#### CI-4 — Esteira industrial (Ladder → multi-output)
-> **Input:** Ladder Diagram para controlo de esteira com sensores de presença, botões de emergência e motor trifásico.  
-> **Saídas obrigatórias:** C, C++, MicroPython, CircuitPython, Rust, Assembly, ST IEC 61131-3.  
-> **Representações visuais:** Blockly, Flowchart.  
-> **Validação:** lógica de emergência (normally-closed) corretamente invertida em todos os outputs.
-
-#### CI-5 — Portão automático (ST IEC 61131-3 → multi-output)
-> **Input:** código ST com sensor de presença, encoder de posição e motor DC com PWM.  
-> **Saídas obrigatórias:** C, C++, MicroPython, CircuitPython, Rust, Assembly.  
-> **Representações visuais:** Blockly, Flowchart, Ladder.  
-> **Validação:** FSM de estados do portão (aberto/fechado/em-movimento/obstáculo) preservada em todos os outputs.
-
-#### CI-6 — Rega automática por zonas (Blockly → multi-output)
-> **Input:** Blockly para rega com sensor de humidade, válvulas solenoides e agenda horária.  
-> **Saídas obrigatórias:** C, C++, MicroPython, CircuitPython, Rust, Assembly, ST IEC 61131-3.  
-> **Representações visuais:** Flowchart, Ladder.  
-> **Validação:** lógica de agenda e limiares de humidade preservados; zonas não se sobrepõem.
-
-#### CI-7 — Qualidade do ar interior (C++ Arduino → multi-output)
-> **Input:** código C++ com CO₂, DHT22, display OLED, alerta sonoro e registo em SD.  
-> **Saídas obrigatórias:** C, MicroPython, CircuitPython, Rust, Assembly, ST IEC 61131-3.  
-> **Representações visuais:** Blockly, Flowchart, Ladder.  
-> **Validação:** limiares de CO₂/temperatura/humidade e lógica de alerta preservados; APIs de display/SD mapeadas para builtins ASL genéricos.
-
-#### CI-8 — Gestão de energia solar (Flowchart → multi-output)
-> **Input:** Flowchart para gestão de bateria, painel fotovoltaico, carga prioritária e corte por tensão mínima.  
-> **Saídas obrigatórias:** C, C++, MicroPython, CircuitPython, Rust, Assembly, ST IEC 61131-3.  
-> **Representações visuais:** Blockly, Ladder.  
-> **Validação:** lógica de histerese de tensão preservada; prioridade de cargas mantida em todos os outputs.
-
-#### CI-9 — Controlo de acesso RFID (Rust Embassy → multi-output)
-> **Input:** código Rust (Embassy) com RFID, teclado matricial, servo e log UART.  
-> **Saídas obrigatórias:** C, C++, MicroPython, CircuitPython, Assembly, ST IEC 61131-3.  
-> **Representações visuais:** Blockly, Flowchart, Ladder.  
-> **Validação:** lógica de autorização (UID válido + PIN) preservada; serialização do async/await Embassy para loop cooperativo ASL correto.
-
-#### CI-10 — Temporizador industrial 7-segmentos (Assembly AVR/ARM → multi-output)
-> **Input:** Assembly (AVR ou ARM Thumb) para temporizador com display multiplexado, DIP switch e relé.  
-> **Saídas obrigatórias:** C, C++, MicroPython, CircuitPython, Rust, ST IEC 61131-3.  
-> **Representações visuais:** Blockly, Flowchart, Ladder.  
-> **Validação:** lógica de multiplexagem e preset preservadas; temporização sem drift em todos os outputs.
-
-#### CI-11 — Pesagem com HX711 e Modbus RTU (CircuitPython → multi-output)
-> **Input:** código CircuitPython com célula de carga HX711, calibração, LCD e Modbus RTU RS-485.  
-> **Saídas obrigatórias:** C, C++, MicroPython, Rust, Assembly, ST IEC 61131-3.  
-> **Representações visuais:** Blockly, Flowchart, Ladder.  
-> **Validação:** fórmula de calibração e registos Modbus preservados; precisão float mantida.
-
-#### CI-12 — SCADA múltiplos tanques ESP32 (MicroPython + Blockly + Flowchart → multi-output, 3 inputs simultâneos)
-> **Inputs simultâneos:** MicroPython + Blockly + Flowchart para sistema SCADA de até 8 tanques com dashboard web (ESP32 WebServer).  
-> **Saídas obrigatórias:** C, C++, CircuitPython, Rust, Assembly, ST IEC 61131-3.  
-> **Parse cruzado:** Blockly ↔ Flowchart ↔ Ladder.  
-> **Validação:** consistência do transpiler — os 3 inputs devem produzir ASLPrograms semanticamente equivalentes; a lógica de polling dos tanques deve ser idêntica em todos os outputs.
-
-#### CI-13 — Bomba de pressão com histerese (C++ + Ladder + Flowchart → multi-output, 3 inputs simultâneos)
-> **Inputs simultâneos:** C++ Arduino + Ladder + Flowchart para bomba com sensor 4–20 mA, pressostato e arranque suave.  
-> **Saídas obrigatórias:** MicroPython, CircuitPython, Rust, Assembly, ST IEC 61131-3.  
-> **Parse cruzado:** Blockly ↔ Flowchart ↔ Ladder.  
-> **Validação:** lógica de histerese (limiares de arranque e paragem) preservada em todas as representações.
-
-#### CI-14 — AVAC multi-zona (MicroPython + ST + Blockly → multi-output, 3 inputs simultâneos)
-> **Inputs simultâneos:** MicroPython + ST IEC 61131-3 + Blockly para AVAC com múltiplos DHT22, setpoints por zona e agenda semanal.  
-> **Saídas obrigatórias:** C, C++, CircuitPython, Rust, Assembly.  
-> **Parse cruzado:** Flowchart ↔ Ladder.  
-> **Validação:** consistência de lógica multi-zona — setpoints e agenda idênticos nos 3 inputs e em todos os outputs.
-
-#### CI-15 — Motor BLDC com encoder e PID (Rust + Flowchart + Assembly ARM → multi-output, 3 inputs simultâneos)
-> **Inputs simultâneos:** Rust (Embassy) + Flowchart + Assembly (ARM Thumb) para motor BLDC com encoder, PID de velocidade e proteção de sobre-corrente.  
-> **Saídas obrigatórias:** C, C++, MicroPython, CircuitPython, ST IEC 61131-3.  
-> **Parse cruzado:** Blockly ↔ Flowchart ↔ Ladder.  
-> **Validação:** lógica de interrupção e loop de controlo semanticamente equivalentes; ISR corretamente serializada nas representações visuais.
-
-#### CI-16 — Semáforo inteligente FSM (CircuitPython + Blockly + Ladder → multi-output, 3 inputs simultâneos)
-> **Inputs simultâneos:** CircuitPython + Blockly + Ladder para semáforo com deteção de veículos, modo noturno e override manual.  
-> **Saídas obrigatórias:** C, C++, MicroPython, Rust, Assembly, ST IEC 61131-3.  
-> **Parse cruzado:** Flowchart ↔ Ladder.  
-> **Validação:** máquina de estados finitos (FSM) corretamente representada e preservada em todos os outputs; transições de modo noturno/manual testadas.
-
-#### CI-17 — Pasteurização com timers encadeados (MicroPython + Flowchart + Ladder → multi-output, 3 inputs simultâneos)
-> **Inputs simultâneos:** MicroPython + Flowchart + Ladder para pasteurização com perfil de temperatura (ramp-up, hold, cool-down), registo em EEPROM e alarme de desvio.  
-> **Saídas obrigatórias:** C, C++, CircuitPython, Rust, Assembly, ST IEC 61131-3.  
-> **Parse cruzado:** Blockly ↔ Ladder.  
-> **Validação:** sequências temporizadas (timers encadeados) preservadas; perfil de temperatura idêntico em todos os outputs.
-
-#### CI-18 — Controlo de piscina com Modbus TCP (ST + Blockly + Assembly AVR → multi-output, 3 inputs simultâneos)
-> **Inputs simultâneos:** ST IEC 61131-3 + Blockly + Assembly (AVR) para controlo de pH/cloro, bombas peristálticas e Modbus TCP.  
-> **Saídas obrigatórias:** C, C++, MicroPython, CircuitPython, Rust.  
-> **Parse cruzado:** Flowchart ↔ Ladder.  
-> **Validação:** precisão numérica REAL/float e registos Modbus preservados; dosagem calculada corretamente em todos os outputs.
-
-#### CI-19 — Monitorização de frota com GPS e MQTT (C++ ESP32 + Flowchart + ST → multi-output, 3 inputs simultâneos)
-> **Inputs simultâneos:** C++ (ESP32) + Flowchart + ST IEC 61131-3 para frota com GPS NMEA, MPU-6050, MQTT via LTE e deteção de condução agressiva.  
-> **Saídas obrigatórias:** MicroPython, CircuitPython, Rust, Assembly.  
-> **Parse cruzado:** Blockly ↔ Flowchart.  
-> **Validação:** lógica assíncrona (ISR + tasks concorrentes) corretamente serializada nas representações visuais; eventos de condução detetados de forma idêntica.
-
-#### CI-20 — AGV de armazém com 4 inputs (MicroPython + Rust + Blockly + Ladder → multi-output, 4 inputs simultâneos)
-> **Inputs simultâneos:** MicroPython + Rust (Embassy) + Blockly + Ladder para AGV com sensores de linha, controlo diferencial e estação de carga automática.  
-> **Saídas obrigatórias:** C, C++, CircuitPython, Assembly, ST IEC 61131-3.  
-> **Parse cruzado:** Flowchart ↔ Ladder.  
-> **Validação:** maior caso de teste do pipeline (4 inputs) — equivalência semântica entre todos os inputs e entre todos os outputs; lógica de navegação e carga preservadas.
-
-#### CI-21 — Segurança perimetral máximo (Flowchart + Blockly + Assembly ARM + ST → multi-output, 4 inputs simultâneos)
-> **Inputs simultâneos:** Flowchart + Blockly + Assembly (ARM Thumb) + ST IEC 61131-3 para segurança perimetral com PIR múltiplos, câmara OpenMV, sirene zoneada, MQTT e log em SD.  
-> **Saídas obrigatórias:** C, C++, MicroPython, CircuitPython, Rust.  
-> **Parse cruzado:** Flowchart ↔ Blockly ↔ Ladder (todos os formatos visuais).  
-> **Validação:** caso de teste máximo de consistência — lógica de eventos assíncronos, concorrência e persistência de dados semanticamente equivalentes em todos os inputs e outputs.
+### 🚀 Output Generators (all ASL → Text/Visual paths)
+- [ ] C generator
+- [ ] C++ (Arduino-style) generator
+- [ ] MicroPython generator
+- [ ] CircuitPython generator
+- [ ] Rust (Embassy) generator
+- [ ] Assembly (AVR and/or ARM Thumb) generator
+- [ ] Structured Text IEC 61131-3 generator
+- [ ] Blockly XML generator
+- [ ] Flowchart JSON generator
+- [ ] Ladder Diagram generator
 
 ---
 
-## 📌 Roadmap e Estado Detalhado
+### 🧪 Integration Test Cases (CI-1 to CI-21)
 
-O estado detalhado do que está feito/pendente está em:  
-👉 [`notyet/README.md`](../notyet/README.md) — Roadmap completo do ASL (fonte de verdade do progresso)
+These cases validate that **semantic equivalence is preserved** across all transformations.
+
+#### CI-1 — Tank level (MicroPython → multi-output)
+> **Input:** MicroPython code for water tank level monitoring (analog sensor, pump, alarm).
+> **Required outputs:** C, C++, CircuitPython, Rust, Assembly, Structured Text (ST) IEC 61131-3.
+> **Visual representations:** Blockly, Flowchart, Ladder (available via parse).
+> **Validation:** level thresholds and pump activation logic identical across all outputs.
+
+#### CI-2 — Home lighting (Flowchart → multi-output)
+> **Input:** Flowchart for zone-based home lighting control system.
+> **Required outputs:** C, C++, MicroPython, CircuitPython, Rust, Assembly, ST IEC 61131-3.
+> **Visual representations:** Blockly, Ladder (available via parse).
+> **Validation:** zone logic and state transitions preserved across all outputs.
+
+#### CI-3 — Greenhouse temperature PID (MicroPython → multi-output)
+> **Input:** MicroPython code with simple PID, DHT22 sensor, fan, and heating resistor.
+> **Required outputs:** C, C++, CircuitPython, Rust, Assembly, ST IEC 61131-3.
+> **Visual representations:** Blockly, Flowchart, Ladder.
+> **Validation:** PID coefficients and actuator logic preserved; numerical equivalence of error calculation.
+
+#### CI-4 — Industrial conveyor belt (Ladder → multi-output)
+> **Input:** Ladder Diagram for conveyor control with presence sensors, emergency buttons, and three-phase motor.
+> **Required outputs:** C, C++, MicroPython, CircuitPython, Rust, Assembly, ST IEC 61131-3.
+> **Visual representations:** Blockly, Flowchart.
+> **Validation:** emergency logic (normally-closed) correctly inverted in all outputs.
+
+#### CI-5 — Automatic gate (ST IEC 61131-3 → multi-output)
+> **Input:** ST code with presence sensor, position encoder, and DC motor with PWM.
+> **Required outputs:** C, C++, MicroPython, CircuitPython, Rust, Assembly.
+> **Visual representations:** Blockly, Flowchart, Ladder.
+> **Validation:** gate FSM (open/closed/moving/obstacle) preserved across all outputs.
+
+#### CI-6 — Zone-based automatic irrigation (Blockly → multi-output)
+> **Input:** Blockly for irrigation with humidity sensor, solenoid valves, and time schedule.
+> **Required outputs:** C, C++, MicroPython, CircuitPython, Rust, Assembly, ST IEC 61131-3.
+> **Visual representations:** Flowchart, Ladder.
+> **Validation:** schedule logic and humidity thresholds preserved; zones do not overlap.
+
+#### CI-7 — Indoor air quality (C++ Arduino → multi-output)
+> **Input:** C++ code with CO₂, DHT22, OLED display, audible alert, and SD logging.
+> **Required outputs:** C, MicroPython, CircuitPython, Rust, Assembly, ST IEC 61131-3.
+> **Visual representations:** Blockly, Flowchart, Ladder.
+> **Validation:** CO₂/temperature/humidity thresholds and alert logic preserved; display/SD APIs mapped to generic ASL builtins.
+
+#### CI-8 — Solar energy management (Flowchart → multi-output)
+> **Input:** Flowchart for battery management, photovoltaic panel, priority load, and minimum voltage cutoff.
+> **Required outputs:** C, C++, MicroPython, CircuitPython, Rust, Assembly, ST IEC 61131-3.
+> **Visual representations:** Blockly, Ladder.
+> **Validation:** voltage hysteresis logic preserved; load priority maintained across all outputs.
+
+#### CI-9 — RFID access control (Rust Embassy → multi-output)
+> **Input:** Rust (Embassy) code with RFID, matrix keypad, servo, and UART log.
+> **Required outputs:** C, C++, MicroPython, CircuitPython, Assembly, ST IEC 61131-3.
+> **Visual representations:** Blockly, Flowchart, Ladder.
+> **Validation:** authorization logic (valid UID + PIN) preserved; Embassy async/await correctly serialized to ASL cooperative loop.
+
+#### CI-10 — Industrial 7-segment timer (Assembly AVR/ARM → multi-output)
+> **Input:** Assembly (AVR or ARM Thumb) for timer with multiplexed display, DIP switch, and relay.
+> **Required outputs:** C, C++, MicroPython, CircuitPython, Rust, ST IEC 61131-3.
+> **Visual representations:** Blockly, Flowchart, Ladder.
+> **Validation:** multiplexing logic and preset preserved; timing without drift across all outputs.
+
+#### CI-11 — HX711 weighing with Modbus RTU (CircuitPython → multi-output)
+> **Input:** CircuitPython code with HX711 load cell, calibration, LCD, and Modbus RTU RS-485.
+> **Required outputs:** C, C++, MicroPython, Rust, Assembly, ST IEC 61131-3.
+> **Visual representations:** Blockly, Flowchart, Ladder.
+> **Validation:** calibration formula and Modbus registers preserved; float precision maintained.
+
+#### CI-12 — Multi-tank SCADA ESP32 (MicroPython + Blockly + Flowchart → multi-output, 3 simultaneous inputs)
+> **Simultaneous inputs:** MicroPython + Blockly + Flowchart for SCADA system with up to 8 tanks and web dashboard (ESP32 WebServer).
+> **Required outputs:** C, C++, CircuitPython, Rust, Assembly, ST IEC 61131-3.
+> **Cross-parsing:** Blockly ↔ Flowchart ↔ Ladder.
+> **Validation:** transpiler consistency — the 3 inputs must produce semantically equivalent ASLPrograms; tank polling logic must be identical across all outputs.
+
+#### CI-13 — Pressure pump with hysteresis (C++ + Ladder + Flowchart → multi-output, 3 simultaneous inputs)
+> **Simultaneous inputs:** C++ Arduino + Ladder + Flowchart for pump with 4–20 mA sensor, pressure switch, and soft start.
+> **Required outputs:** MicroPython, CircuitPython, Rust, Assembly, ST IEC 61131-3.
+> **Cross-parsing:** Blockly ↔ Flowchart ↔ Ladder.
+> **Validation:** hysteresis logic (start and stop thresholds) preserved across all representations.
+
+#### CI-14 — Multi-zone HVAC (MicroPython + ST + Blockly → multi-output, 3 simultaneous inputs)
+> **Simultaneous inputs:** MicroPython + ST IEC 61131-3 + Blockly for HVAC with multiple DHT22 sensors, per-zone setpoints, and weekly schedule.
+> **Required outputs:** C, C++, CircuitPython, Rust, Assembly.
+> **Cross-parsing:** Flowchart ↔ Ladder.
+> **Validation:** multi-zone logic consistency — setpoints and schedule identical across the 3 inputs and all outputs.
+
+#### CI-15 — BLDC motor with encoder and PID (Rust + Flowchart + Assembly ARM → multi-output, 3 simultaneous inputs)
+> **Simultaneous inputs:** Rust (Embassy) + Flowchart + Assembly (ARM Thumb) for BLDC motor with encoder, speed PID, and overcurrent protection.
+> **Required outputs:** C, C++, MicroPython, CircuitPython, ST IEC 61131-3.
+> **Cross-parsing:** Blockly ↔ Flowchart ↔ Ladder.
+> **Validation:** interrupt logic and control loop semantically equivalent; ISR correctly serialized in visual representations.
+
+#### CI-16 — Smart traffic light FSM (CircuitPython + Blockly + Ladder → multi-output, 3 simultaneous inputs)
+> **Simultaneous inputs:** CircuitPython + Blockly + Ladder for traffic light with vehicle detection, night mode, and manual override.
+> **Required outputs:** C, C++, MicroPython, Rust, Assembly, ST IEC 61131-3.
+> **Cross-parsing:** Flowchart ↔ Ladder.
+> **Validation:** finite state machine (FSM) correctly represented and preserved across all outputs; night/manual mode transitions tested.
+
+#### CI-17 — Pasteurization with chained timers (MicroPython + Flowchart + Ladder → multi-output, 3 simultaneous inputs)
+> **Simultaneous inputs:** MicroPython + Flowchart + Ladder for pasteurization with temperature profile (ramp-up, hold, cool-down), EEPROM logging, and deviation alarm.
+> **Required outputs:** C, C++, CircuitPython, Rust, Assembly, ST IEC 61131-3.
+> **Cross-parsing:** Blockly ↔ Ladder.
+> **Validation:** timed sequences (chained timers) preserved; temperature profile identical across all outputs.
+
+#### CI-18 — Pool control with Modbus TCP (ST + Blockly + Assembly AVR → multi-output, 3 simultaneous inputs)
+> **Simultaneous inputs:** ST IEC 61131-3 + Blockly + Assembly (AVR) for pH/chlorine control, peristaltic pumps, and Modbus TCP.
+> **Required outputs:** C, C++, MicroPython, CircuitPython, Rust.
+> **Cross-parsing:** Flowchart ↔ Ladder.
+> **Validation:** REAL/float numerical precision and Modbus registers preserved; dosage correctly calculated across all outputs.
+
+#### CI-19 — Fleet monitoring with GPS and MQTT (C++ ESP32 + Flowchart + ST → multi-output, 3 simultaneous inputs)
+> **Simultaneous inputs:** C++ (ESP32) + Flowchart + ST IEC 61131-3 for fleet with NMEA GPS, MPU-6050, MQTT via LTE, and aggressive driving detection.
+> **Required outputs:** MicroPython, CircuitPython, Rust, Assembly.
+> **Cross-parsing:** Blockly ↔ Flowchart.
+> **Validation:** async logic (ISR + concurrent tasks) correctly serialized in visual representations; driving events detected identically.
+
+#### CI-20 — Warehouse AGV with 4 inputs (MicroPython + Rust + Blockly + Ladder → multi-output, 4 simultaneous inputs)
+> **Simultaneous inputs:** MicroPython + Rust (Embassy) + Blockly + Ladder for AGV with line sensors, differential control, and automatic charging station.
+> **Required outputs:** C, C++, CircuitPython, Assembly, ST IEC 61131-3.
+> **Cross-parsing:** Flowchart ↔ Ladder.
+> **Validation:** largest pipeline test case (4 inputs) — semantic equivalence between all inputs and all outputs; navigation and charging logic preserved.
+
+#### CI-21 — Maximum perimeter security (Flowchart + Blockly + Assembly ARM + ST → multi-output, 4 simultaneous inputs)
+> **Simultaneous inputs:** Flowchart + Blockly + Assembly (ARM Thumb) + ST IEC 61131-3 for perimeter security with multiple PIRs, OpenMV camera, zoned siren, MQTT, and SD logging.
+> **Required outputs:** C, C++, MicroPython, CircuitPython, Rust.
+> **Cross-parsing:** Flowchart ↔ Blockly ↔ Ladder (all visual formats).
+> **Validation:** maximum consistency test case — async event logic, concurrency, and data persistence semantically equivalent across all inputs and outputs.
 
 ---
 
-## 📚 Documentação Relacionada
+## 📌 Roadmap and Detailed Status
 
-- [`docs/AI_ASSISTANT_CONTEXT.md`](./AI_ASSISTANT_CONTEXT.md) — Contexto geral NeuroForge (QEMU, AVR, ESP32)
-- [`notyet/README.md`](../notyet/README.md) — Roadmap e estado de implementação ASL
-- [`src/engine/asl/ASLTypes.ts`](../src/engine/asl/ASLTypes.ts) — Schema ASL (fonte única de verdade)
+The detailed status of what is done/pending is at:
+👉 [`notyet/README.md`](../notyet/README.md) — Full ASL roadmap (source of truth for progress)
+
+---
+
+## 📚 Related Documentation
+
+- [`docs/AI_ASSISTANT_CONTEXT.md`](./AI_ASSISTANT_CONTEXT.md) — General NeuroForge context (QEMU, AVR, ESP32)
+- [`notyet/README.md`](../notyet/README.md) — ASL roadmap and implementation status
+- [`src/engine/asl/ASLTypes.ts`](../src/engine/asl/ASLTypes.ts) — ASL schema (single source of truth)
 - [`src/engine/asl/ASLExecutor.ts`](../src/engine/asl/ASLExecutor.ts) — Runtime
 - [`src/engine/asl/codeToASL.ts`](../src/engine/asl/codeToASL.ts) — Transpiler
-- [`src/engine/SimulationEngine.ts`](../src/engine/SimulationEngine.ts) — Engine JS-mode
+- [`src/engine/SimulationEngine.ts`](../src/engine/SimulationEngine.ts) — JS-mode engine
 
 ---
 
-**Use este documento como base para todas as respostas futuras sobre o subsistema ASL do NeuroForge.**
+**Use this document as the basis for all future responses about the NeuroForge ASL subsystem.**
