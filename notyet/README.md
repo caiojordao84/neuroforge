@@ -13,7 +13,8 @@ Marcadores de status:
 ### 0.1. ASL no core
 [x] ASLTypes.ts: definição do AST — ASLProgram, globals, functions, tasks, statements, expressions.
 [x] ASLExecutor.ts: executor JS que percorre o ASL e chama SimulationEngine.
-[x] codeToASL.ts: transpiler C++ Arduino subset → ASL (v0).
+[x] codeToASL.ts + transforms/: transpiler modularizado C++ Arduino subset → ASL (v1).
+[x] transforms/statementRegistry.ts: Handler Registry pattern para extensibilidade de statements.
 [x] Integração na TopToolbar: modo JS em C++ tenta ASL primeiro, fallback para CodeParser legado.
 
 ### 0.3. Fluxo de trabalho atual (C++ / MicroPython → ASL → SimulationEngine)
@@ -26,7 +27,7 @@ Marcadores de status:
     - Registro central de linguagens: mapeia labels ("C++ Arduino", "MicroPython") para:
       - extensões / ids internos,
       - função de parsing/transpilação → ASL (ex.: CParser + codeToASL, PythonParser + codeToASL).
-    - Único lugar onde decidimos se uma linguagem suporta ASL ou cai no parser legado.
+    - Único lugar onde decide se uma linguagem suporta ASL ou cai no parser legado.
 
 [x] TopToolbar.tsx:
     - Botão Run em modo JS:
@@ -36,11 +37,20 @@ Marcadores de status:
       - Cria um ASLRuntime (ASLExecutor) e inicializa o SimulationEngine em modo JS.
     - Fallback: se a linguagem/board não suportar ASL, usa o fluxo CodeParser legado.
 
-[x] codeToASL.ts:
+[x] codeToASL.ts + transforms/:
+    - Entry point: codeToASL() → parseToProgramNode() → astToASL()
+    - transforms/blockTransform.ts: orchestrator que usa statementRegistry
+    - transforms/statementRegistry.ts: Handler Registry pattern
+      - Cada nodeType (IfStatement, WhileLoop, ForLoop, VariableDeclaration, etc.) tem seu handler dedicado
+      - Extensível: novos handlers podem ser adicionados sem modificar o core
+    - transforms/exprTransform.ts: transformExpr() para expressões
+    - transforms/callTransform.ts: transformCallToStmt() + tryTransformRead()
+    - helpers/arrayUtils.ts: resolveSize, buildEmptyArray, deepCopyValue
+    - helpers/typeUtils.ts: mapToASLType
     - Converte AST de entrada (CParser para C++, PythonParser para MicroPython) em ASLProgram:
-      - Preenche globals, functions e tasks (setup/loop → functions/tasks, outras funções → ASLFunction).
-      - Converte statements (if/while/for/return/break/continue, pinMode/digitalWrite/delay, Serial.print* etc.).
-      - Converte expressões (aritméticas, lógicas, chamadas, leituras de pinos).
+      - Preenche globals, functions e tasks (setup/loop → functions/tasks, outras funções → ASLFunction)
+      - Converte statements via registry (if/while/for/return/break/continue, pinMode/digitalWrite/delay, Serial.print*, hardware)
+      - Converte expressões (aritméticas, lógicas, chamadas, leituras de pinos, indexação arrays)
 
 [x] ASLTypes.ts:
     - Fonte única de verdade do schema ASL: ASLProgram, ASLStatement, ASLExpr, ASLFunction, tasks.
@@ -200,7 +210,35 @@ src/
     asl/
       ASLTypes.ts           (fonte única de verdade do schema)
       ASLExecutor.ts
-      codeToASL.ts
+      index.ts              (barrel exports)
+      codeToASL.ts          (entry point ~194 linhas)
+
+      transforms/            (transformação AST → ASL)
+        index.ts            (barrel exports)
+        context.ts          (TransformContext interface)
+        statementRegistry.ts (Handler Registry pattern)
+        blockTransform.ts   (orchestrator)
+        exprTransform.ts    (transformExpr)
+        callTransform.ts    (transformCallToStmt + tryTransformRead)
+
+      helpers/               (funções utilitárias)
+        index.ts
+        arrayUtils.ts       (resolveSize, buildEmptyArray, deepCopyValue)
+        typeUtils.ts        (mapToASLType)
+
+      plugins/              (parsers por linguagem)
+        c/
+          CParser.ts
+          CGenerator.ts
+        cpp/
+          CppParser.ts
+        python/
+          PythonParser.ts
+          PythonGenerator.ts
+        rust/
+          RustParser.ts
+          RustGenerator.ts
+
       LanguageRegistry.ts   (registro central de linguagens)
 
     tools/
@@ -224,6 +262,8 @@ src/
       simulator/
         SimulatorInterpreter.ts
 ```
+
+> **Nota:** A estrutura acima reflete a implementação atual após a modularização de `codeToASL.ts` (branch `ASL_Integration_codeToASL_Modular`). O padrão Handler Registry permite adicionar novos tipos de statements sem modificar o core do `blockTransform`.
 
 ## 3. Round-trip completo: Código ↔ ASL ↔ Visual
 Este é um eixo central do produto. Os dois sentidos devem ser tratados como capacidades de primeira classe.
