@@ -71,12 +71,12 @@ Marcadores de status:
 
 #### Statements
 
-**Globais e Locais:**
-[x] Declaração global simples: `int x = 0;` fora de setup/loop (vira ASLGlobalVar com literal numérico).
-[x] Declaração local simples: `int i = 0;` em setup/loop (vira assign com literal/constante HIGH/LOW/true/false/número).
-[ ] Declaração global de array: `const int LED_PINS[6] = {3, 4, 5, 6, 7, 8};` (regex não reconhece [tamanho] nem inicializador {...}).
-[ ] Declaração local de array: `int valores[5] = {1, 2, 3, 4, 5};` (sem parser para arrays).
-[~] Declaração local com expressão: `int delayTime = 1000 - (i * 100);` (parser de expressões já existe, mas ainda não cobrimos todos os casos no roadmap/fixtures).
+[**Globais e Locais:**]
+- [x] Declaração global simples: `int x = 0;` fora de setup/loop (vira ASLGlobalVar com literal numérico).
+- [x] Declaração local simples: `int i = 0;` em setup/loop (vira assign com literal/constante HIGH/LOW/true/false/número).
+- [x] Declaração global de array: `const int LED_PINS[6] = {3, 4, 5, 6, 7, 8};` (CParser: isArray, arraySizeExpr, ArrayInitializer)
+- [x] Declaração local de array: `int valores[5] = {1, 2, 3, 4, 5};` (CParser: mesmo caminho de parseVarDecl)
+- [~] Declaração local com expressão: `int delayTime = 1000 - (i * 100);` (parser de expressões já existe, mas ainda não cobrimos todos os casos no roadmap/fixtures).
 
 **Atribuições:**
 [x] Incremento/decremento: `i = i + 1;`, `i = i - 1;` (quando variável é a mesma dos dois lados, gera binary +/-).
@@ -271,12 +271,21 @@ Este é um eixo central do produto. Os dois sentidos devem ser tratados como cap
 [x] Operadores unários: `++i`, `--i`, `i++`, `i--`.
 
 ### 4.3. Arrays e indexação
-[ ] Declaração de arrays globais: `const int pins[6] = {3,4,5,6,7,8};`.
-[ ] Declaração de arrays locais: `int valores[5] = {1,2,3,4,5};`.
-[ ] Acesso por índice: `pins[i]`, `pins[2]` como ASLExpr (novo kind: 'index').
-[ ] Atribuição a elemento de array: `pins[2] = 10;`.
-[ ] Representação de arrays no executor: `env.set('pins', [3,4,5,6,7,8])`.
-[ ] Avaliação de indexação no executor: `evalExpr({kind:'index', array:'pins', index:expr})`.
+[x] Declaração de arrays globais: `const int pins[6] = {3,4,5,6,7,8};`.
+[x] Declaração de arrays locais: `int valores[5] = {1,2,3,4,5};`.
+[x] Acesso por índice: `pins[i]`, `pins[2]` como ASLExpr (novo kind: 'index').
+[x] Atribuição a elemento de array: `pins[2] = 10;` (kind: 'setIndex')
+[x] Representação de arrays no executor: `env.set('pins', [3,4,5,6,7,8])`.
+[x] Avaliação de indexação no executor: `evalExpr({kind:'index', array:'pins', index:expr})`.
+
+ - [x] Declaração de arrays 2D: `int m[3][4];` / `int m[][4] = {{1,2},{3,4}};` (CParser: isArray2D, arraySize2Expr, isRow)
+ - [x] Acesso 2D: `arr[i][j]` como ASLExpr (kind: 'index2D') — ASLIndex2D em ASLTypes.ts
+ - [x] Atribuição 2D: `arr[i][j] = val` (kind: 'setIndex2D') — ASLSetIndex2D em ASLTypes.ts
+ - [x] ASLTypes.ts: ASLSetIndex2D + ASLIndex2D adicionados; ASLStatement e ASLExpr unions actualizados
+ - [x] ASLExecutor.ts: case 'setIndex2D' (guard duplo Array.isArray) + case 'index2D' (fallback 0)
+ 
+> **Checklist detalhado de 38 patterns de array em progresso:**
+> [`docs/checklistArrayCppASL.md`](../docs/checklistArrayCppASL.md)
 
 ### 4.4. Mensagens de erro
 [ ] Indicar linha e trecho exato do código não suportado.
@@ -314,7 +323,7 @@ Este é um eixo central do produto. Os dois sentidos devem ser tratados como cap
 [x] Suporte para linguagem 'c' pura em codeToASL.ts.
 [~] Controle de fluxo completo (v1): while e for simples já funcionam; faltam break, continue, switch.
 [ ] Expressões gerais no RHS de atribuições.
-[ ] Arrays e indexação.
+[~] Arrays e indexação — subset básico 1D e 2D implementado (ver docs/checklistArrayCppASL.md para os 38 patterns em progresso).
 [~] APIs adicionais: analogRead, millis, micros, Serial.print já suportadas em ASLExecutor/SimulationEngine; tone ainda sem simulação dedicada.
 [ ] Parser via Tree-sitter C/C++.
 
