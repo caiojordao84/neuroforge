@@ -81,13 +81,13 @@ Marcadores de status:
 **Atribuições:**
 [x] Incremento/decremento: `i = i + 1;`, `i = i - 1;` (quando variável é a mesma dos dois lados, gera binary +/-).
 [x] Atribuição simples genérica: `x = expr;` (CParser parseia = como operador binário com precedência baixa e codeToASL gera assign com RHS arbitrário).
-[ ] Atribuição a elemento de array: `LED_PINS[2] = 10;` (sem suporte a indexação no transpiler nem executor).
+[x] Atribuição a elemento de array: `LED_PINS[2] = 10;` (codeToASL → setIndex; setIndex2D para 2D).
 
 **Operações de hardware:**
 [x] pinMode: `pinMode(PIN, MODE);` onde MODE ∈ {INPUT, OUTPUT, INPUT_PULLUP}, mas PIN só aceita \w+, não indexação.
-[ ] pinMode com array: `pinMode(LED_PINS[i], OUTPUT);` (LED_PINS[i] não bate no pattern \w+, linha ignorada).
+[x] pinMode com array: `pinMode(LED_PINS[i], OUTPUT);` (CParser gera SubscriptExpression → codeToASL avalia como expr).
 [x] digitalWrite: `digitalWrite(PIN, HIGH/LOW);` (aceita expr simples como valor).
-[ ] digitalWrite com array: `digitalWrite(LED_PINS[i], HIGH);` (mesmo problema de pattern: não reconhece indexação).
+[x] digitalWrite com array: `digitalWrite(LED_PINS[i], HIGH);` (mesmo mecanismo).
 [x] analogWrite: `analogWrite(PIN, VAL);` (VAL vira literal ou var via makeVarOrLiteral).
 [x] delay: `delay(1000);` ou `delay(delayTime);` (argumento tratado como literal/var simples).
 [x] Leitura digital (decl): `int v = digitalRead(PIN);` (gera statement read com mode: 'DIGITAL').
@@ -122,15 +122,15 @@ Marcadores de status:
 [x] Binário simples: `i = i + 1;`, `i = i - 1;` (incremento/decremento quando variável é a mesma dos dois lados).
 [ ] Multiplicação: `x = i * 100;` (precisa fixtures e validação, executor já tem *).
 [ ] Expressão composta: `int delayTime = 1000 - (i * 100);` (parser de expressões já existe, falta fechar o subset/fixtures).
-[ ] Indexação de array: `int pin = LED_PINS[i];` (sem suporte a arrays: não há AST para indexação, nem avaliação no executor).
-[ ] Inicializador de array: `int arr[3] = {1, 2, 3};` (parser não reconhece sintaxe [tamanho] nem {...}).
+[x] Indexação de array: `int pin = LED_PINS[i];` (codeToASL → ASLIndex kind:'index').
+[x] Inicializador de array: `int arr[3] = {1, 2, 3};` (CParser: ArrayInitializer → codeToASL → initialValue JS array).
 [ ] Expressões complexas: `x = a + b * c / 2;` (ainda fora do escopo da ASL v0).
 
 #### Tipos de dados e estruturas
 
 [x] Variáveis escalares: `int x;`, `float y;`, `bool flag;` (funcionam tanto globais quanto locais com inicialização).
-[ ] Arrays estáticos: `int pins[6] = {3,4,5,6,7,8};` (não há parser para declaração nem representação no IR/executor).
-[ ] Acesso por índice: `pins[i]`, `pins[2]` (nenhum ASLExpr representa indexação; executor usa Map<string, any> simples).
+[x] Arrays estáticos: `int pins[6] = {3,4,5,6,7,8};`.
+[x] Acesso por índice: `pins[i]`, `pins[2]` (ASLExecutor: case 'index' em evalExpr).
 [ ] Strings: `char msg[] = "Hello";` (não suportado).
 [ ] Structs/classes: `struct Point { int x, y; };` (não suportado).
 
