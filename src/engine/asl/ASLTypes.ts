@@ -82,7 +82,9 @@ export type ASLStatement =
   | ASLAssign
   | ASLSetIndex
   | ASLSetIndex2D
+  | ASLSetIndex3D
   | ASLSetMember
+  | ASLSetDeref
   | ASLExpressionStmt
   | ASLReturn
   | ASLPrint
@@ -199,12 +201,30 @@ export interface ASLSetIndex2D {
 }
 
 /**
- * Escrita em membro de objeto: target.property = value;
+ * Escrita em índice de array 3D: target[d1][d2][d3] = value;
  */
+export interface ASLSetIndex3D {
+  kind: 'setIndex3D';
+  target: string;
+  d1Index: ASLExpr;
+  d2Index: ASLExpr;
+  d3Index: ASLExpr;
+  value: ASLExpr;
+}
+
 export interface ASLSetMember {
   kind: 'setMember';
   target: ASLExpr;
   property: string;
+  value: ASLExpr;
+}
+
+/**
+ * Escrita por desreferência: *target = value;
+ */
+export interface ASLSetDeref {
+  kind: 'setDeref';
+  target: ASLExpr;
   value: ASLExpr;
 }
 
@@ -255,6 +275,7 @@ export type ASLExpr =
   | ASLVarRef
   | ASLIndex
   | ASLIndex2D
+  | ASLIndex3D
   | ASLMember
   | ASLUnary
   | ASLBinary
@@ -293,6 +314,17 @@ export interface ASLIndex2D {
   array: ASLExpr;
   rowIndex: ASLExpr;
   colIndex: ASLExpr;
+}
+
+/**
+ * Indexação de array 3D: array[d1][d2][d3].
+ */
+export interface ASLIndex3D {
+  kind: 'index3D';
+  array: ASLExpr;
+  d1Index: ASLExpr;
+  d2Index: ASLExpr;
+  d3Index: ASLExpr;
 }
 
 /**

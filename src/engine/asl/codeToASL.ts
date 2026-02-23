@@ -78,6 +78,18 @@ function evaluateInitializer(node: BaseNode | undefined, globalsMap: Map<string,
     return node.children.map(c => evaluateInitializer(c, globalsMap));
   }
 
+  if (node.nodeType === 'UnaryExpression' && node.attributes.operator === '&') {
+    const child = node.children[0];
+    if (child.nodeType === 'Identifier') {
+      return { __isPtr: true, target: child.attributes.name };
+    }
+    if (child.nodeType === 'SubscriptExpression') {
+      const arrName = (child.children[0] as any).attributes.name;
+      const idx = evaluateInitializer(child.children[1], globalsMap);
+      return { __isPtr: true, target: arrName, index: idx };
+    }
+  }
+
   return 0;
 }
 

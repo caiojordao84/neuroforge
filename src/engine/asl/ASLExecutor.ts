@@ -232,11 +232,39 @@ async function executeStatements(
         break;
       }
 
+      case 'setIndex3D': {
+        const d1 = await evalExpr(s.d1Index, localEnv, ctx);
+        const d2 = await evalExpr(s.d2Index, localEnv, ctx);
+        const d3 = await evalExpr(s.d3Index, localEnv, ctx);
+        const val = await evalExpr(s.value, localEnv, ctx);
+        const arr = getVar(s.target, localEnv, ctx.globals);
+        if (Array.isArray(arr) && Array.isArray(arr[d1]) && Array.isArray(arr[d1][d2])) {
+          arr[d1][d2][d3] = val;
+        }
+        break;
+      }
+
       case 'setMember': {
         const targetObj = await evalExpr(s.target, localEnv, ctx);
         const val = await evalExpr(s.value, localEnv, ctx);
         if (targetObj && typeof targetObj === 'object') {
           (targetObj as any)[s.property] = val;
+        }
+        break;
+      }
+
+      case 'setDeref': {
+        const ptr = await evalExpr(s.target, localEnv, ctx);
+        const val = await evalExpr(s.value, localEnv, ctx);
+        if (ptr && typeof ptr === 'object' && ptr.__isPtr) {
+          if (ptr.index !== undefined) {
+            const arr = getVar(ptr.target, localEnv, ctx.globals);
+            if (Array.isArray(arr)) {
+              arr[ptr.index] = val;
+            }
+          } else {
+            setVar(ptr.target, val, localEnv, ctx.globals);
+          }
         }
         break;
       }
@@ -277,6 +305,10 @@ async function executeStatements(
 }
 
 function asString(val: any): string {
+  if (val && typeof val === 'object' && val.__isPtr) {
+    const addr = getPointerAddress(val);
+    return `0x${addr.toString(16).toUpperCase()}`;
+  }
   if (Array.isArray(val)) {
     if (val.length > 0 && typeof val[0] === 'number') {
       let s = '';
@@ -331,6 +363,15 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       return 0;
     }
 
+    case 'index3D': {
+      const arr = await evalExpr(expr.array, env, ctx);
+      const d1 = await evalExpr(expr.d1Index, env, ctx);
+      const d2 = await evalExpr(expr.d2Index, env, ctx);
+      const d3 = await evalExpr(expr.d3Index, env, ctx);
+      if (Array.isArray(arr) && Array.isArray(arr[d1]) && Array.isArray(arr[d1][d2])) return arr[d1][d2][d3];
+      return 0;
+    }
+
     case 'member': {
       const obj = await evalExpr(expr.target, env, ctx);
       if (obj && typeof obj === 'object') return (obj as any)[expr.property];
@@ -355,9 +396,12 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       if (expr.op === '*') {
         if (v && (v as any).__isPtr) {
           const base = getVar((v as any).target, env, ctx.globals);
-          const idx = (v as any).index || 0;
-          return base[idx];
+          if ((v as any).index !== undefined && Array.isArray(base)) {
+            return base[(v as any).index];
+          }
+          return base;
         }
+        return v;
       }
       return v;
     }
@@ -471,7 +515,13 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
 
       // Conversores de tipo e utilitários padrão
       if (expr.callee === 'String') return String(await evalExpr(expr.args[0] || { kind: 'literal', value: '' }, env, ctx));
-      if (expr.callee === 'int') return Math.floor(Number(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx)) || 0);
+      if (expr.callee === 'int') {
+        const val = await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx);
+        if (val && typeof val === 'object' && (val as any).__isPtr) {
+          return getPointerAddress(val);
+        }
+        return Math.floor(Number(val) || 0);
+      }
       if (expr.callee === 'float') return Number(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx)) || 0;
 
       // Hardware / Library Calls (Event-based)
@@ -501,5 +551,22 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
 
       return 0;
     }
+    default:
+      return 0;
   }
+}
+
+function getPointerAddress(ptr: any): number {
+  if (!ptr) return 0;
+  if (!ptr.__addr) {
+    const name = ptr.target || '';
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = (hash << 5) - hash + name.charCodeAt(i);
+      hash |= 0;
+    }
+    const base = 0x1000 + (Math.abs(hash) % 0x7000);
+    ptr.__addr = base + (ptr.index || 0);
+  }
+  return ptr.__addr;
 }

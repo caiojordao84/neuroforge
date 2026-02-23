@@ -49,9 +49,9 @@
 
 ## **⚪ FASE 4 — Avançadas (edge cases)** — 8 items
 
-- [ ] **4.1** `int m[x][y][z]` (arrays 3D+)  
-- [ ] **4.2** `int *ptrs[5]` (array de ponteiros)  
-- [ ] **4.3** `int (*ptr)[4]` (ponteiro para array)  
+- [x] **4.1** `int m[x][y][z]` (arrays 3D+)  
+- [x] **4.2** `int *ptrs[5]` (array de ponteiros)  
+- [x] **4.3** `int (*ptr)[4]` (ponteiro para array)  
 - [ ] **4.4** `MyStruct arr[5]` (array de struct customizada)  
 - [ ] **4.5** `*(arr + i)` (aritmética de ponteiros)  
 - [ ] **4.6** `extern int arr[]` (declaração externa)  

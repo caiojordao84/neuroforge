@@ -17,8 +17,17 @@ export function buildEmptyArray(
   sizeExpr: BaseNode | undefined,
   size2Expr: BaseNode | undefined,
   globalsMap: Map<string, any>,
+  size3Expr?: BaseNode | undefined,
 ): any {
   const n = resolveSize(sizeExpr, globalsMap) || 0;
+  if (size3Expr) {
+    const o = resolveSize(size3Expr, globalsMap) || 0;
+    if (size2Expr) {
+      const m = resolveSize(size2Expr, globalsMap) || 0;
+      return Array(n).fill(null).map(() => Array(m).fill(null).map(() => Array(o).fill(0)));
+    }
+    return Array(n).fill(null).map(() => Array(o).fill(0));
+  }
   if (size2Expr) {
     const m = resolveSize(size2Expr, globalsMap) || 0;
     return Array(n).fill(null).map(() => Array(m).fill(0));
