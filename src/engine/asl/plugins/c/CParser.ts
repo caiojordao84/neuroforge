@@ -10,11 +10,10 @@ export class RecursiveDescentCParser {
     private isType(token: Token): boolean {
         if (token.type === 'KEYWORD' && [
             'int', 'float', 'bool', 'boolean', 'String', 'File', 'char', 'byte', 'short', 'long',
-            'unsigned', 'uint8_t', 'uint16_t', 'uint32_t', 'int8_t', 'int16_t', 'int32_t',
-            'const', 'volatile', 'static', 'PROGMEM', 'auto', 'struct'
+            'unsigned', 'uint8_t', 'uint16_t', 'uint32_t', 'int8_t', 'int16_t', 'int32_t'
         ].includes(token.value)) return true;
 
-        // Dynamic types (like enums or structs)
+        // Dynamic types (like enums)
         if (token.type === 'IDENTIFIER') {
             const sym = this.symbols.resolve(token.value);
             return sym?.type === 'type';
@@ -23,11 +22,9 @@ export class RecursiveDescentCParser {
     }
 
     private isFunctionDecl(): boolean {
-        let offset = 0;
-        if (this.peek(offset).value === 'struct') offset++;
-        if (!this.isType(this.peek(offset))) return false;
+        if (!this.isType(this.peek())) return false;
+        let offset = 1;
         while (this.isType(this.peek(offset))) offset++;
-        while (this.peek(offset).value === '*') offset++;
         return this.peek(offset).type === 'IDENTIFIER' && this.peek(offset + 1).value === '(';
     }
 
@@ -37,57 +34,22 @@ export class RecursiveDescentCParser {
         const program: ProgramNode = { nodeType: 'Program', id: 'root', attributes: {}, children: [] };
         while (this.peek().type !== 'EOF') {
             const t = this.peek();
-            if (t.value === '#') {
-                this.parsePreprocessor();
-                continue;
-            }
+            if (t.value === 'const') this.consume(); // ignore const
             if (t.value === 'enum') {
                 program.children.push(this.parseEnum());
-            } else if (t.value === 'struct') {
-                // If it's "struct Name var;" it's a VarDecl, not a StructDef
-                if (this.peek(1).type === 'IDENTIFIER' && this.peek(2).value === '{') {
-                    const structNode = this.parseStruct();
-                    if (structNode) program.children.push(structNode);
-                } else if (this.peek(1).value === '{') { // Anonymous struct
-                     const structNode = this.parseStruct();
-                     if (structNode) program.children.push(structNode);
-                } else {
-                    const decl = this.parseVarDecl(); if (decl) program.children.push(decl);
-                }
+            } else if (t.value === 'struct' && this.peek(1)?.type === 'IDENTIFIER' && this.peek(2)?.value === '{') {
+                // struct definition: struct Name { ... };
+                const decl = this.parseStruct();
+                if (decl) program.children.push(decl);
             } else if (this.peek().value === 'void' || this.isFunctionDecl()) {
                 program.children.push(this.parseFunction());
-            } else if (this.isType(this.peek())) {
+            } else if (this.isType(this.peek()) || this.peek().value === 'struct' || this.peek().value === 'extern' || this.peek().value === 'std') {
                 const decl = this.parseVarDecl(); if (decl) program.children.push(decl);
             } else {
                 this.consume();
             }
         }
         return { ast: program, symbols: this.symbols.getAllSymbols(), errors: this.semanticErrors };
-    }
-
-    private parsePreprocessor(): void {
-        this.consume('#');
-        const directive = this.consume().value;
-        if (directive === 'define') {
-            const name = this.consume().value;
-            let value: any = undefined;
-            const next = this.peek();
-            if (next.type === 'NUMBER') {
-                value = parseFloat(next.value);
-                this.consume();
-            } else if (next.type === 'STRING') {
-                value = next.value;
-                this.consume();
-            } else if (next.value === 'HIGH' || next.value === 'LOW') {
-                value = next.value === 'HIGH' ? 1 : 0;
-                this.consume();
-            }
-            this.symbols.define(name, 'int', this.peek(-1).line, value, true);
-        }
-        while (this.peek().type !== 'EOF' && this.peek().value !== ';') {
-            this.consume();
-        }
-        if (this.peek().value === ';') this.consume();
     }
 
     private parseEnum(): BaseNode {
@@ -113,72 +75,43 @@ export class RecursiveDescentCParser {
     }
 
     private parseStruct(): BaseNode | null {
-        this.consume('struct');
-        let name: string | null = null;
-        if (this.peek().type === 'IDENTIFIER') {
-            name = this.consume().value;
-            this.symbols.define(name, 'type', this.peek(-1).line);
-        }
-
-        if (this.peek().value !== '{') {
-            // This was just "struct Name;" which is a forward declaration or just "struct Name var;"
-            // But parse() already handles the "struct Name var;" case by calling parseVarDecl.
-            if (this.peek().value === ';') this.consume(';');
-            return null;
-        }
-
+        const line = this.peek().line;
+        this.consume(); // 'struct'
+        const name = this.consume().value;
+        this.symbols.define(name, 'type', line);
         this.consume('{');
-        const members: { type: string, name: string }[] = [];
+        const fields: { type: string; name: string }[] = [];
         while (this.peek().value !== '}' && this.peek().type !== 'EOF') {
-            if (this.isType(this.peek())) {
-                let mType = this.consume().value;
-                while (this.isType(this.peek())) mType += ' ' + this.consume().value;
-                while (this.peek().value === '*') mType += this.consume().value;
-                const mName = this.consume().value;
-                if (this.peek().value === '[') {
-                    this.consume('[');
-                    this.consume(']'); // Simple array support in struct members
-                    members.push({ type: mType + '[]', name: mName });
-                } else {
-                    members.push({ type: mType, name: mName });
-                }
-                this.consume(';');
-            } else {
+            let fType = this.consume().value;
+            while (this.isType(this.peek()) && this.peek().type === 'KEYWORD') {
+                fType += ' ' + this.consume().value;
+            }
+            while (this.peek().value === '*') {
+                fType += '*';
                 this.consume();
             }
+            const fName = this.consume().value;
+            if (this.peek().value === ';') this.consume();
+            fields.push({ type: fType, name: fName });
         }
         this.consume('}');
-
-        // If there is a variable name after "struct { ... } varName;"
-        let instanceDecl: BaseNode | null = null;
+        let inlineInstance: string | null = null;
         if (this.peek().type === 'IDENTIFIER') {
-            const varName = this.consume().value;
-            this.symbols.define(varName, name || 'anonymous_struct', this.peek(-1).line);
-            instanceDecl = {
-                nodeType: 'VariableDeclaration',
-                id: this.genId(),
-                attributes: { name: varName, type: name || 'struct' },
-                children: [{ nodeType: 'Literal', id: this.genId(), attributes: { value: {} }, children: [] }],
-                metadata: { line: this.peek(-1).line }
-            };
+            inlineInstance = this.consume().value;
         }
-
         if (this.peek().value === ';') this.consume(';');
-
-        const structDef: BaseNode = {
+        return {
             nodeType: 'StructDeclaration',
             id: this.genId(),
-            attributes: { name, members },
-            children: instanceDecl ? [instanceDecl] : []
+            attributes: { name, fields, inlineInstance },
+            children: [],
+            metadata: { line },
         };
-
-        return structDef;
     }
 
     private parseFunction(): BaseNode {
         let returnType = this.consume().value;
         while (this.isType(this.peek())) returnType += ' ' + this.consume().value;
-        while (this.peek().value === '*') returnType += this.consume().value;
 
         const name = this.consume().value;
         const line = this.peek(-1).line;
@@ -192,7 +125,7 @@ export class RecursiveDescentCParser {
                 if (this.peek().value === ')') break;
                 let pType = this.consume().value;
                 while (this.isType(this.peek())) pType += ' ' + this.consume().value;
-                while (this.peek().value === '*') pType += this.consume().value;
+                while (this.peek().value === '*') { pType += '*'; this.consume(); }
                 const pName = this.consume().value;
                 params.push({ type: pType, name: pName });
                 if (this.peek().value === '[') { this.consume('['); this.consume(']'); }
@@ -220,6 +153,8 @@ export class RecursiveDescentCParser {
         const t = this.peek();
         const line = t.line;
 
+        if (t.value === 'const') this.consume();
+
         if (t.value === 'if') return this.parseIf();
         if (t.value === 'while') return this.parseWhile();
         if (t.value === 'for') return this.parseFor();
@@ -243,7 +178,7 @@ export class RecursiveDescentCParser {
             this.consume(';');
             return { nodeType: 'ReturnStatement', id: this.genId(), attributes: {}, children: [val], metadata: { line } };
         }
-        if (this.isType(t)) return this.parseVarDecl();
+        if (this.isType(t) || t.value === 'struct' || t.value === 'extern' || t.value === 'std') return this.parseVarDecl();
         if (t.value === ';') { this.consume(); return null; }
         if (t.value === '{') {
             return { nodeType: 'Block', id: this.genId(), attributes: {}, children: this.parseBlock(), metadata: { line } };
@@ -411,44 +346,6 @@ export class RecursiveDescentCParser {
     private parseFor(): BaseNode {
         const line = this.peek().line;
         this.consume('for'); this.consume('('); this.symbols.pushScope();
-
-        if (this.peek().value === 'auto' || this.isType(this.peek())) {
-            const peek0 = this.peek().value;
-            const peek1 = this.peek(1)?.value;
-            const peek2 = this.peek(2)?.value;
-            if ((peek0 === 'auto' || (peek1 && peek1 !== '(')) && peek2 === ':') {
-                let varType = '';
-                if (this.peek().value === 'auto') {
-                    varType = 'int';
-                    this.consume();
-                } else {
-                    varType = this.consume().value;
-                }
-                const varName = this.consume().value;
-                this.consume(':');
-                const iterable = this.parseExpression(0);
-                this.consume(')');
-
-                let body: BaseNode[];
-                if (this.peek().value === '{') {
-                    body = this.parseBlock();
-                } else {
-                    const stmt = this.parseStatement();
-                    body = stmt ? [stmt] : [];
-                }
-                this.symbols.popScope();
-
-                const iterName = (iterable as any).attributes?.name || (iterable as any).children?.[0]?.attributes?.name || '';
-                const initVar: BaseNode = { nodeType: 'VariableDeclaration', id: this.genId(), attributes: { name: '__i', type: 'int' }, children: [{ nodeType: 'Literal', id: this.genId(), attributes: { value: 0 }, children: [] }], metadata: { line } };
-                const sizeNode: BaseNode = { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: '__sizeof' }, children: [{ nodeType: 'Identifier', id: this.genId(), attributes: { name: iterName }, children: [] }], metadata: { line } };
-                const condition: BaseNode = { nodeType: 'BinaryExpression', id: this.genId(), attributes: { operator: '<' }, children: [{ nodeType: 'Identifier', id: this.genId(), attributes: { name: '__i' }, children: [] }, sizeNode], metadata: { line } };
-                const update: BaseNode = { nodeType: 'UnaryExpression', id: this.genId(), attributes: { operator: '++', prefix: false }, children: [{ nodeType: 'Identifier', id: this.genId(), attributes: { name: '__i' }, children: [] }], metadata: { line } };
-                const indexAccess: BaseNode = { nodeType: 'SubscriptExpression', id: this.genId(), attributes: {}, children: [iterable, { nodeType: 'Identifier', id: this.genId(), attributes: { name: '__i' }, children: [] }], metadata: { line } };
-                const assignBody: BaseNode[] = [{ nodeType: 'Assignment', id: this.genId(), attributes: { operator: '=' }, children: [{ nodeType: 'Identifier', id: this.genId(), attributes: { name: varName }, children: [] }, indexAccess], metadata: { line } }, ...body];
-                return { nodeType: 'ForLoop', id: this.genId(), attributes: { hasInit: true, hasUpdate: true, isRangeBased: true }, children: [initVar, condition, update, ...assignBody], metadata: { line } };
-            }
-        }
-
         let init: BaseNode | null = null;
         if (this.peek().type === 'KEYWORD') init = this.parseVarDecl();
         else if (this.peek().type === 'IDENTIFIER') init = this.parseStatement();
@@ -476,100 +373,79 @@ export class RecursiveDescentCParser {
         let isVolatile = false;
         let isStatic = false;
         let isProgmem = false;
+        let isExtern = false;
 
-        while (['const', 'volatile', 'static', 'PROGMEM'].includes(this.peek().value)) {
+        while (['const', 'volatile', 'static', 'PROGMEM', 'extern'].includes(this.peek().value)) {
             const v = this.peek().value;
             if (v === 'const') { isConst = true; this.consume(); }
             else if (v === 'volatile') { isVolatile = true; this.consume(); }
             else if (v === 'static') { isStatic = true; this.consume(); }
             else if (v === 'PROGMEM') { isProgmem = true; this.consume(); }
+            else if (v === 'extern') { isExtern = true; this.consume(); }
             else break;
         }
 
         let type = this.consume().value;
+        let structTypeName: string | null = null;
+
+        if (type === 'std') {
+            const containerType = this.consume().value;
+            if (this.peek().value === '<') {
+                this.consume();
+                const elemType = this.consume().value;
+                if (containerType === 'array') {
+                    if (this.peek().value === ',') this.consume();
+                    const sizeStr = this.consume().value;
+                    this.consume('>');
+                    type = elemType;
+                    (this as any)._stdArraySize = {
+                        nodeType: 'Literal',
+                        id: this.genId(),
+                        attributes: { value: parseInt(sizeStr) || 0 },
+                        children: [],
+                    };
+                } else {
+                    this.consume('>');
+                    type = elemType + '*';
+                }
+            }
+        }
+
+        if (type === 'struct' && this.peek().type === 'IDENTIFIER') {
+            structTypeName = this.consume().value;
+            type = 'struct';
+        }
+
         while (this.isType(this.peek()) && this.peek().type === 'KEYWORD') {
             type += ' ' + this.consume().value;
         }
 
-        if (!isProgmem && this.peek().value === 'PROGMEM') {
-            isProgmem = true;
-            this.consume();
-        }
-
         let isPointer = false;
-        let isPtrToArray = false;
-        let ptrArraySize: BaseNode | null = null;
-        let ptrToArrayName: string | null = null;
-
-        const parenPos = this.pos;
-        if (this.peek().value === '(') {
-            this.consume('(');
-            if (this.peek().value === '*') {
-                this.consume('*');
-                if (this.peek().type === 'IDENTIFIER') {
-                    ptrToArrayName = this.consume().value;
-                    if (this.peek().value === ')') {
-                        this.consume(')');
-                        if (this.peek().value === '[') {
-                            isPtrToArray = true;
-                            this.consume('[');
-                            if (this.peek().value !== ']') {
-                                ptrArraySize = this.parseExpression(0);
-                            }
-                            this.consume(']');
-                            if (!this.symbols.define(ptrToArrayName, type + '*', this.peek().line))
-                                this.semanticErrors.push({ severity: 'WARNING', message: `Redeclaration of '${ptrToArrayName}'` });
-
-                            let value: BaseNode = {
-                                nodeType: 'Literal',
-                                id: this.genId(),
-                                attributes: { value: [] },
-                                children: [],
-                            };
-
-                            if (this.peek().value === '=') {
-                                this.consume('=');
-                                value = this.parseExpression(0);
-                            }
-                            this.consume(';');
-                            return {
-                                nodeType: 'VariableDeclaration',
-                                id: this.genId(),
-                                attributes: {
-                                    name: ptrToArrayName,
-                                    type: type + '*',
-                                    isPtrToArray,
-                                    ptrArraySize,
-                                },
-                                children: [value],
-                                metadata: { line },
-                            };
-                        }
-                    }
-                }
-            }
-            this.pos = parenPos;
-        }
-
         while (this.peek().value === '*') {
             isPointer = true;
             this.consume();
             type += '*';
         }
 
-        const varName = this.consume().value;
-        if (!this.symbols.define(varName, type, this.peek().line))
-            this.semanticErrors.push({ severity: 'WARNING', message: `Redeclaration of '${varName}'` });
+        const name = this.consume().value;
+        if (!this.symbols.define(name, type, this.peek().line))
+            this.semanticErrors.push({ severity: 'WARNING', message: `Redeclaration of '${name}'` });
 
         let isArray = false;
         let isArray2D = false;
-        let isArray3D = false;
+        let isPointerArray = false;
         let arraySizeExpr: BaseNode | null = null;
         let arraySize2Expr: BaseNode | null = null;
-        let arraySize3Expr: BaseNode | null = null;
+
+        if ((this as any)._stdArraySize) {
+            isArray = true;
+            arraySizeExpr = (this as any)._stdArraySize;
+            delete (this as any)._stdArraySize;
+        }
 
         if (this.peek().value === '[') {
             isArray = true;
+            if (isPointer) isPointerArray = true;
             this.consume('[');
             if (this.peek().value !== ']') {
                 arraySizeExpr = this.parseExpression(0);
@@ -583,20 +459,6 @@ export class RecursiveDescentCParser {
                     arraySize2Expr = this.parseExpression(0);
                 }
                 this.consume(']');
-
-                if (this.peek().value === '[') {
-                    isArray3D = true;
-                    this.consume('[');
-                    if (this.peek().value !== ']') {
-                        arraySize3Expr = this.parseExpression(0);
-                    }
-                    this.consume(']');
-                }
-            }
-
-            if (!isProgmem && this.peek().value === 'PROGMEM') {
-                isProgmem = true;
-                this.consume();
             }
         }
 
@@ -617,31 +479,27 @@ export class RecursiveDescentCParser {
                         this.consume('{');
                         const row: BaseNode[] = [];
                         while (this.peek().value !== '}' && this.peek().type !== 'EOF') {
-                            if (this.peek().value === '{') {
-                                this.consume('{');
-                                const plane: BaseNode[] = [];
-                                while (this.peek().value !== '}' && this.peek().type !== 'EOF') {
-                                    plane.push(this.parseExpression(0));
-                                    if (this.peek().value === ',') this.consume(',');
-                                }
-                                this.consume('}');
-                                row.push({
-                                    nodeType: 'ArrayInitializer',
-                                    id: this.genId(),
-                                    attributes: { isPlane: true },
-                                    children: plane,
-                                });
-                            } else {
-                                row.push(this.parseExpression(0));
-                            }
+                            row.push(this.parseExpression(0));
                             if (this.peek().value === ',') this.consume(',');
                         }
                         this.consume('}');
                         elements.push({
                             nodeType: 'ArrayInitializer',
                             id: this.genId(),
-                            attributes: { isRow: true, isArray3D },
+                            attributes: { isRow: true },
                             children: row,
+                        });
+                    } else if (this.peek().value === '[') {
+                        this.consume('[');
+                        const designatedIdx = this.parseExpression(0);
+                        this.consume(']');
+                        this.consume('=');
+                        const designatedVal = this.parseExpression(0);
+                        elements.push({
+                            nodeType: 'DesignatedInitializer',
+                            id: this.genId(),
+                            attributes: { index: designatedIdx },
+                            children: [designatedVal],
                         });
                     } else {
                         elements.push(this.parseExpression(0));
@@ -649,35 +507,11 @@ export class RecursiveDescentCParser {
                     if (this.peek().value === ',') this.consume(',');
                 }
                 this.consume('}');
-                const isStringPointerArray = type.includes('char') && type.includes('*');
-                if (isStringPointerArray && elements.every((e: BaseNode) => e.nodeType === 'Literal' && (e.attributes as any).isString)) {
-                    const stringValues = elements.map((e: BaseNode) => (e.attributes as any).value);
-                    value = {
-                        nodeType: 'ArrayInitializer' as const,
-                        id: this.genId(),
-                        attributes: { isStringPointerArray: true, strings: stringValues },
-                        children: elements,
-                    };
-                } else {
-                    value = {
-                        nodeType: 'ArrayInitializer',
-                        id: this.genId(),
-                        attributes: { isArray2D, isArray3D },
-                        children: elements,
-                    };
-                }
-            } else if (isArray && this.peek().type === 'STRING') {
-                const strLiteral = this.consume().value;
-                const chars = strLiteral.split('').map((c: string) => {
-                    const code = c.charCodeAt(0);
-                    return { nodeType: 'Literal' as const, id: this.genId(), attributes: { value: code }, children: [] as BaseNode[], metadata: {} };
-                });
-                chars.push({ nodeType: 'Literal' as const, id: this.genId(), attributes: { value: 0 }, children: [] as BaseNode[], metadata: {} });
                 value = {
-                    nodeType: 'ArrayInitializer' as const,
+                    nodeType: 'ArrayInitializer',
                     id: this.genId(),
-                    attributes: { isStringLiteral: true },
-                    children: chars,
+                    attributes: { isArray2D },
+                    children: elements,
                 };
             } else {
                 value = this.parseExpression(0);
@@ -689,19 +523,20 @@ export class RecursiveDescentCParser {
             nodeType: 'VariableDeclaration',
             id: this.genId(),
             attributes: {
-                name: varName,
+                name,
                 type,
                 isArray,
                 isArray2D,
-                isArray3D,
                 isPointer,
-                isProgmem,
+                isPointerArray,
+                isExtern,
+                structType: structTypeName ?? undefined,
                 isConst,
                 isVolatile,
                 isStatic,
+                isProgmem,
                 arraySizeExpr: arraySizeExpr ?? undefined,
                 arraySize2Expr: arraySize2Expr ?? undefined,
-                arraySize3Expr: arraySize3Expr ?? undefined,
             },
             children: [value],
             metadata: { line },
@@ -717,15 +552,14 @@ export class RecursiveDescentCParser {
             if (prec < minPrec) break;
             const op = this.consume().value;
             const right = this.parseExpression(prec);
-            const nodeType = ['=', '+=', '-=', '*=', '/=', '&=', '|=', '^=', '<<=', '>>='].includes(op) ? 'Assignment' : 'BinaryExpression';
-            left = { nodeType, id: this.genId(), attributes: { operator: op }, children: [left, right], metadata: { line: t.line } };
+            left = { nodeType: 'BinaryExpression', id: this.genId(), attributes: { operator: op }, children: [left, right], metadata: { line: t.line } };
         }
         return left;
     }
 
     private parsePrefix(): BaseNode {
         const t = this.peek();
-        if (['!', '-', '~', '++', '--', '+', '&', '*'].includes(t.value)) {
+        if (['!', '-', '~', '++', '--', '+'].includes(t.value)) {
             this.consume();
             const right = this.parsePrefix();
             return { nodeType: 'UnaryExpression', id: this.genId(), attributes: { operator: t.value, prefix: true }, children: [right], metadata: { line: t.line } };
@@ -788,35 +622,7 @@ export class RecursiveDescentCParser {
         const line = t.line;
         if (t.type === 'NUMBER') return { nodeType: 'Literal', id: this.genId(), attributes: { value: parseFloat(t.value) }, children: [], metadata: { line } };
         if (t.type === 'STRING') return { nodeType: 'Literal', id: this.genId(), attributes: { value: t.value, isString: true }, children: [], metadata: { line } };
-        if (t.value === 'sizeof') {
-            const hasParen = this.peek().value === '(';
-            if (hasParen) this.consume('(');
-            const expr = this.parseExpression(0);
-            if (hasParen) this.consume(')');
-            return { nodeType: 'SizeofExpression' as const, id: this.genId(), attributes: {}, children: [expr], metadata: { line } };
-        }
-        if (t.value === '(') {
-            // Check if it's a cast: (type) expr
-            const peek = this.peek();
-            if (this.isType(peek) || ['int', 'char', 'float', 'double', 'void', 'byte', 'short', 'long', 'uint8_t', 'uint16_t', 'uint32_t'].includes(peek.value)) {
-                let targetType = this.consume().value;
-                while (this.peek().value === '*') {
-                    targetType += this.consume().value;
-                }
-                this.consume(')');
-                const operand = this.parsePrefix();
-                return {
-                    nodeType: 'CastExpression' as const,
-                    id: this.genId(),
-                    attributes: { targetType },
-                    children: [operand],
-                    metadata: { line },
-                };
-            }
-            const expr = this.parseExpression(0);
-            this.consume(')');
-            return expr;
-        }
+        if (t.value === '(') { const expr = this.parseExpression(0); this.consume(')'); return expr; }
 
         if ([
             'true', 'false', 'HIGH', 'LOW', 'INPUT', 'OUTPUT', 'INPUT_PULLUP',
@@ -836,11 +642,6 @@ export class RecursiveDescentCParser {
         }
 
         if (t.type === 'IDENTIFIER' || t.type === 'KEYWORD') {
-            const sym = this.symbols.resolve(t.value);
-            if (sym && sym.isMacro && sym.value !== undefined && typeof sym.value === 'number') {
-                return { nodeType: 'Literal', id: this.genId(), attributes: { value: sym.value }, children: [], metadata: { line } };
-            }
-
             if (this.peek().value === '(') {
                 this.consume('('); const args: BaseNode[] = [];
                 if (this.peek().value !== ')') {
@@ -957,11 +758,6 @@ export class RecursiveDescentCParser {
         }
         this.pos++; return t;
     }
-
-    private peek(offset: number = 0): Token {
-        if (this.pos + offset >= this.tokens.length) return { type: 'EOF', value: 'EOF', line: this.pos > 0 ? this.tokens[this.pos - 1].line : 0 };
-        return this.tokens[this.pos + offset];
-    }
-
-    private genId(): string { return Math.random().toString(36).substr(2, 9); }
+    private peek(o: number = 0): Token { return this.tokens[this.pos + o] || { type: 'EOF', value: 'EOF', line: 0 }; }
+    private genId() { return Math.random().toString(36).substring(7); }
 }

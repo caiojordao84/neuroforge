@@ -8,6 +8,7 @@ import type {
   ASLGlobalVar,
   ASLFunction,
   ASLTask,
+  ASLStructDef,
 } from './ASLTypes';
 import { RecursiveDescentCParser } from './plugins/c/CParser';
 import { PythonParser } from './plugins/python/PythonParser';
@@ -27,8 +28,7 @@ async function parseToProgramNode(source: string, language: Language): Promise<P
     case 'c':
     case 'cpp': {
       const parser = new RecursiveDescentCParser();
-      const { ast, symbols } = parser.parse(source);
-      (globalThis as any).__cpParserSymbols = symbols;
+      const { ast } = parser.parse(source);
       return ast;
     }
 
@@ -46,119 +46,43 @@ async function parseToProgramNode(source: string, language: Language): Promise<P
   }
 }
 
-/**
- * Simple evaluator for constant global initializers.
- * Supports literals, string literals, references to other globals,
- * basic arithmetic, bitwise ops, unary minus, and address-of.
- */
-function evaluateInitializer(node: BaseNode | undefined, globalsMap: Map<string, any>): any {
-  if (!node) return 0;
-
-  if (node.nodeType === 'Literal') {
-    return node.attributes.value;
-  }
-
-  // StringLiteral: const char* name = "hello" → "hello"
-  if (node.nodeType === 'StringLiteral') {
-    return node.attributes.value ?? '';
-  }
-
-  if (node.nodeType === 'Identifier') {
-    return globalsMap.get(node.attributes.name) ?? 0;
-  }
-
-  if (node.nodeType === 'BinaryExpression') {
-    const left = evaluateInitializer(node.children[0], globalsMap);
-    const right = evaluateInitializer(node.children[1], globalsMap);
-    const op = node.attributes.operator;
-    switch (op) {
-      case '+': return left + right;
-      case '-': return left - right;
-      case '*': return left * right;
-      case '/': return left / right;
-      case '%': return left % right;
-      // bitwise ops em constantes globais (ex: flags combinadas com |)
-      case '|': return left | right;
-      case '&': return left & right;
-      case '^': return left ^ right;
-      case '<<': return left << right;
-      case '>>': return left >> right;
-      default: return 0;
-    }
-  }
-
-  if (node.nodeType === 'ArrayInitializer') {
-    return node.children.map(c => evaluateInitializer(c, globalsMap));
-  }
-
-  // UnaryExpression com '-': const int OFFSET = -10
-  if (node.nodeType === 'UnaryExpression' && node.attributes.operator === '-') {
-    return -(evaluateInitializer(node.children[0], globalsMap));
-  }
-
-  if (node.nodeType === 'UnaryExpression' && node.attributes.operator === '&') {
-    const child = node.children[0];
-    if (child.nodeType === 'Identifier') {
-      return { __isPtr: true, target: child.attributes.name };
-    }
-    if (child.nodeType === 'SubscriptExpression') {
-      const arrName = (child.children[0] as any).attributes.name;
-      const idx = evaluateInitializer(child.children[1], globalsMap);
-      return { __isPtr: true, target: arrName, index: idx };
-    }
-  }
-
-  return 0;
-}
-
-/**
- * Cria um objecto JS com todos os campos de uma struct inicializados a zero.
- * Usado quando uma variável global é do tipo de uma struct conhecida
- * e não tem inicializador explícito.
- */
-function buildStructInstance(
-  typeName: string,
-  structs: Map<string, { members: { name: string; type: string }[] }>,
-): Record<string, any> | null {
-  const def = structs.get(typeName);
-  if (!def) return null;
-  const obj: Record<string, any> = {};
-  for (const m of def.members) {
-    const t = m.type.trim();
-    if (t === 'float') obj[m.name] = 0.0;
-    else if (t === 'bool' || t === 'boolean') obj[m.name] = false;
-    else if (t === 'string' || t === 'String') obj[m.name] = '';
-    else obj[m.name] = 0; // int, char, byte, short, long, …
-  }
-  return obj;
-}
-
 export function astToASL(program: ProgramNode, language?: Language): ASLProgram {
   const ctx = createTransformContext(language);
+  const structs: ASLStructDef[] = [];
   const globals: ASLGlobalVar[] = [];
   const functions: ASLFunction[] = [];
   const tasks: ASLTask[] = [];
 
-  // Add macros from the parser (not in AST as nodes)
-  const cParserSymbols = (globalThis as any).__cpParserSymbols;
-  if (cParserSymbols) {
-    cParserSymbols.forEach((sym: any) => {
-      if (sym.isMacro && sym.value !== undefined) {
-        ctx.globalsMap.set(sym.name, sym.value);
-        globals.push({
-          name: sym.name,
-          type: 'int',
-          initialValue: sym.value,
-        });
-      }
-    });
-  }
-
-  const isPython = language === 'micropython' || language === 'circuitpython' || language === 'python';
   const topLevelNodes: BaseNode[] = [];
+  const isPython = language === 'micropython' || language === 'circuitpython' || language === 'python';
 
   program.children.forEach((node) => {
     if (!node) return;
+
+    if (node.nodeType === 'StructDeclaration') {
+      const def: ASLStructDef = {
+        name: node.attributes.name,
+        fields: node.attributes.fields || [],
+      };
+      structs.push(def);
+      ctx.structDefs = ctx.structDefs ?? {};
+      ctx.structDefs[def.name] = def;
+
+      if (node.attributes.inlineInstance) {
+        const instName = node.attributes.inlineInstance as string;
+        const zeroObj: Record<string, any> = {};
+        def.fields.forEach((f) => { zeroObj[f.name] = 0; });
+        const initVal = deepCopyValue(zeroObj);
+        globals.push({
+          name: instName,
+          type: 'struct',
+          initialValue: initVal,
+          structType: def.name,
+        });
+        ctx.globalsMap.set(instName, initVal);
+      }
+      return;
+    }
 
     if (node.nodeType === 'EnumDeclaration') {
       const members = node.attributes.members || [];
@@ -170,33 +94,6 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
         });
         ctx.globalsMap.set(m.name, m.value);
       });
-      return;
-    }
-
-    if (node.nodeType === 'StructDeclaration') {
-      const name = node.attributes.name;
-      const members = node.attributes.members || [];
-      if (name) {
-        ctx.structs.set(name, { members });
-      }
-      // Se a struct tem uma instância inline (ex: "struct Foo { int x; } p;"),
-      // processa o filho VariableDeclaration
-      if (node.children.length > 0) {
-        node.children.forEach(child => {
-          if (child.nodeType === 'VariableDeclaration') {
-            const vName = child.attributes.name;
-            const vType = name || 'struct';
-            const instance = buildStructInstance(vType, ctx.structs) ?? {};
-            const safeVal = deepCopyValue(instance);
-            globals.push({
-              name: vName,
-              type: vType as any,
-              initialValue: safeVal,
-            });
-            ctx.globalsMap.set(vName, safeVal);
-          }
-        });
-      }
       return;
     }
 
@@ -220,49 +117,70 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
           body,
         });
       }
-    } else if (node.nodeType === 'VariableDeclaration') {
-      const name = node.attributes.name;
-      const type = mapToASLType(node.attributes.type || 'int');
-      const rawType: string = node.attributes.type || 'int';
-      const isArray = node.attributes.isArray;
-      const isArray2D = node.attributes.isArray2D;
-
-      let initialValue: any = 0;
-      const valNode = node.children[0];
-
-      if (valNode) {
-        if (isArray && valNode.nodeType === 'ArrayInitializer') {
-          initialValue = evaluateInitializer(valNode, ctx.globalsMap);
-        } else {
-          initialValue = evaluateInitializer(valNode, ctx.globalsMap);
-        }
-      } else if (isArray) {
-        initialValue = buildEmptyArray(
-          node.attributes.arraySizeExpr,
-          node.attributes.arraySize2Expr,
-          ctx.globalsMap,
-        );
-      } else {
-        // Tipo pode ser uma struct conhecida: inicializar com objecto zerado
-        const structInstance = buildStructInstance(rawType, ctx.structs);
-        if (structInstance !== null) {
-          initialValue = structInstance;
-        }
-        // caso contrário, initialValue permanece 0 (escalar)
-      }
-
-      const safeInitialValue = deepCopyValue(initialValue);
-      globals.push({
-        name,
-        type: (type || rawType) as any,
-        initialValue: safeInitialValue,
-        comments: node.leadingComments,
-        progmem: node.attributes.isProgmem,
-      } as any);
-
-      ctx.globalsMap.set(name, safeInitialValue);
     } else {
       topLevelNodes.push(node);
+
+      if (node.nodeType === 'VariableDeclaration') {
+        if (node.attributes.isExtern) return;
+
+        const name = node.attributes.name;
+        const type = mapToASLType(node.attributes.type || 'int');
+        const isArray = node.attributes.isArray;
+        const isArray2D = node.attributes.isArray2D;
+        let initialValue: any = 0;
+
+        const valNode = node.children[0];
+        if (valNode) {
+          if (valNode.nodeType === 'ArrayInitializer') {
+            if (isArray2D && valNode.attributes.isArray2D) {
+              initialValue = valNode.children.map((rowNode) => {
+                if (rowNode.nodeType === 'ArrayInitializer' && rowNode.attributes.isRow) {
+                  return rowNode.children.map((c) => {
+                    const e = transformExpr(c);
+                    return e.kind === 'literal' ? e.value : 0;
+                  });
+                }
+                const e = transformExpr(rowNode);
+                return e.kind === 'literal' ? e.value : 0;
+              });
+            } else {
+              initialValue = valNode.children.map((c) => {
+                const e = transformExpr(c);
+                if (e.kind === 'literal') return e.value;
+                return 0;
+              });
+            }
+          } else if (valNode.nodeType === 'Literal') {
+            if (isArray) {
+              initialValue = buildEmptyArray(
+                node.attributes.arraySizeExpr,
+                node.attributes.arraySize2Expr,
+                ctx.globalsMap,
+              );
+            } else {
+              initialValue = valNode.attributes.value;
+            }
+          }
+        } else if (isArray) {
+          initialValue = buildEmptyArray(
+            node.attributes.arraySizeExpr,
+            node.attributes.arraySize2Expr,
+            ctx.globalsMap,
+          );
+        }
+
+        const safeInitialValue = deepCopyValue(initialValue);
+
+        globals.push({
+          name,
+          type: type as any,
+          initialValue: safeInitialValue,
+          structType: node.attributes.structType,
+          comments: node.leadingComments,
+        } as any);
+
+        ctx.globalsMap.set(name, safeInitialValue);
+      }
     }
   });
 
@@ -280,7 +198,9 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
       const setupFunc = functions.find(f => f.name === 'setup');
       if (setupFunc) {
         setupFunc.body.unshift(...topLevelStmts);
-      } else if (!existingLoop) {
+      } else if (existingLoop) {
+        // C++ root nodes are typically globals
+      } else {
         tasks.push({ name: 'mainLoop', body: topLevelStmts });
       }
     }
@@ -297,9 +217,9 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
 
   return {
     metadata: { name: 'AST Generated' },
+    structs,
     globals,
     functions,
     tasks,
-    structs: Object.fromEntries(ctx.structs),
   };
 }

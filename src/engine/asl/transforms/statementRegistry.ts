@@ -95,11 +95,11 @@ function handleForLoop(node: BaseNode, ctx: TransformContext): ASLStatement[] {
       update.nodeType === 'ExpressionStatement'
         ? update
         : ({
-          nodeType: 'ExpressionStatement',
-          id: 'u',
-          attributes: {},
-          children: [update],
-        } as BaseNode),
+            nodeType: 'ExpressionStatement',
+            id: 'u',
+            attributes: {},
+            children: [update],
+          } as BaseNode),
     ], ctx));
   }
 
@@ -154,7 +154,6 @@ function handleVariableDeclaration(node: BaseNode, _ctx: TransformContext): ASLS
   const valNode = node.children[0];
   const isArray = node.attributes.isArray;
   const isArray2D = node.attributes.isArray2D;
-  const isArray3D = node.attributes.isArray3D;
 
   if (valNode && valNode.nodeType === 'CallExpression' && valNode.attributes.callee === 'Pin') {
     const pinExpr = transformExpr(valNode.children[0]);
@@ -178,84 +177,84 @@ function handleVariableDeclaration(node: BaseNode, _ctx: TransformContext): ASLS
   }
 
   if (valNode) {
+    if (node.attributes.structType && valNode.nodeType === 'ArrayInitializer') {
+      const structDef = _ctx.structDefs?.[node.attributes.structType];
+      const buildStructObj = (initNode: BaseNode): Record<string, any> => {
+        const obj: Record<string, any> = {};
+        if (structDef) {
+          structDef.fields.forEach((f, i) => {
+            const child = initNode.children[i];
+            if (child) {
+              const e = transformExpr(child);
+              obj[f.name] = e.kind === 'literal' ? e.value : 0;
+            } else {
+              obj[f.name] = 0;
+            }
+          });
+        }
+        return obj;
+      };
+
+      let finalVal: any;
+      if (isArray) {
+        finalVal = valNode.children.map((rowNode) => {
+          if (rowNode.nodeType === 'ArrayInitializer') {
+            return buildStructObj(rowNode);
+          }
+          return buildStructObj(valNode);
+        });
+      } else {
+        finalVal = buildStructObj(valNode);
+      }
+
+      return [{
+        kind: 'assign',
+        target: node.attributes.name,
+        value: { kind: 'literal', value: deepCopyValue(finalVal) },
+      } as ASLStatement];
+    }
+
     if (valNode.nodeType === 'ArrayInitializer') {
       let arrayVal: ASLExpr;
-      if (isArray3D && valNode.attributes.isArray3D) {
-        const declaredD1 = resolveSize(node.attributes.arraySizeExpr, _ctx.globalsMap) || valNode.children.length;
-        const d2Children = valNode.children[0]?.children?.length || 0;
-        const declaredD2 = resolveSize(node.attributes.arraySize2Expr, _ctx.globalsMap) || d2Children;
-        const d3Children = valNode.children[0]?.children?.[0]?.children?.length || 0;
-        const declaredD3 = resolveSize(node.attributes.arraySize3Expr, _ctx.globalsMap) || d3Children;
-
+      if (isArray2D && valNode.attributes.isArray2D) {
         arrayVal = {
           kind: 'literal',
-          value: valNode.children.map((planeNode) => {
-            if (planeNode.nodeType === 'ArrayInitializer') {
-              return planeNode.children.map((rowNode) => {
-                if (rowNode.nodeType === 'ArrayInitializer') {
-                  const rowValues = rowNode.children.map((c) => {
-                    const e = transformExpr(c);
-                    return e.kind === 'literal' ? e.value : 0;
-                  });
-                  while (rowValues.length < declaredD3) rowValues.push(0);
-                  return rowValues;
-                }
-                const e = transformExpr(rowNode);
-                const val = e.kind === 'literal' ? e.value : 0;
-                const arr = Array(declaredD3).fill(0);
-                arr[0] = val;
-                return arr;
-              });
-            }
-            return Array(declaredD2).fill(Array(declaredD3).fill(0));
-          }),
-        };
-      } else if (isArray2D && valNode.attributes.isArray2D) {
-        const declaredRows = resolveSize(node.attributes.arraySizeExpr, _ctx.globalsMap) || valNode.children.length;
-        const rowChildren = valNode.children[0]?.children?.length || 0;
-        const declaredCols = resolveSize(node.attributes.arraySize2Expr, _ctx.globalsMap) || rowChildren;
-
-        arrayVal = {
-          kind: 'literal',
-          value: valNode.children.map((rowNode, _rowIdx) => {
+          value: valNode.children.map((rowNode) => {
             if (rowNode.nodeType === 'ArrayInitializer' && rowNode.attributes.isRow) {
-              const rowValues = rowNode.children.map((c) => {
+              return rowNode.children.map((c) => {
                 const e = transformExpr(c);
                 return e.kind === 'literal' ? e.value : 0;
               });
-              while (rowValues.length < declaredCols) rowValues.push(0);
-              return rowValues;
             }
             const e = transformExpr(rowNode);
-            const rowVal = e.kind === 'literal' ? e.value : 0;
-            const rowArr = Array(declaredCols).fill(0);
-            rowArr[0] = rowVal;
-            return rowArr;
+            return e.kind === 'literal' ? e.value : 0;
           }),
         };
-        const rows = (arrayVal as any).value as any[];
-        while (rows.length < declaredRows) {
-          rows.push(Array(declaredCols).fill(0));
-        }
       } else {
-        const declaredSize = resolveSize(node.attributes.arraySizeExpr, _ctx.globalsMap) || valNode.children.length;
-        const isStringPtrArr = valNode.attributes.isStringPointerArray;
-        if (isStringPtrArr && valNode.attributes.strings) {
-          arrayVal = { kind: 'literal', value: [...valNode.attributes.strings] };
-        } else {
-          const values = valNode.children.map((c) => {
-            const e = transformExpr(c);
-            if (e.kind === 'literal') return e.value;
-            if (e.kind === 'unary' && e.op === '&') {
-              const targetName = (e.expr as any).name;
-              if (targetName) {
-                return { __isPtr: true, target: targetName };
-              }
+        const hasDesignated = valNode.children.some(
+          (c: BaseNode) => c.nodeType === 'DesignatedInitializer'
+        );
+
+        if (hasDesignated) {
+          const declaredSize = resolveSize(node.attributes.arraySizeExpr, _ctx.globalsMap);
+          const sparseArr = Array(declaredSize || valNode.children.length).fill(0);
+          valNode.children.forEach((c: BaseNode) => {
+            if (c.nodeType === 'DesignatedInitializer') {
+              const idxExpr = transformExpr(c.attributes.index as BaseNode);
+              const idx = idxExpr.kind === 'literal' ? (idxExpr.value as number) : 0;
+              const valExpr = transformExpr(c.children[0]);
+              sparseArr[idx] = valExpr.kind === 'literal' ? valExpr.value : 0;
             }
-            return 0;
           });
-          while (values.length < declaredSize) values.push(0);
-          arrayVal = { kind: 'literal', value: values };
+          arrayVal = { kind: 'literal', value: sparseArr };
+        } else {
+          arrayVal = {
+            kind: 'literal',
+            value: valNode.children.map((c) => {
+              const e = transformExpr(c);
+              return e.kind === 'literal' ? e.value : 0;
+            }),
+          };
         }
       }
       return [{
@@ -315,44 +314,23 @@ function handleExpressionStatement(node: BaseNode, _ctx: TransformContext): ASLS
     } as ASLStatement];
   }
 
-  if ((expr.nodeType === 'BinaryExpression' || expr.nodeType === 'Assignment') && ['=', '+=', '-=', '*=', '/='].includes(expr.attributes.operator)) {
+  if (expr.nodeType === 'BinaryExpression' && ['=', '+=', '-=', '*=', '/='].includes(expr.attributes.operator)) {
     return handleAssignment(expr);
   }
 
   if (expr.nodeType === 'UnaryExpression' && ['++', '--'].includes(expr.attributes.operator)) {
     const child = expr.children[0];
-    const op = expr.attributes.operator === '++' ? '+' : '-';
-
     if (child.nodeType === 'Identifier') {
       return [{
         kind: 'assign',
         target: child.attributes.name,
         value: {
           kind: 'binary',
-          op: op,
+          op: expr.attributes.operator === '++' ? '+' : '-',
           left: { kind: 'var', name: child.attributes.name },
           right: { kind: 'literal', value: 1 },
         },
       } as ASLStatement];
-    }
-
-    if (child.nodeType === 'SubscriptExpression') {
-      const targetArr = child.children[0];
-      const index = child.children[1];
-      if (targetArr.nodeType === 'Identifier') {
-        const arrName = targetArr.attributes.name;
-        return [{
-          kind: 'setIndex',
-          target: arrName,
-          index: transformExpr(index),
-          value: {
-            kind: 'binary',
-            op: op,
-            left: { kind: 'index', target: { kind: 'var', name: arrName }, index: transformExpr(index) },
-            right: { kind: 'literal', value: 1 },
-          },
-        } as ASLStatement];
-      }
     }
   }
 
@@ -410,79 +388,42 @@ function handleAssignment(expr: BaseNode): ASLStatement[] {
     const targetArr = left.children[0];
     const index = left.children[1];
 
-    // 3D: arr[d1][d2][d3] = val
-    if (
-      targetArr.nodeType === 'SubscriptExpression' &&
-      targetArr.children[0].nodeType === 'SubscriptExpression' &&
-      (targetArr.children[0] as any).children[0].nodeType === 'Identifier'
-    ) {
-      const innerArr = targetArr.children[0];
-      const arrName = (innerArr as any).children[0].attributes.name;
-      const d1Index = transformExpr((innerArr as any).children[1]);
-      const d2Index = transformExpr(targetArr.children[1]);
-      const d3Index = transformExpr(index);
-
-      if (op === '=') {
-        return [{
-          kind: 'setIndex3D',
-          target: arrName,
-          d1Index,
-          d2Index,
-          d3Index,
-          value: transformExpr(right),
-        } as ASLStatement];
-      }
-      // compound assignment 3D não suportado (edge case raro)
-      return [];
-    }
-
-    // 2D: arr[row][col] op= val
-    if (
-      targetArr.nodeType === 'SubscriptExpression' &&
-      targetArr.children[0].nodeType === 'Identifier'
-    ) {
+    if (targetArr.nodeType === 'SubscriptExpression' && targetArr.children[0].nodeType === 'Identifier') {
       const arrName = targetArr.children[0].attributes.name;
       const rowIndex = transformExpr(targetArr.children[1]);
       const colIndex = transformExpr(index);
-      if (op === '=') {
-        return [{ kind: 'setIndex2D', target: arrName, rowIndex, colIndex, value: transformExpr(right) } as ASLStatement];
-      }
-      // compound assignment 2D: arr[i][j] += val → already handled by FASE 2.1
-      const binOp2D = op.charAt(0) as '+' | '-' | '*' | '/';
-      if (['+', '-', '*', '/'].includes(binOp2D)) {
-        return [{
-          kind: 'setIndex2D',
-          target: arrName,
-          rowIndex,
-          colIndex,
-          value: {
-            kind: 'binary',
-            op: binOp2D,
-            left: { kind: 'index2D', array: { kind: 'var', name: arrName }, rowIndex, colIndex },
-            right: transformExpr(right),
-          },
-        } as ASLStatement];
-      }
+      return [{
+        kind: 'setIndex2D',
+        target: arrName,
+        rowIndex,
+        colIndex,
+        value: transformExpr(right),
+      } as ASLStatement];
     }
 
-    // 1D: arr[i] op= val
     if (targetArr.nodeType === 'Identifier') {
-      const arrName = targetArr.attributes.name;
-      const idxExpr = transformExpr(index);
       if (op === '=') {
-        return [{ kind: 'setIndex', target: arrName, index: idxExpr, value: transformExpr(right) } as ASLStatement];
-      }
-      // compound assignment 1D: arr[i] += val, arr[i] -= val, etc.
-      const binOp1D = op.charAt(0) as '+' | '-' | '*' | '/';
-      if (['+', '-', '*', '/'].includes(binOp1D)) {
         return [{
           kind: 'setIndex',
-          target: arrName,
-          index: idxExpr,
+          target: targetArr.attributes.name,
+          index: transformExpr(index),
+          value: transformExpr(right),
+        } as ASLStatement];
+      } else {
+        const binOp = op.charAt(0) as '+' | '-' | '*' | '/';
+        const currentVal: ASLExpr = {
+          kind: 'index',
+          target: transformExpr(targetArr),
+          index: transformExpr(index),
+        };
+        return [{
+          kind: 'setIndex',
+          target: targetArr.attributes.name,
+          index: transformExpr(index),
           value: {
             kind: 'binary',
-            op: binOp1D,
-            left: { kind: 'index', target: { kind: 'var', name: arrName }, index: idxExpr },
+            op: binOp,
+            left: currentVal,
             right: transformExpr(right),
           },
         } as ASLStatement];
@@ -498,25 +439,21 @@ function handleAssignment(expr: BaseNode): ASLStatement[] {
         property: left.attributes.property,
         value: transformExpr(right),
       } as ASLStatement];
-    }
-  }
-
-  if (left.nodeType === 'UnaryExpression' && left.attributes.operator === '*') {
-    if (op === '=') {
-      return [{
-        kind: 'setDeref',
-        target: transformExpr(left.children[0]),
-        value: transformExpr(right),
-      } as ASLStatement];
     } else {
       const binOp = op.charAt(0) as '+' | '-' | '*' | '/';
-      return [{
-        kind: 'setDeref',
+      const currentVal: ASLExpr = {
+        kind: 'member',
         target: transformExpr(left.children[0]),
+        property: left.attributes.property,
+      };
+      return [{
+        kind: 'setMember',
+        target: transformExpr(left.children[0]),
+        property: left.attributes.property,
         value: {
           kind: 'binary',
           op: binOp,
-          left: { kind: 'unary', op: '*', expr: transformExpr(left.children[0]) },
+          left: currentVal,
           right: transformExpr(right),
         },
       } as ASLStatement];
