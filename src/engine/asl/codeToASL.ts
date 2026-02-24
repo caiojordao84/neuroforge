@@ -111,6 +111,28 @@ function evaluateInitializer(node: BaseNode | undefined, globalsMap: Map<string,
   return 0;
 }
 
+/**
+ * Cria um objecto JS com todos os campos de uma struct inicializados a zero.
+ * Usado quando uma variável global é do tipo de uma struct conhecida
+ * e não tem inicializador explícito.
+ */
+function buildStructInstance(
+  typeName: string,
+  structs: Map<string, { members: { name: string; type: string }[] }>,
+): Record<string, any> | null {
+  const def = structs.get(typeName);
+  if (!def) return null;
+  const obj: Record<string, any> = {};
+  for (const m of def.members) {
+    const t = m.type.trim();
+    if (t === 'float') obj[m.name] = 0.0;
+    else if (t === 'bool' || t === 'boolean') obj[m.name] = false;
+    else if (t === 'string' || t === 'String') obj[m.name] = '';
+    else obj[m.name] = 0; // int, char, byte, short, long, …
+  }
+  return obj;
+}
+
 export function astToASL(program: ProgramNode, language?: Language): ASLProgram {
   const ctx = createTransformContext(language);
   const globals: ASLGlobalVar[] = [];
@@ -157,10 +179,21 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
       if (name) {
         ctx.structs.set(name, { members });
       }
+      // Se a struct tem uma instância inline (ex: "struct Foo { int x; } p;"),
+      // processa o filho VariableDeclaration
       if (node.children.length > 0) {
         node.children.forEach(child => {
           if (child.nodeType === 'VariableDeclaration') {
-            // handled in VariableDeclaration branch
+            const vName = child.attributes.name;
+            const vType = name || 'struct';
+            const instance = buildStructInstance(vType, ctx.structs) ?? {};
+            const safeVal = deepCopyValue(instance);
+            globals.push({
+              name: vName,
+              type: vType as any,
+              initialValue: safeVal,
+            });
+            ctx.globalsMap.set(vName, safeVal);
           }
         });
       }
@@ -190,6 +223,7 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
     } else if (node.nodeType === 'VariableDeclaration') {
       const name = node.attributes.name;
       const type = mapToASLType(node.attributes.type || 'int');
+      const rawType: string = node.attributes.type || 'int';
       const isArray = node.attributes.isArray;
       const isArray2D = node.attributes.isArray2D;
 
@@ -208,12 +242,19 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
           node.attributes.arraySize2Expr,
           ctx.globalsMap,
         );
+      } else {
+        // Tipo pode ser uma struct conhecida: inicializar com objecto zerado
+        const structInstance = buildStructInstance(rawType, ctx.structs);
+        if (structInstance !== null) {
+          initialValue = structInstance;
+        }
+        // caso contrário, initialValue permanece 0 (escalar)
       }
 
       const safeInitialValue = deepCopyValue(initialValue);
       globals.push({
         name,
-        type: type as any,
+        type: (type || rawType) as any,
         initialValue: safeInitialValue,
         comments: node.leadingComments,
         progmem: node.attributes.isProgmem,
@@ -259,5 +300,6 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
     globals,
     functions,
     tasks,
+    structs: Object.fromEntries(ctx.structs),
   };
 }

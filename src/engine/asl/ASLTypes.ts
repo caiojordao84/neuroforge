@@ -1,11 +1,18 @@
 // src/engine/asl/ASLTypes.ts
 // ASL v1: núcleo de tipos unificado (funções, calls, returns, Serial/print,
-// arrays, break/continue, index/member, comentários, etc.)
+// arrays, break/continue, index/member, comentários, structs, etc.)
 
 /**
  * Tipos escalares suportados na ASL v1.
  */
 export type ASLType = 'int' | 'float' | 'bool' | 'string' | 'void';
+
+/**
+ * Definição de struct: lista de membros com nome e tipo.
+ */
+export interface ASLStructDef {
+  members: { type: string; name: string }[];
+}
 
 /**
  * Programa ASL completo.
@@ -20,6 +27,12 @@ export interface ASLProgram {
   globals: ASLGlobalVar[];
   functions: ASLFunction[];
   tasks: ASLTask[];
+  /**
+   * Mapa de structs definidas no programa.
+   * Chave = nome da struct (ex: 'Ponto'), valor = definição com membros.
+   * Serializado como Record para compatibilidade JSON.
+   */
+  structs?: Record<string, ASLStructDef>;
 }
 
 /**
@@ -28,7 +41,7 @@ export interface ASLProgram {
  */
 export interface ASLGlobalVar {
   name: string;
-  type: ASLType;
+  type: ASLType | string;
   initialValue?: any;
   /**
    * Comentários associados à declaração global (por ex. docs extraídas do código fonte).
@@ -56,7 +69,7 @@ export interface ASLFunction {
 
 export interface ASLParam {
   name: string;
-  type: ASLType;
+  type: ASLType | string;
 }
 
 /**

@@ -1,11 +1,11 @@
 // src/engine/asl/ASLExecutor.ts
 // Executor assíncrono da ASL v1 sobre o SimulationEngine (modo fake).
-// Suporta: funções, chamadas, arrays/objetos, break/continue/return, print/log,
-// abortSignal para controle de loops e delays.
+// Suporta: funções, chamadas, arrays/objetos, structs, break/continue/return,
+// print/log, abortSignal para controle de loops e delays.
 
 import type { SimulationEngine } from '@/engine/SimulationEngine';
 import { simulationEngine } from '@/engine/SimulationEngine';
-import type { ASLProgram, ASLStatement, ASLExpr, ASLFunction } from './ASLTypes';
+import type { ASLProgram, ASLStatement, ASLExpr, ASLFunction, ASLStructDef } from './ASLTypes';
 
 export interface ASLRuntime {
   setup: () => Promise<void>;
@@ -39,10 +39,17 @@ export function createASLRuntime(
   const globalEnv = new Map<string, any>();
   const functionMap = new Map<string, ASLFunction>();
 
+  // Mapa de structs para inicialização correcta de instâncias
+  const structsMap = new Map<string, ASLStructDef>(
+    Object.entries(program.structs ?? {})
+  );
+
   // 1. Inicializa globais com deep copy para arrays/objetos
   for (const g of program.globals) {
     const rawInitial =
-      g.initialValue !== undefined ? g.initialValue : defaultValueForType(g.type);
+      g.initialValue !== undefined
+        ? g.initialValue
+        : defaultValueForType(g.type, structsMap);
     const initial =
       Array.isArray(rawInitial) || (rawInitial && typeof rawInitial === 'object')
         ? JSON.parse(JSON.stringify(rawInitial))
@@ -62,6 +69,7 @@ export function createASLRuntime(
     engine,
     functions: functionMap,
     globals: globalEnv,
+    structs: structsMap,
     abortSignal: options.abortSignal,
     printBuffer: '',
   };
@@ -93,22 +101,44 @@ interface RunContext {
   engine: SimulationEngine;
   functions: Map<string, ASLFunction>;
   globals: Map<string, any>;
+  structs: Map<string, ASLStructDef>;
   abortSignal?: AbortSignal;
   /** Buffer para Serial.print() sem newline — flush em Serial.println() */
   printBuffer: string;
 }
 
-function defaultValueForType(type: string): any {
+/**
+ * Devolve o valor zero para um tipo dado.
+ * Se o tipo for o nome de uma struct conhecida, devolve um objecto
+ * com todos os campos inicializados a zero.
+ */
+function defaultValueForType(type: string, structs?: Map<string, ASLStructDef>): any {
   switch (type) {
     case 'int':
     case 'float':
       return 0;
     case 'bool':
+    case 'boolean':
       return false;
     case 'string':
+    case 'String':
       return '';
-    default:
+    case 'void':
+      return undefined;
+    default: {
+      // Verificar se é uma struct conhecida
+      if (structs) {
+        const def = structs.get(type);
+        if (def) {
+          const obj: Record<string, any> = {};
+          for (const m of def.members) {
+            obj[m.name] = defaultValueForType(m.type.trim(), structs);
+          }
+          return obj;
+        }
+      }
       return 0;
+    }
   }
 }
 
@@ -207,7 +237,12 @@ async function executeStatements(
 
       case 'assign': {
         const val = await evalExpr(s.value, localEnv, ctx);
-        setVar(s.target, val, localEnv, ctx.globals);
+        // Se o valor atribuído é um objecto/struct, garantir deep copy
+        const safeVal =
+          val !== null && typeof val === 'object' && !val.__isPtr
+            ? JSON.parse(JSON.stringify(val))
+            : val;
+        setVar(s.target, safeVal, localEnv, ctx.globals);
         break;
       }
 
@@ -375,6 +410,14 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
     case 'member': {
       const obj = await evalExpr(expr.target, env, ctx);
       if (obj && typeof obj === 'object') return (obj as any)[expr.property];
+      // Se o objecto ainda não foi inicializado mas é uma struct conhecida,
+      // tentar obter o valor zero do campo
+      if (expr.target.kind === 'var') {
+        const structVal = getVar(expr.target.name, env, ctx.globals);
+        if (structVal && typeof structVal === 'object') {
+          return (structVal as any)[expr.property] ?? 0;
+        }
+      }
       return 0;
     }
 
@@ -597,7 +640,12 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         const callEnv = new Map<string, any>();
         for (let i = 0; i < funcDef.params.length; i++) {
           const val = expr.args[i] ? await evalExpr(expr.args[i], env, ctx) : 0;
-          callEnv.set(funcDef.params[i].name, val);
+          // Se o parâmetro for do tipo struct, passar deep copy (pass-by-value)
+          const safeVal =
+            val !== null && typeof val === 'object' && !val.__isPtr
+              ? JSON.parse(JSON.stringify(val))
+              : val;
+          callEnv.set(funcDef.params[i].name, safeVal);
         }
         try {
           await executeStatements(funcDef.body, callEnv, ctx);
