@@ -250,27 +250,27 @@ Ordered by priority.
 
 ### 0.8.1. Missing Statements (ASLTypes.ts + executor + registry)
 
-| Priority | Gap | Description |
-|---|---|---|
-| 🔴 Critical | `switch/case` | `switch(var) { case X: ... break; }` — common in FSMs (CIs 5, 9, 16). Needs `ASLSwitch` type + `statementRegistry` handler + executor case. |
-| 🔴 Critical | `doWhile` | `do { ... } while(cond)` — present in AVR/Arduino patterns. |
-| 🟡 Medium | `delayMicroseconds` | `delayMicroseconds(us)` — needed for bit-bang protocols (I2C, SPI manual). Currently falls through to unhandled. |
-| 🟡 Medium | range-based `for` (C++11) | `for (auto x : arr)` — ESP32/C++11 mode; CParser partially tracks `FASE 3.15` but executor has no `forRange`. |
-| 🟢 Low | `typedef` / `using` | Type aliases — affects `mapToASLType`. |
-| 🟢 Low | `struct` declaration + instance | `struct Point { int x, y; };` — tracked in `0.3` as `[ ]`. Needed for CIs 7, 9, 11. |
+| Priority   | Gap                             | Description                                                                                                                                 |
+| ---------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🔴 Critical | `switch/case`                   | `switch(var) { case X: ... break; }` — common in FSMs (CIs 5, 9, 16). Needs `ASLSwitch` type + `statementRegistry` handler + executor case. |
+| 🔴 Critical | `doWhile`                       | `do { ... } while(cond)` — present in AVR/Arduino patterns.                                                                                 |
+| 🟡 Medium   | `delayMicroseconds`             | `delayMicroseconds(us)` — needed for bit-bang protocols (I2C, SPI manual). Currently falls through to unhandled.                            |
+| 🟡 Medium   | range-based `for` (C++11)       | `for (auto x : arr)` — ESP32/C++11 mode; CParser partially tracks `FASE 3.15` but executor has no `forRange`.                               |
+| 🟢 Low      | `typedef` / `using`             | Type aliases — affects `mapToASLType`.                                                                                                      |
+| 🟢 Low      | `struct` declaration + instance | `struct Point { int x, y; };` — tracked in `0.3` as `[ ]`. Needed for CIs 7, 9, 11.                                                         |
 
 ### 0.8.2. Missing Expressions (ASLTypes.ts + exprTransform + executor)
 
-| Priority | Gap | Description |
-|---|---|---|
-| 🔴 Critical | `TernaryExpression` | `x = (a > b) ? a : b` — very common in C++ sketches. `exprTransform` falls back to `literal 0`. Needs `ASLTernary` type or lowering to `if`. |
-| 🟠 Important | Cast `(byte)`, `(uint8_t)`, `(char)` | `CastExpression` only handles `int`/`float`/`String`. All other casts silently return the value as `int`. |
-| 🟠 Important | Negative literal in `evaluateInitializer` | `const int OFFSET = -10` — `UnaryExpression` with `-` operator returns `0` in `evaluateInitializer`. |
-| 🟠 Important | String literal as global initializer | `const char* name = "hello"` — `evaluateInitializer` returns `0` instead of `"hello"`. |
-| 🟡 Medium | `CommaExpression` | `for(int i=0, j=0; ...)` — falls to `literal 0`. |
-| 🟡 Medium | `sizeof(type)` (without variable) | `sizeof(int)` as a type-only expression — only variable-based `sizeof` is handled. |
-| 🟢 Low | `AddressOf` in complex lvalue | `&struct.member` — only `&varName` and `&arr[i]` are handled; silently returns wrong pointer. |
-| 🟢 Low | String concatenation `"text" + String(val)` | `binary +` on mixed string/number evaluates incorrectly in executor (JS `+` coerces, but types may mismatch). |
+| Priority    | Gap                                         | Description                                                                                                                                  |
+| ----------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🔴 Critical  | `TernaryExpression`                         | `x = (a > b) ? a : b` — very common in C++ sketches. `exprTransform` falls back to `literal 0`. Needs `ASLTernary` type or lowering to `if`. |
+| 🟠 Important | Cast `(byte)`, `(uint8_t)`, `(char)`        | `CastExpression` only handles `int`/`float`/`String`. All other casts silently return the value as `int`.                                    |
+| 🟠 Important | Negative literal in `evaluateInitializer`   | `const int OFFSET = -10` — `UnaryExpression` with `-` operator returns `0` in `evaluateInitializer`.                                         |
+| 🟠 Important | String literal as global initializer        | `const char* name = "hello"` — `evaluateInitializer` returns `0` instead of `"hello"`.                                                       |
+| 🟡 Medium    | `CommaExpression`                           | `for(int i=0, j=0; ...)` — falls to `literal 0`.                                                                                             |
+| 🟡 Medium    | `sizeof(type)` (without variable)           | `sizeof(int)` as a type-only expression — only variable-based `sizeof` is handled.                                                           |
+| 🟢 Low       | `AddressOf` in complex lvalue               | `&struct.member` — only `&varName` and `&arr[i]` are handled; silently returns wrong pointer.                                                |
+| 🟢 Low       | String concatenation `"text" + String(val)` | `binary +` on mixed string/number evaluates incorrectly in executor (JS `+` coerces, but types may mismatch).                                |
 
 ### 0.8.3. Missing Builtins in ASLExecutor (callee dispatch)
 
@@ -536,7 +536,8 @@ This is a central product feature. Both directions must be treated as first-clas
 ### 7.1. C / Arduino C++
 - [x] Basic subset v0 (see section 0.3 for full detail).
 - [x] Support for pure `'c'` language in `codeToASL.ts`.
-- [x] Full control flow (v1): `while` and simple `for` work; `break` and `continue` implemented; `switch` via lowering.
+- [x] Full control flow (v1): `while` and simple `for` work; `break` and `continue` implemented.
+- [ ] `switch/case`: not yet implemented (tracked in Sec. 4.1 and 0.8.1).
 - [x] General expressions on RHS of assignments.
 - [x] Arrays and indexing — basic 1D and 2D subset implemented.
 - [~] Additional APIs: `analogRead`, `millis`, `micros`, `Serial.print` already supported in `ASLExecutor/SimulationEngine`; `tone` still without dedicated simulation.

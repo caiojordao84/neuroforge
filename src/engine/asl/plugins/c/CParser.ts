@@ -11,10 +11,10 @@ export class RecursiveDescentCParser {
         if (token.type === 'KEYWORD' && [
             'int', 'float', 'bool', 'boolean', 'String', 'File', 'char', 'byte', 'short', 'long',
             'unsigned', 'uint8_t', 'uint16_t', 'uint32_t', 'int8_t', 'int16_t', 'int32_t',
-            'const', 'volatile', 'static', 'PROGMEM', 'auto'
+            'const', 'volatile', 'static', 'PROGMEM', 'auto', 'struct'
         ].includes(token.value)) return true;
 
-        // Dynamic types (like enums)
+        // Dynamic types (like enums or structs)
         if (token.type === 'IDENTIFIER') {
             const sym = this.symbols.resolve(token.value);
             return sym?.type === 'type';
@@ -24,6 +24,7 @@ export class RecursiveDescentCParser {
 
     private isFunctionDecl(): boolean {
         let offset = 0;
+        if (this.peek(offset).value === 'struct') offset++;
         if (!this.isType(this.peek(offset))) return false;
         while (this.isType(this.peek(offset))) offset++;
         while (this.peek(offset).value === '*') offset++;
@@ -42,6 +43,17 @@ export class RecursiveDescentCParser {
             }
             if (t.value === 'enum') {
                 program.children.push(this.parseEnum());
+            } else if (t.value === 'struct') {
+                // If it's "struct Name var;" it's a VarDecl, not a StructDef
+                if (this.peek(1).type === 'IDENTIFIER' && this.peek(2).value === '{') {
+                    const structNode = this.parseStruct();
+                    if (structNode) program.children.push(structNode);
+                } else if (this.peek(1).value === '{') { // Anonymous struct
+                     const structNode = this.parseStruct();
+                     if (structNode) program.children.push(structNode);
+                } else {
+                    const decl = this.parseVarDecl(); if (decl) program.children.push(decl);
+                }
             } else if (this.peek().value === 'void' || this.isFunctionDecl()) {
                 program.children.push(this.parseFunction());
             } else if (this.isType(this.peek())) {
@@ -98,6 +110,69 @@ export class RecursiveDescentCParser {
         this.consume('}');
         if (this.peek().value === ';') this.consume(';');
         return { nodeType: 'EnumDeclaration', id: this.genId(), attributes: { name, members }, children: [] };
+    }
+
+    private parseStruct(): BaseNode | null {
+        this.consume('struct');
+        let name: string | null = null;
+        if (this.peek().type === 'IDENTIFIER') {
+            name = this.consume().value;
+            this.symbols.define(name, 'type', this.peek(-1).line);
+        }
+
+        if (this.peek().value !== '{') {
+            // This was just "struct Name;" which is a forward declaration or just "struct Name var;"
+            // But parse() already handles the "struct Name var;" case by calling parseVarDecl.
+            if (this.peek().value === ';') this.consume(';');
+            return null;
+        }
+
+        this.consume('{');
+        const members: { type: string, name: string }[] = [];
+        while (this.peek().value !== '}' && this.peek().type !== 'EOF') {
+            if (this.isType(this.peek())) {
+                let mType = this.consume().value;
+                while (this.isType(this.peek())) mType += ' ' + this.consume().value;
+                while (this.peek().value === '*') mType += this.consume().value;
+                const mName = this.consume().value;
+                if (this.peek().value === '[') {
+                    this.consume('[');
+                    this.consume(']'); // Simple array support in struct members
+                    members.push({ type: mType + '[]', name: mName });
+                } else {
+                    members.push({ type: mType, name: mName });
+                }
+                this.consume(';');
+            } else {
+                this.consume();
+            }
+        }
+        this.consume('}');
+
+        // If there is a variable name after "struct { ... } varName;"
+        let instanceDecl: BaseNode | null = null;
+        if (this.peek().type === 'IDENTIFIER') {
+            const varName = this.consume().value;
+            this.symbols.define(varName, name || 'anonymous_struct', this.peek(-1).line);
+            instanceDecl = {
+                nodeType: 'VariableDeclaration',
+                id: this.genId(),
+                attributes: { name: varName, type: name || 'struct' },
+                children: [{ nodeType: 'Literal', id: this.genId(), attributes: { value: {} }, children: [] }],
+                metadata: { line: this.peek(-1).line }
+            };
+        }
+
+        if (this.peek().value === ';') this.consume(';');
+
+        const structDef: BaseNode = {
+            nodeType: 'StructDeclaration',
+            id: this.genId(),
+            attributes: { name, members },
+            children: instanceDecl ? [instanceDecl] : []
+        };
+
+        return structDef;
     }
 
     private parseFunction(): BaseNode {

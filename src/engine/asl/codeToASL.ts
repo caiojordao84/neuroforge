@@ -133,6 +133,24 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
       return;
     }
 
+    if (node.nodeType === 'StructDeclaration') {
+      const name = node.attributes.name;
+      const members = node.attributes.members || [];
+      if (name) {
+        ctx.structs.set(name, { members });
+      }
+      // If the struct declaration also has an instance (e.g., struct { ... } p;)
+      if (node.children.length > 0) {
+        node.children.forEach(child => {
+          if (child.nodeType === 'VariableDeclaration') {
+            // This will be handled in the VariableDeclaration branch if we don't return here
+            // but let's just let it fall through or handle it explicitly.
+          }
+        });
+      }
+      return;
+    }
+
     if (node.nodeType === 'Function') {
       const name = node.attributes.name;
       const params: any[] = node.attributes.params || [];

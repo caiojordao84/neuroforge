@@ -6,6 +6,7 @@ export type BlockTransformFn = (nodes: BaseNode[], ctx: TransformContext) => ASL
 
 export interface TransformContext {
   globalsMap: Map<string, any>;
+  structs: Map<string, { members: { name: string, type: string }[] }>;
   language?: Language;
   transformBlock?: BlockTransformFn;
 }
@@ -13,6 +14,7 @@ export interface TransformContext {
 export function createTransformContext(language?: Language): TransformContext {
   return {
     globalsMap: new Map(),
+    structs: new Map(),
     language,
   };
 }

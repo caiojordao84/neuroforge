@@ -13,6 +13,7 @@ export type NodeType =
     // Optimization Nodes
     | 'HardwarePwm' | 'GpioBatch'
     | 'EnumDeclaration'
+    | 'StructDeclaration'
     | 'SizeofExpression'
     | 'CastExpression';
 
