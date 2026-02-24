@@ -389,6 +389,7 @@ export class RecursiveDescentCParser {
         let structTypeName: string | null = null;
 
         if (type === 'std') {
+            if (this.peek().value === '::') this.consume('::');
             const containerType = this.consume().value;
             if (this.peek().value === '<') {
                 this.consume();
@@ -471,7 +472,7 @@ export class RecursiveDescentCParser {
 
         if (this.peek().value === '=') {
             this.consume('=');
-            if (isArray && this.peek().value === '{') {
+            if (this.peek().value === '{') {
                 this.consume('{');
                 const elements: BaseNode[] = [];
                 while (this.peek().value !== '}' && this.peek().type !== 'EOF') {
@@ -547,19 +548,32 @@ export class RecursiveDescentCParser {
         let left = this.parsePrefix();
         while (true) {
             const t = this.peek();
-            if (t.type === 'EOF' || [';', ')', ',', ']', '}'].includes(t.value)) break;
+            if (t.type === 'EOF' || [';', ')', ',', ']', '}', ':'].includes(t.value)) break;
             const prec = this.getPrecedence(t.value);
             if (prec < minPrec) break;
             const op = this.consume().value;
-            const right = this.parseExpression(prec);
-            left = { nodeType: 'BinaryExpression', id: this.genId(), attributes: { operator: op }, children: [left, right], metadata: { line: t.line } };
+            if (op === '?') {
+                const whenTrue = this.parseExpression(0);
+                this.consume(':');
+                const whenFalse = this.parseExpression(0);
+                left = {
+                    nodeType: 'ConditionalExpression',
+                    id: this.genId(),
+                    attributes: {},
+                    children: [left, whenTrue, whenFalse],
+                    metadata: { line: t.line }
+                };
+            } else {
+                const right = this.parseExpression(prec);
+                left = { nodeType: 'BinaryExpression', id: this.genId(), attributes: { operator: op }, children: [left, right], metadata: { line: t.line } };
+            }
         }
         return left;
     }
 
     private parsePrefix(): BaseNode {
         const t = this.peek();
-        if (['!', '-', '~', '++', '--', '+'].includes(t.value)) {
+        if (['!', '-', '~', '++', '--', '+', '&', '*'].includes(t.value)) {
             this.consume();
             const right = this.parsePrefix();
             return { nodeType: 'UnaryExpression', id: this.genId(), attributes: { operator: t.value, prefix: true }, children: [right], metadata: { line: t.line } };
@@ -579,9 +593,9 @@ export class RecursiveDescentCParser {
                     children: [node],
                     metadata: { line: node.metadata?.line },
                 };
-            } else if (this.peek().value === '.') {
+            } else if (this.peek().value === '.' || this.peek().value === '->') {
                 const line = this.peek().line;
-                this.consume('.');
+                const op = this.consume().value;
                 const member = this.consume().value;
                 const meta = { line };
                 if (this.peek().value === '(') {
@@ -596,7 +610,13 @@ export class RecursiveDescentCParser {
                     this.consume(')');
                     node = this.mapMethodCall(node, member, args, meta);
                 } else {
-                    node = { nodeType: 'MemberExpression', id: this.genId(), attributes: { property: member }, children: [node], metadata: meta };
+                    node = {
+                        nodeType: 'MemberExpression',
+                        id: this.genId(),
+                        attributes: { property: member, operator: op },
+                        children: [node],
+                        metadata: meta
+                    };
                 }
             } else if (this.peek().value === '[') {
                 const line = this.peek().line;
@@ -737,8 +757,9 @@ export class RecursiveDescentCParser {
 
     private getPrecedence(op: string): number {
         if (op === '=' || op === '+=' || op === '-=' || op === '*=' || op === '/=' || op === '&=' || op === '|=' || op === '^=' || op === '<<=' || op === '>>=') return 1;
-        if (['||'].includes(op)) return 2;
-        if (['&&'].includes(op)) return 3;
+        if (op === '?') return 2;
+        if (['||'].includes(op)) return 3;
+        if (['&&'].includes(op)) return 4;
         if (['|'].includes(op)) return 4;
         if (['^'].includes(op)) return 5;
         if (['&'].includes(op)) return 6;

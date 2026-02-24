@@ -264,6 +264,15 @@ async function executeStatements(
         }
         break;
       }
+
+      case 'setPointer': {
+        const ptrObj = await evalExpr(s.target, localEnv, ctx);
+        const val = await evalExpr(s.value, localEnv, ctx);
+        if (ptrObj && typeof ptrObj === 'object' && ptrObj.__isPtr) {
+          setVar(ptrObj.target, val, localEnv, ctx.globals);
+        }
+        break;
+      }
     }
   }
 }
@@ -314,7 +323,22 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
     }
 
     case 'unary': {
+      if (expr.op === '&') {
+        const target = expr.expr;
+        if (target.kind === 'var') {
+          return { __isPtr: true, target: target.name };
+        }
+        // Fallback or complex & handled elsewhere
+        return 0;
+      }
+
       const v = await evalExpr(expr.expr, env, ctx);
+      if (expr.op === '*') {
+        if (v && typeof v === 'object' && v.__isPtr) {
+          return getVar(v.target, env, ctx.globals);
+        }
+        return 0;
+      }
       if (expr.op === '!') return !v;
       if (expr.op === '~') return ~v;
       if (expr.op === '+') return +v;
@@ -443,6 +467,11 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       }
 
       return 0;
+    }
+
+    case 'conditional': {
+      const cond = await evalExpr(expr.condition, env, ctx);
+      return cond ? evalExpr(expr.whenTrue, env, ctx) : evalExpr(expr.whenFalse, env, ctx);
     }
   }
 }

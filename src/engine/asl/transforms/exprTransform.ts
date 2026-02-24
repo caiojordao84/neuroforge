@@ -143,5 +143,14 @@ export function transformExpr(node: BaseNode | undefined): ASLExpr {
     } as ASLExpr;
   }
 
+  if (node.nodeType === 'ConditionalExpression') {
+    return {
+      kind: 'conditional',
+      condition: transformExpr(node.children[0]),
+      whenTrue: transformExpr(node.children[1]),
+      whenFalse: transformExpr(node.children[2]),
+    } as ASLExpr;
+  }
+
   return { kind: 'literal', value: 0 };
 }

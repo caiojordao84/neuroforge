@@ -15,7 +15,7 @@ import { PythonParser } from './plugins/python/PythonParser';
 import { createTransformContext, type TransformContext } from './transforms/context';
 import { transformBlock } from './transforms/blockTransform';
 import { mapToASLType } from './helpers/typeUtils';
-import { buildEmptyArray, deepCopyValue } from './helpers/arrayUtils';
+import { buildEmptyArray, deepCopyValue, resolveSize } from './helpers/arrayUtils';
 import { transformExpr } from './transforms/exprTransform';
 
 export async function codeToASL(source: string, language: Language): Promise<ASLProgram> {
@@ -132,23 +132,49 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
         const valNode = node.children[0];
         if (valNode) {
           if (valNode.nodeType === 'ArrayInitializer') {
-            if (isArray2D && valNode.attributes.isArray2D) {
-              initialValue = valNode.children.map((rowNode) => {
-                if (rowNode.nodeType === 'ArrayInitializer' && rowNode.attributes.isRow) {
-                  return rowNode.children.map((c) => {
-                    const e = transformExpr(c);
-                    return e.kind === 'literal' ? e.value : 0;
+            const structType = node.attributes.structType;
+            const structDef = structType ? ctx.structDefs?.[structType] : null;
+
+            if (structDef && !isArray) {
+              // Map array initializer to struct fields
+              const obj: Record<string, any> = {};
+              structDef.fields.forEach((f, i) => {
+                const c = valNode.children[i];
+                if (c) {
+                  const e = transformExpr(c);
+                  obj[f.name] = e.kind === 'literal' ? e.value : 0;
+                } else {
+                  obj[f.name] = 0;
+                }
+              });
+              initialValue = obj;
+            } else if (isArray2D && valNode.attributes.isArray2D) {
+              const rows = resolveSize(node.attributes.arraySizeExpr, ctx.globalsMap) || valNode.children.length;
+              const cols = resolveSize(node.attributes.arraySize2Expr, ctx.globalsMap) || 0;
+
+              initialValue = Array(rows).fill(null).map((_, i) => {
+                const rowNode = valNode.children[i];
+                const row = Array(cols).fill(0);
+                if (rowNode && rowNode.nodeType === 'ArrayInitializer' && rowNode.attributes.isRow) {
+                  rowNode.children.forEach((c, j) => {
+                    if (j < cols) {
+                      const e = transformExpr(c);
+                      row[j] = e.kind === 'literal' ? e.value : 0;
+                    }
                   });
                 }
-                const e = transformExpr(rowNode);
-                return e.kind === 'literal' ? e.value : 0;
+                return row;
               });
             } else {
-              initialValue = valNode.children.map((c) => {
-                const e = transformExpr(c);
-                if (e.kind === 'literal') return e.value;
-                return 0;
+              const size = resolveSize(node.attributes.arraySizeExpr, ctx.globalsMap) || valNode.children.length;
+              const arr = Array(size).fill(0);
+              valNode.children.forEach((c, i) => {
+                if (i < size) {
+                  const e = transformExpr(c);
+                  arr[i] = e.kind === 'literal' ? e.value : 0;
+                }
               });
+              initialValue = arr;
             }
           } else if (valNode.nodeType === 'Literal') {
             if (isArray) {
