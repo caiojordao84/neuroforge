@@ -463,11 +463,18 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       }
 
       if (expr.callee === 'Serial.begin') return 0;
+
+      // random(max) — 1 arg; random(min, max) — 2 args
       if (expr.callee === 'random') {
+        if (expr.args.length === 1) {
+          const max = await evalExpr(expr.args[0], env, ctx);
+          return Math.floor(Math.random() * max);
+        }
         const min = expr.args[0] ? await evalExpr(expr.args[0], env, ctx) : 0;
         const max = expr.args[1] ? await evalExpr(expr.args[1], env, ctx) : 100;
         return Math.floor(Math.random() * (max - min)) + min;
       }
+
       if (expr.callee === 'digitalRead') {
         const pin = await evalExpr(expr.args[0], env, ctx);
         return ctx.engine.digitalRead(pin) === 'HIGH' ? 1 : 0;
@@ -510,10 +517,10 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
           }
           return arr.length;
         }
-        return 1; // Default size for non-arrays (e.g. sizeof(int))
+        return 1;
       }
 
-      // Conversores de tipo e utilitários padrão
+      // Conversores de tipo
       if (expr.callee === 'String') return String(await evalExpr(expr.args[0] || { kind: 'literal', value: '' }, env, ctx));
       if (expr.callee === 'int') {
         const val = await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx);
@@ -523,6 +530,58 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         return Math.floor(Number(val) || 0);
       }
       if (expr.callee === 'float') return Number(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx)) || 0;
+
+      // --- Math builtins ---
+      if (expr.callee === 'abs') return Math.abs(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx));
+      if (expr.callee === 'sqrt') return Math.sqrt(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx));
+      if (expr.callee === 'pow') {
+        const base = await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx);
+        const exp  = await evalExpr(expr.args[1] || { kind: 'literal', value: 1 }, env, ctx);
+        return Math.pow(base, exp);
+      }
+      if (expr.callee === 'sin')   return Math.sin(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx));
+      if (expr.callee === 'cos')   return Math.cos(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx));
+      if (expr.callee === 'tan')   return Math.tan(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx));
+      if (expr.callee === 'log')   return Math.log(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx));
+      if (expr.callee === 'min') {
+        const a = await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx);
+        const b = await evalExpr(expr.args[1] || { kind: 'literal', value: 0 }, env, ctx);
+        return Math.min(a, b);
+      }
+      if (expr.callee === 'max') {
+        const a = await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx);
+        const b = await evalExpr(expr.args[1] || { kind: 'literal', value: 0 }, env, ctx);
+        return Math.max(a, b);
+      }
+      if (expr.callee === 'round') return Math.round(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx));
+      if (expr.callee === 'floor') return Math.floor(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx));
+      if (expr.callee === 'ceil')  return Math.ceil(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx));
+      if (expr.callee === 'isnan') return isNaN(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx)) ? 1 : 0;
+      if (expr.callee === 'isinf') return !isFinite(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx)) ? 1 : 0;
+
+      // --- C stdlib string functions ---
+      if (expr.callee === 'strlen') {
+        const s = String(await evalExpr(expr.args[0] || { kind: 'literal', value: '' }, env, ctx));
+        return s.length;
+      }
+      if (expr.callee === 'strcmp') {
+        const sa = String(await evalExpr(expr.args[0] || { kind: 'literal', value: '' }, env, ctx));
+        const sb = String(await evalExpr(expr.args[1] || { kind: 'literal', value: '' }, env, ctx));
+        return sa === sb ? 0 : (sa < sb ? -1 : 1);
+      }
+      if (expr.callee === 'atoi') {
+        const s = String(await evalExpr(expr.args[0] || { kind: 'literal', value: '0' }, env, ctx));
+        return parseInt(s, 10) || 0;
+      }
+      if (expr.callee === 'atof') {
+        const s = String(await evalExpr(expr.args[0] || { kind: 'literal', value: '0' }, env, ctx));
+        return parseFloat(s) || 0;
+      }
+      if (expr.callee === 'dtostrf') {
+        const val  = await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx);
+        const prec = expr.args[2] ? await evalExpr(expr.args[2], env, ctx) : 2;
+        return Number(val).toFixed(Number(prec) || 2);
+      }
 
       // Hardware / Library Calls (Event-based)
       if (expr.callee.includes('.') || expr.callee === 'KeypadRead') {

@@ -217,7 +217,7 @@ function handleVariableDeclaration(node: BaseNode, _ctx: TransformContext): ASLS
 
         arrayVal = {
           kind: 'literal',
-          value: valNode.children.map((rowNode, rowIdx) => {
+          value: valNode.children.map((rowNode, _rowIdx) => {
             if (rowNode.nodeType === 'ArrayInitializer' && rowNode.attributes.isRow) {
               const rowValues = rowNode.children.map((c) => {
                 const e = transformExpr(c);
@@ -337,7 +337,6 @@ function handleExpressionStatement(node: BaseNode, _ctx: TransformContext): ASLS
     }
 
     if (child.nodeType === 'SubscriptExpression') {
-      // ... existing SubscriptExpression handling ...
       const targetArr = child.children[0];
       const index = child.children[1];
       if (targetArr.nodeType === 'Identifier') {
@@ -411,7 +410,12 @@ function handleAssignment(expr: BaseNode): ASLStatement[] {
     const targetArr = left.children[0];
     const index = left.children[1];
 
-    if (targetArr.nodeType === 'SubscriptExpression' && targetArr.children[0].nodeType === 'SubscriptExpression' && (targetArr.children[0] as any).children[0].nodeType === 'Identifier') {
+    // 3D: arr[d1][d2][d3] = val
+    if (
+      targetArr.nodeType === 'SubscriptExpression' &&
+      targetArr.children[0].nodeType === 'SubscriptExpression' &&
+      (targetArr.children[0] as any).children[0].nodeType === 'Identifier'
+    ) {
       const innerArr = targetArr.children[0];
       const arrName = (innerArr as any).children[0].attributes.name;
       const d1Index = transformExpr((innerArr as any).children[1]);
@@ -428,18 +432,60 @@ function handleAssignment(expr: BaseNode): ASLStatement[] {
           value: transformExpr(right),
         } as ASLStatement];
       }
-    } else if (targetArr.nodeType === 'SubscriptExpression' && targetArr.children[0].nodeType === 'Identifier') {
+      // compound assignment 3D não suportado (edge case raro)
+      return [];
+    }
+
+    // 2D: arr[row][col] op= val
+    if (
+      targetArr.nodeType === 'SubscriptExpression' &&
+      targetArr.children[0].nodeType === 'Identifier'
+    ) {
       const arrName = targetArr.children[0].attributes.name;
       const rowIndex = transformExpr(targetArr.children[1]);
       const colIndex = transformExpr(index);
       if (op === '=') {
         return [{ kind: 'setIndex2D', target: arrName, rowIndex, colIndex, value: transformExpr(right) } as ASLStatement];
       }
-    } else if (targetArr.nodeType === 'Identifier') {
+      // compound assignment 2D: arr[i][j] += val → already handled by FASE 2.1
+      const binOp2D = op.charAt(0) as '+' | '-' | '*' | '/';
+      if (['+', '-', '*', '/'].includes(binOp2D)) {
+        return [{
+          kind: 'setIndex2D',
+          target: arrName,
+          rowIndex,
+          colIndex,
+          value: {
+            kind: 'binary',
+            op: binOp2D,
+            left: { kind: 'index2D', array: { kind: 'var', name: arrName }, rowIndex, colIndex },
+            right: transformExpr(right),
+          },
+        } as ASLStatement];
+      }
+    }
+
+    // 1D: arr[i] op= val
+    if (targetArr.nodeType === 'Identifier') {
       const arrName = targetArr.attributes.name;
       const idxExpr = transformExpr(index);
       if (op === '=') {
         return [{ kind: 'setIndex', target: arrName, index: idxExpr, value: transformExpr(right) } as ASLStatement];
+      }
+      // compound assignment 1D: arr[i] += val, arr[i] -= val, etc.
+      const binOp1D = op.charAt(0) as '+' | '-' | '*' | '/';
+      if (['+', '-', '*', '/'].includes(binOp1D)) {
+        return [{
+          kind: 'setIndex',
+          target: arrName,
+          index: idxExpr,
+          value: {
+            kind: 'binary',
+            op: binOp1D,
+            left: { kind: 'index', target: { kind: 'var', name: arrName }, index: idxExpr },
+            right: transformExpr(right),
+          },
+        } as ASLStatement];
       }
     }
   }

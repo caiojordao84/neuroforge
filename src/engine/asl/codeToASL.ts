@@ -48,13 +48,19 @@ async function parseToProgramNode(source: string, language: Language): Promise<P
 
 /**
  * Simple evaluator for constant global initializers.
- * Supports literals, references to other globals, and basic arithmetic.
+ * Supports literals, string literals, references to other globals,
+ * basic arithmetic, bitwise ops, unary minus, and address-of.
  */
 function evaluateInitializer(node: BaseNode | undefined, globalsMap: Map<string, any>): any {
   if (!node) return 0;
 
   if (node.nodeType === 'Literal') {
     return node.attributes.value;
+  }
+
+  // StringLiteral: const char* name = "hello" → "hello"
+  if (node.nodeType === 'StringLiteral') {
+    return node.attributes.value ?? '';
   }
 
   if (node.nodeType === 'Identifier') {
@@ -70,12 +76,24 @@ function evaluateInitializer(node: BaseNode | undefined, globalsMap: Map<string,
       case '-': return left - right;
       case '*': return left * right;
       case '/': return left / right;
+      case '%': return left % right;
+      // bitwise ops em constantes globais (ex: flags combinadas com |)
+      case '|': return left | right;
+      case '&': return left & right;
+      case '^': return left ^ right;
+      case '<<': return left << right;
+      case '>>': return left >> right;
       default: return 0;
     }
   }
 
   if (node.nodeType === 'ArrayInitializer') {
     return node.children.map(c => evaluateInitializer(c, globalsMap));
+  }
+
+  // UnaryExpression com '-': const int OFFSET = -10
+  if (node.nodeType === 'UnaryExpression' && node.attributes.operator === '-') {
+    return -(evaluateInitializer(node.children[0], globalsMap));
   }
 
   if (node.nodeType === 'UnaryExpression' && node.attributes.operator === '&') {
@@ -139,12 +157,10 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
       if (name) {
         ctx.structs.set(name, { members });
       }
-      // If the struct declaration also has an instance (e.g., struct { ... } p;)
       if (node.children.length > 0) {
         node.children.forEach(child => {
           if (child.nodeType === 'VariableDeclaration') {
-            // This will be handled in the VariableDeclaration branch if we don't return here
-            // but let's just let it fall through or handle it explicitly.
+            // handled in VariableDeclaration branch
           }
         });
       }
