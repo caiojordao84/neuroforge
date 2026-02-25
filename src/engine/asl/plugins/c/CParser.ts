@@ -13,10 +13,10 @@ export class RecursiveDescentCParser {
             'unsigned', 'uint8_t', 'uint16_t', 'uint32_t', 'int8_t', 'int16_t', 'int32_t'
         ].includes(token.value)) return true;
 
-        // Dynamic types (like enums)
+        // Dynamic types (like enums and structs)
         if (token.type === 'IDENTIFIER') {
             const sym = this.symbols.resolve(token.value);
-            return sym?.type === 'type';
+            return sym?.type === 'type' || sym?.type === 'struct';
         }
         return false;
     }
@@ -78,7 +78,7 @@ export class RecursiveDescentCParser {
         const line = this.peek().line;
         this.consume(); // 'struct'
         const name = this.consume().value;
-        this.symbols.define(name, 'type', line);
+        this.symbols.define(name, 'struct', line);
         this.consume('{');
         const fields: { type: string; name: string }[] = [];
         while (this.peek().value !== '}' && this.peek().type !== 'EOF') {
@@ -414,6 +414,12 @@ export class RecursiveDescentCParser {
 
         if (type === 'struct' && this.peek().type === 'IDENTIFIER') {
             structTypeName = this.consume().value;
+            type = 'struct';
+        }
+        
+        const sym = this.symbols.resolve(type);
+        if (sym && sym.type === 'struct') {
+            structTypeName = type;
             type = 'struct';
         }
 
