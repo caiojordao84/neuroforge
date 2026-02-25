@@ -195,6 +195,39 @@ function handleVariableDeclaration(node: BaseNode, _ctx: TransformContext): ASLS
       });
       return stmts;
     }
+    
+    if (structDef && isArray) {
+      // Array of Structs Initialization
+      const size = resolveSize(node.attributes.arraySizeExpr, _ctx.globalsMap) || valNode.children.length;
+      const emptyArr: any[] = [];
+      
+      for (let i = 0; i < size; i++) {
+         const baseObj: Record<string, any> = {};
+         structDef.fields.forEach(f => { baseObj[f.name] = 0; });
+         emptyArr.push(baseObj);
+      }
+      
+      stmts.push({ kind: 'assign', target: name, value: { kind: 'literal', value: emptyArr } });
+
+      valNode.children.forEach((rowNode, i) => {
+        if (i < size && rowNode.nodeType === 'ArrayInitializer') {
+          rowNode.children.forEach((c, j) => {
+            if (j < structDef.fields.length) {
+               const field = structDef.fields[j];
+               const expr = transformExpr(c);
+               // Access arr[i].fieldName
+               stmts.push({ 
+                   kind: 'setMember', 
+                   target: { kind: 'index', target: { kind: 'var', name }, index: { kind: 'literal', value: i } }, 
+                   property: field.name, 
+                   value: expr 
+               });
+            }
+          });
+        }
+      });
+      return stmts;
+    }
 
     if (isArray2D && valNode.attributes.isArray2D) {
       const rows = resolveSize(node.attributes.arraySizeExpr, _ctx.globalsMap) || valNode.children.length;
