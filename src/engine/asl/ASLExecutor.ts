@@ -182,6 +182,29 @@ async function executeStatements(
         break;
       }
 
+      case 'for': {
+        let cycles = 0;
+        while (await evalExpr(s.condition, localEnv, ctx)) {
+          if (ctx.abortSignal?.aborted) return;
+          let broken = false;
+          try {
+            await executeStatements(s.body, localEnv, ctx);
+          } catch (e) {
+            if (e instanceof BreakSignal) { broken = true; }
+            else if (e instanceof ContinueSignal) { /* fall through to update */ }
+            else throw e;
+          }
+          if (broken) break;
+          // Update always runs (even on continue), matching C/C++ for-loop semantics
+          await executeStatements(s.update, localEnv, ctx);
+          cycles++;
+          if (cycles % 10 === 0) {
+            await new Promise((r) => setTimeout(r, 0));
+          }
+        }
+        break;
+      }
+
       case 'delay': {
         const ms = await evalExpr(s.milliseconds, localEnv, ctx);
         const total = Math.max(0, Number(ms) || 0);

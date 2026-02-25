@@ -118,10 +118,12 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
         });
       }
     } else {
+      if (node.nodeType === 'VariableDeclaration') {
+        if (node.attributes.isExtern) return;
+      }
       topLevelNodes.push(node);
 
       if (node.nodeType === 'VariableDeclaration') {
-        if (node.attributes.isExtern) return;
 
         const name = node.attributes.name;
         const type = mapToASLType(node.attributes.type || 'int');
@@ -165,6 +167,23 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
                 }
                 return row;
               });
+            } else if (structDef && isArray) {
+              // Array of structs: map each row to an object with field names
+              const size = resolveSize(node.attributes.arraySizeExpr, ctx.globalsMap) || valNode.children.length;
+              initialValue = Array(size).fill(null).map((_, i) => {
+                const obj: Record<string, any> = {};
+                structDef.fields.forEach(f => { obj[f.name] = 0; });
+                const rowNode = valNode.children[i];
+                if (rowNode && rowNode.nodeType === 'ArrayInitializer') {
+                  rowNode.children.forEach((c, j) => {
+                    if (j < structDef.fields.length) {
+                      const e = transformExpr(c);
+                      obj[structDef.fields[j].name] = e.kind === 'literal' ? e.value : 0;
+                    }
+                  });
+                }
+                return obj;
+              });
             } else {
               const size = resolveSize(node.attributes.arraySizeExpr, ctx.globalsMap) || valNode.children.length;
               const arr = Array(size).fill(0);
@@ -203,6 +222,7 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
           initialValue: safeInitialValue,
           structType: node.attributes.structType,
           comments: node.leadingComments,
+          ...(node.attributes.isPointerArray ? { isPointerArray: true } : {}),
         } as any);
 
         ctx.globalsMap.set(name, safeInitialValue);

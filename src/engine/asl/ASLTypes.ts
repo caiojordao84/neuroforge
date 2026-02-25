@@ -94,6 +94,7 @@ export type ASLStatement =
   | ASLRead
   | ASLIf
   | ASLWhile
+  | ASLFor
   | ASLDelay
   | ASLAssign
   | ASLSetIndex
@@ -176,6 +177,16 @@ export interface ASLWhile {
   kind: 'while';
   condition: ASLExpr;
   body: ASLStatement[];
+}
+
+/**
+ * For loop with separate update that runs even on continue.
+ */
+export interface ASLFor {
+  kind: 'for';
+  condition: ASLExpr;
+  body: ASLStatement[];
+  update: ASLStatement[];
 }
 
 /**

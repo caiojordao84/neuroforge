@@ -9,7 +9,7 @@ export class RecursiveDescentCParser {
 
     private isType(token: Token): boolean {
         if (token.type === 'KEYWORD' && [
-            'int', 'float', 'bool', 'boolean', 'String', 'File', 'char', 'byte', 'short', 'long',
+            'void', 'int', 'float', 'bool', 'boolean', 'String', 'File', 'char', 'byte', 'short', 'long',
             'unsigned', 'uint8_t', 'uint16_t', 'uint32_t', 'int8_t', 'int16_t', 'int32_t'
         ].includes(token.value)) return true;
 
@@ -22,10 +22,17 @@ export class RecursiveDescentCParser {
     }
 
     private isFunctionDecl(): boolean {
-        if (!this.isType(this.peek())) return false;
+        const current = this.peek();
+        console.log('[CParser] isFunctionDecl check:', current.type, current.value);
+        if (!this.isType(current)) {
+            console.log('[CParser] isFunctionDecl: false - not a type');
+            return false;
+        }
         let offset = 1;
         while (this.isType(this.peek(offset))) offset++;
-        return this.peek(offset).type === 'IDENTIFIER' && this.peek(offset + 1).value === '(';
+        const isFunc = this.peek(offset).type === 'IDENTIFIER' && this.peek(offset + 1).value === '(';
+        console.log('[CParser] isFunctionDecl:', isFunc, 'offset:', offset, 'next:', this.peek(offset).value, 'after:', this.peek(offset + 1)?.value);
+        return isFunc;
     }
 
     parse(code: string): { ast: ProgramNode, symbols: Symbol[], errors: AnalysisIssue[] } {
@@ -34,6 +41,7 @@ export class RecursiveDescentCParser {
         const program: ProgramNode = { nodeType: 'Program', id: 'root', attributes: {}, children: [] };
         while (this.peek().type !== 'EOF') {
             const t = this.peek();
+            console.log('[CParser] Token:', t.type, t.value, 'line:', t.line);
             if (t.value === 'const') this.consume(); // ignore const
             if (t.value === 'enum') {
                 program.children.push(this.parseEnum());
@@ -42,6 +50,7 @@ export class RecursiveDescentCParser {
                 const decl = this.parseStruct();
                 if (decl) program.children.push(decl);
             } else if (this.peek().value === 'void' || this.isFunctionDecl()) {
+                console.log('[CParser] Detected function declaration, calling parseFunction()');
                 program.children.push(this.parseFunction());
             } else if (this.isType(this.peek()) || this.peek().value === 'struct' || this.peek().value === 'extern' || this.peek().value === 'std') {
                 const decl = this.parseVarDecl(); if (decl) program.children.push(decl);
@@ -110,12 +119,14 @@ export class RecursiveDescentCParser {
     }
 
     private parseFunction(): BaseNode {
+        console.log('[CParser] parseFunction starting, current token:', this.peek().type, this.peek().value);
         let returnType = this.consume().value;
         while (this.isType(this.peek())) returnType += ' ' + this.consume().value;
 
         const name = this.consume().value;
         const line = this.peek(-1).line;
 
+        console.log('[CParser] Function:', returnType, name, 'at line', line);
         this.consume('(');
         const params: { type: string, name: string }[] = [];
         this.symbols.pushScope();
@@ -152,6 +163,7 @@ export class RecursiveDescentCParser {
     private parseStatement(): BaseNode | null {
         const t = this.peek();
         const line = t.line;
+        console.log('[CParser] parseStatement token:', t.type, t.value, 'line:', t.line);
 
         if (t.value === 'const') this.consume();
 
@@ -178,7 +190,19 @@ export class RecursiveDescentCParser {
             this.consume(';');
             return { nodeType: 'ReturnStatement', id: this.genId(), attributes: {}, children: [val], metadata: { line } };
         }
-        if (this.isType(t) || t.value === 'struct' || t.value === 'extern' || t.value === 'std') return this.parseVarDecl();
+        if (this.isType(t) || t.value === 'struct' || t.value === 'extern' || t.value === 'std') {
+            // Disambiguate: struct variable usage (p.x, p[0], p = ...) vs declaration (Point p)
+            if (t.type === 'IDENTIFIER') {
+                const next = this.peek(1);
+                if (['.', '->', '[', '=', '+=', '-=', '*=', '/=', '++', '--'].includes(next.value)) {
+                    // This is variable usage, not a type declaration — fall through to expression
+                } else {
+                    return this.parseVarDecl();
+                }
+            } else {
+                return this.parseVarDecl();
+            }
+        }
         if (t.value === ';') { this.consume(); return null; }
         if (t.value === '{') {
             return { nodeType: 'Block', id: this.genId(), attributes: {}, children: this.parseBlock(), metadata: { line } };
@@ -416,7 +440,7 @@ export class RecursiveDescentCParser {
             structTypeName = this.consume().value;
             type = 'struct';
         }
-        
+
         const sym = this.symbols.resolve(type);
         if (sym && sym.type === 'struct') {
             structTypeName = type;
