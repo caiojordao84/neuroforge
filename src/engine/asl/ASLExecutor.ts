@@ -299,11 +299,7 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       const arr = await evalExpr(expr.target, env, ctx);
       const idx = await evalExpr(expr.index, env, ctx);
       if (Array.isArray(arr)) {
-        const rawVal = arr[idx];
-        if (rawVal && typeof rawVal === 'object' && rawVal.__isPtr) {
-          return getVar(rawVal.target, env, ctx.globals) ?? rawVal;
-        }
-        return rawVal;
+        return arr[idx];
       }
       return 0;
     }
