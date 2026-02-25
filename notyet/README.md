@@ -105,7 +105,7 @@ Status markers:
 - [x] Dereference compound assignment: `*ptr += val;` (lowered to `setDeref` with binary RHS).
 
 **Hardware operations:**
-- [x] `pinMode`: `pinMode(PIN, MODE);` where `MODE` ∈ `{INPUT, OUTPUT, INPUT_PULLUP}`, but PIN only accepts `\w+`, not indexing.
+- [x] `pinMode`: `pinMode(PIN, MODE);` where `MODE` ∈ `{INPUT, OUTPUT, INPUT_PULLUP}`, but PIN only accepts `\\w+`, not indexing.
 - [x] `pinMode` with array: `pinMode(LED_PINS[i], OUTPUT);` (CParser generates `SubscriptExpression` → `codeToASL` evaluates as expr).
 - [x] `digitalWrite`: `digitalWrite(PIN, HIGH/LOW);` (accepts simple expr as value).
 - [x] `digitalWrite` with array: `digitalWrite(LED_PINS[i], HIGH);` (same mechanism).
@@ -149,7 +149,6 @@ Status markers:
 - [x] String literal to char array: `char str[] = "hello"` (FASE 1.4).
 - [x] sizeof() builtin: `sizeof(arr)`, `sizeof(arr[0])` (FASE 2.4).
 - [x] Zero-init: `int arr[5] = {}` or `= {0}` (FASE 2.5).
-- [x] Array of string pointers: `const char* labels[] = {"a","b"}` (FASE 2.8).
 - [x] Complex expressions: `x = a + b * c / 2;`.
 
 #### Data Types and Structures
@@ -167,7 +166,10 @@ Status markers:
 - [x] 3D assignment: `arr[d1][d2][d3] = val` (kind: `'setIndex3D'`) — `ASLSetIndex3D` in `ASLTypes.ts`.
 - [x] `ASLExecutor.ts`: `case 'setIndex3D'` (triple `Array.isArray` guard) + `case 'index3D'`.
 - [x] Array of string pointers: `const char* labels[] = {"a","b"}` (FASE 2.8) — `isStringPointerArray` in `statementRegistry`.
-- [ ] Structs/classes: `struct Point { int x, y; };` (not supported).
+- [x] Structs (data only): `struct Point { int x, y; };` (FASE 4) — `ASLStructDef`, inline instances, member access/assignment.
+- [x] C++ standard arrays: `std::array<int, 3>` and `std::vector<int>` (lowered to C arrays in ASL).
+- [x] Extern variables: `extern int val;` (safely ignored during ASL code generation).
+- [x] Designated initializers: `int arr[5] = {[0]=1, [3]=99}` (FASE 4).
 
 #### Arithmetic Operators in the ASL Executor
 
@@ -257,16 +259,16 @@ Ordered by priority.
 | 🟡 Medium   | `delayMicroseconds`             | `delayMicroseconds(us)` — needed for bit-bang protocols (I2C, SPI manual). Currently falls through to unhandled.                            |
 | 🟡 Medium   | range-based `for` (C++11)       | `for (auto x : arr)` — ESP32/C++11 mode; CParser partially tracks `FASE 3.15` but executor has no `forRange`.                               |
 | 🟢 Low      | `typedef` / `using`             | Type aliases — affects `mapToASLType`.                                                                                                      |
-| 🟢 Low      | `struct` declaration + instance | `struct Point { int x, y; };` — tracked in `0.3` as `[ ]`. Needed for CIs 7, 9, 11.                                                         |
+| 🟢 Low      | `struct` declaration + instance | **[IMPLEMENTED]** `struct Point { int x, y; };` — Supported in Phase 4 (arrays of structs, inline instances, member access).              |
 
 ### 0.8.2. Missing Expressions (ASLTypes.ts + exprTransform + executor)
 
 | Priority    | Gap                                         | Description                                                                                                                                  |
 | ----------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| 🔴 Critical  | `TernaryExpression`                         | `x = (a > b) ? a : b` — very common in C++ sketches. `exprTransform` falls back to `literal 0`. Needs `ASLTernary` type or lowering to `if`. |
+| 🔴 Critical  | `TernaryExpression`                         | **[IMPLEMENTED]** `x = (a > b) ? a : b` — Parsed as `ConditionalExpression` and executed natively in ASLExecutor.            |
 | 🟠 Important | Cast `(byte)`, `(uint8_t)`, `(char)`        | `CastExpression` only handles `int`/`float`/`String`. All other casts silently return the value as `int`.                                    |
-| 🟠 Important | Negative literal in `evaluateInitializer`   | `const int OFFSET = -10` — `UnaryExpression` with `-` operator returns `0` in `evaluateInitializer`.                                         |
-| 🟠 Important | String literal as global initializer        | `const char* name = "hello"` — `evaluateInitializer` returns `0` instead of `"hello"`.                                                       |
+| 🟠 Important | Negative literal in `evaluateInitializer`   | **[IMPLEMENTED]** `const int OFFSET = -10` — Handled via `UnaryExpression` in `evaluateInitializer`.                                         |
+| 🟠 Important | String literal as global initializer        | **[IMPLEMENTED]** `const char* name = "hello"` — Handled via `StringLiteral` in `evaluateInitializer`.                                       |
 | 🟡 Medium    | `CommaExpression`                           | `for(int i=0, j=0; ...)` — falls to `literal 0`.                                                                                             |
 | 🟡 Medium    | `sizeof(type)` (without variable)           | `sizeof(int)` as a type-only expression — only variable-based `sizeof` is handled.                                                           |
 | 🟢 Low       | `AddressOf` in complex lvalue               | `&struct.member` — only `&varName` and `&arr[i]` are handled; silently returns wrong pointer.                                                |
@@ -277,23 +279,23 @@ Ordered by priority.
 These are all currently handled by the generic fallback (`return 0` with no error). Each can be fixed in `ASLExecutor.ts` alone — no schema change needed.
 
 **Math functions (trivial — `Math.*` wrappers):**
-- [ ] `abs(x)` → `Math.abs(x)`
-- [ ] `sqrt(x)` → `Math.sqrt(x)`
-- [ ] `pow(base, exp)` → `Math.pow(base, exp)`
-- [ ] `sin(x)` / `cos(x)` / `tan(x)` → `Math.sin/cos/tan`
-- [ ] `log(x)` → `Math.log(x)`
-- [ ] `min(a, b)` / `max(a, b)` → `Math.min/max`
-- [ ] `round(x)` / `floor(x)` / `ceil(x)` → `Math.round/floor/ceil`
-- [ ] `isnan(x)` → `isNaN(x)`
-- [ ] `isinf(x)` → `!isFinite(x)`
-- [ ] `random(max)` (1-arg form) → `Math.floor(Math.random() * max)` — different from existing `random(min, max)`.
+- [x] `abs(x)` → `Math.abs(x)`
+- [x] `sqrt(x)` → `Math.sqrt(x)`
+- [x] `pow(base, exp)` → `Math.pow(base, exp)`
+- [x] `sin(x)` / `cos(x)` / `tan(x)` → `Math.sin/cos/tan`
+- [x] `log(x)` → `Math.log(x)`
+- [x] `min(a, b)` / `max(a, b)` → `Math.min/max`
+- [x] `round(x)` / `floor(x)` / `ceil(x)` → `Math.round/floor/ceil`
+- [x] `isnan(x)` → `isNaN(x)`
+- [x] `isinf(x)` → `!isFinite(x)`
+- [x] `random(max)` (1-arg form) → `Math.floor(Math.random() * max)` — different from existing `random(min, max)`.
 
 **String / C stdlib functions:**
-- [ ] `strlen(s)` → `String(s).length`
-- [ ] `strcmp(a, b)` → `a === b ? 0 : 1`
-- [ ] `atoi(s)` → `parseInt(s)`
-- [ ] `atof(s)` → `parseFloat(s)`
-- [ ] `dtostrf(val, width, prec, buf)` — Arduino AVR float-to-string; simulate with `val.toFixed(prec)`.
+- [x] `strlen(s)` → `String(s).length`
+- [x] `strcmp(a, b)` → `a === b ? 0 : 1`
+- [x] `atoi(s)` → `parseInt(s)`
+- [x] `atof(s)` → `parseFloat(s)`
+- [x] `dtostrf(val, width, prec, buf)` — Arduino AVR float-to-string; simulate with `val.toFixed(prec)`.
 - [ ] `sprintf(buf, fmt, ...)` — partial: format string to char array (limited subset).
 
 **Serial extensions:**
@@ -317,8 +319,8 @@ These are all currently handled by the generic fallback (`return 0` with no erro
 
 `evaluateInitializer` is used for **compile-time evaluation** of global variable initializers. Gaps:
 
-- [ ] `UnaryExpression` with `-` operator: `const int OFFSET = -10` → currently returns `0`.
-- [ ] String literal (`StringLiteral` node): `const char* name = "hello"` → returns `0` instead of `"hello"`.
+- [x] `UnaryExpression` with `-` operator: `const int OFFSET = -10` → currently returns `0`. (Implemented)
+- [x] String literal (`StringLiteral` node): `const char* name = "hello"` → returns `0` instead of `"hello"`. (Implemented)
 - [ ] Array of string literals: `const char* arr[] = {"on","off"}` → partially handled via `isStringPointerArray` in `statementRegistry` but **not** in `evaluateInitializer` (inconsistency for globals).
 - [ ] Conditional/ternary initializer: `const int X = (A > B) ? A : B` → returns `0` (acceptable limitation, document as explicit unsupported).
 
