@@ -1,0 +1,162 @@
+﻿
+
+[TEST] === T-SW1 ÔÇö switch b├ísico + default ===
+[TEST] Parsing C++...
+[CParser] Token: KEYWORD int line: 2
+[CParser] isFunctionDecl check: KEYWORD int
+[CParser] isFunctionDecl: false offset: 1 next: state after: =
+[CParser] Token: KEYWORD void line: 3
+[CParser] Detected function declaration, calling parseFunction()
+[CParser] parseFunction starting, current token: KEYWORD void
+[CParser] Function: void setup at line 3
+[CParser] parseStatement token: IDENTIFIER Serial line: 3
+[CParser] Token: KEYWORD void line: 4
+[CParser] Detected function declaration, calling parseFunction()
+[CParser] parseFunction starting, current token: KEYWORD void
+[CParser] Function: void loop at line 4
+[CParser] parseStatement token: KEYWORD switch line: 5
+[CParser] parseStatement token: IDENTIFIER Serial line: 6
+[CParser] parseStatement token: IDENTIFIER break line: 6
+[CParser] parseStatement token: IDENTIFIER Serial line: 7
+[CParser] parseStatement token: IDENTIFIER break line: 7
+[CParser] parseStatement token: IDENTIFIER Serial line: 8
+[CParser] parseStatement token: IDENTIFIER break line: 8
+[CParser] parseStatement token: IDENTIFIER Serial line: 9
+[CParser] parseStatement token: IDENTIFIER break line: 9
+[TEST] Transformando para ASL...
+[TEST] Executando simula├º├úo...
+[SERIAL] TWO
+[TEST] Gerando C++...
+[TEST] OK: C++ cont├®m 'switch'
+[TEST] Gerando Python (MicroPython)...
+[TEST] OK: Python cont├®m emula├º├úo de switch
+[TEST] Gerando Rust...
+[TEST] OK: Rust cont├®m 'match'
+
+
+[TEST] === T-SW2 ÔÇö switch dentro de for (valida├º├úo do bug fix) ===
+[TEST] Parsing C++...
+[CParser] Token: KEYWORD void line: 2
+[CParser] Detected function declaration, calling parseFunction()
+[CParser] parseFunction starting, current token: KEYWORD void
+[CParser] Function: void setup at line 2
+[CParser] parseStatement token: IDENTIFIER Serial line: 2
+[CParser] Token: KEYWORD void line: 3
+[CParser] Detected function declaration, calling parseFunction()
+[CParser] parseFunction starting, current token: KEYWORD void
+[CParser] Function: void loop at line 3
+[CParser] parseStatement token: KEYWORD for line: 4
+[CParser] parseStatement token: KEYWORD switch line: 5
+[CParser] parseStatement token: IDENTIFIER digitalWrite line: 6
+[CParser] parseStatement token: IDENTIFIER break line: 6
+[CParser] parseStatement token: IDENTIFIER digitalWrite line: 7
+[CParser] parseStatement token: IDENTIFIER break line: 7
+[CParser] parseStatement token: IDENTIFIER digitalWrite line: 8
+[CParser] parseStatement token: IDENTIFIER break line: 8
+[TEST] Transformando para ASL...
+[TEST] Executando simula├º├úo...
+[SERIAL] digitalWrite(10, HIGH)
+[SERIAL] digitalWrite(11, HIGH)
+[SERIAL] digitalWrite(12, HIGH)
+[TEST] Gerando C++...
+[TEST] OK: C++ cont├®m 'switch'
+[TEST] Gerando Python (MicroPython)...
+[TEST] ERRO: Python N├âO cont├®m emula├º├úo de switch
+import machine
+import time
+from machine import Pin, PWM
+
+# Main Program
+Serial.begin(9600)
+
+while True:
+    pass # ForLoop
+[TEST] Gerando Rust...
+[TEST] ERRO: Rust N├âO cont├®m 'match'
+// Generated Rust Code
+#![no_std]
+#![no_main]
+
+use esp_hal::prelude::*;
+
+#[entry]
+fn main() -> ! {
+    let peripherals = Peripherals::take();
+    let system = peripherals.SYSTEM.split();
+    let clocks = ClockControl::boot_defaults(system.clock_control).freeze();
+    let mut delay = Delay::new(&clocks);
+
+    // Setup
+    Serial.begin(9600);
+
+    loop {
+        // Unhandled Node: ForLoop
+    }
+}
+
+
+[TEST] === T-SW3 ÔÇö switch com enum ===
+[TEST] Parsing C++...
+[CParser] Token: KEYWORD enum line: 2
+[CParser] Token: IDENTIFIER Phase line: 3
+[CParser] isFunctionDecl check: IDENTIFIER Phase
+[CParser] isFunctionDecl: false offset: 1 next: phase after: =
+[CParser] Token: KEYWORD void line: 4
+[CParser] Detected function declaration, calling parseFunction()
+[CParser] parseFunction starting, current token: KEYWORD void
+[CParser] Function: void setup at line 4
+[CParser] parseStatement token: IDENTIFIER pinMode line: 5
+[CParser] parseStatement token: IDENTIFIER Serial line: 6
+[CParser] Token: KEYWORD void line: 8
+[CParser] Detected function declaration, calling parseFunction()
+[CParser] parseFunction starting, current token: KEYWORD void
+[CParser] Function: void loop at line 8
+[CParser] parseStatement token: KEYWORD switch line: 9
+[CParser] parseStatement token: IDENTIFIER digitalWrite line: 10
+[CParser] parseStatement token: IDENTIFIER Serial line: 10
+[CParser] parseStatement token: IDENTIFIER break line: 10
+[CParser] parseStatement token: IDENTIFIER digitalWrite line: 11
+[CParser] parseStatement token: IDENTIFIER Serial line: 11
+[CParser] parseStatement token: IDENTIFIER break line: 11
+[CParser] parseStatement token: IDENTIFIER digitalWrite line: 12
+[CParser] parseStatement token: IDENTIFIER Serial line: 12
+[CParser] parseStatement token: IDENTIFIER break line: 12
+[TEST] Transformando para ASL...
+[TEST] Executando simula├º├úo...
+[SERIAL] digitalWrite(9, HIGH)
+[SERIAL] RUNNING
+[TEST] Gerando C++...
+[TEST] OK: C++ cont├®m 'switch'
+[TEST] Gerando Python (MicroPython)...
+[TEST] OK: Python cont├®m emula├º├úo de switch
+[TEST] Gerando Rust...
+[TEST] OK: Rust cont├®m 'match'
+
+
+[TEST] === T-SW4 ÔÇö fall-through intencional (case vazio) ===
+[TEST] Parsing C++...
+[CParser] Token: KEYWORD void line: 2
+[CParser] Detected function declaration, calling parseFunction()
+[CParser] parseFunction starting, current token: KEYWORD void
+[CParser] Function: void setup at line 2
+[CParser] parseStatement token: IDENTIFIER Serial line: 2
+[CParser] Token: KEYWORD void line: 3
+[CParser] Detected function declaration, calling parseFunction()
+[CParser] parseFunction starting, current token: KEYWORD void
+[CParser] Function: void loop at line 3
+[CParser] parseStatement token: KEYWORD int line: 4
+[CParser] parseStatement token: KEYWORD switch line: 5
+[CParser] parseStatement token: IDENTIFIER Serial line: 8
+[CParser] parseStatement token: IDENTIFIER break line: 9
+[CParser] parseStatement token: IDENTIFIER Serial line: 11
+[TEST] Transformando para ASL...
+[TEST] Executando simula├º├úo...
+[SERIAL] ONE or TWO
+[TEST] Gerando C++...
+[TEST] OK: C++ cont├®m 'switch'
+[TEST] Gerando Python (MicroPython)...
+[TEST] OK: Python cont├®m emula├º├úo de switch
+[TEST] Gerando Rust...
+[TEST] OK: Rust cont├®m 'match'
+
+[TEST] Todos os testes conclu├¡dos.

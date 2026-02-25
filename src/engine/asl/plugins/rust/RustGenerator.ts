@@ -97,14 +97,60 @@ export class RustGenerator {
             node.children.slice(1).forEach(c => this.genStmt(c, lines, indent + "    "));
             this.addLn(lines, `${indent}}`, node);
         }
+        else if (node.nodeType === 'ForLoop') {
+            // Basic C-style for loop as while loop in Rust
+            let childIdx = 0;
+            if (node.attributes.hasInit && node.children[childIdx]) {
+                const initNode = node.children[childIdx];
+                this.genStmt(initNode, lines, indent);
+                childIdx++;
+            }
+            const cond = node.children[childIdx] ? this.genExpr(node.children[childIdx]) : 'true';
+            childIdx++;
+
+            const updateNode = node.attributes.hasUpdate ? node.children[childIdx] : null;
+            if (updateNode) childIdx++;
+
+            this.addLn(lines, `${indent}while ${cond} {`, node);
+            const innerIndent = indent + "    ";
+            node.children.slice(childIdx).forEach(c => this.genStmt(c, lines, innerIndent));
+            if (updateNode) {
+                this.genStmt(updateNode, lines, innerIndent);
+            }
+            this.addLn(lines, `${indent}}`, node);
+        }
         else if (node.nodeType === 'Print') {
             this.addLn(lines, `${indent}println!("{}", ${this.genExpr(node.children[0])});`, node);
         }
-        else if (node.nodeType === 'HardwarePwm') {
-            this.addLn(lines, `${indent}// HW PWM on Pin ${node.attributes.pin}, Duty: ${node.attributes.duty}`, node);
+        else if (node.nodeType === 'DesignatedInitializer') {
+            const fields = node.attributes.fields;
+            this.addLn(lines, `${indent}{`, node);
+            fields.forEach((f: any) => this.addLn(lines, `${indent}  ${f.name}: ${this.genExpr(f.value)},`, node));
+            this.addLn(lines, `${indent}}`, node);
+        }
+        else if (node.nodeType === 'SwitchStatement') {
+            const disc = this.genExpr(node.children[0]);
+            this.addLn(lines, `${indent}match ${disc} {`, node);
+
+            for (let ci = 1; ci < node.children.length; ci++) {
+                const caseNode = node.children[ci];
+                if (caseNode.attributes.isDefault) {
+                    this.addLn(lines, `${indent}    _ => {`, caseNode);
+                    const body = caseNode.children.filter(c => c.nodeType !== 'BreakStatement');
+                    body.forEach(c => this.genStmt(c, lines, indent + '        '));
+                    this.addLn(lines, `${indent}    }`, null);
+                } else {
+                    const testExpr = this.genExpr(caseNode.children[0]);
+                    this.addLn(lines, `${indent}    ${testExpr} => {`, caseNode);
+                    const body = caseNode.children.slice(1).filter(c => c.nodeType !== 'BreakStatement');
+                    body.forEach(c => this.genStmt(c, lines, indent + '        '));
+                    this.addLn(lines, `${indent}    }`, null);
+                }
+            }
+            this.addLn(lines, `${indent}}`, node);
         }
         else {
-            this.addLn(lines, `${indent}// ${node.nodeType}`, node);
+            this.addLn(lines, `${indent}// Unhandled Node: ${node.nodeType}`, node);
         }
     }
 

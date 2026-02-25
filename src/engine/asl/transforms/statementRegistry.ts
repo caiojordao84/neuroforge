@@ -24,6 +24,7 @@ export const statementRegistry: Record<string, StatementHandler> = {
   IfStatement: handleIfStatement,
   WhileLoop: handleWhileLoop,
   ForLoop: handleForLoop,
+  SwitchStatement: handleSwitchStatement,
   ReturnStatement: handleReturnStatement,
   BreakStatement: handleBreakStatement,
   ContinueStatement: handleContinueStatement,
@@ -38,6 +39,40 @@ export const statementRegistry: Record<string, StatementHandler> = {
     return acc;
   }, {} as Record<string, StatementHandler>)
 };
+
+function handleSwitchStatement(node: BaseNode, ctx: TransformContext): ASLStatement[] {
+  // children[0] = discriminant expr
+  // children[1..] = CaseClause nodes
+  const discriminant = transformExpr(node.children[0]);
+  const caseNodes = node.children.slice(1);
+
+  const cases = caseNodes.map((caseNode) => {
+    const isDefault = !!caseNode.attributes.isDefault;
+
+    let test: ASLExpr | null = null;
+    let bodyChildren: BaseNode[] = [];
+
+    if (isDefault) {
+      // Sem testExpr — todos os children são body
+      bodyChildren = caseNode.children;
+    } else {
+      // children[0] = testExpr, children[1..] = body
+      test = transformExpr(caseNode.children[0]);
+      bodyChildren = caseNode.children.slice(1);
+    }
+
+    const body = ctx.transformBlock ? ctx.transformBlock(bodyChildren, ctx) : [];
+    return { test, body };
+  });
+
+  return [
+    {
+      kind: 'switch',
+      discriminant,
+      cases,
+    } as ASLStatement,
+  ];
+}
 
 function handleIfStatement(node: BaseNode, ctx: TransformContext): ASLStatement[] {
   const condition = transformExpr(node.children[0]);

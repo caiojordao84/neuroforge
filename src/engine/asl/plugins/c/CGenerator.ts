@@ -137,6 +137,22 @@ export class CGenerator {
             this.addLn(lines, `${indent}// Batch Update`, node);
             ops.forEach((op: any) => this.addLn(lines, `${indent}digitalWrite(${op.pin}, ${op.val});`, node));
         }
+        else if (node.nodeType === 'SwitchStatement') {
+            const disc = this.genExpr(node.children[0]);
+            this.addLn(lines, `${indent}switch (${disc}) {`, node);
+
+            for (let i = 1; i < node.children.length; i++) {
+                const caseNode = node.children[i];
+                if (caseNode.attributes.isDefault) {
+                    this.addLn(lines, `${indent}  default:`, caseNode);
+                    caseNode.children.forEach(c => this.genStmt(c, lines, indent + "    "));
+                } else {
+                    this.addLn(lines, `${indent}  case ${this.genExpr(caseNode.children[0])}:`, caseNode);
+                    caseNode.children.slice(1).forEach(c => this.genStmt(c, lines, indent + "    "));
+                }
+            }
+            this.addLn(lines, `${indent}}`, node);
+        }
         else {
             this.addLn(lines, `${indent}// Unhandled Node: ${node.nodeType}`, node);
         }

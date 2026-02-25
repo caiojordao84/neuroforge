@@ -16,7 +16,9 @@ export type NodeType =
     | 'StructDeclaration'
     | 'SizeofExpression'
     | 'CastExpression'
-    | 'ConditionalExpression';
+    | 'ConditionalExpression'
+    | 'SwitchStatement'
+    | 'CaseClause';
 
 export interface BaseNode {
     nodeType: NodeType;

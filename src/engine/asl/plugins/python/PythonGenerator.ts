@@ -160,12 +160,73 @@ export class PythonGenerator {
             return;
         }
 
+        if (n.nodeType === 'ForLoop') {
+            // Basic C-style for loop as while loop in Python
+            let childIdx = 0;
+            if (n.attributes.hasInit && n.children[childIdx]) {
+                const initNode = n.children[childIdx];
+                this.genStmt(initNode, i, out);
+                childIdx++;
+            }
+            const cond = n.children[childIdx] ? this.genExpr(n.children[childIdx]) : 'True';
+            childIdx++;
+
+            const updateNode = n.attributes.hasUpdate ? n.children[childIdx] : null;
+            if (updateNode) childIdx++;
+
+            this.addLn(out, `${i}while ${cond}:`, n);
+            const innerIndent = i + '    ';
+            n.children.slice(childIdx).forEach(c => this.genStmt(c, innerIndent, out));
+            if (updateNode) {
+                this.genStmt(updateNode, innerIndent, out);
+            }
+            return;
+        }
+
         if (n.nodeType === 'Print') {
             return this.addLn(out, `${i}print(${this.genExpr(n.children[0])})`, n);
         }
 
         if (n.nodeType === 'ExpressionStatement') {
             return this.addLn(out, `${i}${this.genExpr(n.children[0])}`, n);
+        }
+
+        if (n.nodeType === 'SwitchStatement') {
+            const disc = this.genExpr(n.children[0]);
+            const swDiscVar = `__sw_disc_${this.genId()}`;
+            this.addLn(out, `${i}${swDiscVar} = ${disc}`, n);
+
+            let firstCase = true;
+            for (let j = 1; j < n.children.length; j++) {
+                const caseNode = n.children[j];
+                if (caseNode.attributes.isDefault) continue;
+
+                const caseVal = this.genExpr(caseNode.children[0]);
+                const ifStmt = firstCase ? 'if' : 'elif';
+                this.addLn(out, `${i}${ifStmt} ${swDiscVar} == ${caseVal}:`, caseNode);
+
+                // Filter out BreakStatements from the body
+                const body = caseNode.children.slice(1).filter(c => c.nodeType !== 'BreakStatement');
+                if (body.length === 0) {
+                    this.addLn(out, `${i}    pass`, caseNode);
+                } else {
+                    body.forEach(c => this.genStmt(c, i + '    ', out));
+                }
+                firstCase = false;
+            }
+
+            // Default case
+            const defaultCase = n.children.find(c => c.attributes.isDefault);
+            if (defaultCase) {
+                this.addLn(out, `${i}else:`, defaultCase);
+                const body = defaultCase.children.filter(c => c.nodeType !== 'BreakStatement');
+                if (body.length === 0) {
+                    this.addLn(out, `${i}    pass`, defaultCase);
+                } else {
+                    body.forEach(c => this.genStmt(c, i + '    ', out));
+                }
+            }
+            return;
         }
 
         this.addLn(out, `${i}pass # ${n.nodeType}`, n);
@@ -194,4 +255,5 @@ export class PythonGenerator {
     }
 
     private evalLit(n: BaseNode) { return n.attributes.value; }
+    private genId() { return Math.random().toString(36).substring(7); }
 }

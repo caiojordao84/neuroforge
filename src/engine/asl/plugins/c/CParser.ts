@@ -23,15 +23,15 @@ export class RecursiveDescentCParser {
 
     private isFunctionDecl(): boolean {
         const current = this.peek();
-        console.log('[CParser] isFunctionDecl check:', current.type, current.value);
+        
         if (!this.isType(current)) {
-            console.log('[CParser] isFunctionDecl: false - not a type');
+            
             return false;
         }
         let offset = 1;
         while (this.isType(this.peek(offset))) offset++;
         const isFunc = this.peek(offset).type === 'IDENTIFIER' && this.peek(offset + 1).value === '(';
-        console.log('[CParser] isFunctionDecl:', isFunc, 'offset:', offset, 'next:', this.peek(offset).value, 'after:', this.peek(offset + 1)?.value);
+        
         return isFunc;
     }
 
@@ -41,7 +41,7 @@ export class RecursiveDescentCParser {
         const program: ProgramNode = { nodeType: 'Program', id: 'root', attributes: {}, children: [] };
         while (this.peek().type !== 'EOF') {
             const t = this.peek();
-            console.log('[CParser] Token:', t.type, t.value, 'line:', t.line);
+            
             if (t.value === 'const') this.consume(); // ignore const
             if (t.value === 'enum') {
                 program.children.push(this.parseEnum());
@@ -50,7 +50,7 @@ export class RecursiveDescentCParser {
                 const decl = this.parseStruct();
                 if (decl) program.children.push(decl);
             } else if (this.peek().value === 'void' || this.isFunctionDecl()) {
-                console.log('[CParser] Detected function declaration, calling parseFunction()');
+                
                 program.children.push(this.parseFunction());
             } else if (this.isType(this.peek()) || this.peek().value === 'struct' || this.peek().value === 'extern' || this.peek().value === 'std') {
                 const decl = this.parseVarDecl(); if (decl) program.children.push(decl);
@@ -119,14 +119,14 @@ export class RecursiveDescentCParser {
     }
 
     private parseFunction(): BaseNode {
-        console.log('[CParser] parseFunction starting, current token:', this.peek().type, this.peek().value);
+        
         let returnType = this.consume().value;
         while (this.isType(this.peek())) returnType += ' ' + this.consume().value;
 
         const name = this.consume().value;
         const line = this.peek(-1).line;
 
-        console.log('[CParser] Function:', returnType, name, 'at line', line);
+        
         this.consume('(');
         const params: { type: string, name: string }[] = [];
         this.symbols.pushScope();
@@ -163,7 +163,7 @@ export class RecursiveDescentCParser {
     private parseStatement(): BaseNode | null {
         const t = this.peek();
         const line = t.line;
-        console.log('[CParser] parseStatement token:', t.type, t.value, 'line:', t.line);
+        
 
         if (t.value === 'const') this.consume();
 
@@ -260,50 +260,21 @@ export class RecursiveDescentCParser {
         }
         this.consume('}');
 
-        let elseNode: BaseNode | null = null;
-        const defaultCase = cases.find(c => c.test === null);
-        const normalCases = cases.filter(c => c.test !== null);
+        const caseNodes: BaseNode[] = cases.map((c) => ({
+            nodeType: 'CaseClause',
+            id: this.genId(),
+            attributes: { isDefault: c.test === null },
+            children: c.test !== null ? [c.test, ...c.body] : [...c.body],
+            metadata: { line },
+        }));
 
-        if (defaultCase && defaultCase.body.length > 0) {
-            elseNode = {
-                nodeType: 'Block',
-                id: this.genId(),
-                attributes: {},
-                children: defaultCase.body,
-                metadata: { line },
-            };
-        }
-
-        let result: BaseNode | null = elseNode;
-        for (let i = normalCases.length - 1; i >= 0; i--) {
-            const c = normalCases[i];
-            const condition: BaseNode = {
-                nodeType: 'BinaryExpression',
-                id: this.genId(),
-                attributes: { operator: '==' },
-                children: [discriminant, c.test!],
-                metadata: { line },
-            };
-            const thenBlock: BaseNode = {
-                nodeType: 'Block',
-                id: this.genId(),
-                attributes: {},
-                children: c.body,
-                metadata: { line },
-            };
-            const children: BaseNode[] = [condition, thenBlock];
-            if (result) children.push(result);
-            result = {
-                nodeType: 'IfStatement',
-                id: this.genId(),
-                attributes: {},
-                children,
-                metadata: { line },
-            };
-        }
-
-        if (!result) return { nodeType: 'Block', id: this.genId(), attributes: {}, children: [], metadata: { line } };
-        return result;
+        return {
+            nodeType: 'SwitchStatement',
+            id: this.genId(),
+            attributes: { caseCount: cases.length },
+            children: [discriminant, ...caseNodes],
+            metadata: { line },
+        };
     }
 
     private parseIf(): BaseNode {

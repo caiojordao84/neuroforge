@@ -48,6 +48,7 @@ async function parseToProgramNode(source: string, language: Language): Promise<P
 
 export function astToASL(program: ProgramNode, language?: Language): ASLProgram {
   const ctx = createTransformContext(language);
+  ctx.transformBlock = transformBlock;
   const structs: ASLStructDef[] = [];
   const globals: ASLGlobalVar[] = [];
   const functions: ASLFunction[] = [];

@@ -107,6 +107,7 @@ export type ASLStatement =
   | ASLPrint
   | ASLBreak
   | ASLContinue
+  | ASLSwitch
   | ASLComment;
 
 /**
@@ -295,6 +296,25 @@ export interface ASLBreak {
  */
 export interface ASLContinue {
   kind: 'continue';
+}
+
+/**
+ * Caso individual de switch/case.
+ * test === null → cláusula 'default'
+ */
+export interface ASLSwitchCase {
+  test: ASLExpr | null;
+  body: ASLStatement[];
+}
+
+/**
+ * Switch/case nativo ASL.
+ * Preserva semântica de fall-through do C.
+ */
+export interface ASLSwitch {
+  kind: 'switch';
+  discriminant: ASLExpr;
+  cases: ASLSwitchCase[];
 }
 
 /**

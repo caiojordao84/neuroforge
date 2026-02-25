@@ -190,9 +190,11 @@ async function executeStatements(
           try {
             await executeStatements(s.body, localEnv, ctx);
           } catch (e) {
-            if (e instanceof BreakSignal) { broken = true; }
-            else if (e instanceof ContinueSignal) { /* fall through to update */ }
-            else throw e;
+            if (e instanceof BreakSignal) {
+              broken = true;
+            } else if (e instanceof ContinueSignal) {
+              /* fall through to update */
+            } else throw e;
           }
           if (broken) break;
           // Update always runs (even on continue), matching C/C++ for-loop semantics
@@ -202,6 +204,45 @@ async function executeStatements(
             await new Promise((r) => setTimeout(r, 0));
           }
         }
+        break;
+      }
+
+      case 'switch': {
+        const discVal = await evalExpr(s.discriminant, localEnv, ctx);
+        let matched = false;
+        let defaultIdx = -1;
+
+        try {
+          for (let i = 0; i < s.cases.length; i++) {
+            const c = s.cases[i];
+
+            if (c.test === null) {
+              defaultIdx = i;
+              continue; // não executar default agora; só se nenhum case casar
+            }
+
+            if (!matched) {
+              const testVal = await evalExpr(c.test, localEnv, ctx);
+              if (discVal == testVal) matched = true; // == para semântica C (int/enum)
+            }
+
+            if (matched) {
+              await executeStatements(c.body, localEnv, ctx);
+              // fall-through: não sair — continuar para case seguinte
+            }
+          }
+
+          // Se nenhum case casou, executar default e subsequentes (fall-through do default)
+          if (!matched && defaultIdx >= 0) {
+            for (let i = defaultIdx; i < s.cases.length; i++) {
+              await executeStatements(s.cases[i].body, localEnv, ctx);
+            }
+          }
+        } catch (e) {
+          if (!(e instanceof BreakSignal)) throw e;
+          // BreakSignal consumido aqui — NÃO propaga para loops externos
+        }
+
         break;
       }
 
