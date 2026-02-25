@@ -8,13 +8,14 @@ import type {
   ASLGlobalVar,
   ASLFunction,
   ASLTask,
+  ASLStructDef,
 } from './ASLTypes';
 import { RecursiveDescentCParser } from './plugins/c/CParser';
 import { PythonParser } from './plugins/python/PythonParser';
 import { createTransformContext, type TransformContext } from './transforms/context';
 import { transformBlock } from './transforms/blockTransform';
 import { mapToASLType } from './helpers/typeUtils';
-import { buildEmptyArray, deepCopyValue } from './helpers/arrayUtils';
+import { buildEmptyArray, deepCopyValue, resolveSize } from './helpers/arrayUtils';
 import { transformExpr } from './transforms/exprTransform';
 
 export async function codeToASL(source: string, language: Language): Promise<ASLProgram> {
@@ -47,6 +48,7 @@ async function parseToProgramNode(source: string, language: Language): Promise<P
 
 export function astToASL(program: ProgramNode, language?: Language): ASLProgram {
   const ctx = createTransformContext(language);
+  const structs: ASLStructDef[] = [];
   const globals: ASLGlobalVar[] = [];
   const functions: ASLFunction[] = [];
   const tasks: ASLTask[] = [];
@@ -56,6 +58,31 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
 
   program.children.forEach((node) => {
     if (!node) return;
+
+    if (node.nodeType === 'StructDeclaration') {
+      const def: ASLStructDef = {
+        name: node.attributes.name,
+        fields: node.attributes.fields || [],
+      };
+      structs.push(def);
+      ctx.structDefs = ctx.structDefs ?? {};
+      ctx.structDefs[def.name] = def;
+
+      if (node.attributes.inlineInstance) {
+        const instName = node.attributes.inlineInstance as string;
+        const zeroObj: Record<string, any> = {};
+        def.fields.forEach((f) => { zeroObj[f.name] = 0; });
+        const initVal = deepCopyValue(zeroObj);
+        globals.push({
+          name: instName,
+          type: 'struct',
+          initialValue: initVal,
+          structType: def.name,
+        });
+        ctx.globalsMap.set(instName, initVal);
+      }
+      return;
+    }
 
     if (node.nodeType === 'EnumDeclaration') {
       const members = node.attributes.members || [];
@@ -91,9 +118,13 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
         });
       }
     } else {
+      if (node.nodeType === 'VariableDeclaration') {
+        if (node.attributes.isExtern) return;
+      }
       topLevelNodes.push(node);
 
       if (node.nodeType === 'VariableDeclaration') {
+
         const name = node.attributes.name;
         const type = mapToASLType(node.attributes.type || 'int');
         const isArray = node.attributes.isArray;
@@ -103,23 +134,66 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
         const valNode = node.children[0];
         if (valNode) {
           if (valNode.nodeType === 'ArrayInitializer') {
-            if (isArray2D && valNode.attributes.isArray2D) {
-              initialValue = valNode.children.map((rowNode) => {
-                if (rowNode.nodeType === 'ArrayInitializer' && rowNode.attributes.isRow) {
-                  return rowNode.children.map((c) => {
-                    const e = transformExpr(c);
-                    return e.kind === 'literal' ? e.value : 0;
+            const structType = node.attributes.structType;
+            const structDef = structType ? ctx.structDefs?.[structType] : null;
+
+            if (structDef && !isArray) {
+              // Map array initializer to struct fields
+              const obj: Record<string, any> = {};
+              structDef.fields.forEach((f, i) => {
+                const c = valNode.children[i];
+                if (c) {
+                  const e = transformExpr(c);
+                  obj[f.name] = e.kind === 'literal' ? e.value : 0;
+                } else {
+                  obj[f.name] = 0;
+                }
+              });
+              initialValue = obj;
+            } else if (isArray2D && valNode.attributes.isArray2D) {
+              const rows = resolveSize(node.attributes.arraySizeExpr, ctx.globalsMap) || valNode.children.length;
+              const cols = resolveSize(node.attributes.arraySize2Expr, ctx.globalsMap) || 0;
+
+              initialValue = Array(rows).fill(null).map((_, i) => {
+                const rowNode = valNode.children[i];
+                const row = Array(cols).fill(0);
+                if (rowNode && rowNode.nodeType === 'ArrayInitializer' && rowNode.attributes.isRow) {
+                  rowNode.children.forEach((c, j) => {
+                    if (j < cols) {
+                      const e = transformExpr(c);
+                      row[j] = e.kind === 'literal' ? e.value : 0;
+                    }
                   });
                 }
-                const e = transformExpr(rowNode);
-                return e.kind === 'literal' ? e.value : 0;
+                return row;
+              });
+            } else if (structDef && isArray) {
+              // Array of structs: map each row to an object with field names
+              const size = resolveSize(node.attributes.arraySizeExpr, ctx.globalsMap) || valNode.children.length;
+              initialValue = Array(size).fill(null).map((_, i) => {
+                const obj: Record<string, any> = {};
+                structDef.fields.forEach(f => { obj[f.name] = 0; });
+                const rowNode = valNode.children[i];
+                if (rowNode && rowNode.nodeType === 'ArrayInitializer') {
+                  rowNode.children.forEach((c, j) => {
+                    if (j < structDef.fields.length) {
+                      const e = transformExpr(c);
+                      obj[structDef.fields[j].name] = e.kind === 'literal' ? e.value : 0;
+                    }
+                  });
+                }
+                return obj;
               });
             } else {
-              initialValue = valNode.children.map((c) => {
-                const e = transformExpr(c);
-                if (e.kind === 'literal') return e.value;
-                return 0;
+              const size = resolveSize(node.attributes.arraySizeExpr, ctx.globalsMap) || valNode.children.length;
+              const arr = Array(size).fill(0);
+              valNode.children.forEach((c, i) => {
+                if (i < size) {
+                  const e = transformExpr(c);
+                  arr[i] = e.kind === 'literal' ? e.value : 0;
+                }
               });
+              initialValue = arr;
             }
           } else if (valNode.nodeType === 'Literal') {
             if (isArray) {
@@ -146,7 +220,9 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
           name,
           type: type as any,
           initialValue: safeInitialValue,
+          structType: node.attributes.structType,
           comments: node.leadingComments,
+          ...(node.attributes.isPointerArray ? { isPointerArray: true } : {}),
         } as any);
 
         ctx.globalsMap.set(name, safeInitialValue);
@@ -187,6 +263,7 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
 
   return {
     metadata: { name: 'AST Generated' },
+    structs,
     globals,
     functions,
     tasks,

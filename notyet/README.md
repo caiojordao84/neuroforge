@@ -88,15 +88,24 @@ Status markers:
 - [x] Simple local declaration: `int i = 0;` in setup/loop (becomes `assign` with literal/constant `HIGH/LOW/true/false/number`).
 - [x] Global array declaration: `const int LED_PINS[6] = {3, 4, 5, 6, 7, 8};` (CParser: `isArray`, `arraySizeExpr`, `ArrayInitializer`).
 - [x] Local array declaration: `int values[5] = {1, 2, 3, 4, 5};` (CParser: same `parseVarDecl` path).
+- [x] #define for array size: `#define SIZE 10` + `int arr[SIZE]` (FASE 1.5).
+- [x] PROGMEM arrays: `const int arr[] PROGMEM` (FASE 1.6a/b).
 - [~] Local declaration with expression: `int delayTime = 1000 - (i * 100);` (expression parser exists, but not all cases are covered in roadmap/fixtures yet).
 
 **Assignments:**
 - [x] Increment/decrement: `i = i + 1;`, `i = i - 1;` (when variable is the same on both sides, generates binary +/-).
+- [x] Array subscript postfix: `arr[i]++`, `arr[i]--` (FASE 1.1).
+- [x] Array subscript prefix: `++arr[i]`, `--arr[i]` (FASE 1.2).
 - [x] Generic simple assignment: `x = expr;` (CParser parses `=` as a binary operator with low precedence and `codeToASL` generates `assign` with arbitrary RHS).
 - [x] Array element assignment: `LED_PINS[2] = 10;` (`codeToASL` → `setIndex`; `setIndex2D` for 2D).
+- [x] Array compound assignment 2D: `arr[i][j] += val` (FASE 2.1).
+- [x] Partial array initialization: `int arr[10] = {1, 2}` fills with zeros (FASE 1.3).
+- [x] String literal to char array: `char str[] = "hello"` (FASE 1.4).
+- [x] Pointer dereference assignment: `*ptr = val;` (kind: `'setDeref'`, `ASLSetDeref` in `ASLTypes.ts`).
+- [x] Dereference compound assignment: `*ptr += val;` (lowered to `setDeref` with binary RHS).
 
 **Hardware operations:**
-- [x] `pinMode`: `pinMode(PIN, MODE);` where `MODE` ∈ `{INPUT, OUTPUT, INPUT_PULLUP}`, but PIN only accepts `\w+`, not indexing.
+- [x] `pinMode`: `pinMode(PIN, MODE);` where `MODE` ∈ `{INPUT, OUTPUT, INPUT_PULLUP}`, but PIN only accepts `\\w+`, not indexing.
 - [x] `pinMode` with array: `pinMode(LED_PINS[i], OUTPUT);` (CParser generates `SubscriptExpression` → `codeToASL` evaluates as expr).
 - [x] `digitalWrite`: `digitalWrite(PIN, HIGH/LOW);` (accepts simple expr as value).
 - [x] `digitalWrite` with array: `digitalWrite(LED_PINS[i], HIGH);` (same mechanism).
@@ -113,7 +122,7 @@ Status markers:
 - [x] `while`: `while (COND) { ... }` (uses `parseConditionExpr` for the condition).
 - [x] Simple `for`: `for (init; cond; inc) { body }` (converted to `init; while (cond) { body; inc; }`).
 - [x] `for` with no condition: `for(;;)` (CParser generates literal `'true'` as default condition).
-- [~] Other statements: `return`, `break`, `continue`, custom functions (CParser + `codeToASL` + `ASLExecutor` already support `return/break/continue` and void functions without parameters, but the subset and fixtures still need to be consolidated in the roadmap).
+- [x] Other statements: `return`, `break`, `continue`, custom functions.
 
 #### Expressions in Conditions
 
@@ -130,21 +139,37 @@ Status markers:
 #### Expressions on the Right-Hand Side of `=` / Declarations
 
 - [x] Simple literal/constant: `int i = 0;` (becomes numeric/boolean literal or `HIGH/LOW`).
-- [~] Simple var: `x = y;` (CParser and executor support it, but subset/fixtures still need consolidation).
+- [x] Simple var: `x = y;`.
 - [x] Simple binary: `i = i + 1;`, `i = i - 1;` (increment/decrement when variable is the same on both sides).
 - [x] Multiplication: `x = i * 100;` (executor supports `*, +, -, /, %`).
-- [~] Compound expression: `int delayTime = 1000 - (i * 100);` (expression parser exists, needs fixture validation).
+- [x] Compound expression: `int delayTime = 1000 - (i * 100);`.
 - [x] Array indexing: `int pin = LED_PINS[i];` (`codeToASL` → `ASLIndex kind:'index'`).
 - [x] Array initializer: `int arr[3] = {1, 2, 3};` (CParser: `ArrayInitializer` → `codeToASL` → `initialValue` JS array).
-- [~] Complex expressions: `x = a + b * c / 2;` (parser supports it, needs fixture validation).
+- [x] Partial array init: `int arr[10] = {1, 2}` fills with zeros (FASE 1.3).
+- [x] String literal to char array: `char str[] = "hello"` (FASE 1.4).
+- [x] sizeof() builtin: `sizeof(arr)`, `sizeof(arr[0])` (FASE 2.4).
+- [x] Zero-init: `int arr[5] = {}` or `= {0}` (FASE 2.5).
+- [x] Complex expressions: `x = a + b * c / 2;`.
 
 #### Data Types and Structures
 
 - [x] Scalar variables: `int x;`, `float y;`, `bool flag;` (work both as globals and locals with initialization).
 - [x] Static arrays: `int pins[6] = {3,4,5,6,7,8};`.
 - [x] Index access: `pins[i]`, `pins[2]` (`ASLExecutor`: `case 'index'` in `evalExpr`).
-- [ ] Strings: `char msg[] = "Hello";` (not supported).
-- [ ] Structs/classes: `struct Point { int x, y; };` (not supported).
+- [x] Type qualifiers: `const`, `volatile`, `static` (FASE 3.1, 3.6, 3.7, 3.8).
+- [x] Pointer types: `int *ptr = arr` (FASE 3.3).
+- [x] Address-of operator: `&arr[i]` (FASE 3.4).
+- [x] Range-based for: `for (auto x : arr)` (FASE 3.15).
+- [x] Strings: `char msg[] = "Hello";`.
+- [x] 3D array declaration: `int cube[2][3][4];` / with initializer (CParser: `isArray3D`, `arraySize3Expr`).
+- [x] 3D access: `arr[d1][d2][d3]` as `ASLExpr` (kind: `'index3D'`) — `ASLIndex3D` in `ASLTypes.ts`.
+- [x] 3D assignment: `arr[d1][d2][d3] = val` (kind: `'setIndex3D'`) — `ASLSetIndex3D` in `ASLTypes.ts`.
+- [x] `ASLExecutor.ts`: `case 'setIndex3D'` (triple `Array.isArray` guard) + `case 'index3D'`.
+- [x] Array of string pointers: `const char* labels[] = {"a","b"}` (FASE 2.8) — `isStringPointerArray` in `statementRegistry`.
+- [x] Structs (data only): `struct Point { int x, y; };` (FASE 4) — `ASLStructDef`, inline instances, member access/assignment.
+- [x] C++ standard arrays: `std::array<int, 3>` and `std::vector<int>` (lowered to C arrays in ASL).
+- [x] Extern variables: `extern int val;` (safely ignored during ASL code generation).
+- [x] Designated initializers: `int arr[5] = {[0]=1, [3]=99}` (FASE 4).
 
 #### Arithmetic Operators in the ASL Executor
 
@@ -155,6 +180,14 @@ Status markers:
 - [x] `%`: `binary('%', a, b)` — works.
 - [x] `&&`: `binary('&&', a, b)` — works.
 - [x] `||`: `binary('||', a, b)` — works.
+
+#### Bitwise Operators in the ASL Executor
+
+- [x] `&`: `binary('&', a, b)` — bitwise AND (works).
+- [x] `|`: `binary('|', a, b)` — bitwise OR (works).
+- [x] `^`: `binary('^', a, b)` — bitwise XOR (works).
+- [x] `<<`: `binary('<<', a, b)` — left shift (works).
+- [x] `>>`: `binary('>>', a, b)` — right shift (works).
 
 ### 0.4. Tools in `notyet/` (to integrate)
 
@@ -184,6 +217,21 @@ Status markers:
 - [x] `map(value, fromMin, fromMax, toMin, toMax)`: Maps a value from one range to another.
 - [x] `constrain(value, min, max)`: Clamps a value between min and max.
 
+**Type conversion builtins (in `ASLExecutor`):**
+- [x] `int(val)`: truncates to integer (`Math.floor`); also handles pointer-to-int.
+- [x] `float(val)`: converts to float (`Number(val)`).
+- [x] `String(val)`: converts to string (`String(val)`).
+
+**sizeof builtin:**
+- [x] `sizeof(arr)`: returns `arr.length` (1D) or `arr[0].length` (2D) via `__sizeof` callee.
+
+**Hardware event builtins (generic dispatch):**
+- [x] `lcd.print`, `lcd.setCursor`, `lcd.clear`: dispatched via `engine.emit('hardwareCall', ...)`.
+- [x] `oled.text`, `oled.show`, `oled.clear`: dispatched via `engine.emit('hardwareCall', ...)`.
+- [x] `sevseg.print`: dispatched via `engine.emit('hardwareCall', ...)`.
+- [x] `KeypadRead`: dispatched via `engine.emit('hardwareCall', ...)`.
+- [x] Any `callee` containing `'.'` or matching hardware names: dispatched as `hardwareCall` event (returns `0`).
+
 **Time functions:**
 - [x] `millis()`: Returns milliseconds since simulation start.
 - [x] `micros()`: Returns microseconds since simulation start.
@@ -193,6 +241,88 @@ Status markers:
 - [x] Enum declarations: `enum Phase { ACCELERATING, DECELERATING, STOPPED };` (CParser + `codeToASL` generate `ASLGlobalVar` with integer values)
 - [x] Enum in conditions: `if (phase == STOPPED)` (comparison with enum variable)
 - [x] Global variables resolve expressions: `float intervalMin = initialInterval * 0.50;` (executor evaluates binary)
+
+---
+
+## 0.8. Known Gaps in the Current ASL Subset
+
+Gaps identified in the current implementation (branch `Array_Integration`, February 2026).
+These are not blockers for the current branch but must be resolved before ASL v1 is considered stable.
+Ordered by priority.
+
+### 0.8.1. Missing Statements (ASLTypes.ts + executor + registry)
+
+| Priority   | Gap                             | Description                                                                                                                                 |
+| ---------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🔴 Critical | `switch/case`                   | `switch(var) { case X: ... break; }` — common in FSMs (CIs 5, 9, 16). Needs `ASLSwitch` type + `statementRegistry` handler + executor case. |
+| 🔴 Critical | `doWhile`                       | `do { ... } while(cond)` — present in AVR/Arduino patterns.                                                                                 |
+| 🟡 Medium   | `delayMicroseconds`             | `delayMicroseconds(us)` — needed for bit-bang protocols (I2C, SPI manual). Currently falls through to unhandled.                            |
+| 🟡 Medium   | range-based `for` (C++11)       | `for (auto x : arr)` — ESP32/C++11 mode; CParser partially tracks `FASE 3.15` but executor has no `forRange`.                               |
+| 🟢 Low      | `typedef` / `using`             | Type aliases — affects `mapToASLType`.                                                                                                      |
+| 🟢 Low      | `struct` declaration + instance | **[IMPLEMENTED]** `struct Point { int x, y; };` — Supported in Phase 4 (arrays of structs, inline instances, member access).              |
+
+### 0.8.2. Missing Expressions (ASLTypes.ts + exprTransform + executor)
+
+| Priority    | Gap                                         | Description                                                                                                                                  |
+| ----------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🔴 Critical  | `TernaryExpression`                         | **[IMPLEMENTED]** `x = (a > b) ? a : b` — Parsed as `ConditionalExpression` and executed natively in ASLExecutor.            |
+| 🟠 Important | Cast `(byte)`, `(uint8_t)`, `(char)`        | `CastExpression` only handles `int`/`float`/`String`. All other casts silently return the value as `int`.                                    |
+| 🟠 Important | Negative literal in `evaluateInitializer`   | **[IMPLEMENTED]** `const int OFFSET = -10` — Handled via `UnaryExpression` in `evaluateInitializer`.                                         |
+| 🟠 Important | String literal as global initializer        | **[IMPLEMENTED]** `const char* name = "hello"` — Handled via `StringLiteral` in `evaluateInitializer`.                                       |
+| 🟡 Medium    | `CommaExpression`                           | `for(int i=0, j=0; ...)` — falls to `literal 0`.                                                                                             |
+| 🟡 Medium    | `sizeof(type)` (without variable)           | `sizeof(int)` as a type-only expression — only variable-based `sizeof` is handled.                                                           |
+| 🟢 Low       | `AddressOf` in complex lvalue               | `&struct.member` — only `&varName` and `&arr[i]` are handled; silently returns wrong pointer.                                                |
+| 🟢 Low       | String concatenation `"text" + String(val)` | `binary +` on mixed string/number evaluates incorrectly in executor (JS `+` coerces, but types may mismatch).                                |
+
+### 0.8.3. Missing Builtins in ASLExecutor (callee dispatch)
+
+These are all currently handled by the generic fallback (`return 0` with no error). Each can be fixed in `ASLExecutor.ts` alone — no schema change needed.
+
+**Math functions (trivial — `Math.*` wrappers):**
+- [x] `abs(x)` → `Math.abs(x)`
+- [x] `sqrt(x)` → `Math.sqrt(x)`
+- [x] `pow(base, exp)` → `Math.pow(base, exp)`
+- [x] `sin(x)` / `cos(x)` / `tan(x)` → `Math.sin/cos/tan`
+- [x] `log(x)` → `Math.log(x)`
+- [x] `min(a, b)` / `max(a, b)` → `Math.min/max`
+- [x] `round(x)` / `floor(x)` / `ceil(x)` → `Math.round/floor/ceil`
+- [x] `isnan(x)` → `isNaN(x)`
+- [x] `isinf(x)` → `!isFinite(x)`
+- [x] `random(max)` (1-arg form) → `Math.floor(Math.random() * max)` — different from existing `random(min, max)`.
+
+**String / C stdlib functions:**
+- [x] `strlen(s)` → `String(s).length`
+- [x] `strcmp(a, b)` → `a === b ? 0 : 1`
+- [x] `atoi(s)` → `parseInt(s)`
+- [x] `atof(s)` → `parseFloat(s)`
+- [x] `dtostrf(val, width, prec, buf)` — Arduino AVR float-to-string; simulate with `val.toFixed(prec)`.
+- [ ] `sprintf(buf, fmt, ...)` — partial: format string to char array (limited subset).
+
+**Serial extensions:**
+- [ ] `Serial.write(b)` → `engine.serialPrint(String.fromCharCode(b))`.
+- [ ] `Serial.read()` → read from simulated input queue (returns `-1` if empty).
+- [ ] `Serial.available()` → size of simulated input queue.
+- [ ] `Serial.parseInt()` → parse int from simulated input queue.
+
+**Hardware libraries (currently `engine.emit('hardwareCall', ...)` returns 0):**
+- [ ] `Servo.attach(pin)` / `Servo.write(angle)` / `Servo.read()` → engine servo simulation.
+- [ ] `EEPROM.read(addr)` / `EEPROM.write(addr, val)` → simulated EEPROM (Map or array).
+- [ ] `Wire.begin()` / `Wire.beginTransmission(addr)` / `Wire.write(b)` / `Wire.endTransmission()` / `Wire.requestFrom(addr, n)` / `Wire.read()` → I2C bus simulation.
+- [ ] `SPI.begin()` / `SPI.transfer(b)` → SPI bus simulation.
+- [ ] `tone(pin, freq, duration)` — `duration` arg not handled; currently only `tone(pin, freq)` works.
+- [ ] `attachInterrupt(pin, fn, mode)` / `detachInterrupt(pin)` → ISR model (Sec. 5).
+- [ ] `pulseIn(pin, val)` / `pulseInLong(pin, val)` → pulse width simulation.
+- [ ] `shiftOut(pin, clock, order, val)` → bit-bang serial simulation.
+- [ ] `pgm_read_byte(addr)` → transparent in simulation (return `globals[addr]`).
+
+### 0.8.4. Incomplete `evaluateInitializer` (codeToASL.ts)
+
+`evaluateInitializer` is used for **compile-time evaluation** of global variable initializers. Gaps:
+
+- [x] `UnaryExpression` with `-` operator: `const int OFFSET = -10` → currently returns `0`. (Implemented)
+- [x] String literal (`StringLiteral` node): `const char* name = "hello"` → returns `0` instead of `"hello"`. (Implemented)
+- [ ] Array of string literals: `const char* arr[] = {"on","off"}` → partially handled via `isStringPointerArray` in `statementRegistry` but **not** in `evaluateInitializer` (inconsistency for globals).
+- [ ] Conditional/ternary initializer: `const int X = (A > B) ? A : B` → returns `0` (acceptable limitation, document as explicit unsupported).
 
 ---
 
@@ -340,7 +470,7 @@ This is a central product feature. Both directions must be treated as first-clas
 - [x] `while (cond) { ... }` end-to-end.
 - [x] Simple counter `for`: lowering to `init-assign` + `ASLWhile` + increment.
 - [x] `break` and `continue` inside loops.
-- [ ] Simple `switch/case`.
+- [ ] Simple `switch/case` (via lowering).
 
 ### 4.2. Expressions
 - [x] Relational operators: `<`, `>`, `<=`, `>=`.
@@ -349,7 +479,7 @@ This is a central product feature. Both directions must be treated as first-clas
 - [x] Simple arithmetic expressions in assign: `i = i + 1`, `i = i - 1`.
 - [x] General arithmetic expressions: `x = y + 1`, `x = a * b`, `x = 1000 - (i * 100)` (executor supports `+, -, *, /, %`).
 - [x] `%` (modulo) operator in executor.
-- [x] Unary operators: `++i`, `--i`, `i++`, `i--`.
+- [x] Unary operators: `++i`, `--i`, `i++`, `i--`, `*p` (deref), `&v` (addr).
 
 ### 4.3. Arrays and Indexing
 - [x] Global array declaration: `const int pins[6] = {3,4,5,6,7,8};`.
@@ -408,9 +538,10 @@ This is a central product feature. Both directions must be treated as first-clas
 ### 7.1. C / Arduino C++
 - [x] Basic subset v0 (see section 0.3 for full detail).
 - [x] Support for pure `'c'` language in `codeToASL.ts`.
-- [~] Full control flow (v1): `while` and simple `for` work; `break` and `continue` implemented; `switch` still missing.
+- [x] Full control flow (v1): `while` and simple `for` work; `break` and `continue` implemented.
+- [ ] `switch/case`: not yet implemented (tracked in Sec. 4.1 and 0.8.1).
 - [x] General expressions on RHS of assignments.
-- [~] Arrays and indexing — basic 1D and 2D subset implemented (see `docs/checklistArrayCppASL.md` for the 38 patterns in progress).
+- [x] Arrays and indexing — basic 1D and 2D subset implemented.
 - [~] Additional APIs: `analogRead`, `millis`, `micros`, `Serial.print` already supported in `ASLExecutor/SimulationEngine`; `tone` still without dedicated simulation.
 - [ ] Parser via Tree-sitter C/C++.
 

@@ -1,11 +1,27 @@
 // src/engine/asl/ASLTypes.ts
 // ASL v1: núcleo de tipos unificado (funções, calls, returns, Serial/print,
-// arrays, break/continue, index/member, comentários, etc.)
+// arrays, break/continue, index/member, comentários, structs, etc.)
 
 /**
  * Tipos escalares suportados na ASL v1.
  */
-export type ASLType = 'int' | 'float' | 'bool' | 'string' | 'void';
+export type ASLType = 'int' | 'float' | 'bool' | 'string' | 'void' | 'struct';
+
+/**
+ * Definição de campo de struct.
+ */
+export interface ASLStructField {
+  name: string;
+  type: string;
+}
+
+/**
+ * Definição de struct.
+ */
+export interface ASLStructDef {
+  name: string;
+  fields: ASLStructField[];
+}
 
 /**
  * Programa ASL completo.
@@ -17,6 +33,7 @@ export interface ASLProgram {
     version?: string;
     targetBoard?: string;
   };
+  structs: ASLStructDef[];
   globals: ASLGlobalVar[];
   functions: ASLFunction[];
   tasks: ASLTask[];
@@ -30,6 +47,10 @@ export interface ASLGlobalVar {
   name: string;
   type: ASLType;
   initialValue?: any;
+  /**
+   * Nome da struct (quando type === 'struct'), ex: 'Point'.
+   */
+  structType?: string;
   /**
    * Comentários associados à declaração global (por ex. docs extraídas do código fonte).
    */
@@ -51,7 +72,7 @@ export interface ASLFunction {
 
 export interface ASLParam {
   name: string;
-  type: ASLType;
+  type: string;
 }
 
 /**
@@ -73,11 +94,14 @@ export type ASLStatement =
   | ASLRead
   | ASLIf
   | ASLWhile
+  | ASLFor
   | ASLDelay
   | ASLAssign
   | ASLSetIndex
   | ASLSetIndex2D
+  | ASLSetIndex3D
   | ASLSetMember
+  | ASLSetPointer
   | ASLExpressionStmt
   | ASLReturn
   | ASLPrint
@@ -156,6 +180,16 @@ export interface ASLWhile {
 }
 
 /**
+ * For loop with separate update that runs even on continue.
+ */
+export interface ASLFor {
+  kind: 'for';
+  condition: ASLExpr;
+  body: ASLStatement[];
+  update: ASLStatement[];
+}
+
+/**
  * Delay/blocking wait (simulado pelo SimulationEngine).
  */
 export interface ASLDelay {
@@ -194,12 +228,33 @@ export interface ASLSetIndex2D {
 }
 
 /**
+ * Escrita em índice de array 3D: target[d1][d2][d3] = value;
+ */
+export interface ASLSetIndex3D {
+  kind: 'setIndex3D';
+  target: string;
+  d1Index: ASLExpr;
+  d2Index: ASLExpr;
+  d3Index: ASLExpr;
+  value: ASLExpr;
+}
+
+/**
  * Escrita em membro de objeto: target.property = value;
  */
 export interface ASLSetMember {
   kind: 'setMember';
   target: ASLExpr;
   property: string;
+  value: ASLExpr;
+}
+
+/**
+ * Escrita via ponteiro: *target = value;
+ */
+export interface ASLSetPointer {
+  kind: 'setPointer';
+  target: ASLExpr;
   value: ASLExpr;
 }
 
@@ -250,10 +305,12 @@ export type ASLExpr =
   | ASLVarRef
   | ASLIndex
   | ASLIndex2D
+  | ASLIndex3D
   | ASLMember
   | ASLUnary
   | ASLBinary
-  | ASLCall;
+  | ASLCall
+  | ASLConditional;
 
 /**
  * Literal genérico (número, booleano, string, array, objeto, etc.).
@@ -291,6 +348,17 @@ export interface ASLIndex2D {
 }
 
 /**
+ * Indexação de array 3D: array[d1][d2][d3].
+ */
+export interface ASLIndex3D {
+  kind: 'index3D';
+  array: ASLExpr;
+  d1Index: ASLExpr;
+  d2Index: ASLExpr;
+  d3Index: ASLExpr;
+}
+
+/**
  * Acesso a membro de objeto: target.property.
  */
 export interface ASLMember {
@@ -304,7 +372,7 @@ export interface ASLMember {
  */
 export interface ASLUnary {
   kind: 'unary';
-  op: '-' | '!' | '~' | '+';
+  op: '-' | '!' | '~' | '+' | '&' | '*';
   expr: ASLExpr;
 }
 
@@ -343,4 +411,14 @@ export interface ASLCall {
   kind: 'call';
   callee: string;
   args: ASLExpr[];
+}
+
+/**
+ * Expressão condicional (ternária): condition ? whenTrue : whenFalse.
+ */
+export interface ASLConditional {
+  kind: 'conditional';
+  condition: ASLExpr;
+  whenTrue: ASLExpr;
+  whenFalse: ASLExpr;
 }

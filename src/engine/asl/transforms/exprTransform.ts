@@ -75,6 +75,17 @@ export function transformExpr(node: BaseNode | undefined): ASLExpr {
     const arrayNode = node.children[0];
     const indexNode = node.children[1];
     if (arrayNode.nodeType === 'SubscriptExpression') {
+      const innerArray = arrayNode.children[0];
+      const innerIndex = arrayNode.children[1];
+      if (innerArray.nodeType === 'SubscriptExpression') {
+        return {
+          kind: 'index3D',
+          array: transformExpr(innerArray.children[0]),
+          d1Index: transformExpr(innerArray.children[1]),
+          d2Index: transformExpr(innerIndex),
+          d3Index: transformExpr(indexNode),
+        } as ASLExpr;
+      }
       return {
         kind: 'index2D',
         array: transformExpr(arrayNode.children[0]),
@@ -94,6 +105,50 @@ export function transformExpr(node: BaseNode | undefined): ASLExpr {
       kind: 'member',
       target: transformExpr(node.children[0]),
       property: node.attributes.property,
+    } as ASLExpr;
+  }
+
+  if (node.nodeType === 'SizeofExpression') {
+    const child = node.children[0];
+
+    if (child) {
+      return {
+        kind: 'call',
+        callee: '__sizeof',
+        args: [transformExpr(child)],
+      } as ASLExpr;
+    }
+
+    return { kind: 'literal', value: 1 } as ASLExpr;
+  }
+
+  if (node.nodeType === 'ArrayInitializer') {
+    return {
+      kind: 'literal',
+      value: node.children.map(c => (transformExpr(c) as any).value ?? 0)
+    } as ASLExpr;
+  }
+
+  if (node.nodeType === 'CastExpression') {
+    const targetType = node.attributes.targetType as string;
+    const operand = transformExpr(node.children[0]);
+    let callee = 'int';
+    if (targetType === 'float' || targetType === 'double') callee = 'float';
+    if (targetType === 'String') callee = 'String';
+
+    return {
+      kind: 'call',
+      callee,
+      args: [operand],
+    } as ASLExpr;
+  }
+
+  if (node.nodeType === 'ConditionalExpression') {
+    return {
+      kind: 'conditional',
+      condition: transformExpr(node.children[0]),
+      whenTrue: transformExpr(node.children[1]),
+      whenFalse: transformExpr(node.children[2]),
     } as ASLExpr;
   }
 

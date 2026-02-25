@@ -9,10 +9,14 @@ export type NodeType =
     | 'SevSegPrint' | 'KeypadRead'
     | 'BinaryExpression' | 'UnaryExpression' | 'CallExpression' | 'MemberExpression' | 'SubscriptExpression' | 'ArrayInitializer'
     | 'Identifier' | 'Literal' | 'Empty'
-    | 'ExpressionStatement'
+    | 'ExpressionStatement' | 'DesignatedInitializer'
     // Optimization Nodes
     | 'HardwarePwm' | 'GpioBatch'
-    | 'EnumDeclaration';
+    | 'EnumDeclaration'
+    | 'StructDeclaration'
+    | 'SizeofExpression'
+    | 'CastExpression'
+    | 'ConditionalExpression';
 
 export interface BaseNode {
     nodeType: NodeType;
@@ -35,6 +39,7 @@ export interface Symbol {
     declaredLine: number;
     usageCount: number;
     value?: any;
+    isMacro?: boolean;
 }
 
 export interface AnalysisIssue {

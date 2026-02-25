@@ -1,7 +1,7 @@
 // src/engine/asl/ASLExecutor.ts
 // Executor assíncrono da ASL v1 sobre o SimulationEngine (modo fake).
 // Suporta: funções, chamadas, arrays/objetos, break/continue/return, print/log,
-// abortSignal para controle de loops e delays.
+// abortSignal para controle de loops e delays, structs, pointer arrays.
 
 import type { SimulationEngine } from '@/engine/SimulationEngine';
 import { simulationEngine } from '@/engine/SimulationEngine';
@@ -13,18 +13,10 @@ export interface ASLRuntime {
 }
 
 export interface ASLRuntimeOptions {
-  /**
-   * Permite injetar uma instância custom de SimulationEngine
-   * (útil para testes). Por padrão usa o singleton global.
-   */
   engine?: SimulationEngine;
-  /**
-   * Sinal opcional para abortar loops/delays longos.
-   */
   abortSignal?: AbortSignal;
 }
 
-// Sinais de controle internos
 class ReturnSignal {
   constructor(public value: any) { }
 }
@@ -39,7 +31,6 @@ export function createASLRuntime(
   const globalEnv = new Map<string, any>();
   const functionMap = new Map<string, ASLFunction>();
 
-  // 1. Inicializa globais com deep copy para arrays/objetos
   for (const g of program.globals) {
     const rawInitial =
       g.initialValue !== undefined ? g.initialValue : defaultValueForType(g.type);
@@ -50,13 +41,12 @@ export function createASLRuntime(
     globalEnv.set(g.name, initial);
   }
 
-  // 2. Indexa funções
   for (const f of program.functions) {
     functionMap.set(f.name, f);
   }
 
   const setupFuncDef = program.functions.find((f) => f.name === 'setup');
-  const mainTask = program.tasks[0]; // loop (ou mainLoop)
+  const mainTask = program.tasks[0];
 
   const runContext: RunContext = {
     engine,
@@ -94,7 +84,6 @@ interface RunContext {
   functions: Map<string, ASLFunction>;
   globals: Map<string, any>;
   abortSignal?: AbortSignal;
-  /** Buffer para Serial.print() sem newline — flush em Serial.println() */
   printBuffer: string;
 }
 
@@ -107,12 +96,13 @@ function defaultValueForType(type: string): any {
       return false;
     case 'string':
       return '';
+    case 'struct':
+      return {};
     default:
       return 0;
   }
 }
 
-// Executa um bloco de statements.
 async function executeStatements(
   stmts: ASLStatement[],
   localEnv: Map<string, any>,
@@ -192,6 +182,29 @@ async function executeStatements(
         break;
       }
 
+      case 'for': {
+        let cycles = 0;
+        while (await evalExpr(s.condition, localEnv, ctx)) {
+          if (ctx.abortSignal?.aborted) return;
+          let broken = false;
+          try {
+            await executeStatements(s.body, localEnv, ctx);
+          } catch (e) {
+            if (e instanceof BreakSignal) { broken = true; }
+            else if (e instanceof ContinueSignal) { /* fall through to update */ }
+            else throw e;
+          }
+          if (broken) break;
+          // Update always runs (even on continue), matching C/C++ for-loop semantics
+          await executeStatements(s.update, localEnv, ctx);
+          cycles++;
+          if (cycles % 10 === 0) {
+            await new Promise((r) => setTimeout(r, 0));
+          }
+        }
+        break;
+      }
+
       case 'delay': {
         const ms = await evalExpr(s.milliseconds, localEnv, ctx);
         const total = Math.max(0, Number(ms) || 0);
@@ -207,7 +220,10 @@ async function executeStatements(
 
       case 'assign': {
         const val = await evalExpr(s.value, localEnv, ctx);
-        setVar(s.target, val, localEnv, ctx.globals);
+        const safeVal = (val && typeof val === 'object')
+          ? JSON.parse(JSON.stringify(val))
+          : val;
+        setVar(s.target, safeVal, localEnv, ctx.globals);
         break;
       }
 
@@ -258,20 +274,25 @@ async function executeStatements(
         throw new ContinueSignal();
 
       case 'print': {
-        // Avalia argumentos (pode ser 0 para Serial.println() sem args)
         const parts: string[] = [];
         for (const a of s.args) {
           parts.push(String(await evalExpr(a, localEnv, ctx) ?? ''));
         }
         const msg = parts.join('');
-
         if (s.newline !== false) {
-          // println (ou print legado sem atributo) — flush do buffer
           ctx.engine.log(ctx.printBuffer + msg);
           ctx.printBuffer = '';
         } else {
-          // print sem newline — acumula no buffer
           ctx.printBuffer += msg;
+        }
+        break;
+      }
+
+      case 'setPointer': {
+        const ptrObj = await evalExpr(s.target, localEnv, ctx);
+        const val = await evalExpr(s.value, localEnv, ctx);
+        if (ptrObj && typeof ptrObj === 'object' && ptrObj.__isPtr) {
+          setVar(ptrObj.target, val, localEnv, ctx.globals);
         }
         break;
       }
@@ -279,7 +300,6 @@ async function executeStatements(
   }
 }
 
-// Helpers de ambiente
 function setVar(name: string, val: any, local: Map<string, any>, global: Map<string, any>) {
   if (local.has(name)) local.set(name, val);
   else global.set(name, val);
@@ -290,7 +310,6 @@ function getVar(name: string, local: Map<string, any>, global: Map<string, any>)
   return global.get(name);
 }
 
-// Avaliação de expressões
 async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): Promise<any> {
   switch (expr.kind) {
     case 'literal':
@@ -302,7 +321,9 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
     case 'index': {
       const arr = await evalExpr(expr.target, env, ctx);
       const idx = await evalExpr(expr.index, env, ctx);
-      if (Array.isArray(arr)) return arr[idx];
+      if (Array.isArray(arr)) {
+        return arr[idx];
+      }
       return 0;
     }
 
@@ -321,7 +342,22 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
     }
 
     case 'unary': {
+      if (expr.op === '&') {
+        const target = expr.expr;
+        if (target.kind === 'var') {
+          return { __isPtr: true, target: target.name };
+        }
+        // Fallback or complex & handled elsewhere
+        return 0;
+      }
+
       const v = await evalExpr(expr.expr, env, ctx);
+      if (expr.op === '*') {
+        if (v && typeof v === 'object' && v.__isPtr) {
+          return getVar(v.target, env, ctx.globals);
+        }
+        return 0;
+      }
       if (expr.op === '!') return !v;
       if (expr.op === '~') return ~v;
       if (expr.op === '+') return +v;
@@ -398,12 +434,8 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         const pin = await evalExpr(expr.args[0], env, ctx);
         return ctx.engine.analogRead(pin);
       }
-      if (expr.callee === 'millis') {
-        return ctx.engine.millis();
-      }
-      if (expr.callee === 'micros') {
-        return ctx.engine.micros();
-      }
+      if (expr.callee === 'millis') return ctx.engine.millis();
+      if (expr.callee === 'micros') return ctx.engine.micros();
       if (expr.callee === 'tone' || expr.callee === 'noTone' || expr.callee === 'servo') {
         const args = [];
         for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
@@ -423,12 +455,10 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         return ctx.engine.constrain(args[0], args[1], args[2]);
       }
 
-      // Conversores de tipo e utilitários padrão
       if (expr.callee === 'String') return String(await evalExpr(expr.args[0] || { kind: 'literal', value: '' }, env, ctx));
       if (expr.callee === 'int') return Math.floor(Number(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx)) || 0);
       if (expr.callee === 'float') return Number(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx)) || 0;
 
-      // Hardware / Library Calls (Event-based)
       if (expr.callee.includes('.') || expr.callee === 'KeypadRead') {
         const args = [];
         for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
@@ -436,13 +466,15 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         return 0;
       }
 
-      // Funções de usuário
       const funcDef = ctx.functions.get(expr.callee);
       if (funcDef) {
         const callEnv = new Map<string, any>();
         for (let i = 0; i < funcDef.params.length; i++) {
           const val = expr.args[i] ? await evalExpr(expr.args[i], env, ctx) : 0;
-          callEnv.set(funcDef.params[i].name, val);
+          const safeVal = (val && typeof val === 'object')
+            ? JSON.parse(JSON.stringify(val))
+            : val;
+          callEnv.set(funcDef.params[i].name, safeVal);
         }
         try {
           await executeStatements(funcDef.body, callEnv, ctx);
@@ -454,6 +486,11 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       }
 
       return 0;
+    }
+
+    case 'conditional': {
+      const cond = await evalExpr(expr.condition, env, ctx);
+      return cond ? evalExpr(expr.whenTrue, env, ctx) : evalExpr(expr.whenFalse, env, ctx);
     }
   }
 }

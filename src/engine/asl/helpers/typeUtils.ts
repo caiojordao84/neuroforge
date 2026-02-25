@@ -7,5 +7,6 @@ export function mapToASLType(cppType: string): ASLType {
   if (lower.includes('float') || lower === 'double') return 'float';
   if (lower === 'bool' || lower === 'boolean') return 'bool';
   if (lower === 'string') return 'string';
+  if (lower === 'struct') return 'struct';
   return 'int';
 }
