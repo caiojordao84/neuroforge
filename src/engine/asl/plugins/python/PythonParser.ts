@@ -486,6 +486,33 @@ class RegexPythonParser {
             } as BaseNode;
         }
 
+        // ── return expr ─────────────────────────────────────────────────────────
+        const returnM = trimmed.match(/^return\s*(.*)$/);
+        if (returnM) {
+            const val = returnM[1].trim();
+            const child = val ? this._parseExpr(val, lineNum) : null;
+            return {
+                nodeType: 'ReturnStatement', id: `ret-${lineNum}`, attributes: {}, children: child ? [child] : [],
+                metadata: meta
+            } as BaseNode;
+        }
+
+        // ── break ───────────────────────────────────────────────────────────────
+        if (trimmed === 'break') {
+            return {
+                nodeType: 'BreakStatement', id: `brk-${lineNum}`, attributes: {}, children: [],
+                metadata: meta
+            } as BaseNode;
+        }
+
+        // ── continue ────────────────────────────────────────────────────────────
+        if (trimmed === 'continue') {
+            return {
+                nodeType: 'ContinueStatement', id: `cont-${lineNum}`, attributes: {}, children: [],
+                metadata: meta
+            } as BaseNode;
+        }
+
         // ── Generic assignment: var = expr ───────────────────────────────────
         const assignM = trimmed.match(/^(\w+)\s*=\s*(.+)\s*$/);
         if (assignM && !assignM[1].match(/^(if|while|for|def|class|import|from|return|pass)$/)) {
@@ -629,6 +656,8 @@ class PythonCstToAst {
             case 'assignment': return this.visitAssignment(node);
             case 'augmented_assignment': return this.visitAssignment(node);
             case 'return_statement': return this.visitReturn(node);
+            case 'break_statement': return this.visitBreak(node);
+            case 'continue_statement': return this.visitContinue(node);
             case 'match_statement': return this.visitMatch(node);
             case 'list_comprehension': return this.visitListComprehension(node);
             case 'import_statement':
@@ -643,6 +672,20 @@ class PythonCstToAst {
         const val = node.child(1) ? this.visitExpr(node.child(1)) : null;
         return {
             nodeType: 'ReturnStatement', id: `ret-${node.id}`, attributes: {}, children: val ? [val] : [],
+            metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
+    visitBreak(node: any): BaseNode {
+        return {
+            nodeType: 'BreakStatement', id: `brk-${node.id}`, attributes: {}, children: [],
+            metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
+    visitContinue(node: any): BaseNode {
+        return {
+            nodeType: 'ContinueStatement', id: `cont-${node.id}`, attributes: {}, children: [],
             metadata: { line: node.startPosition.row + 1 }
         };
     }

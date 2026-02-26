@@ -171,6 +171,7 @@ export class RecursiveDescentCParser {
         if (t.value === 'while') return this.parseWhile();
         if (t.value === 'for') return this.parseFor();
         if (t.value === 'switch') return this.parseSwitch();
+        if (t.value === 'do') return this.parseDoWhile();
 
         if (t.value === 'break') {
             this.consume('break');
@@ -336,6 +337,24 @@ export class RecursiveDescentCParser {
             body = stmt ? [stmt] : [];
         }
         return { nodeType: 'WhileLoop', id: this.genId(), attributes: {}, children: [condition, ...body], metadata: { line } };
+    }
+
+    private parseDoWhile(): BaseNode {
+        const line = this.peek().line;
+        this.consume('do');
+        let body: BaseNode[];
+        if (this.peek().value === '{') {
+            body = this.parseBlock();
+        } else {
+            const stmt = this.parseStatement();
+            body = stmt ? [stmt] : [];
+        }
+        this.consume('while');
+        this.consume('(');
+        const condition = this.parseExpression(0);
+        this.consume(')');
+        this.consume(';');
+        return { nodeType: 'DoWhileLoop', id: this.genId(), attributes: {}, children: [condition, ...body], metadata: { line } };
     }
 
     private parseFor(): BaseNode {

@@ -23,6 +23,7 @@ export type StatementHandler = (node: BaseNode, ctx: TransformContext) => ASLSta
 export const statementRegistry: Record<string, StatementHandler> = {
   IfStatement: handleIfStatement,
   WhileLoop: handleWhileLoop,
+  DoWhileLoop: handleDoWhileLoop,
   ForLoop: handleForLoop,
   SwitchStatement: handleSwitchStatement,
   ReturnStatement: handleReturnStatement,
@@ -103,6 +104,17 @@ function handleWhileLoop(node: BaseNode, ctx: TransformContext): ASLStatement[] 
 
   return [{
     kind: 'while',
+    condition: transformExpr(node.children[0]),
+    body,
+  } as ASLStatement];
+}
+
+function handleDoWhileLoop(node: BaseNode, ctx: TransformContext): ASLStatement[] {
+  const bodyNodes = node.children.slice(1);
+  const body = ctx.transformBlock ? ctx.transformBlock(bodyNodes, ctx) : [];
+
+  return [{
+    kind: 'doWhile',
     condition: transformExpr(node.children[0]),
     body,
   } as ASLStatement];

@@ -64,6 +64,9 @@ class RustCstToAst {
             case 'while_expression': return this.visitWhile(node);
             case 'for_expression': return this.visitFor(node);
             case 'match_expression': return this.visitMatch(node);
+            case 'break_expression': return this.visitBreak(node);
+            case 'continue_expression': return this.visitContinue(node);
+            case 'return_expression': return this.visitReturn(node);
             case 'call_expression':
             case 'binary_expression':
             case 'assignment_expression':
@@ -295,6 +298,38 @@ class RustCstToAst {
             id: `sw-${node.id}`,
             attributes: {},
             children: [discriminant as BaseNode, ...cases],
+            metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
+    visitBreak(node: any): BaseNode {
+        return {
+            nodeType: 'BreakStatement',
+            id: `brk-${node.id}`,
+            attributes: {},
+            children: [],
+            metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
+    visitContinue(node: any): BaseNode {
+        return {
+            nodeType: 'ContinueStatement',
+            id: `cont-${node.id}`,
+            attributes: {},
+            children: [],
+            metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
+    visitReturn(node: any): BaseNode {
+        const valueNode = node.childForFieldName('value');
+        const val = valueNode ? this.visitExpr(valueNode) : null;
+        return {
+            nodeType: 'ReturnStatement',
+            id: `ret-${node.id}`,
+            attributes: {},
+            children: val ? [val] : [],
             metadata: { line: node.startPosition.row + 1 }
         };
     }

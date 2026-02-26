@@ -182,6 +182,25 @@ async function executeStatements(
         break;
       }
 
+      case 'doWhile': {
+        let cycles = 0;
+        do {
+          if (ctx.abortSignal?.aborted) return;
+          try {
+            await executeStatements(s.body, localEnv, ctx);
+          } catch (e) {
+            if (e instanceof BreakSignal) break;
+            if (e instanceof ContinueSignal) continue;
+            throw e;
+          }
+          cycles++;
+          if (cycles % 10 === 0) {
+            await new Promise((r) => setTimeout(r, 0));
+          }
+        } while (await evalExpr(s.condition, localEnv, ctx));
+        break;
+      }
+
       case 'for': {
         let cycles = 0;
         while (await evalExpr(s.condition, localEnv, ctx)) {
@@ -500,6 +519,64 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         const args = [];
         for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
         return ctx.engine.constrain(args[0], args[1], args[2]);
+      }
+
+      if (expr.callee === 'abs') {
+        const arg = await evalExpr(expr.args[0], env, ctx);
+        return Math.abs(arg);
+      }
+      if (expr.callee === 'sqrt') {
+        const arg = await evalExpr(expr.args[0], env, ctx);
+        return Math.sqrt(arg);
+      }
+      if (expr.callee === 'pow') {
+        const arg0 = await evalExpr(expr.args[0], env, ctx);
+        const arg1 = await evalExpr(expr.args[1], env, ctx);
+        return Math.pow(arg0, arg1);
+      }
+      if (expr.callee === 'sin') {
+        const arg = await evalExpr(expr.args[0], env, ctx);
+        return Math.sin(arg);
+      }
+      if (expr.callee === 'cos') {
+        const arg = await evalExpr(expr.args[0], env, ctx);
+        return Math.cos(arg);
+      }
+      if (expr.callee === 'tan') {
+        const arg = await evalExpr(expr.args[0], env, ctx);
+        return Math.tan(arg);
+      }
+      if (expr.callee === 'log') {
+        const arg = await evalExpr(expr.args[0], env, ctx);
+        return Math.log(arg);
+      }
+      if (expr.callee === 'min') {
+        const arg0 = await evalExpr(expr.args[0], env, ctx);
+        const arg1 = await evalExpr(expr.args[1], env, ctx);
+        return Math.min(arg0, arg1);
+      }
+      if (expr.callee === 'max') {
+        const arg0 = await evalExpr(expr.args[0], env, ctx);
+        const arg1 = await evalExpr(expr.args[1], env, ctx);
+        return Math.max(arg0, arg1);
+      }
+      if (expr.callee === 'round') {
+        const arg = await evalExpr(expr.args[0], env, ctx);
+        return Math.round(arg);
+      }
+      if (expr.callee === 'floor') {
+        const arg = await evalExpr(expr.args[0], env, ctx);
+        return Math.floor(arg);
+      }
+      if (expr.callee === 'ceil') {
+        const arg = await evalExpr(expr.args[0], env, ctx);
+        return Math.ceil(arg);
+      }
+
+      if (expr.callee === 'random') {
+        const min = expr.args[0] ? await evalExpr(expr.args[0], env, ctx) : 0;
+        const max = expr.args[1] ? await evalExpr(expr.args[1], env, ctx) : 100;
+        return Math.floor(Math.random() * (max - min)) + min;
       }
 
       if (expr.callee === 'String') return String(await evalExpr(expr.args[0] || { kind: 'literal', value: '' }, env, ctx));
