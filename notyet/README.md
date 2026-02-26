@@ -215,16 +215,28 @@ Status markers:
 
 **Mathematical and utility functions in `ASLExecutor`:**
 - [x] `random(min, max)`: Generates a random number between min and max.
+- [x] `random(max)`: Generates a random number between 0 and max-1.
 - [x] `map(value, fromMin, fromMax, toMin, toMax)`: Maps a value from one range to another.
 - [x] `constrain(value, min, max)`: Clamps a value between min and max.
+
+**Math functions NOT YET implemented (return 0):**
+- [ ] `abs(x)` → should use `Math.abs(x)`
+- [ ] `sqrt(x)` → should use `Math.sqrt(x)`
+- [ ] `pow(base, exp)` → should use `Math.pow(base, exp)`
+- [ ] `sin(x)` / `cos(x)` / `tan(x)` → should use `Math.sin/cos/tan`
+- [ ] `log(x)` → should use `Math.log(x)`
+- [ ] `min(a, b)` / `max(a, b)` → should use `Math.min/max`
+- [ ] `round(x)` / `floor(x)` / `ceil(x)` → should use `Math.round/floor/ceil`
+- [ ] `isnan(x)` → should use `isNaN(x)`
+- [ ] `isinf(x)` → should use `!isFinite(x)`
 
 **Type conversion builtins (in `ASLExecutor`):**
 - [x] `int(val)`: truncates to integer (`Math.floor`); also handles pointer-to-int.
 - [x] `float(val)`: converts to float (`Number(val)`).
 - [x] `String(val)`: converts to string (`String(val)`).
 
-**sizeof builtin:**
-- [x] `sizeof(arr)`: returns `arr.length` (1D) or `arr[0].length` (2D) via `__sizeof` callee.
+**sizeof builtin — NOT YET IMPLEMENTED:**
+- [ ] `sizeof(arr)`: should return `arr.length` (1D) or `arr[0].length` (2D) via `__sizeof` callee.
 
 **Hardware event builtins (generic dispatch):**
 - [x] `lcd.print`, `lcd.setCursor`, `lcd.clear`: dispatched via `engine.emit('hardwareCall', ...)`.
@@ -236,6 +248,10 @@ Status markers:
 **Time functions:**
 - [x] `millis()`: Returns milliseconds since simulation start.
 - [x] `micros()`: Returns microseconds since simulation start.
+
+**Tone/Buzzer (partial):**
+- [x] `tone(pin, freq)`: Generates tone at given frequency (duration not supported yet).
+- [x] `noTone(pin)`: Stops tone generation.
 
 ### 0.7. Additional Supported Structures
 
@@ -279,24 +295,24 @@ Ordered by priority.
 
 These are all currently handled by the generic fallback (`return 0` with no error). Each can be fixed in `ASLExecutor.ts` alone — no schema change needed.
 
-**Math functions (trivial — `Math.*` wrappers):**
-- [x] `abs(x)` → `Math.abs(x)`
-- [x] `sqrt(x)` → `Math.sqrt(x)`
-- [x] `pow(base, exp)` → `Math.pow(base, exp)`
-- [x] `sin(x)` / `cos(x)` / `tan(x)` → `Math.sin/cos/tan`
-- [x] `log(x)` → `Math.log(x)`
-- [x] `min(a, b)` / `max(a, b)` → `Math.min/max`
-- [x] `round(x)` / `floor(x)` / `ceil(x)` → `Math.round/floor/ceil`
-- [x] `isnan(x)` → `isNaN(x)`
-- [x] `isinf(x)` → `!isFinite(x)`
+**Math functions (trivial — `Math.*` wrappers) — NOT YET IMPLEMENTED:**
+- [ ] `abs(x)` → should use `Math.abs(x)`
+- [ ] `sqrt(x)` → should use `Math.sqrt(x)`
+- [ ] `pow(base, exp)` → should use `Math.pow(base, exp)`
+- [ ] `sin(x)` / `cos(x)` / `tan(x)` → should use `Math.sin/cos/tan`
+- [ ] `log(x)` → should use `Math.log(x)`
+- [ ] `min(a, b)` / `max(a, b)` → should use `Math.min/max`
+- [ ] `round(x)` / `floor(x)` / `ceil(x)` → should use `Math.round/floor/ceil`
+- [ ] `isnan(x)` → should use `isNaN(x)`
+- [ ] `isinf(x)` → should use `!isFinite(x)`
 - [x] `random(max)` (1-arg form) → `Math.floor(Math.random() * max)` — different from existing `random(min, max)`.
 
-**String / C stdlib functions:**
-- [x] `strlen(s)` → `String(s).length`
-- [x] `strcmp(a, b)` → `a === b ? 0 : 1`
-- [x] `atoi(s)` → `parseInt(s)`
-- [x] `atof(s)` → `parseFloat(s)`
-- [x] `dtostrf(val, width, prec, buf)` — Arduino AVR float-to-string; simulate with `val.toFixed(prec)`.
+**String / C stdlib functions — NOT YET IMPLEMENTED:**
+- [ ] `strlen(s)` → should use `String(s).length`
+- [ ] `strcmp(a, b)` → should use `a === b ? 0 : 1`
+- [ ] `atoi(s)` → should use `parseInt(s)`
+- [ ] `atof(s)` → should use `parseFloat(s)`
+- [ ] `dtostrf(val, width, prec, buf)` — Arduino AVR float-to-string; simulate with `val.toFixed(prec)`.
 - [ ] `sprintf(buf, fmt, ...)` — partial: format string to char array (limited subset).
 
 **Serial extensions:**

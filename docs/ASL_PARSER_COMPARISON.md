@@ -24,7 +24,7 @@
 | **Loop (infinito)**   | ✅ [x]     | ✅ `while(1)`    | ✅ `while_statement`  | ✅ `while True:`             | ✅ `loop_expression`  |
 | **SwitchStatement**   | ✅ [x]     | ✅               | ✅ `match_statement`  | ✅ `match/case`              | ✅ `match_expression` |
 | **CaseClause**        | ✅ [x]     | ✅               | ✅ `case_clause`      | ✅                           | ✅ `match_arm`        |
-| **BreakStatement**    | ✅ [x]     | ✅               | ❌                    | ⚠️ auto-add                  | ❌                    |
+| **BreakStatement**    | ✅ [x]     | ✅               | ✅                    | ⚠️ auto-add                  | ❌                    |
 | **ContinueStatement** | ✅ [x]     | ✅               | ❌                    | ❌                           | ❌                    |
 | **ReturnStatement**   | ✅ [x]     | ✅               | ✅ `return_statement` | ❌                           | ❌                    |
 | **DoWhile**           | ❌ [🔴]     | ❌               | ❌                    | ❌                           | ❌                    |
@@ -148,23 +148,25 @@
 
 ## 9. Gaps Identificados (README vs Implementação)
 
+> ⚠️ **IMPORTANTE**: Diversos Math Builtins (abs, sqrt, pow, sin, cos, tan, min, max, round, floor, ceil) estão listados no README.md como implementados ([x]), mas **NÃO estão implementados** no código atual do ASLExecutor. Eles retornam 0 por causa do fallback genérico.
+
 | Item                  | Status README  | Status Parser | Ação Necessária                                      |
 | --------------------- | -------------- | ------------- | ---------------------------------------------------- |
 | **DoWhile**           | ❌ [🔴 Critical] | ❌             | Implementar no CParser + ASLExecutor                 |
-| **delayMicroseconds** | ❌ [🟡 Medium]   | ❌             | Adicionar ao ASLExecutor                             |
-| **range-based for**   | ❌ [🟡 Medium]   | ❌             | Implementar no CParser                               |
-| **Serial.write/read** | ❌ [Planejado]  | ❌             | Implementar no ASLExecutor                           |
-| **Servo**             | ❌ [Planejado]  | ❌             | Implementar hardwareCall                             |
-| **EEPROM**            | ❌ [Planejado]  | ❌             | Implementar hardwareCall                             |
-| **Wire (I2C)**        | ❌ [Planejado]  | ❌             | Implementar hardwareCall                             |
-| **SPI**               | ❌ [Planejado]  | ❌             | Implementar hardwareCall                             |
-| **tone()**            | ❌ [Planejado]  | ❌             | Implementar no ASLExecutor                           |
-| **attachInterrupt**   | ❌ [Planejado]  | ❌             | Implementar modelo ISR                               |
-| **pulseIn**           | ❌ [Planejado]  | ❌             | Implementar                                          |
-| **shiftOut**          | ❌ [Planejado]  | ❌             | Implementar                                          |
-| **Math Builtins**     | 🔴 [Critical]   | ❌             | Implementar abs, sqrt, pow, sin, etc. no ASLExecutor |
-| **sizeof**            | 🟡 [Medium]     | ❌             | Adicionar suporte real no ASLExecutor                |
-| **String concat**     | ⚠️ [🟢 Low]      | ⚠️             | Corrigir no ASLExecutor                              |
+| **delayMicroseconds** | ✅ [x]         | ❌             | Adicionar ao ASLExecutor                             |
+| **Math Builtins**     | ✅ [x]         | ❌             | CRITICAL: Implementar abs, sqrt, pow, sin, cos, etc. |
+| **sizeof**            | ✅ [x]         | ❌             | Adicionar suporte no ASLExecutor                      |
+| **range-based for**   | ✅ [x]         | ❌             | Implementar no CParser                               |
+| **Serial.write/read** | ✅ [x]         | ❌             | Implementar no ASLExecutor                           |
+| **Servo**             | ✅ [x]         | ⚠️ parcial     | Implementar hardwareCall                             |
+| **EEPROM**            | ✅ [x]         | ❌             | Implementar hardwareCall                             |
+| **Wire (I2C)**        | ✅ [x]         | ❌             | Implementar hardwareCall                             |
+| **SPI**               | ✅ [x]         | ❌             | Implementar hardwareCall                             |
+| **tone()**            | ✅ [x]         | ⚠️ parcial     | Implementar duration arg                             |
+| **attachInterrupt**   | ✅ [x]         | ❌             | Implementar modelo ISR                              |
+| **pulseIn**           | ✅ [x]         | ❌             | Implementar                                         |
+| **shiftOut**          | ✅ [x]         | ❌             | Implementar                                         |
+| **String concat**     | ✅ [x]         | ⚠️             | Corrigir no ASLExecutor                             |
 
 ---
 
@@ -189,10 +191,10 @@
 - [ ] Implementar `sizeof` no `ASLExecutor`
 
 ### Python (Prioridade Alta)
-- [ ] Adicionar while loop no Regex parser
 - [ ] Adicionar return statement no Regex parser
-- [ ] Adicionar break/continue no Tree-sitter
-- [ ] Adicionar Switch/Case no Regex parser
+- [ ] Adicionar continue no Tree-sitter
+- [x] Adicionar while loop no Regex parser (while True:)
+- [x] Adicionar Switch/Case no Regex parser
 
 ### Rust (Prioridade Alta)
 - [ ] Adicionar break/continue
@@ -208,8 +210,18 @@
 
 ## 12. Arquivos Analisados
 
+### Parsers
 - `src/engine/asl/plugins/c/CParser.ts` (trata C e C++)
-- `src/engine/asl/plugins/python/PythonParser.ts`
+- `src/engine/asl/plugins/python/PythonParser.ts` (Tree-sitter + Regex fallback)
 - `src/engine/asl/plugins/rust/RustParser.ts`
+
+### Executors e Simulation
+- `src/engine/asl/ASLExecutor.ts`
+- `src/engine/SimulationEngine.ts`
+
+### Transformações
 - `src/engine/asl/codeToASL.ts`
+- `src/engine/asl/transforms/statementRegistry.ts`
+
+### Referência
 - `notyet/README.md`
