@@ -178,8 +178,12 @@ export class CGenerator {
             if (callee === 'servo') return `servo.write(${args})`;
             return `${callee}(${args})`;
         }
-        if (node.nodeType === 'GpioRead') return `digitalRead(${this.genExpr(node.children[0])})`;
         if (node.nodeType === 'AnalogRead') return `analogRead(${this.genExpr(node.children[0])})`;
+        if (node.nodeType === 'SubscriptExpression') return `${this.genExpr(node.children[0])}[${this.genExpr(node.children[1])}]`;
+        if (node.nodeType === 'ArrayInitializer') {
+            const elements = node.children.map(c => this.genExpr(c)).join(', ');
+            return `{ ${elements} }`;
+        }
 
         return "";
     }

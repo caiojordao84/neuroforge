@@ -14,8 +14,8 @@ Status markers:
 
 ### 0.1. ASL in the Core
 
-- [x] `ASLTypes.ts`: AST definition — `ASLProgram`, globals, functions, tasks, statements, expressions.
-- [x] `ASLExecutor.ts`: JS executor that traverses the ASL and calls `SimulationEngine`.
+- [x] `ASLTypes.ts`: AST definition — `ASLProgram`, globals, functions, tasks, statements, expressions (including `SwitchStatement`, `ASLObject`).
+- [x] `ASLExecutor.ts`: JS executor that traverses the ASL and calls `SimulationEngine` (supports `switch/case`, dictionary lookup, `format`).
 - [x] `codeToASL.ts` + `transforms/`: modularized transpiler for C++ Arduino subset → ASL (v1).
 - [x] `transforms/statementRegistry.ts`: Handler Registry pattern for statement extensibility.
 - [x] Integration in `TopToolbar`: JS mode in C++ tries ASL first, falls back to legacy `CodeParser`.
@@ -122,6 +122,7 @@ Status markers:
 - [x] `while`: `while (COND) { ... }` (uses `parseConditionExpr` for the condition).
 - [x] Simple `for`: `for (init; cond; inc) { body }` (converted to `init; while (cond) { body; inc; }`).
 - [x] `for` with no condition: `for(;;)` (CParser generates literal `'true'` as default condition).
+- [x] `switch/case`: `switch(var) { case X: ... break; }` (ASL native support with fall-through).
 - [x] Other statements: `return`, `break`, `continue`, custom functions.
 
 #### Expressions in Conditions
@@ -252,27 +253,27 @@ Ordered by priority.
 
 ### 0.8.1. Missing Statements (ASLTypes.ts + executor + registry)
 
-| Priority   | Gap                             | Description                                                                                                                                 |
-| ---------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| 🔴 Critical | `switch/case`                   | `switch(var) { case X: ... break; }` — common in FSMs (CIs 5, 9, 16). Needs `ASLSwitch` type + `statementRegistry` handler + executor case. |
-| 🔴 Critical | `doWhile`                       | `do { ... } while(cond)` — present in AVR/Arduino patterns.                                                                                 |
-| 🟡 Medium   | `delayMicroseconds`             | `delayMicroseconds(us)` — needed for bit-bang protocols (I2C, SPI manual). Currently falls through to unhandled.                            |
-| 🟡 Medium   | range-based `for` (C++11)       | `for (auto x : arr)` — ESP32/C++11 mode; CParser partially tracks `FASE 3.15` but executor has no `forRange`.                               |
-| 🟢 Low      | `typedef` / `using`             | Type aliases — affects `mapToASLType`.                                                                                                      |
-| 🟢 Low      | `struct` declaration + instance | **[IMPLEMENTED]** `struct Point { int x, y; };` — Supported in Phase 4 (arrays of structs, inline instances, member access).              |
+| Priority   | Gap                             | Description                                                                                                                  |
+| ---------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 🟢 Low      | `switch/case`                   | **[IMPLEMENTED]** Native support in ASL and generators (C, Python, Rust).                                                    |
+| 🔴 Critical | `doWhile`                       | `do { ... } while(cond)` — present in AVR/Arduino patterns.                                                                  |
+| 🟡 Medium   | `delayMicroseconds`             | `delayMicroseconds(us)` — needed for bit-bang protocols (I2C, SPI manual). Currently falls through to unhandled.             |
+| 🟡 Medium   | range-based `for` (C++11)       | `for (auto x : arr)` — ESP32/C++11 mode; CParser partially tracks `FASE 3.15` but executor has no `forRange`.                |
+| 🟢 Low      | `typedef` / `using`             | Type aliases — affects `mapToASLType`.                                                                                       |
+| 🟢 Low      | `struct` declaration + instance | **[IMPLEMENTED]** `struct Point { int x, y; };` — Supported in Phase 4 (arrays of structs, inline instances, member access). |
 
 ### 0.8.2. Missing Expressions (ASLTypes.ts + exprTransform + executor)
 
-| Priority    | Gap                                         | Description                                                                                                                                  |
-| ----------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| 🔴 Critical  | `TernaryExpression`                         | **[IMPLEMENTED]** `x = (a > b) ? a : b` — Parsed as `ConditionalExpression` and executed natively in ASLExecutor.            |
-| 🟠 Important | Cast `(byte)`, `(uint8_t)`, `(char)`        | `CastExpression` only handles `int`/`float`/`String`. All other casts silently return the value as `int`.                                    |
-| 🟠 Important | Negative literal in `evaluateInitializer`   | **[IMPLEMENTED]** `const int OFFSET = -10` — Handled via `UnaryExpression` in `evaluateInitializer`.                                         |
-| 🟠 Important | String literal as global initializer        | **[IMPLEMENTED]** `const char* name = "hello"` — Handled via `StringLiteral` in `evaluateInitializer`.                                       |
-| 🟡 Medium    | `CommaExpression`                           | `for(int i=0, j=0; ...)` — falls to `literal 0`.                                                                                             |
-| 🟡 Medium    | `sizeof(type)` (without variable)           | `sizeof(int)` as a type-only expression — only variable-based `sizeof` is handled.                                                           |
-| 🟢 Low       | `AddressOf` in complex lvalue               | `&struct.member` — only `&varName` and `&arr[i]` are handled; silently returns wrong pointer.                                                |
-| 🟢 Low       | String concatenation `"text" + String(val)` | `binary +` on mixed string/number evaluates incorrectly in executor (JS `+` coerces, but types may mismatch).                                |
+| Priority    | Gap                                         | Description                                                                                                       |
+| ----------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| 🔴 Critical  | `TernaryExpression`                         | **[IMPLEMENTED]** `x = (a > b) ? a : b` — Parsed as `ConditionalExpression` and executed natively in ASLExecutor. |
+| 🟠 Important | Cast `(byte)`, `(uint8_t)`, `(char)`        | `CastExpression` only handles `int`/`float`/`String`. All other casts silently return the value as `int`.         |
+| 🟠 Important | Negative literal in `evaluateInitializer`   | **[IMPLEMENTED]** `const int OFFSET = -10` — Handled via `UnaryExpression` in `evaluateInitializer`.              |
+| 🟠 Important | String literal as global initializer        | **[IMPLEMENTED]** `const char* name = "hello"` — Handled via `StringLiteral` in `evaluateInitializer`.            |
+| 🟡 Medium    | `CommaExpression`                           | `for(int i=0, j=0; ...)` — falls to `literal 0`.                                                                  |
+| 🟡 Medium    | `sizeof(type)` (without variable)           | `sizeof(int)` as a type-only expression — only variable-based `sizeof` is handled.                                |
+| 🟢 Low       | `AddressOf` in complex lvalue               | `&struct.member` — only `&varName` and `&arr[i]` are handled; silently returns wrong pointer.                     |
+| 🟢 Low       | String concatenation `"text" + String(val)` | `binary +` on mixed string/number evaluates incorrectly in executor (JS `+` coerces, but types may mismatch).     |
 
 ### 0.8.3. Missing Builtins in ASLExecutor (callee dispatch)
 
@@ -470,7 +471,7 @@ This is a central product feature. Both directions must be treated as first-clas
 - [x] `while (cond) { ... }` end-to-end.
 - [x] Simple counter `for`: lowering to `init-assign` + `ASLWhile` + increment.
 - [x] `break` and `continue` inside loops.
-- [ ] Simple `switch/case` (via lowering).
+- [x] Simple `switch/case` (native support in ASL and generators).
 
 ### 4.2. Expressions
 - [x] Relational operators: `<`, `>`, `<=`, `>=`.
@@ -491,8 +492,8 @@ This is a central product feature. Both directions must be treated as first-clas
 - [x] 2D array declaration: `int m[3][4];` / `int m[][4] = {{1,2},{3,4}};` (CParser: `isArray2D`, `arraySize2Expr`, `isRow`)
 - [x] 2D access: `arr[i][j]` as `ASLExpr` (kind: `'index2D'`) — `ASLIndex2D` in `ASLTypes.ts`
 - [x] 2D assignment: `arr[i][j] = val` (kind: `'setIndex2D'`) — `ASLSetIndex2D` in `ASLTypes.ts`
-- [x] `ASLTypes.ts`: `ASLSetIndex2D` + `ASLIndex2D` added; `ASLStatement` and `ASLExpr` unions updated
 - [x] `ASLExecutor.ts`: `case 'setIndex2D'` (double `Array.isArray` guard) + `case 'index2D'` (fallback 0)
+- [x] **Dictionary and Object support**: `ObjectInitializer` node and `ASLObject` expression kind. `ASLExecutor` supports indexing into objects/dictionaries.
 
 > **Detailed checklist of 38 array patterns in progress:**
 > [`docs/checklistArrayCppASL.md`](../docs/checklistArrayCppASL.md)
@@ -539,7 +540,7 @@ This is a central product feature. Both directions must be treated as first-clas
 - [x] Basic subset v0 (see section 0.3 for full detail).
 - [x] Support for pure `'c'` language in `codeToASL.ts`.
 - [x] Full control flow (v1): `while` and simple `for` work; `break` and `continue` implemented.
-- [ ] `switch/case`: not yet implemented (tracked in Sec. 4.1 and 0.8.1).
+- [x] `switch/case`: implemented natively in ASL and `CGenerator`.
 - [x] General expressions on RHS of assignments.
 - [x] Arrays and indexing — basic 1D and 2D subset implemented.
 - [~] Additional APIs: `analogRead`, `millis`, `micros`, `Serial.print` already supported in `ASLExecutor/SimulationEngine`; `tone` still without dedicated simulation.
@@ -548,7 +549,11 @@ This is a central product feature. Both directions must be treated as first-clas
 ### 7.2. MicroPython / CircuitPython
 - [x] Execution via ASL (MicroPython/CircuitPython/Python).
 - [x] Python support: `Pin`, `value()`, `on()`, `off()`, `time.sleep_ms()`, `if/else`, `while True`.
-- [x] Parser via Tree-sitter Python (`web-tree-sitter`).
+- [x] Parser via Tree-sitter Python (`web-tree-sitter`) + inductions-aware Regex Fallback.
+- [x] Advanced loops: `for i, x in enumerate(items)`, `for x in reversed(items)`.
+- [x] Collections: `list`, `list_comprehension`, and dictionary support (`{key: value}`).
+- [x] String methods: `.format()` support.
+- [x] MicroPython specific: `Pin.id()`, `Pin.on()`, `Pin.off()`, `Pin.value()`.
 
 ### 7.3. JavaScript / TypeScript
 - [ ] Subset with `setup()/loop()`, IO ops, `if/else`, `while`, `for`.

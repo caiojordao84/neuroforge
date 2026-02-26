@@ -245,6 +245,13 @@ export class PythonGenerator {
             const args = n.children.map(c => this.genExpr(c)).join(', ');
             return `${n.attributes.callee}(${args})`;
         }
+        if (n.nodeType === 'ArrayInitializer') {
+            const elements = n.children.map(c => this.genExpr(c)).join(', ');
+            return `[${elements}]`;
+        }
+        if (n.nodeType === 'SubscriptExpression') {
+            return `${this.genExpr(n.children[0])}[${this.genExpr(n.children[1])}]`;
+        }
 
         if (n.nodeType === 'GpioRead') {
             const pin = this.evalLit(n.children[0]);

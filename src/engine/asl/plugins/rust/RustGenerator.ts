@@ -168,6 +168,13 @@ export class RustGenerator {
             const args = node.children.map(c => this.genExpr(c)).join(', ');
             return `${node.attributes.callee}(${args})`;
         }
+        if (node.nodeType === 'ArrayInitializer') {
+            const elements = node.children.map(c => this.genExpr(c)).join(', ');
+            return `vec![${elements}]`;
+        }
+        if (node.nodeType === 'SubscriptExpression') {
+            return `${this.genExpr(node.children[0])}[${this.genExpr(node.children[1])}]`;
+        }
         return "";
     }
 }

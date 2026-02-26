@@ -330,6 +330,8 @@ export type ASLExpr =
   | ASLUnary
   | ASLBinary
   | ASLCall
+  | ASLArray
+  | ASLObject
   | ASLConditional;
 
 /**
@@ -338,6 +340,22 @@ export type ASLExpr =
 export interface ASLLiteral {
   kind: 'literal';
   value: any;
+}
+
+/**
+ * Array literal (coleção de expressões).
+ */
+export interface ASLArray {
+  kind: 'array';
+  elements: ASLExpr[];
+}
+
+/**
+ * Object literal (collection of key-expression pairs).
+ */
+export interface ASLObject {
+  kind: 'object';
+  properties: { key: ASLExpr; value: ASLExpr }[];
 }
 
 /**

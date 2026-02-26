@@ -63,6 +63,7 @@ class RustCstToAst {
             case 'loop_expression': return this.visitLoop(node);
             case 'while_expression': return this.visitWhile(node);
             case 'for_expression': return this.visitFor(node);
+            case 'match_expression': return this.visitMatch(node);
             case 'call_expression':
             case 'binary_expression':
             case 'assignment_expression':
@@ -235,6 +236,65 @@ class RustCstToAst {
             id: `for-${node.id}`,
             attributes: { hasInit: true, hasUpdate: true },
             children: [init, condition, update, ...body],
+            metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
+    visitMatch(node: any): BaseNode {
+        const valueNode = node.childForFieldName('value');
+        const discriminant = valueNode ? this.visitExpr(valueNode) : { nodeType: 'Literal', id: 'l', attributes: { value: 0 }, children: [] };
+
+        const cases: BaseNode[] = [];
+
+        node.children.forEach((c: any) => {
+            if (c.type === 'match_arm') {
+                const pattern = c.childForFieldName('pattern');
+                const armValue = c.childForFieldName('value');
+
+                const isDefault = pattern?.text === '_';
+                const test = isDefault ? null : (pattern ? this.visitExpr(pattern) : null);
+
+                let body: BaseNode[] = [];
+                if (armValue) {
+                    if (armValue.type === 'block') {
+                        body = this.visitBlockChildren(armValue);
+                    } else {
+                        const visited = this.visit(armValue);
+                        if (visited) {
+                            body = [visited];
+                        } else {
+                            const expr = this.visitExpr(armValue);
+                            body = [{
+                                nodeType: 'ExpressionStatement',
+                                id: `stmt-${armValue.id}`,
+                                attributes: {},
+                                children: [expr],
+                                metadata: { line: armValue.startPosition.row + 1 }
+                            }];
+                        }
+                    }
+                }
+
+                const caseNode: BaseNode = {
+                    nodeType: 'CaseClause',
+                    id: `case-${c.id}`,
+                    attributes: { isDefault },
+                    children: [
+                        ...(test ? [test as BaseNode] : []),
+                        ...body,
+                        { nodeType: 'BreakStatement', id: `brk-${c.id}`, attributes: {}, children: [] } as BaseNode
+                    ],
+                    metadata: { line: c.startPosition.row + 1 }
+                };
+                cases.push(caseNode);
+            }
+        });
+
+        return {
+            nodeType: 'SwitchStatement',
+            id: `sw-${node.id}`,
+            attributes: {},
+            children: [discriminant as BaseNode, ...cases],
             metadata: { line: node.startPosition.row + 1 }
         };
     }

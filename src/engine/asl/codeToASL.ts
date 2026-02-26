@@ -12,6 +12,7 @@ import type {
 } from './ASLTypes';
 import { RecursiveDescentCParser } from './plugins/c/CParser';
 import { PythonParser } from './plugins/python/PythonParser';
+import { RustParser } from './plugins/rust/RustParser';
 import { createTransformContext, type TransformContext } from './transforms/context';
 import { transformBlock } from './transforms/blockTransform';
 import { mapToASLType } from './helpers/typeUtils';
@@ -36,6 +37,13 @@ async function parseToProgramNode(source: string, language: Language): Promise<P
     case 'circuitpython':
     case 'python': {
       const parser = new PythonParser();
+      await parser.init();
+      const { ast } = parser.parse(source);
+      return ast;
+    }
+
+    case 'rust': {
+      const parser = new RustParser();
       await parser.init();
       const { ast } = parser.parse(source);
       return ast;

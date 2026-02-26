@@ -319,7 +319,7 @@ async function executeStatements(
         for (const a of s.args) {
           parts.push(String(await evalExpr(a, localEnv, ctx) ?? ''));
         }
-        const msg = parts.join('');
+        const msg = parts.join(' ');
         if (s.newline !== false) {
           ctx.engine.log(ctx.printBuffer + msg);
           ctx.printBuffer = '';
@@ -363,6 +363,9 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       const arr = await evalExpr(expr.target, env, ctx);
       const idx = await evalExpr(expr.index, env, ctx);
       if (Array.isArray(arr)) {
+        return arr[idx];
+      }
+      if (arr && typeof arr === 'object') {
         return arr[idx];
       }
       return 0;
@@ -460,6 +463,9 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
           return ctx.engine.digitalRead(pin) === 'HIGH' ? 1 : 0;
         }
       }
+      if (expr.callee === 'Pin.id') {
+        return await evalExpr(expr.args[0], env, ctx);
+      }
 
       if (expr.callee === 'Serial.begin') return 0;
       if (expr.callee === 'random') {
@@ -499,6 +505,35 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       if (expr.callee === 'String') return String(await evalExpr(expr.args[0] || { kind: 'literal', value: '' }, env, ctx));
       if (expr.callee === 'int') return Math.floor(Number(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx)) || 0);
       if (expr.callee === 'float') return Number(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx)) || 0;
+      if (expr.callee === '__len' || expr.callee === 'len') {
+        const arr = await evalExpr(expr.args[0], env, ctx);
+        if (Array.isArray(arr)) return arr.length;
+        if (typeof arr === 'string') return arr.length;
+        return 0;
+      }
+      if (expr.callee === 'reversed') {
+        const arr = await evalExpr(expr.args[0], env, ctx);
+        if (Array.isArray(arr)) return [...arr].reverse();
+        if (typeof arr === 'string') return arr.split('').reverse().join('');
+        return arr;
+      }
+      if (expr.callee === 'format') {
+        let str = await evalExpr(expr.args[0], env, ctx);
+        if (typeof str !== 'string') str = String(str);
+        const args = [];
+        for (let i = 1; i < expr.args.length; i++) args.push(await evalExpr(expr.args[i], env, ctx));
+        for (const arg of args) {
+          str = str.replace('{}', String(arg));
+        }
+        return str;
+      }
+      if (expr.callee === 'enumerate') {
+        const arr = await evalExpr(expr.args[0], env, ctx);
+        if (Array.isArray(arr)) {
+          return arr.map((val, idx) => [idx, val]);
+        }
+        return [];
+      }
 
       if (expr.callee.includes('.') || expr.callee === 'KeypadRead') {
         const args = [];
@@ -529,9 +564,27 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       return 0;
     }
 
+    case 'array': {
+      const arr = [];
+      for (const el of expr.elements) {
+        arr.push(await evalExpr(el, env, ctx));
+      }
+      return arr;
+    }
+
     case 'conditional': {
       const cond = await evalExpr(expr.condition, env, ctx);
       return cond ? evalExpr(expr.whenTrue, env, ctx) : evalExpr(expr.whenFalse, env, ctx);
+    }
+
+    case 'object': {
+      const obj: Record<any, any> = {};
+      for (const prop of expr.properties) {
+        const k = await evalExpr(prop.key, env, ctx);
+        const v = await evalExpr(prop.value, env, ctx);
+        obj[k] = v;
+      }
+      return obj;
     }
   }
 }

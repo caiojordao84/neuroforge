@@ -124,8 +124,22 @@ export function transformExpr(node: BaseNode | undefined): ASLExpr {
 
   if (node.nodeType === 'ArrayInitializer') {
     return {
-      kind: 'literal',
-      value: node.children.map(c => (transformExpr(c) as any).value ?? 0)
+      kind: 'array',
+      elements: node.children.map(transformExpr)
+    } as ASLExpr;
+  }
+
+  if (node.nodeType === 'ObjectInitializer') {
+    const properties: { key: ASLExpr; value: ASLExpr }[] = [];
+    for (let i = 0; i < node.children.length; i += 2) {
+      properties.push({
+        key: transformExpr(node.children[i]),
+        value: transformExpr(node.children[i + 1]),
+      });
+    }
+    return {
+      kind: 'object',
+      properties,
     } as ASLExpr;
   }
 

@@ -56,7 +56,7 @@ export const LANGUAGE_REGISTRY: LanguageInfo[] = [
         label: 'Rust',
         extension: '.rs',
         monacoLanguage: 'rust',
-        isASLSupported: false, // Not yet in codeToASL
+        isASLSupported: true,
     },
 ];
 

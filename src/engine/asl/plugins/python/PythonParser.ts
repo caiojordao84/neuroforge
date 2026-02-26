@@ -77,13 +77,21 @@ class RegexPythonParser {
         this.lines = source.split('\n');
         this.pos = 0;
 
+        const rootNodes: BaseNode[] = [];
         const setupNodes: BaseNode[] = [];
         const loopNodes: BaseNode[] = [];
-        const globals: BaseNode[] = [];
-        const functions: BaseNode[] = [];
 
-        let inWhileTrue = false;
-        let whileTrueIndent = 0;
+        interface BlockContext {
+            node: BaseNode;
+            indent: number;
+            type: 'while' | 'for' | 'match' | 'case' | 'if';
+        }
+        const stack: BlockContext[] = [];
+
+        const getActiveChildren = () => {
+            if (stack.length > 0) return stack[stack.length - 1].node.children;
+            return setupNodes; // Default to setup if top-level
+        };
 
         while (this.pos < this.lines.length) {
             const raw = this.lines[this.pos];
@@ -91,10 +99,14 @@ class RegexPythonParser {
             const trimmed = line.trim();
             const indent = line.length - line.trimStart().length;
 
-            // Skip empty lines and comments
             if (!trimmed || trimmed.startsWith('#')) {
                 this.pos++;
                 continue;
+            }
+
+            // Unindent handling
+            while (stack.length > 0 && indent <= stack[stack.length - 1].indent) {
+                stack.pop();
             }
 
             // Skip imports
@@ -103,47 +115,194 @@ class RegexPythonParser {
                 continue;
             }
 
-            // Detect while True / while 1: → main loop body follows
+            // Detect while True:
             if (/^while\s+(True|1)\s*:/.test(trimmed)) {
-                inWhileTrue = true;
-                whileTrueIndent = indent;
+                // In Regex parser, while True: nodes go to loopNodes normally, or we just collect them
+                // For simplicity, we'll mark this node as the loop body container if it's top-level
+                const whileNode: BaseNode = {
+                    nodeType: 'WhileLoop', id: `while-${this.pos}`, attributes: {}, children: [
+                        { nodeType: 'Literal', id: `lit-true-${this.pos}`, attributes: { value: 1 }, children: [] }
+                    ]
+                };
+                if (stack.length === 0) loopNodes.push(whileNode);
+                else getActiveChildren().push(whileNode);
+
+                stack.push({ node: whileNode, indent, type: 'while' });
                 this.pos++;
                 continue;
             }
 
-            // Once we're in while True, collect body until outdent
-            if (inWhileTrue) {
-                if (trimmed && indent <= whileTrueIndent && !trimmed.startsWith('#')) {
-                    // We've exited the while True block
-                    inWhileTrue = false;
+            // Detect for x in ...
+            const forM = trimmed.match(/^for\s+(\w+)\s+in\s+([^:]+):/);
+            if (forM) {
+                const varName = forM[1];
+                let iterableStr = forM[2].trim();
+
+                // Basic construction of ForLoop
+                const forNode: BaseNode = {
+                    nodeType: 'ForLoop', id: `for-${this.pos}`,
+                    attributes: { hasInit: true, hasUpdate: true }, children: []
+                };
+
+                // Helper to handle range/iterators in fallback
+                if (iterableStr.startsWith('range(')) {
+                    const argStr = iterableStr.substring(6, iterableStr.length - 1);
+                    const args = argStr.split(',').map(s => s.trim());
+                    let start = 0, stop = 10;
+                    if (args.length === 1) stop = parseInt(args[0]) || 0;
+                    else if (args.length >= 2) {
+                        start = parseInt(args[0]) || 0;
+                        stop = parseInt(args[1]) || 0;
+                    }
+                    forNode.children.push(
+                        { nodeType: 'VariableDeclaration', id: `init-${this.pos}`, attributes: { name: varName, type: 'int' }, children: [{ nodeType: 'Literal', id: `l0-${this.pos}`, attributes: { value: start }, children: [] }] },
+                        { nodeType: 'BinaryExpression', id: `cond-${this.pos}`, attributes: { operator: '<' }, children: [{ nodeType: 'Identifier', id: `id-${this.pos}`, attributes: { name: varName }, children: [] }, { nodeType: 'Literal', id: `l1-${this.pos}`, attributes: { value: stop }, children: [] }] },
+                        { nodeType: 'UnaryExpression', id: `upd-${this.pos}`, attributes: { operator: '++', prefix: false }, children: [{ nodeType: 'Identifier', id: `id-u-${this.pos}`, attributes: { name: varName }, children: [] }] }
+                    );
                 } else {
-                    const node = this._parseLine(trimmed, this.pos + 1);
-                    if (node) loopNodes.push(node);
+                    let target = iterableStr;
+                    let isReversed = false;
+                    if (iterableStr.startsWith('reversed(')) {
+                        target = iterableStr.substring(9, iterableStr.length - 1);
+                        isReversed = true;
+                    }
+
+                    const indexVar = `__i_${this.pos}`;
+                    const lenExpr: BaseNode = { nodeType: 'CallExpression', id: `len-${this.pos}`, attributes: { callee: 'len' }, children: [{ nodeType: 'Identifier', id: `target-${this.pos}`, attributes: { name: target }, children: [] }] };
+
+                    if (!isReversed) {
+                        forNode.children.push(
+                            { nodeType: 'VariableDeclaration', id: `init-${this.pos}`, attributes: { name: indexVar, type: 'int' }, children: [{ nodeType: 'Literal', id: `l0-${this.pos}`, attributes: { value: 0 }, children: [] }] },
+                            { nodeType: 'BinaryExpression', id: `cond-${this.pos}`, attributes: { operator: '<' }, children: [{ nodeType: 'Identifier', id: `id-${this.pos}`, attributes: { name: indexVar }, children: [] }, lenExpr] },
+                            { nodeType: 'UnaryExpression', id: `upd-${this.pos}`, attributes: { operator: '++', prefix: false }, children: [{ nodeType: 'Identifier', id: `id-u-${this.pos}`, attributes: { name: indexVar }, children: [] }] }
+                        );
+                    } else {
+                        forNode.children.push(
+                            { nodeType: 'VariableDeclaration', id: `init-${this.pos}`, attributes: { name: indexVar, type: 'int' }, children: [{ nodeType: 'BinaryExpression', id: `s-${this.pos}`, attributes: { operator: '-' }, children: [lenExpr, { nodeType: 'Literal', id: `lit1-${this.pos}`, attributes: { value: 1 }, children: [] }] } as BaseNode] },
+                            { nodeType: 'BinaryExpression', id: `cond-${this.pos}`, attributes: { operator: '>=' }, children: [{ nodeType: 'Identifier', id: `id-${this.pos}`, attributes: { name: indexVar }, children: [] }, { nodeType: 'Literal', id: `l0-${this.pos}`, attributes: { value: 0 }, children: [] }] },
+                            { nodeType: 'UnaryExpression', id: `upd-${this.pos}`, attributes: { operator: '--', prefix: false }, children: [{ nodeType: 'Identifier', id: `id-u-${this.pos}`, attributes: { name: indexVar }, children: [] }] }
+                        );
+                    }
+
+                    // Add mapping: varName = target[indexVar]
+                    if (varName.includes(',')) {
+                        const vars = varName.split(',').map(v => v.trim());
+                        const tmpVar = `__val_${this.pos}`;
+                        forNode.children.push({
+                            nodeType: 'VariableDeclaration', id: `map-tmp-${this.pos}`, attributes: { name: tmpVar, type: 'auto' },
+                            children: [{
+                                nodeType: 'SubscriptExpression', id: `sub-${this.pos}`, attributes: {}, children: [
+                                    { nodeType: 'Identifier', id: `id-t-${this.pos}`, attributes: { name: target }, children: [] },
+                                    { nodeType: 'Identifier', id: `id-ix-${this.pos}`, attributes: { name: indexVar }, children: [] }
+                                ]
+                            } as BaseNode]
+                        });
+                        vars.forEach((v, idx) => {
+                            forNode.children.push({
+                                nodeType: 'ExpressionStatement', id: `map-${this.pos}-${idx}`, attributes: {},
+                                children: [{
+                                    nodeType: 'BinaryExpression', id: `map-ass-${this.pos}-${idx}`, attributes: { operator: '=' },
+                                    children: [
+                                        { nodeType: 'Identifier', id: `id-v-${this.pos}-${idx}`, attributes: { name: v }, children: [] },
+                                        {
+                                            nodeType: 'SubscriptExpression', id: `sub-v-${this.pos}-${idx}`, attributes: {},
+                                            children: [
+                                                { nodeType: 'Identifier', id: `id-tmp-${this.pos}-${idx}`, attributes: { name: tmpVar }, children: [] },
+                                                { nodeType: 'Literal', id: `lit-ix-${this.pos}-${idx}`, attributes: { value: idx }, children: [] }
+                                            ]
+                                        } as BaseNode
+                                    ]
+                                } as BaseNode]
+                            } as BaseNode);
+                        });
+                    } else {
+                        forNode.children.push({
+                            nodeType: 'ExpressionStatement', id: `map-${this.pos}`, attributes: {},
+                            children: [{
+                                nodeType: 'BinaryExpression', id: `map-ass-${this.pos}`, attributes: { operator: '=' },
+                                children: [
+                                    { nodeType: 'Identifier', id: `id-v-${this.pos}`, attributes: { name: varName }, children: [] },
+                                    {
+                                        nodeType: 'SubscriptExpression', id: `sub-${this.pos}`, attributes: {}, children: [
+                                            { nodeType: 'Identifier', id: `id-t-${this.pos}`, attributes: { name: target }, children: [] },
+                                            { nodeType: 'Identifier', id: `id-ix-${this.pos}`, attributes: { name: indexVar }, children: [] }
+                                        ]
+                                    } as BaseNode
+                                ]
+                            } as BaseNode]
+                        } as BaseNode);
+                    }
+                }
+
+                getActiveChildren().push(forNode);
+                stack.push({ node: forNode, indent, type: 'for' });
+                this.pos++;
+                continue;
+            }
+
+            // Detect match subject:
+            const matchM = trimmed.match(/^match\s+(.+)\s*:/);
+            if (matchM) {
+                const subject = this._parseExpr(matchM[1].trim(), this.pos + 1);
+                const matchNode: BaseNode = {
+                    nodeType: 'SwitchStatement', id: `sw-${this.pos}`, attributes: {},
+                    children: [subject]
+                };
+                getActiveChildren().push(matchNode);
+                stack.push({ node: matchNode, indent, type: 'match' });
+                this.pos++;
+                continue;
+            }
+
+            // Detect case:
+            if (stack.length > 0 && stack[stack.length - 1].type === 'match') {
+                const caseM = trimmed.match(/^case\s+(.+)\s*:/);
+                if (caseM) {
+                    const pattern = caseM[1].trim();
+                    const isDefault = pattern === '_';
+                    const caseNode: BaseNode = {
+                        nodeType: 'CaseClause', id: `case-${this.pos}`, attributes: { isDefault }, children: []
+                    };
+                    if (!isDefault) caseNode.children.push(this._parseExpr(pattern, this.pos + 1));
+                    stack[stack.length - 1].node.children.push(caseNode);
+                    stack.push({ node: caseNode, indent, type: 'case' });
                     this.pos++;
                     continue;
                 }
             }
 
-            // Top-level assignment / call / statement
+            // Standard line
             const node = this._parseLine(trimmed, this.pos + 1);
             if (node) {
-                if (node.nodeType === 'VariableDeclaration') {
-                    globals.push(node);
-                    setupNodes.push(node);
-                } else {
-                    setupNodes.push(node);
+                getActiveChildren().push(node);
+                if (node.nodeType === 'VariableDeclaration' && stack.length === 0) {
+                    rootNodes.push(node);
                 }
             }
             this.pos++;
         }
+
+        // Post-process matches to add breaks to cases (Regex only)
+        const addBreaks = (nodes: BaseNode[]) => {
+            nodes.forEach(n => {
+                if (n.nodeType === 'SwitchStatement') {
+                    n.children.slice(1).forEach(c => {
+                        if (c.nodeType === 'CaseClause') {
+                            c.children.push({ nodeType: 'BreakStatement', id: `brk-post-${c.id}`, attributes: {}, children: [] });
+                        }
+                    });
+                }
+            });
+        };
+        addBreaks(setupNodes);
+        addBreaks(loopNodes);
 
         return {
             nodeType: 'Program',
             id: 'root',
             attributes: {},
             children: [
-                ...globals,
-                ...functions,
+                ...rootNodes,
                 { nodeType: 'Function', id: 'setup', attributes: { name: 'setup' }, children: setupNodes },
                 { nodeType: 'Function', id: 'loop', attributes: { name: 'loop' }, children: loopNodes },
             ],
@@ -162,7 +321,7 @@ class RegexPythonParser {
             return {
                 nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
                 children: [{
-                    nodeType: 'Print', id: `print-${lineNum}`, attributes: {},
+                    nodeType: 'Print', id: `print-${lineNum}`, attributes: { newline: true },
                     children: [this._parseExpr(printM[1].trim(), lineNum)]
                 } as BaseNode],
                 metadata: meta
@@ -358,6 +517,59 @@ class RegexPythonParser {
         if (s === 'False' || s === 'LOW') return { nodeType: 'Literal', id: `l-${lineNum}`, attributes: { value: 0 }, children: [], metadata: meta };
         if (s === 'None') return { nodeType: 'Literal', id: `l-${lineNum}`, attributes: { value: 0 }, children: [], metadata: meta };
 
+        // Binary Expression (simple '+' only for fallback)
+        if (s.includes(' + ')) {
+            const parts = s.split(' + ');
+            return {
+                nodeType: 'BinaryExpression', id: `bin-${lineNum}`, attributes: { operator: '+' },
+                children: [this._parseExpr(parts[0].trim(), lineNum), this._parseExpr(parts[1].trim(), lineNum)],
+                metadata: meta
+            };
+        }
+
+        // Dictionary Literal
+        if (s.startsWith('{') && s.endsWith('}')) {
+            const inner = s.slice(1, -1).trim();
+            const pairs = inner.split(',').filter(p => p.trim());
+            const children: BaseNode[] = [];
+            for (const p of pairs) {
+                const parts = p.split(':');
+                if (parts.length >= 2) {
+                    const k = parts[0].trim();
+                    const v = parts.slice(1).join(':').trim();
+                    children.push(this._parseExpr(k, lineNum));
+                    children.push(this._parseExpr(v, lineNum));
+                }
+            }
+            return {
+                nodeType: 'ObjectInitializer', id: `dict-${lineNum}`, attributes: {},
+                children, metadata: meta
+            };
+        }
+
+        // Subscript access: obj[key]
+        const subscriptM = s.match(/^(\w+)\s*\[(.*)\]$/);
+        if (subscriptM) {
+            return {
+                nodeType: 'SubscriptExpression', id: `sub-${lineNum}`, attributes: {},
+                children: [
+                    { nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: subscriptM[1] }, children: [] },
+                    this._parseExpr(subscriptM[2].trim(), lineNum)
+                ],
+                metadata: meta
+            };
+        }
+
+        // Method id() call
+        const idCallM = s.match(/^(\w+)\.id\(\)$/);
+        if (idCallM) {
+            return {
+                nodeType: 'CallExpression', id: `id-${lineNum}`, attributes: { callee: 'Pin.id' },
+                children: [{ nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: idCallM[1] }, children: [] }],
+                metadata: meta
+            };
+        }
+
         // Integer
         if (/^-?\d+$/.test(s)) return { nodeType: 'Literal', id: `l-${lineNum}`, attributes: { value: parseInt(s) }, children: [], metadata: meta };
         // Float
@@ -374,7 +586,19 @@ class RegexPythonParser {
         const boardM = s.match(/^board\..*?(\d+)$/);
         if (boardM) return { nodeType: 'Literal', id: `l-${lineNum}`, attributes: { value: parseInt(boardM[1]) }, children: [], metadata: meta };
 
-        // Identifier
+        // Identifier or .format() call
+        const formatM = s.match(/^(['"].*?['"])\.format\((.*)\)$/);
+        if (formatM) {
+            const strLiteral = this._parseExpr(formatM[1], lineNum);
+            const args = formatM[2].split(',').filter(x => x.trim()).map(a => this._parseExpr(a.trim(), lineNum));
+            return {
+                nodeType: 'CallExpression', id: `fmt-${lineNum}`,
+                attributes: { callee: 'format' },
+                children: [strLiteral, ...args],
+                metadata: meta
+            };
+        }
+
         return { nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: s }, children: [], metadata: meta };
     }
 }
@@ -405,6 +629,8 @@ class PythonCstToAst {
             case 'assignment': return this.visitAssignment(node);
             case 'augmented_assignment': return this.visitAssignment(node);
             case 'return_statement': return this.visitReturn(node);
+            case 'match_statement': return this.visitMatch(node);
+            case 'list_comprehension': return this.visitListComprehension(node);
             case 'import_statement':
             case 'import_from_statement':
                 return { nodeType: 'Empty', id: `imp-${node.id}`, attributes: {}, children: [] };
@@ -499,7 +725,42 @@ class PythonCstToAst {
             }
         }
 
-        // Top-level variable definition (hoistable)
+        // Handle tuple/list unpacking: i, led = [0, pin]
+        if (leftExpr && (leftExpr.type === 'pattern_list' || leftExpr.type === 'tuple' || leftExpr.text.includes(','))) {
+            const vars = leftExpr.text.split(',').map(v => v.trim());
+            const tmpVar = `__tmp_${node.id}`;
+            const result: BaseNode[] = [
+                {
+                    nodeType: 'VariableDeclaration', id: `tmp-${node.id}`,
+                    attributes: { name: tmpVar, type: 'auto' },
+                    children: [right], metadata: meta
+                }
+            ];
+            vars.forEach((v, idx) => {
+                result.push({
+                    nodeType: 'ExpressionStatement', id: `unpack-${node.id}-${idx}`, attributes: {},
+                    children: [{
+                        nodeType: 'BinaryExpression', id: `ass-${node.id}-${idx}`, attributes: { operator: '=' },
+                        children: [
+                            { nodeType: 'Identifier', id: `id-${node.id}-${idx}`, attributes: { name: v }, children: [] },
+                            {
+                                nodeType: 'SubscriptExpression', id: `sub-${node.id}-${idx}`, attributes: {},
+                                children: [
+                                    { nodeType: 'Identifier', id: `target-${node.id}-${idx}`, attributes: { name: tmpVar }, children: [] },
+                                    { nodeType: 'Literal', id: `idx-${node.id}-${idx}`, attributes: { value: idx }, children: [] }
+                                ]
+                            } as BaseNode
+                        ]
+                    } as BaseNode],
+                    metadata: meta
+                } as BaseNode);
+            });
+            return {
+                nodeType: 'Block', id: `unpack-blk-${node.id}`, attributes: {},
+                children: result, metadata: meta
+            } as BaseNode;
+        }
+
         if (left.nodeType === 'Identifier') {
             return {
                 nodeType: 'VariableDeclaration', id: `decl-${node.id}`,
@@ -568,39 +829,233 @@ class PythonCstToAst {
     }
 
     visitFor(node: any): BaseNode {
-        const left = node.childForFieldName('left')?.text || 'i';
-        const right = node.childForFieldName('right');
+        const leftExpr = node.childForFieldName('left');
+        const rightExpr = node.childForFieldName('right');
         const body = node.childForFieldName('body');
+        const meta = { line: node.startPosition.row + 1 };
 
-        let maxVal = 10;
-        if (right?.type === 'call' && right.childForFieldName('function')?.text === 'range') {
-            const args = right.childForFieldName('arguments');
-            if (args && args.firstChild) {
-                const arg = args.children.find((c: any) => c.type === 'integer');
-                if (arg) maxVal = parseInt(arg.text);
+        const leftText = leftExpr?.text || 'i';
+        const indexVar = `__i_${node.id % 1000000}`; // Shortened for readability in user logs
+
+        let init: BaseNode, condition: BaseNode, update: BaseNode;
+        let extraBody: BaseNode[] = [];
+
+        if (rightExpr?.type === 'call' && rightExpr.childForFieldName('function')?.text === 'range') {
+            const argsNode = rightExpr.childForFieldName('arguments');
+            const vArgs = argsNode ? argsNode.children.filter((c: any) => c.type !== '(' && c.type !== ')' && c.type !== ',').map((c: any) => this.visitExpr(c)) : [];
+            let start = 0, stop = 10, step = 1;
+
+            if (vArgs.length === 1) {
+                if (vArgs[0].nodeType === 'Literal') stop = vArgs[0].attributes.value;
+                else stop = 10; // TODO: handle dynamic stop
+            } else if (vArgs.length >= 2) {
+                if (vArgs[0].nodeType === 'Literal') start = vArgs[0].attributes.value;
+                if (vArgs[1].nodeType === 'Literal') stop = vArgs[1].attributes.value;
+                if (vArgs.length >= 3 && vArgs[2].nodeType === 'Literal') step = vArgs[2].attributes.value;
+            }
+
+            init = {
+                nodeType: 'VariableDeclaration', id: `init-${node.id}`, attributes: { name: leftText, type: 'int' },
+                children: [{ nodeType: 'Literal', id: `lit-0-${node.id}`, attributes: { value: start }, children: [] }]
+            };
+            condition = {
+                nodeType: 'BinaryExpression', id: `cond-${node.id}`, attributes: { operator: step > 0 ? '<' : '>' },
+                children: [
+                    { nodeType: 'Identifier', id: `id-${node.id}`, attributes: { name: leftText }, children: [] },
+                    vArgs.length >= 2 ? vArgs[1] : (vArgs.length === 1 ? vArgs[0] : { nodeType: 'Literal', id: 'l', attributes: { value: 10 }, children: [] })
+                ]
+            };
+            update = {
+                nodeType: 'ExpressionStatement', id: `upd-${node.id}`, attributes: {},
+                children: [{
+                    nodeType: 'BinaryExpression', id: `u-${node.id}`, attributes: { operator: '=' },
+                    children: [
+                        { nodeType: 'Identifier', id: `id-u-${node.id}`, attributes: { name: leftText }, children: [] },
+                        {
+                            nodeType: 'BinaryExpression', id: `add-${node.id}`, attributes: { operator: '+' },
+                            children: [
+                                { nodeType: 'Identifier', id: `id-u2-${node.id}`, attributes: { name: leftText }, children: [] },
+                                { nodeType: 'Literal', id: `step-${node.id}`, attributes: { value: step }, children: [] }
+                            ]
+                        } as BaseNode
+                    ]
+                } as BaseNode]
+            };
+        } else {
+            // Iterator loop: for x in iterable
+            const iterable = this.visitExpr(rightExpr!);
+            init = {
+                nodeType: 'VariableDeclaration', id: `init-${node.id}`, attributes: { name: indexVar, type: 'int' },
+                children: [{ nodeType: 'Literal', id: `lit-0-${node.id}`, attributes: { value: 0 }, children: [] }]
+            };
+            condition = {
+                nodeType: 'BinaryExpression', id: `cond-${node.id}`, attributes: { operator: '<' },
+                children: [
+                    { nodeType: 'Identifier', id: `idx-${node.id}`, attributes: { name: indexVar }, children: [] },
+                    { nodeType: 'CallExpression', id: `len-${node.id}`, attributes: { callee: 'len' }, children: [iterable] }
+                ]
+            };
+            update = {
+                nodeType: 'ExpressionStatement', id: `upd-${node.id}`, attributes: {},
+                children: [{
+                    nodeType: 'BinaryExpression', id: `u-${node.id}`, attributes: { operator: '=' },
+                    children: [
+                        { nodeType: 'Identifier', id: `id-idx-${node.id}`, attributes: { name: indexVar }, children: [] },
+                        {
+                            nodeType: 'BinaryExpression', id: `add-${node.id}`, attributes: { operator: '+' },
+                            children: [
+                                { nodeType: 'Identifier', id: `id-idx2-${node.id}`, attributes: { name: indexVar }, children: [] },
+                                { nodeType: 'Literal', id: `step-${node.id}`, attributes: { value: 1 }, children: [] }
+                            ]
+                        } as BaseNode
+                    ]
+                } as BaseNode]
+            };
+
+            // Destructuring or single assignment
+            if (leftText.includes(',')) {
+                const vars = leftText.split(',').map(v => v.trim());
+                const tmpVar = `__val_${node.id}`;
+                extraBody.push({
+                    nodeType: 'VariableDeclaration', id: `map-${node.id}`, attributes: { name: tmpVar, type: 'auto' },
+                    children: [{
+                        nodeType: 'SubscriptExpression', id: `sub-${node.id}`, attributes: {},
+                        children: [iterable, { nodeType: 'Identifier', id: `idx-a-${node.id}`, attributes: { name: indexVar }, children: [] }]
+                    } as BaseNode]
+                });
+                vars.forEach((v, idx) => {
+                    extraBody.push({
+                        nodeType: 'ExpressionStatement', id: `map-${node.id}-${idx}`, attributes: {},
+                        children: [{
+                            nodeType: 'BinaryExpression', id: `map-ass-${node.id}-${idx}`, attributes: { operator: '=' },
+                            children: [
+                                { nodeType: 'Identifier', id: `id-v-${node.id}-${idx}`, attributes: { name: v }, children: [] },
+                                {
+                                    nodeType: 'SubscriptExpression', id: `sub-v-${node.id}-${idx}`, attributes: {},
+                                    children: [
+                                        { nodeType: 'Identifier', id: `id-tmp-${node.id}-${idx}`, attributes: { name: tmpVar }, children: [] },
+                                        { nodeType: 'Literal', id: `lit-ix-${node.id}-${idx}`, attributes: { value: idx }, children: [] }
+                                    ]
+                                } as BaseNode
+                            ]
+                        } as BaseNode]
+                    });
+                });
+            } else {
+                extraBody.push({
+                    nodeType: 'ExpressionStatement', id: `map-${node.id}`, attributes: {},
+                    children: [{
+                        nodeType: 'BinaryExpression', id: `map-ass-${node.id}`, attributes: { operator: '=' },
+                        children: [
+                            { nodeType: 'Identifier', id: `id-v-${node.id}`, attributes: { name: leftText }, children: [] },
+                            {
+                                nodeType: 'SubscriptExpression', id: `sub-${node.id}`, attributes: {},
+                                children: [iterable, { nodeType: 'Identifier', id: `idx-a-${node.id}`, attributes: { name: indexVar }, children: [] }]
+                            } as BaseNode
+                        ]
+                    } as BaseNode]
+                });
             }
         }
 
-        const init: BaseNode = {
-            nodeType: 'VariableDeclaration', id: 'init', attributes: { name: left, type: 'int' },
-            children: [{ nodeType: 'Literal', id: 'l1', attributes: { value: 0 }, children: [] }]
-        };
-        const condition: BaseNode = {
-            nodeType: 'BinaryExpression', id: 'cond', attributes: { operator: '<' },
-            children: [
-                { nodeType: 'Identifier', id: 'id', attributes: { name: left }, children: [] },
-                { nodeType: 'Literal', id: 'l2', attributes: { value: maxVal }, children: [] }
-            ]
-        };
-        const update: BaseNode = {
-            nodeType: 'UnaryExpression', id: 'upd', attributes: { operator: '++', prefix: false },
-            children: [{ nodeType: 'Identifier', id: 'id', attributes: { name: left }, children: [] }]
-        };
-
         return {
             nodeType: 'ForLoop', id: `for-${node.id}`, attributes: { hasInit: true, hasUpdate: true },
-            children: [init, condition, update, ...(body ? this.visitBlockChildren(body) : [])],
+            children: [init, condition, update, ...extraBody, ...(body ? this.visitBlockChildren(body) : [])],
+            metadata: meta
+        } as BaseNode;
+    }
+
+    visitMatch(node: any): BaseNode {
+        const subject = node.childForFieldName('subject');
+        const discriminant = subject ? this.visitExpr(subject) : { nodeType: 'Literal', id: 'l', attributes: { value: 0 }, children: [] };
+
+        const cases: BaseNode[] = [];
+
+        node.children.forEach((c: any) => {
+            if (c.type === 'case_clause') {
+                const pattern = c.childForFieldName('pattern');
+                const body = c.childForFieldName('body');
+
+                const isDefault = pattern?.text === '_' || pattern?.type === 'wildcard_pattern';
+                const test = isDefault ? null : (pattern ? this.visitExpr(pattern) : null);
+
+                const caseNode: BaseNode = {
+                    nodeType: 'CaseClause',
+                    id: `case-${c.id}`,
+                    attributes: { isDefault },
+                    children: [
+                        ...(test ? [test as BaseNode] : []),
+                        ...(body ? this.visitBlockChildren(body) : []),
+                        { nodeType: 'BreakStatement', id: `brk-${c.id}`, attributes: {}, children: [] } as BaseNode
+                    ],
+                    metadata: { line: c.startPosition.row + 1 }
+                };
+                cases.push(caseNode);
+            }
+        });
+
+        return {
+            nodeType: 'SwitchStatement',
+            id: `sw-${node.id}`,
+            attributes: {},
+            children: [discriminant as BaseNode, ...cases],
             metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
+    visitListComprehension(node: any): BaseNode {
+        const bodyNode = node.childForFieldName('body');
+        const forIn = node.namedChild(1); // for_in_clause
+        const meta = { line: node.startPosition.row + 1 };
+
+        if (bodyNode && forIn && forIn.type === 'for_in_clause') {
+            const left = forIn.childForFieldName('left');
+            const right = forIn.childForFieldName('right');
+            const varName = left?.text;
+
+            if (right?.type === 'call' && right.childForFieldName('function')?.text === 'range' && varName) {
+                const argsNode = right.childForFieldName('arguments');
+                if (argsNode) {
+                    const argsNodes = argsNode.children.filter((c: any) =>
+                        c.type !== '(' && c.type !== ')' && c.type !== ','
+                    );
+
+                    let start = 0;
+                    let stop = 10;
+                    const vArgs = argsNodes.map(a => this.visitExpr(a));
+                    if (vArgs.length === 1 && vArgs[0].nodeType === 'Literal') {
+                        stop = vArgs[0].attributes.value;
+                    } else if (vArgs.length >= 2) {
+                        if (vArgs[0].nodeType === 'Literal') start = vArgs[0].attributes.value;
+                        if (vArgs[1].nodeType === 'Literal') stop = vArgs[1].attributes.value;
+                    }
+
+                    if (stop - start >= 0 && stop - start < 50) {
+                        const elements: BaseNode[] = [];
+                        for (let i = start; i < stop; i++) {
+                            const env = new Map<string, BaseNode>();
+                            env.set(varName, { nodeType: 'Literal', id: `lit-${i}`, attributes: { value: i }, children: [] });
+                            elements.push(this.visitExpr(bodyNode, env));
+                        }
+                        return {
+                            nodeType: 'ArrayInitializer',
+                            id: `lc-${node.id}`,
+                            attributes: { isArray: true },
+                            children: elements,
+                            metadata: meta
+                        };
+                    }
+                }
+            }
+        }
+
+        // Fallback: return empty array initializer
+        return {
+            nodeType: 'ArrayInitializer',
+            id: `lc-${node.id}`,
+            attributes: { isArray: true },
+            children: [],
+            metadata: meta
         };
     }
 
@@ -627,12 +1082,26 @@ class PythonCstToAst {
         return result;
     }
 
-    visitExpr(node: any): BaseNode {
+    visitExpr(node: any, env?: Map<string, BaseNode>): BaseNode {
         const meta = { line: node.startPosition.row + 1 };
         if (node.type === 'integer') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: parseInt(node.text) }, children: [], metadata: meta };
         if (node.type === 'float') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: parseFloat(node.text) }, children: [], metadata: meta };
         if (node.type === 'string') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: node.text.replace(/['\"]/g, ''), isString: true }, children: [], metadata: meta };
-        if (node.type === 'identifier') return { nodeType: 'Identifier', id: `i-${node.id}`, attributes: { name: node.text }, children: [], metadata: meta };
+        if (node.type === 'identifier') {
+            if (env?.has(node.text)) return env.get(node.text)!;
+            return { nodeType: 'Identifier', id: `i-${node.id}`, attributes: { name: node.text }, children: [], metadata: meta };
+        }
+
+        if (node.type === 'list') {
+            const elements = node.namedChildren.map((c: any) => this.visitExpr(c, env));
+            return {
+                nodeType: 'ArrayInitializer',
+                id: `list-${node.id}`,
+                attributes: { isArray: true },
+                children: elements as BaseNode[],
+                metadata: meta
+            };
+        }
 
         if (node.type === 'true' || node.type === 'True' || (node.type === 'identifier' && node.text === 'True'))
             return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: 1 }, children: [], metadata: meta };
@@ -643,12 +1112,12 @@ class PythonCstToAst {
 
         if (node.type === 'parenthesized_expression') {
             const inner = node.namedChild(0);
-            return inner ? this.visitExpr(inner) : { nodeType: 'Empty', id: 'e', attributes: {}, children: [] };
+            return inner ? this.visitExpr(inner, env) : { nodeType: 'Empty', id: 'e', attributes: {}, children: [] };
         }
 
         if (node.type === 'unary_operator' || node.type === 'not_operator') {
             const op = node.childForFieldName('operator')?.text || (node.type === 'not_operator' ? 'not' : '-');
-            const arg = this.visitExpr(node.childForFieldName('argument') || node.namedChild(0));
+            const arg = this.visitExpr(node.childForFieldName('argument') || node.namedChild(0), env);
             return {
                 nodeType: 'UnaryExpression', id: `un-${node.id}`,
                 attributes: { operator: op === 'not' ? '!' : op, prefix: true },
@@ -657,8 +1126,8 @@ class PythonCstToAst {
         }
 
         if (node.type === 'binary_operator' || node.type === 'boolean_operator') {
-            const left = this.visitExpr(node.childForFieldName('left')!);
-            const right = this.visitExpr(node.childForFieldName('right')!);
+            const left = this.visitExpr(node.childForFieldName('left')!, env);
+            const right = this.visitExpr(node.childForFieldName('right')!, env);
             let op = node.childForFieldName('operator')?.text || 'and';
             if (op === 'and') op = '&&';
             if (op === 'or') op = '||';
@@ -666,43 +1135,67 @@ class PythonCstToAst {
         }
 
         if (node.type === 'comparison_operator') {
-            const left = this.visitExpr(node.child(0)!);
-            const right = this.visitExpr(node.child(2)!);
+            const left = this.visitExpr(node.child(0)!, env);
+            const right = this.visitExpr(node.child(2)!, env);
             const op = node.child(1)?.text || '==';
             return { nodeType: 'BinaryExpression', id: `cmp-${node.id}`, attributes: { operator: op }, children: [left, right], metadata: meta };
         }
 
+        if (node.type === 'list_comprehension') return this.visitListComprehension(node);
+        if (node.type === 'dictionary') return this.visitDictionary(node, env);
+        if (node.type === 'subscript') return this.visitSubscript(node, env);
+
         if (node.type === 'call') {
             const func = node.childForFieldName('function');
             const argsNode = node.childForFieldName('arguments');
-            const args = argsNode ? argsNode.children.filter((c: any) => c.type !== '(' && c.type !== ')' && c.type !== ',').map((c: any) => this.visitExpr(c)) : [];
+            const args = argsNode ? argsNode.children.filter((c: any) => c.type !== '(' && c.type !== ')' && c.type !== ',').map((c: any) => this.visitExpr(c, env)) : [];
 
             let callee = func?.text || '';
 
             if (func?.type === 'attribute') {
-                const obj = func.childForFieldName('object')?.text || '';
+                const objNode = func.childForFieldName('object');
+                const objText = objNode?.text || '';
                 const attr = func.childForFieldName('attribute')?.text || '';
-                callee = `${obj}.${attr}`;
+                callee = `${objText}.${attr}`;
+
+                // Handle string.format()
+                if (attr === 'format' && objNode?.type === 'string') {
+                    return {
+                        nodeType: 'CallExpression', id: `fmt-${node.id}`,
+                        attributes: { callee: 'format' },
+                        children: [this.visitExpr(objNode, env), ...args],
+                        metadata: meta
+                    };
+                }
 
                 // MicroPython: led.on() → Pin.on, led.off() → Pin.off
                 if (attr === 'on' && args.length === 0) {
-                    return { nodeType: 'CallExpression', id: `on-${node.id}`, attributes: { callee: 'Pin.on' }, children: [this.visitExpr(func.childForFieldName('object'))], metadata: meta };
+                    return { nodeType: 'CallExpression', id: `on-${node.id}`, attributes: { callee: 'Pin.on' }, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
                 }
                 if (attr === 'off' && args.length === 0) {
-                    return { nodeType: 'CallExpression', id: `off-${node.id}`, attributes: { callee: 'Pin.off' }, children: [this.visitExpr(func.childForFieldName('object'))], metadata: meta };
+                    return { nodeType: 'CallExpression', id: `off-${node.id}`, attributes: { callee: 'Pin.off' }, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
                 }
 
                 // MicroPython / CircuitPython: pin.value() / pin.value(val)
                 if (attr === 'value') {
                     if (args.length === 1) {
-                        return { nodeType: 'CallExpression', id: `set-${node.id}`, attributes: { callee: 'Pin.value' }, children: [this.visitExpr(func.childForFieldName('object')), args[0]], metadata: meta };
+                        return { nodeType: 'CallExpression', id: `set-${node.id}`, attributes: { callee: 'Pin.value' }, children: [this.visitExpr(func.childForFieldName('object'), env), args[0]], metadata: meta };
                     } else if (args.length === 0) {
-                        return { nodeType: 'CallExpression', id: `get-${node.id}`, attributes: { callee: 'Pin.value' }, children: [this.visitExpr(func.childForFieldName('object'))], metadata: meta };
+                        return { nodeType: 'CallExpression', id: `get-${node.id}`, attributes: { callee: 'Pin.value' }, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
                     }
+                }
+
+                // MicroPython Pin.id()
+                if (attr === 'id' && args.length === 0) {
+                    return { nodeType: 'CallExpression', id: `id-${node.id}`, attributes: { callee: 'Pin.id' }, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
                 }
             }
 
-            if (callee === 'print') return { nodeType: 'Print', id: `p-${node.id}`, attributes: {}, children: args, metadata: meta };
+            if (callee === 'print') return { nodeType: 'Print', id: `p-${node.id}`, attributes: { newline: true }, children: args, metadata: meta };
+            if (callee === 'enumerate') return { nodeType: 'CallExpression', id: `enum-${node.id}`, attributes: { callee: 'enumerate' }, children: args, metadata: meta };
+            if (callee === 'reversed') return { nodeType: 'CallExpression', id: `rev-${node.id}`, attributes: { callee: 'reversed' }, children: args, metadata: meta };
+            if (callee === 'len') return { nodeType: 'CallExpression', id: `len-${node.id}`, attributes: { callee: 'len' }, children: args, metadata: meta };
+
             if (callee === 'time.sleep_ms' || callee === 'sleep_ms' || callee === 'utime.sleep_ms') return { nodeType: 'DelayMs', id: `d-${node.id}`, attributes: {}, children: args, metadata: meta };
             if (callee === 'time.sleep' || callee === 'sleep' || callee === 'utime.sleep') {
                 if (args.length > 0 && args[0].nodeType === 'Literal') {
@@ -753,5 +1246,33 @@ class PythonCstToAst {
         }
 
         return { nodeType: 'Empty', id: 'e', attributes: {}, children: [] };
+    }
+
+    visitDictionary(node: any, env?: Map<string, BaseNode>): BaseNode {
+        const meta = { line: node.startPosition.row + 1 };
+        const pairs = node.namedChildren.filter((c: any) => c.type === 'pair');
+        const children: BaseNode[] = [];
+        for (const pair of pairs) {
+            const key = pair.childForFieldName('key');
+            const val = pair.childForFieldName('value');
+            if (key && val) {
+                children.push(this.visitExpr(key, env));
+                children.push(this.visitExpr(val, env));
+            }
+        }
+        return {
+            nodeType: 'ObjectInitializer', id: `dict-${node.id}`, attributes: {},
+            children, metadata: meta
+        };
+    }
+
+    visitSubscript(node: any, env?: Map<string, BaseNode>): BaseNode {
+        const meta = { line: node.startPosition.row + 1 };
+        const value = this.visitExpr(node.childForFieldName('value'), env);
+        const subscript = this.visitExpr(node.childForFieldName('subscript'), env);
+        return {
+            nodeType: 'SubscriptExpression', id: `sub-${node.id}`, attributes: {},
+            children: [value, subscript], metadata: meta
+        };
     }
 }
