@@ -2,6 +2,8 @@
 
 This document describes the evolution of NeuroForge as a simulation and transpilation platform for embedded systems, with ASL (Abstract Simulation Language) as the universal intermediate representation. The guiding thread is the full integration of the contents of `notyet/` into the core (`src/engine`), eliminating that folder at the end of the process.
 
+> 📋 **Implementation Standard**: See [docs/IMPLEMENTATION_STANDARD.md](../docs/IMPLEMENTATION_STANDARD.md) for the implementation pattern that ensures parity across all languages.
+
 Status markers:
 - `[x]` Completed
 - `[~]` In progress / stabilizing

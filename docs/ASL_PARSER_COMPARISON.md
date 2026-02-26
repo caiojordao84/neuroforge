@@ -2,6 +2,8 @@
 
 > Documento gerado em Fevereiro 2026
 > Comparação entre a documentação (`notyet/README.md`) e a implementação real dos parsers ASL
+>
+> 📋 **Para o plano de implementação padrão, consulte**: [IMPLEMENTATION_STANDARD.md](./IMPLEMENTATION_STANDARD.md)
 
 ---
 
@@ -16,18 +18,18 @@
 
 ## 1. Estruturas de Controle
 
-| Estrutura             | README.md | C/C++ (CParser) | Python Tree-sitter   | Python Regex                | RustParser           |
-| --------------------- | --------- | --------------- | -------------------- | --------------------------- | -------------------- |
+| Estrutura             | README.md | C/C++ (CParser) | Python Tree-sitter   | Python Regex               | RustParser           |
+| --------------------- | --------- | --------------- | -------------------- | -------------------------- | -------------------- |
 | **IfStatement**       | ✅ [x]     | ✅               | ✅ `if_statement`     | ❌                           | ✅ `if_expression`    |
 | **WhileLoop**         | ✅ [x]     | ✅               | ✅ `while_statement`  | ⚠️ apenas como `while True:` | ✅ `while_expression` |
-| **ForLoop**           | ✅ [x]     | ✅               | ✅ `for_statement`    | ✅ `for ... in`              | ✅ `for_expression`   |
+| **ForLoop**           | ✅ [x]     | ✅               | ✅ `for_statement`    | ✅ `for ... in`             | ✅ `for_expression`   |
 | **Loop (infinito)**   | ✅ [x]     | ✅ `while(1)`    | ✅ `while_statement`  | ✅ `while True:`             | ✅ `loop_expression`  |
-| **SwitchStatement**   | ✅ [x]     | ✅               | ✅ `match_statement`  | ✅ `match/case`              | ✅ `match_expression` |
-| **CaseClause**        | ✅ [x]     | ✅               | ✅ `case_clause`      | ✅                           | ✅ `match_arm`        |
-| **BreakStatement**    | ✅ [x]     | ✅               | ✅                    | ⚠️ auto-add                  | ❌                    |
-| **ContinueStatement** | ✅ [x]     | ✅               | ❌                    | ❌                           | ❌                    |
-| **ReturnStatement**   | ✅ [x]     | ✅               | ✅ `return_statement` | ❌                           | ❌                    |
-| **DoWhile**           | ❌ [🔴]     | ❌               | ❌                    | ❌                           | ❌                    |
+| **SwitchStatement**   | ✅ [x]     | ✅               | ✅ `match_statement`  | ✅ `match/case`             | ✅ `match_expression` |
+| **CaseClause**        | ✅ [x]     | ✅               | ✅ `case_clause`      | ✅                          | ✅ `match_arm`        |
+| **BreakStatement**    | ✅ [x]     | ✅               | ❌                    | ⚠️ auto-add                 | ❌                    |
+| **ContinueStatement** | ✅ [x]     | ✅               | ❌                    | ❌                          | ❌                    |
+| **ReturnStatement**   | ✅ [x]     | ✅               | ✅ `return_statement` | ❌                          | ❌                    |
+| **DoWhile**           | ❌ [🔴]     | ❌               | ❌                    | ❌                          | ❌                    |
 
 ---
 
@@ -36,7 +38,7 @@
 | Declaração              | README.md | C/C++ (CParser) | Python Tree-sitter      | Python Regex   | RustParser          |
 | ----------------------- | --------- | --------------- | ----------------------- | -------------- | ------------------- |
 | **VariableDeclaration** | ✅ [x]     | ✅               | ✅ `let_declaration`     | ✅ `var = expr` | ✅ `let_declaration` |
-| **Function**            | ✅ [x]     | ✅               | ✅ `function_definition` | ❌              | ✅ `function_item`   |
+| **Function**            | ✅ [x]     | ✅               | ✅ `function_definition` | ✅ `def`        | ✅ `function_item`   |
 | **StructDeclaration**   | ✅ [x]     | ✅               | ❌                       | ❌              | ❌                   |
 | **EnumDeclaration**     | ✅ [x]     | ✅               | ❌                       | ❌              | ❌                   |
 | **ArrayInitializer 1D** | ✅ [x]     | ✅               | ✅ `list`                | ❌              | ❌                   |
@@ -70,7 +72,7 @@
 | Função ASL      | README.md | C/C++ (CParser)  | Python Tree-sitter | Python Regex | RustParser   |
 | --------------- | --------- | ---------------- | ------------------ | ------------ | ------------ |
 | **GpioSet**     | ✅ [x]     | ✅ `digitalWrite` | ✅ `pin.value(1)`   | ✅            | ✅ `gpio_set` |
-| **GpioRead**    | ✅ [x]     | ✅ `digitalRead`  | ✅ `pin.value()`    | ❌            | ❌            |
+| **GpioRead**    | ✅ [x]     | ✅ `digitalRead`  | ❌                  | ❌            | ❌            |
 | **AnalogWrite** | ✅ [x]     | ✅ `analogWrite`  | ❌                  | ❌            | ❌            |
 | **AnalogRead**  | ✅ [x]     | ✅ `analogRead`   | ❌                  | ❌            | ❌            |
 | **DelayMs**     | ✅ [x]     | ✅ `delay`        | ✅ `time.sleep_ms`  | ✅            | ✅ `delay`    |
@@ -127,8 +129,10 @@
 
 ## 8. Builtins (ASLExecutor)
 
-| Função                     | README.md | Implementado |
-| -------------------------- | --------- | ------------ |
+> ⚠️ **IMPORTANTE**: Os Math Builtins estão marcados como ✅ no README.md mas **NÃO estão implementados** no código atual!
+
+| Função                   | README.md | Implementado |
+| ------------------------ | --------- | ------------ |
 | **abs()**                  | ✅ [x]     | ❌            |
 | **sqrt()**                 | ✅ [x]     | ❌            |
 | **pow()**                  | ✅ [x]     | ❌            |
@@ -136,19 +140,20 @@
 | **min/max**                | ✅ [x]     | ❌            |
 | **round/floor/ceil**       | ✅ [x]     | ❌            |
 | **random(min,max)**        | ✅ [x]     | ✅            |
-| **random(max)**            | ⚠️         | ⚠️ parcial    |
+| **random(max)**            | ✅ [x]     | ✅            |
 | **map()**                  | ✅ [x]     | ✅            |
 | **constrain()**            | ✅ [x]     | ✅            |
 | **int()/float()/String()** | ✅ [x]     | ✅            |
 | **sizeof()**               | ✅ [x]     | ❌            |
 | **millis()**               | ✅ [x]     | ✅            |
 | **micros()**               | ✅ [x]     | ✅            |
+| **tone()** (parcial)       | ✅ [x]     | ⚠️            |
 
 ---
 
 ## 9. Gaps Identificados (README vs Implementação)
 
-> ⚠️ **IMPORTANTE**: Diversos Math Builtins (abs, sqrt, pow, sin, cos, tan, min, max, round, floor, ceil) estão listados no README.md como implementados ([x]), mas **NÃO estão implementados** no código atual do ASLExecutor. Eles retornam 0 por causa do fallback genérico.
+> ⚠️ **CRÍTICO**: Diversos Math Builtins (abs, sqrt, pow, sin, cos, tan, min, max, round, floor, ceil) estão listados no README.md como implementados ([x]), mas **NÃO estão implementados** no código atual do ASLExecutor. Eles retornam 0 por causa do fallback genérico.
 
 | Item                  | Status README  | Status Parser | Ação Necessária                                      |
 | --------------------- | -------------- | ------------- | ---------------------------------------------------- |
@@ -179,15 +184,15 @@
 | **Expressões**    | 100%  | 80%         | 40%          | 60%  |
 | **Hardware**      | 100%  | 30%         | 20%          | 15%  |
 | **Display I/O**   | 100%  | 0%          | 0%           | 0%   |
-| **Math Builtins** | 15%   | N/A         | N/A          | N/A  |
+| **Math Builtins** | 0%    | N/A         | N/A          | N/A  |
 
 ---
 
 ## 11. Resumo: Próximos Passos
 
 ### C/C++ (Prioridade Alta)
-- [ ] Completar gap identificado na tabela acima (DoWhile, etc.)
-- [ ] Implementar Math Builtins (`abs`, `sqrt`, etc.) no `ASLExecutor`
+- [ ] Completar gaps identificados na tabela acima
+- [x] Implementar Math Builtins (`abs`, `sqrt`, etc.) no `ASLExecutor` - **CORRIGIDO: Math Builtins NÃO estão implementados!**
 - [ ] Implementar `sizeof` no `ASLExecutor`
 
 ### Python (Prioridade Alta)
@@ -205,6 +210,7 @@
 ### Gaps Globais
 - [ ] DoWhile (todas as linguagens)
 - [ ] Hardware específico (LCD, OLED, etc.) para Python/Rust
+- [ ] Math Builtins no ASLExecutor (abs, sqrt, pow, sin, cos, tan, min, max, round, floor, ceil)
 
 ---
 
@@ -212,7 +218,7 @@
 
 ### Parsers
 - `src/engine/asl/plugins/c/CParser.ts` (trata C e C++)
-- `src/engine/asl/plugins/python/PythonParser.ts` (Tree-sitter + Regex fallback)
+- `src/engine/asl/plugins/python/PythonParser.ts`
 - `src/engine/asl/plugins/rust/RustParser.ts`
 
 ### Executors e Simulation
