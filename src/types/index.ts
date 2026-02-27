@@ -12,9 +12,11 @@ export interface WindowState {
   size: { width: number; height: number };
   zIndex: number;
   title: string;
+  isDocked: boolean;
+  dockWidth: number;
 }
 
-export type WindowId = 'codeEditor' | 'componentsLibrary' | 'serialMonitor' | 'terminal' | 'properties';
+export type WindowId = 'codeEditor' | 'componentsLibrary' | 'serialMonitor' | 'terminal' | 'properties' | 'libraries' | 'aslViewer' | 'serialTerminal';
 
 // ============================================
 // Pin State Machine Types

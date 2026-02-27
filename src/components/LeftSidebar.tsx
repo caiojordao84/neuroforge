@@ -7,6 +7,7 @@ import {
   PanelTopOpen,
   Book,
   BrainCircuit,
+  Columns,
 } from 'lucide-react';
 import { useUIStore, type WindowId } from '@/stores/useUIStore';
 import { cn } from '@/lib/utils';
@@ -23,8 +24,7 @@ const tabs: SidebarTab[] = [
   { id: 'libraries', icon: Book, label: 'Libraries' },
   { id: 'properties', icon: PanelTopOpen, label: 'Properties' },
   { id: 'aslViewer', icon: BrainCircuit, label: 'ASL Viewer' },
-  { id: 'serialMonitor', icon: Terminal, label: 'Serial Monitor' },
-  { id: 'terminal', icon: Zap, label: 'Terminal' },
+  { id: 'serialTerminal', icon: Columns, label: 'Serial & Terminal' },
 ];
 
 export const LeftSidebar: React.FC = () => {
