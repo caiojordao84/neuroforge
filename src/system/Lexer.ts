@@ -1,4 +1,4 @@
-export type TokenType = 'KEYWORD' | 'IDENTIFIER' | 'NUMBER' | 'SYMBOL' | 'STRING' | 'EOF';
+export type TokenType = 'KEYWORD' | 'IDENTIFIER' | 'NUMBER' | 'SYMBOL' | 'STRING' | 'COMMENT' | 'EOF';
 
 export interface Token { type: TokenType; value: string; line: number; }
 
@@ -20,21 +20,32 @@ export class Lexer {
 
       // Line comments
       if (char === '/' && this.src[this.cursor + 1] === '/') {
-        while (this.src[this.cursor] !== '\n' && this.cursor < this.src.length) this.cursor++;
+        const startLine = this.line;
+        let comment = '';
+        while (this.src[this.cursor] !== '\n' && this.cursor < this.src.length) {
+          comment += this.src[this.cursor++];
+        }
+        comment = comment.replace(/^\/\//, '').trim();
+        tokens.push({ type: 'COMMENT', value: comment, line: startLine });
         continue;
       }
 
       // Block comments
       if (char === '/' && this.src[this.cursor + 1] === '*') {
-        this.cursor += 2; // Skip /*
+        const startLine = this.line;
+        this.cursor += 2;
+        let comment = '';
         while (this.cursor < this.src.length) {
           if (this.src[this.cursor] === '*' && this.src[this.cursor + 1] === '/') {
-            this.cursor += 2; // Skip */
+            this.cursor += 2;
             break;
           }
+          comment += this.src[this.cursor];
           if (this.src[this.cursor] === '\n') this.line++;
           this.cursor++;
         }
+        comment = comment.replace(/^\* ?/, '').replace(/ ?\*$/, '').trim();
+        tokens.push({ type: 'COMMENT', value: comment, line: startLine });
         continue;
       }
 
