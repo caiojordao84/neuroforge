@@ -487,6 +487,28 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       }
 
       if (expr.callee === 'Serial.begin') return 0;
+      if (expr.callee === 'Serial.available') {
+        return ctx.engine.serialAvailable();
+      }
+      if (expr.callee === 'Serial.read') {
+        return ctx.engine.serialRead();
+      }
+      if (expr.callee === 'Serial.write') {
+        const val = await evalExpr(expr.args[0], env, ctx);
+        return ctx.engine.serialWrite(val);
+      }
+      if (expr.callee === 'Serial.readString') {
+        let str = '';
+        let byte = ctx.engine.serialRead();
+        while (byte !== -1) {
+          str += String.fromCharCode(byte);
+          byte = ctx.engine.serialRead();
+        }
+        return str;
+      }
+      if (expr.callee === 'Serial.parseInt') {
+        return ctx.engine.serialParseInt();
+      }
       if (expr.callee === 'random') {
         const min = expr.args[0] ? await evalExpr(expr.args[0], env, ctx) : 0;
         const max = expr.args[1] ? await evalExpr(expr.args[1], env, ctx) : 100;
@@ -571,12 +593,6 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       if (expr.callee === 'ceil') {
         const arg = await evalExpr(expr.args[0], env, ctx);
         return Math.ceil(arg);
-      }
-
-      if (expr.callee === 'random') {
-        const min = expr.args[0] ? await evalExpr(expr.args[0], env, ctx) : 0;
-        const max = expr.args[1] ? await evalExpr(expr.args[1], env, ctx) : 100;
-        return Math.floor(Math.random() * (max - min)) + min;
       }
 
       if (expr.callee === 'String') return String(await evalExpr(expr.args[0] || { kind: 'literal', value: '' }, env, ctx));

@@ -118,6 +118,7 @@ export class SimulationEngine extends EventEmitter {
   private pinCache: Map<number, PinState> = new Map();
   private isLoopExecuting = false;
   private simulationStartTime = 0;
+  private serialRxBuffer: number[] = [];
 
   constructor() {
     super();
@@ -191,6 +192,7 @@ export class SimulationEngine extends EventEmitter {
 
     // Don't remove listeners - components need them to react to pin changes
     this.pinCache.clear();
+    this.serialRxBuffer = [];
   }
 
   pause(): void {
@@ -461,13 +463,43 @@ export class SimulationEngine extends EventEmitter {
   }
 
   serialAvailable(): number {
-    return 0;
+    return this.serialRxBuffer.length;
   }
 
   serialRead(): number {
-    // MISSION 4: Emit event for RX LED (when implemented)
-    this.emit('serialReceive', {});
-    return -1;
+    if (this.serialRxBuffer.length === 0) return -1;
+    const byte = this.serialRxBuffer.shift()!;
+    this.emit('serialReceive', { byte });
+    return byte;
+  }
+
+  serialWrite(value: number | string): number {
+    const text = typeof value === 'number'
+        ? String.fromCharCode(value)
+        : String(value);
+    this.serialPrint(text);
+    return text.length;
+  }
+
+  serialParseInt(): number {
+    let str = '';
+    while (this.serialRxBuffer.length > 0) {
+        const ch = String.fromCharCode(this.serialRxBuffer[0]);
+        if (/[\d\-]/.test(ch)) {
+            str += ch;
+            this.serialRxBuffer.shift();
+        } else {
+            break;
+        }
+    }
+    return str ? parseInt(str, 10) : 0;
+  }
+
+  serialInject(text: string): void {
+    for (let i = 0; i < text.length; i++) {
+        this.serialRxBuffer.push(text.charCodeAt(i));
+    }
+    this.emit('serialData', { text });
   }
 
   tone(pin: number, frequency: number, duration?: number): void {
