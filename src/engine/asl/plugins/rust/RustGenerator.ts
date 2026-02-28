@@ -1,4 +1,3 @@
-
 import type { ProgramNode, BaseNode, SourceMapEntry } from '@/system/types';
 
 export class RustGenerator {
@@ -19,9 +18,9 @@ export class RustGenerator {
 
         const funcs = ast.children.filter(c => c.nodeType === 'Function');
         const setup = funcs.find(f => f.attributes.name === 'setup');
-        const loop = funcs.find(f => f.attributes.name === 'loop');
+        const loop_ = funcs.find(f => f.attributes.name === 'loop');
 
-        if (setup || loop) {
+        if (setup || loop_) {
             this.addLn(lines, "#[entry]", null);
             this.addLn(lines, "fn main() -> ! {", null);
             this.addLn(lines, "    let peripherals = Peripherals::take();", null);
@@ -37,10 +36,10 @@ export class RustGenerator {
             }
 
             this.addLn(lines, "", null);
-            if (loop) this.printComments(loop, lines, "    ");
-            this.addLn(lines, "    loop {", loop);
-            if (loop) {
-                loop.children.forEach(c => this.genStmt(c, lines, "        "));
+            if (loop_) this.printComments(loop_, lines, "    ");
+            this.addLn(lines, "    loop {", loop_ ?? null);
+            if (loop_) {
+                loop_.children.forEach(c => this.genStmt(c, lines, "        "));
             }
             this.addLn(lines, "    }", null);
             this.addLn(lines, "}", null);
@@ -68,10 +67,8 @@ export class RustGenerator {
     private printComments(node: BaseNode, lines: string[], indent: string) {
         if (node.leadingComments) {
             node.leadingComments.forEach(c => {
-                // Ensure it has a // prefix (if it doesn't already)
                 let clean = c.trim();
                 if (clean.startsWith('/*')) {
-                    // Keep block comments as is
                     this.addLn(lines, `${indent}${clean}`, null);
                 } else if (clean.startsWith('//')) {
                     this.addLn(lines, `${indent}${clean}`, null);
@@ -84,6 +81,8 @@ export class RustGenerator {
 
     private genStmt(node: BaseNode, lines: string[], indent: string) {
         this.printComments(node, lines, indent);
+
+        if (node.nodeType === 'Empty') return;
 
         if (node.nodeType === 'VariableDeclaration') {
             const val = node.children.length > 0 ? this.genExpr(node.children[0]) : '0';
@@ -102,8 +101,14 @@ export class RustGenerator {
             }
             this.addLn(lines, `${indent}${this.genExpr(child)};`, node);
         }
+        else if (node.nodeType === 'Block') {
+            node.children.forEach(c => this.genStmt(c, lines, indent));
+        }
         else if (node.nodeType === 'GpioSet') {
             this.addLn(lines, `${indent}gpio_set(${this.genExpr(node.children[0])}, ${this.genExpr(node.children[1])});`, node);
+        }
+        else if (node.nodeType === 'GpioRead') {
+            this.addLn(lines, `${indent}gpio_get(${this.genExpr(node.children[0])});`, node);
         }
         else if (node.nodeType === 'AnalogRead') {
             this.addLn(lines, `${indent}adc.read(${this.genExpr(node.children[0])});`, node);
@@ -114,9 +119,68 @@ export class RustGenerator {
         else if (node.nodeType === 'DelayMs') {
             this.addLn(lines, `${indent}delay.delay_ms(${this.genExpr(node.children[0])}u32);`, node);
         }
+        else if (node.nodeType === 'Print') {
+            this.addLn(lines, `${indent}println!("{}", ${this.genExpr(node.children[0])});`, node);
+        }
+        else if (node.nodeType === 'BreakStatement') {
+            this.addLn(lines, `${indent}break;`, node);
+        }
+        else if (node.nodeType === 'ContinueStatement') {
+            this.addLn(lines, `${indent}continue;`, node);
+        }
+        else if (node.nodeType === 'ReturnStatement') {
+            if (node.children.length > 0) {
+                this.addLn(lines, `${indent}return ${this.genExpr(node.children[0])};`, node);
+            } else {
+                this.addLn(lines, `${indent}return;`, node);
+            }
+        }
         else if (node.nodeType === 'IfStatement') {
-            this.addLn(lines, `${indent}if ${this.genExpr(node.children[0])} {`, node);
+            // children[0] = condition
+            // children[1] = Block (then)
+            // children[2] = Block (else) | IfStatement (else if) — optional
+            const cond = this.genExpr(node.children[0]);
+            this.addLn(lines, `${indent}if ${cond} {`, node);
+            if (node.children[1]) {
+                const thenBlock = node.children[1];
+                const thenChildren = thenBlock.nodeType === 'Block' ? thenBlock.children : [thenBlock];
+                thenChildren.forEach(c => this.genStmt(c, lines, indent + "    "));
+            }
+            this.addLn(lines, `${indent}}`, node);
+
+            if (node.children[2]) {
+                const elseNode = node.children[2];
+                if (elseNode.nodeType === 'IfStatement') {
+                    // else if — rewrite last closing brace
+                    lines[lines.length - 1] = `${indent}} else `;
+                    const tempLines: string[] = [];
+                    this.genStmt(elseNode, tempLines, "");
+                    // attach first line inline, rest as new lines
+                    const [first, ...rest] = tempLines;
+                    lines[lines.length - 1] += first.trim();
+                    rest.forEach(l => lines.push(indent + l.trimStart()));
+                    this.currentLine += rest.length;
+                } else {
+                    // plain else block
+                    lines[lines.length - 1] = `${indent}} else {`;
+                    const elseChildren = elseNode.nodeType === 'Block' ? elseNode.children : [elseNode];
+                    elseChildren.forEach(c => this.genStmt(c, lines, indent + "    "));
+                    this.addLn(lines, `${indent}}`, node);
+                }
+            }
+        }
+        else if (node.nodeType === 'Loop') {
+            // Infinite loop
+            this.addLn(lines, `${indent}loop {`, node);
+            node.children.forEach(c => this.genStmt(c, lines, indent + "    "));
+            this.addLn(lines, `${indent}}`, node);
+        }
+        else if (node.nodeType === 'DoWhileLoop') {
+            // Rust has no do-while — emulate with loop + trailing condition break
+            // children[0] = condition, children[1..] = body
+            this.addLn(lines, `${indent}loop {`, node);
             node.children.slice(1).forEach(c => this.genStmt(c, lines, indent + "    "));
+            this.addLn(lines, `${indent}    if !(${this.genExpr(node.children[0])}) { break; }`, node);
             this.addLn(lines, `${indent}}`, node);
         }
         else if (node.nodeType === 'WhileLoop') {
@@ -125,7 +189,6 @@ export class RustGenerator {
             this.addLn(lines, `${indent}}`, node);
         }
         else if (node.nodeType === 'ForLoop') {
-            // Basic C-style for loop as while loop in Rust
             let childIdx = 0;
             if (node.attributes.hasInit && node.children[childIdx]) {
                 const initNode = node.children[childIdx];
@@ -146,13 +209,10 @@ export class RustGenerator {
             }
             this.addLn(lines, `${indent}}`, node);
         }
-        else if (node.nodeType === 'Print') {
-            this.addLn(lines, `${indent}println!("{}", ${this.genExpr(node.children[0])});`, node);
-        }
         else if (node.nodeType === 'DesignatedInitializer') {
             const fields = node.attributes.fields;
             this.addLn(lines, `${indent}{`, node);
-            fields.forEach((f: any) => this.addLn(lines, `${indent}  ${f.name}: ${this.genExpr(f.value)},`, node));
+            fields.forEach((f: any) => this.addLn(lines, `${indent}    ${f.name}: ${this.genExpr(f.value)},`, node));
             this.addLn(lines, `${indent}}`, node);
         }
         else if (node.nodeType === 'SwitchStatement') {
@@ -190,6 +250,26 @@ export class RustGenerator {
         if (node.nodeType === 'Identifier') return node.attributes.name;
         if (node.nodeType === 'BinaryExpression') {
             return `${this.genExpr(node.children[0])} ${node.attributes.operator} ${this.genExpr(node.children[1])}`;
+        }
+        if (node.nodeType === 'UnaryExpression') {
+            if (node.attributes.prefix) return `${node.attributes.operator}${this.genExpr(node.children[0])}`;
+            // postfix ++ / -- not native in Rust — emit as += 1 / -= 1
+            const op = node.attributes.operator === '++' ? ' += 1' : ' -= 1';
+            return `${this.genExpr(node.children[0])}${op}`;
+        }
+        if (node.nodeType === 'MemberExpression') {
+            const op = node.attributes.operator || '.';
+            return `${this.genExpr(node.children[0])}${op}${node.attributes.property}`;
+        }
+        if (node.nodeType === 'ConditionalExpression') {
+            // Rust has no ternary — use if/else expression
+            return `(if ${this.genExpr(node.children[0])} { ${this.genExpr(node.children[1])} } else { ${this.genExpr(node.children[2])} })`;
+        }
+        if (node.nodeType === 'GpioRead') {
+            return `gpio_get(${this.genExpr(node.children[0])})`;
+        }
+        if (node.nodeType === 'AnalogRead') {
+            return `adc.read(${this.genExpr(node.children[0])})`;
         }
         if (node.nodeType === 'CallExpression') {
             const args = node.children.map(c => this.genExpr(c)).join(', ');
