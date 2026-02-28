@@ -456,6 +456,18 @@ class RegexPythonParser {
             } as BaseNode;
         }
 
+        // ── MicroPython ADC: adc.read_u16() / adc.read() ─────────────────────
+        const adcReadM = trimmed.match(/^(\w+)\.read(?:_u16)?\(\)\s*$/);
+        if (adcReadM) {
+            return {
+                nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
+                children: [{
+                    nodeType: 'AnalogRead', id: `adc-${lineNum}`, attributes: {},
+                    children: [{ nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: adcReadM[1] }, children: [] } as BaseNode]
+                } as BaseNode],
+                metadata: meta
+            } as BaseNode;
+        }
 
         // ── CircuitPython: led.value = True/False/0/1 ────────────────────────
         const cpDioM = trimmed.match(/^(\w+)\.value\s*=\s*(.+)\s*$/);
@@ -1275,6 +1287,15 @@ class PythonCstToAst {
                 // MicroPython Pin.id()
                 if (attr === 'id' && args.length === 0) {
                     return { nodeType: 'CallExpression', id: `id-${node.id}`, attributes: { callee: 'Pin.id' }, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
+                }
+
+                // MicroPython ADC: adc.read_u16() / adc.read()
+                if ((attr === 'read_u16' || attr === 'read') && args.length === 0) {
+                    return {
+                        nodeType: 'AnalogRead', id: `adc-${node.id}`, attributes: {},
+                        children: [this.visitExpr(func.childForFieldName('object'), env)],
+                        metadata: meta
+                    };
                 }
             }
 
