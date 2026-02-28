@@ -524,6 +524,16 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       }
       if (expr.callee === 'millis') return ctx.engine.millis();
       if (expr.callee === 'micros') return ctx.engine.micros();
+      if (expr.callee === 'sizeof') {
+        const val = await evalExpr(expr.args[0], env, ctx);
+        if (Array.isArray(val)) return val.length;
+        if (typeof val === 'string') return val.length;
+        return 4; // primitivos: int/float = 4 bytes em simulação
+      }
+      if (expr.callee === 'delayMicroseconds') {
+        ctx.engine.delayMicroseconds();
+        return 0;
+      }
       if (expr.callee === 'tone' || expr.callee === 'noTone' || expr.callee === 'servo') {
         const args = [];
         for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
