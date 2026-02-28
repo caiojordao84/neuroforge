@@ -26,6 +26,7 @@ export const statementRegistry: Record<string, StatementHandler> = {
   DoWhileLoop: handleDoWhileLoop,
   ForLoop: handleForLoop,
   SwitchStatement: handleSwitchStatement,
+  StructDeclaration: handleStructDeclaration,
   ReturnStatement: handleReturnStatement,
   BreakStatement: handleBreakStatement,
   ContinueStatement: handleContinueStatement,
@@ -40,6 +41,16 @@ export const statementRegistry: Record<string, StatementHandler> = {
     return acc;
   }, {} as Record<string, StatementHandler>)
 };
+
+/**
+ * StructDeclaration — no-op handler.
+ * Struct registration is handled upstream in codeToASL.ts (ASLProgram.structs[]).
+ * This handler prevents spurious assign() statements when StructDeclaration
+ * nodes appear inside function/loop blocks (e.g. from RustParser or CParser).
+ */
+function handleStructDeclaration(_node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [];
+}
 
 function handleSwitchStatement(node: BaseNode, ctx: TransformContext): ASLStatement[] {
   // children[0] = discriminant expr
@@ -265,7 +276,6 @@ function handleVariableDeclaration(node: BaseNode, _ctx: TransformContext): ASLS
             if (j < structDef.fields.length) {
               const field = structDef.fields[j];
               const expr = transformExpr(c);
-              // Access arr[i].fieldName
               stmts.push({
                 kind: 'setMember',
                 target: { kind: 'index', target: { kind: 'var', name }, index: { kind: 'literal', value: i } },

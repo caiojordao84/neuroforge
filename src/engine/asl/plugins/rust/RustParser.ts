@@ -50,16 +50,6 @@ export class RustParser {
 class RustCstToAst {
     convert(node: any): ProgramNode {
         const children = this.visitBlockChildren(node);
-
-        // Automatic Unwrapping: If we have exactly one function named 'main',
-        // unwrap its children into the Program level.
-        const funcs = children.filter(c => c.nodeType === 'Function');
-        if (funcs.length === 1 && funcs[0].attributes.name === 'main') {
-            const mainBody = funcs[0].children;
-            const otherNodes = children.filter(c => c !== funcs[0]);
-            return { nodeType: 'Program', id: 'root', attributes: {}, children: [...otherNodes, ...mainBody] };
-        }
-
         return { nodeType: 'Program', id: 'root', attributes: {}, children };
     }
 
@@ -74,6 +64,7 @@ class RustCstToAst {
             case 'while_expression': return this.visitWhile(node);
             case 'for_expression': return this.visitFor(node);
             case 'match_expression': return this.visitMatch(node);
+            case 'struct_item': return this.visitStruct(node);
             case 'break_expression': return this.visitBreak(node);
             case 'continue_expression': return this.visitContinue(node);
             case 'return_expression': return this.visitReturn(node);
@@ -102,28 +93,8 @@ class RustCstToAst {
     }
 
     visitExpressionStatement(node: any): BaseNode {
-        const first = node.firstChild!;
-        const text = node.text || '';
-
-        // Enhanced Boilerplate Filtering
-        if (text.includes('esp_hal') ||
-            text.includes('no_std') ||
-            text.includes('no_main') ||
-            text.includes('entry') ||
-            text.includes('.split()') ||
-            text.includes('.freeze()')) {
-            return { nodeType: 'Empty', id: 'e', attributes: {}, children: [] };
-        }
-
-        const expr = this.visit(first);
-        if (!expr || expr.nodeType === 'Empty') return { nodeType: 'Empty', id: 'e', attributes: {}, children: [] };
-
-        // Rust control flow are expressions, but mapped to statements in ASL. Avoid wrapping them.
-        if (['WhileLoop', 'IfStatement', 'ForLoop', 'SwitchStatement'].includes(expr.nodeType)) {
-            // Keep comments attached
-            if (expr.metadata && !expr.metadata.line) expr.metadata.line = node.startPosition.row + 1;
-            return expr;
-        }
+        const expr = this.visit(node.firstChild!);
+        if (!expr) return { nodeType: 'Empty', id: 'e', attributes: {}, children: [] };
 
         return {
             nodeType: 'ExpressionStatement',
@@ -135,17 +106,6 @@ class RustCstToAst {
     }
 
     visitLet(node: any): BaseNode {
-        const text = node.text || '';
-        // Filter ESP-HAL boilerplate variables
-        if (text.includes('Peripherals::take') ||
-            text.includes('system.clock_control') ||
-            text.includes('ClockControl') ||
-            text.includes('Delay::new') ||
-            text.includes('.split()') ||
-            text.includes('.freeze()')) {
-            return { nodeType: 'Empty', id: 'e', attributes: {}, children: [] };
-        }
-
         const pattern = node.childForFieldName('pattern');
         const name = pattern?.text.replace('mut ', '').trim() || 'unknown';
         const valueNode = node.childForFieldName('value');
@@ -190,7 +150,7 @@ class RustCstToAst {
                 result.push(visited);
             }
         });
-        return result.filter(n => n.nodeType !== 'Empty');
+        return result;
     }
 
     visitIf(node: any): BaseNode {
@@ -216,9 +176,7 @@ class RustCstToAst {
     visitLoop(node: any): BaseNode {
         const bodyNode = node.childForFieldName('body');
         const children = bodyNode ? this.visitBlockChildren(bodyNode) : [];
-
-        // CGenerator expects WhileLoop with Literal(1) to treat as 'void loop()'
-        const trueCond: BaseNode = { nodeType: 'Literal', id: `true-${node.id}`, attributes: { value: 1 }, children: [] };
+        const trueCond: BaseNode = { nodeType: 'Literal', id: 'true', attributes: { value: 1 }, children: [] };
 
         return {
             nodeType: 'WhileLoop',
@@ -251,23 +209,38 @@ class RustCstToAst {
 
         let initVal: any = 0;
         let maxVal: any = 10;
+        let isInclusive = false;
 
         if (iterator?.type === 'range_expression') {
+            // child(1) is '..' or '..='
+            const rangeOp = iterator.child(1)?.text || '..';
+            isInclusive = rangeOp === '..=';
             const left = iterator.child(0);
             const right = iterator.child(2);
-            if (left) initVal = parseInt(left.text) || 0;
-            if (right) maxVal = parseInt(right.text) || 0;
+            if (left) initVal = isNaN(parseInt(left.text)) ? left.text : parseInt(left.text);
+            if (right) maxVal = isNaN(parseInt(right.text)) ? right.text : parseInt(right.text);
         }
+
+        // For inclusive ranges (..=), use <= instead of <
+        const condOp = isInclusive ? '<=' : '<';
+
+        const initLiteral: BaseNode = typeof initVal === 'number'
+            ? { nodeType: 'Literal', id: 'l1', attributes: { value: initVal }, children: [] }
+            : { nodeType: 'Identifier', id: 'l1', attributes: { name: initVal }, children: [] };
+
+        const maxLiteral: BaseNode = typeof maxVal === 'number'
+            ? { nodeType: 'Literal', id: 'l2', attributes: { value: maxVal }, children: [] }
+            : { nodeType: 'Identifier', id: 'l2', attributes: { name: maxVal }, children: [] };
 
         const init: BaseNode = {
             nodeType: 'VariableDeclaration', id: 'init', attributes: { name: pattern, type: 'int' },
-            children: [{ nodeType: 'Literal', id: 'l1', attributes: { value: initVal }, children: [] }]
+            children: [initLiteral]
         };
         const condition: BaseNode = {
-            nodeType: 'BinaryExpression', id: 'cond', attributes: { operator: '<' },
+            nodeType: 'BinaryExpression', id: 'cond', attributes: { operator: condOp },
             children: [
                 { nodeType: 'Identifier', id: 'id', attributes: { name: pattern }, children: [] },
-                { nodeType: 'Literal', id: 'l2', attributes: { value: maxVal }, children: [] }
+                maxLiteral
             ]
         };
         const update: BaseNode = {
@@ -345,6 +318,33 @@ class RustCstToAst {
         };
     }
 
+    visitStruct(node: any): BaseNode {
+        const name = node.childForFieldName('name')?.text || 'UnknownStruct';
+        const fields: BaseNode[] = [];
+
+        node.children.forEach((c: any) => {
+            if (c.type === 'field_declaration') {
+                const fieldName = c.childForFieldName('name')?.text || 'field';
+                const fieldType = c.childForFieldName('type')?.text || 'int';
+                fields.push({
+                    nodeType: 'VariableDeclaration',
+                    id: `field-${c.id}`,
+                    attributes: { name: fieldName, type: fieldType },
+                    children: [],
+                    metadata: { line: c.startPosition.row + 1 }
+                });
+            }
+        });
+
+        return {
+            nodeType: 'StructDeclaration',
+            id: `struct-${node.id}`,
+            attributes: { name },
+            children: fields,
+            metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
     visitBreak(node: any): BaseNode {
         return {
             nodeType: 'BreakStatement',
@@ -381,9 +381,16 @@ class RustCstToAst {
         const meta = { line: node.startPosition.row + 1 };
 
         if (node.type === 'integer_literal') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: parseInt(node.text) }, children: [], metadata: meta };
+        if (node.type === 'float_literal') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: parseFloat(node.text) }, children: [], metadata: meta };
         if (node.type === 'string_literal') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: node.text.replace(/"/g, ''), isString: true }, children: [], metadata: meta };
         if (node.type === 'boolean_literal') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: node.text === 'true' ? 1 : 0 }, children: [], metadata: meta };
         if (node.type === 'identifier') return { nodeType: 'Identifier', id: `i-${node.id}`, attributes: { name: node.text }, children: [], metadata: meta };
+
+        if (node.type === 'index_expression') {
+            const target = this.visitExpr(node.child(0)!);
+            const index  = this.visitExpr(node.child(2)!); // child(1) is '['
+            return { nodeType: 'SubscriptExpression', id: `sub-${node.id}`, attributes: {}, children: [target, index], metadata: meta };
+        }
 
         if (node.type === 'binary_expression') {
             const left = this.visitExpr(node.child(0)!);
@@ -406,34 +413,40 @@ class RustCstToAst {
 
     visitCall(node: any): BaseNode {
         const funcNode = node.childForFieldName('function');
-        let funcName = funcNode?.text || '';
+        const funcName = funcNode?.text || '';
         const argsNode = node.childForFieldName('arguments');
         const args = argsNode ? argsNode.children.filter((c: any) => c.type !== '(' && c.type !== ')' && c.type !== ',').map((c: any) => this.visitExpr(c)) : [];
 
         const meta = { line: node.startPosition.row + 1 };
 
-        // Handle dot notation (delay.delay_ms, led.set_high, etc.)
-        if (funcName.includes('.')) {
-            const parts = funcName.split('.');
-            const method = parts[parts.length - 1];
-            if (method === 'delay_ms' || method === 'delay_us') {
-                return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
-            }
-            if (method === 'set_high' || method === 'set_low') {
-                const val = method === 'set_high' ? 1 : 0;
-                return {
-                    nodeType: 'GpioSet', id: `c-${node.id}`, attributes: {}, children: [
-                        { nodeType: 'Literal', id: 'l', attributes: { value: 13 }, children: [] },
-                        { nodeType: 'Literal', id: 'v', attributes: { value: val }, children: [] }
-                    ], metadata: meta
-                };
-            }
-        }
+        // ── GPIO ──────────────────────────────────────────────────────────────────
+        if (funcName === 'gpio_set' || funcName === 'digitalWrite')
+            return { nodeType: 'GpioSet', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+        if (funcName === 'gpio_get' || funcName === 'digitalRead')
+            return { nodeType: 'GpioRead', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+        if (funcName === 'adc_read' || funcName === 'analogRead')
+            return { nodeType: 'AnalogRead', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
 
-        if (funcName === 'gpio_set' || funcName === 'digitalWrite') return { nodeType: 'GpioSet', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
-        if (funcName === 'delay' || funcName === 'delay_ms') return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
-        if (funcName === 'pinMode') return { nodeType: 'CallExpression', id: `c-${node.id}`, attributes: { callee: 'pinMode' }, children: args, metadata: meta };
-        if (funcName === 'Serial.begin') return { nodeType: 'CallExpression', id: `c-${node.id}`, attributes: { callee: 'Serial.begin' }, children: args, metadata: meta };
+        // ── Delays ────────────────────────────────────────────────────────────────
+        // Standard: delay(ms) / delay_ms(ms)
+        if (funcName === 'delay' || funcName === 'delay_ms')
+            return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+
+        // Embassy async: Timer::after_millis(n).await  →  DelayMs(n)
+        if (funcName === 'Timer::after_millis' || funcName.endsWith('::after_millis') || funcName.endsWith('.after_millis'))
+            return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+
+        // Embassy async: Timer::after_secs(n).await  →  DelayMs(n * 1000)
+        if (funcName === 'Timer::after_secs' || funcName.endsWith('::after_secs') || funcName.endsWith('.after_secs')) {
+            const secArg = args[0] || { nodeType: 'Literal', id: 'l', attributes: { value: 0 }, children: [] };
+            const msArg: BaseNode = {
+                nodeType: 'BinaryExpression',
+                id: `ms-${node.id}`,
+                attributes: { operator: '*' },
+                children: [secArg, { nodeType: 'Literal', id: 'l1000', attributes: { value: 1000 }, children: [] }]
+            };
+            return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: [msArg], metadata: meta };
+        }
 
         return { nodeType: 'CallExpression', id: `call-${node.id}`, attributes: { callee: funcName }, children: args, metadata: meta };
     }
@@ -444,19 +457,29 @@ class RustCstToAst {
         const tokenTree = node.childForFieldName('tokens');
         let text = tokenTree?.text || '';
         if (text.startsWith('(') && text.endsWith(')')) text = text.substring(1, text.length - 1);
-
-        if (text.includes(',')) {
-            const parts = text.split(',').map(s => s.trim().replace(/"/g, ''));
-            if (parts[0] === '{}' && parts[1]) text = parts[1];
-        } else {
-            text = text.replace(/"/g, '');
-        }
+        text = text.replace(/"/g, '');
 
         const meta = { line: node.startPosition.row + 1 };
 
+        // Standard Rust: println!, print!
         if (name === 'println') {
-            return { nodeType: 'Print', id: `p-${node.id}`, attributes: {}, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: text, isString: true }, children: [] }], metadata: meta };
+            return { nodeType: 'Print', id: `p-${node.id}`, attributes: { newline: true }, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: text, isString: true }, children: [] }], metadata: meta };
         }
+        if (name === 'print') {
+            return { nodeType: 'Print', id: `p-${node.id}`, attributes: { newline: false }, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: text, isString: true }, children: [] }], metadata: meta };
+        }
+
+        // Embassy / defmt: info!, warn!, error!, debug!, trace!
+        if (['info', 'warn', 'error', 'debug', 'trace'].includes(name)) {
+            return { nodeType: 'Print', id: `p-${node.id}`, attributes: { newline: true }, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: `[${name.toUpperCase()}] ${text}`, isString: true }, children: [] }], metadata: meta };
+        }
+
+        // RTIC / embedded: uprintln!, rprintln!, hprintln!
+        if (['uprintln', 'rprintln', 'hprintln', 'uprint', 'rprint', 'hprint'].includes(name)) {
+            const newline = name.endsWith('ln');
+            return { nodeType: 'Print', id: `p-${node.id}`, attributes: { newline }, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: text, isString: true }, children: [] }], metadata: meta };
+        }
+
         return { nodeType: 'Empty', id: 'e', attributes: {}, children: [] };
     }
 }
