@@ -30,6 +30,17 @@
 | 1.15 | `SwitchStatement` handler no `statementRegistry` | `statementRegistry.ts` | ✅ Já existia |
 | 1.16 | `StructDeclaration` handler no `statementRegistry` (no-op explícito) | `statementRegistry.ts` | ✅ [87c43b8](https://github.com/caiojordao84/neuroforge/commit/87c43b8115e7eea0cb552e8aa85706719131beb7) |
 | 1.17 | `CastExpression` + `ConditionalExpression` no `exprTransform` | `exprTransform.ts` | ✅ Já existia |
+| 1.18 | `UnaryExpression` no RustParser (`!`, `-`, `*`, `&`, `&mut`) | `RustParser.ts` | ✅ [65cc7c88](https://github.com/caiojordao84/neuroforge/commit/65cc7c880be122e50660059f33585e0f75ee5d02) |
+| 1.19 | `MemberExpression` no RustParser (`struct.field`, `method_call`) | `RustParser.ts` | ✅ [65cc7c88](https://github.com/caiojordao84/neuroforge/commit/65cc7c880be122e50660059f33585e0f75ee5d02) |
+| 1.20 | `reference_expression` (`&x`, `&mut x`) no RustParser | `RustParser.ts` | ✅ [65cc7c88](https://github.com/caiojordao84/neuroforge/commit/65cc7c880be122e50660059f33585e0f75ee5d02) |
+| 1.21 | `DoWhileLoop` no RustGenerator (emulado: `loop { body; if !(cond) { break; } }`) | `RustGenerator.ts` | ✅ [a6191adb](https://github.com/caiojordao84/neuroforge/commit/a6191adb7cc3170b3ee90e80916b465e929c5121) |
+| 1.22 | `BreakStatement` / `ContinueStatement` / `ReturnStatement` no RustGenerator | `RustGenerator.ts` | ✅ [a6191adb](https://github.com/caiojordao84/neuroforge/commit/a6191adb7cc3170b3ee90e80916b465e929c5121) |
+| 1.23 | `IfStatement` else / else-if no RustGenerator | `RustGenerator.ts` | ✅ [a6191adb](https://github.com/caiojordao84/neuroforge/commit/a6191adb7cc3170b3ee90e80916b465e929c5121) |
+| 1.24 | `Loop` infinito no RustGenerator (`loop { ... }`) | `RustGenerator.ts` | ✅ [a6191adb](https://github.com/caiojordao84/neuroforge/commit/a6191adb7cc3170b3ee90e80916b465e929c5121) |
+| 1.25 | `Block`, `GpioRead` (stmt) no RustGenerator | `RustGenerator.ts` | ✅ [a6191adb](https://github.com/caiojordao84/neuroforge/commit/a6191adb7cc3170b3ee90e80916b465e929c5121) |
+| 1.26 | `UnaryExpression`, `MemberExpression`, `ConditionalExpression`, `GpioRead` no RustGenerator `genExpr` | `RustGenerator.ts` | ✅ [a6191adb](https://github.com/caiojordao84/neuroforge/commit/a6191adb7cc3170b3ee90e80916b465e929c5121) |
+| 1.27 | `DoWhile` no CParser (`do_statement`) | `CParser.ts` | ✅ [060942cf](https://github.com/caiojordao84/neuroforge/commit/060942cf4be154ed76f358d373a66b819b59c865) |
+| 1.28 | `ASLExecutor.ts` — `doWhile`, `switch`, `for`, todos os nós | `ASLExecutor.ts` | ✅ Já existia completo |
 
 ---
 
@@ -46,16 +57,16 @@
 
 | Estrutura             | README.md | C/C++ (CParser) | Python Tree-sitter   | Python Regex               | RustParser           |
 | --------------------- | --------- | --------------- | -------------------- | -------------------------- | -------------------- |
-| **IfStatement**       | ✅         | ✅               | ✅ `if_statement`     | ❌                           | ✅ `if_expression`    |
+| **IfStatement**       | ✅         | ✅               | ✅ `if_statement`     | ✅                           | ✅ `if_expression`    |
 | **WhileLoop**         | ✅         | ✅               | ✅ `while_statement`  | ⚠️ apenas `while True:` | ✅ `while_expression` |
 | **ForLoop**           | ✅         | ✅               | ✅ `for_statement`    | ✅ `for ... in`             | ✅ `for_expression` (`0..N`, `0..=N`) |
 | **Loop (infinito)**   | ✅         | ✅ `while(1)`    | ✅ `while_statement`  | ✅ `while True:`             | ✅ `loop_expression`  |
 | **SwitchStatement**   | ✅         | ✅               | ✅ `match_statement`  | ✅ `match/case`             | ✅ `match_expression` |
 | **CaseClause**        | ✅         | ✅               | ✅ `case_clause`      | ✅                          | ✅ `match_arm`        |
-| **BreakStatement**    | ✅         | ✅               | ❌                    | ⚠️ auto-add                 | ✅ `break_expression`    |
-| **ContinueStatement** | ✅         | ✅               | ❌                    | ❌                          | ✅ `continue_expression` |
-| **ReturnStatement**   | ✅         | ✅               | ✅ `return_statement` | ❌                          | ✅ `return_expression`   |
-| **DoWhile**           | ❌ 🔴       | ❌               | ❌                    | ❌                          | ❌                    |
+| **BreakStatement**    | ✅         | ✅               | ✅                    | ⚠️ auto-add                 | ✅ `break_expression`    |
+| **ContinueStatement** | ✅         | ✅               | ✅                    | ✅                          | ✅ `continue_expression` |
+| **ReturnStatement**   | ✅         | ✅               | ✅ `return_statement` | ✅                          | ✅ `return_expression`   |
+| **DoWhile**           | ✅ 🟢      | ✅ `do_statement` | ❌ (inexistente em Python) | ❌ (inexistente em Python) | ✅ `RustGenerator` emula via `loop { if !(cond) { break; } }` |
 
 ---
 
@@ -85,11 +96,11 @@
 | **Boolean**                       | ✅         | ✅               | ✅ `true/False`      | ✅            | ✅                   |
 | **Identifier**                    | ✅         | ✅               | ✅                   | ✅            | ✅                   |
 | **BinaryExpression (+,-,\*,/,%)** | ✅         | ✅               | ✅ `binary_operator` | ⚠️ apenas `+` | ✅                   |
-| **UnaryExpression (!,-,++,--)**   | ✅         | ✅               | ✅                   | ❌            | ❌                   |
+| **UnaryExpression (!,-,++,--)**   | ✅         | ✅               | ✅                   | ❌            | ✅ `unary_expression`, `reference_expression` |
 | **ComparisonOperator**            | ✅         | ✅               | ✅                   | ❌            | ✅ (`binary_expression`) |
 | **SubscriptExpression**           | ✅         | ✅               | ✅ `subscript`       | ✅            | ✅ `index_expression` |
-| **MemberExpression**              | ✅         | ✅               | ✅ `attribute`       | ❌            | ❌                   |
-| **ConditionalExpression (? :)**   | ✅         | ✅               | ❌                   | ❌            | ❌                   |
+| **MemberExpression**              | ✅         | ✅               | ✅ `attribute`       | ❌            | ✅ `field_expression`, `method_call_expression` |
+| **ConditionalExpression (? :)**   | ✅         | ✅               | ❌                   | ❌            | ✅ RustGenerator: `(if cond { a } else { b })` |
 | **CastExpression**                | ✅         | ✅               | ❌                   | ❌            | ❌                   |
 
 ---
@@ -98,8 +109,8 @@
 
 | Função ASL      | README.md | C/C++ (CParser)  | Python Tree-sitter | Python Regex | RustParser   |
 | --------------- | --------- | ---------------- | ------------------ | ------------ | ------------ |
-| **GpioSet**     | ✅         | ✅ `digitalWrite` | ✅ `pin.value(1)`   | ✅            | ✅ `gpio_set` / `digitalWrite` |
-| **GpioRead**    | ✅         | ✅ `digitalRead`  | ❌                  | ❌            | ✅ `gpio_get` / `digitalRead`  |
+| **GpioSet**     | ✅         | ✅ `digitalWrite` | ✅ `pin.value(1)`   | ✅            | ✅ `gpio_set` / `digitalWrite` / `set_high` / `set_low` |
+| **GpioRead**    | ✅         | ✅ `digitalRead`  | ❌                  | ❌            | ✅ `gpio_get` / `digitalRead` / `is_high` / `is_low` |
 | **AnalogWrite** | ✅         | ✅ `analogWrite`  | ❌                  | ❌            | ❌            |
 | **AnalogRead**  | ✅         | ✅ `analogRead`   | ✅ `ADC`            | ❌            | ✅ `adc_read` / `analogRead`   |
 | **DelayMs**     | ✅         | ✅ `delay`        | ✅ `time.sleep_ms`  | ✅            | ✅ `delay` / `delay_ms` / `Timer::after_millis` / `Timer::after_secs` |
@@ -114,7 +125,7 @@
 
 | Função                | README.md | C/C++ (CParser)          | Python Tree-sitter | Python Regex | RustParser   |
 | --------------------- | --------- | ------------------------ | ------------------ | ------------ | ------------ |
-| **Print**             | ✅         | ✅ `Serial.print/println` | ✅ `print()`        | ✅            | ✅ `println!` / `print!` / `info!` / `warn!` / `error!` / `uprintln!` / `rprintln!` |
+| **Print**             | ✅         | ✅ `Serial.print/println` | ✅ `print()`        | ✅            | ✅ `println!` / `print!` / `info!` / `warn!` / `error!` / `debug!` / `trace!` / `uprintln!` / `rprintln!` / `hprintln!` |
 | **Serial.begin**      | ✅         | ✅                        | ❌                  | ❌            | ❌            |
 | **Serial.available**  | ✅         | ✅                        | ❌                  | ❌            | ❌            |
 | **Serial.readString** | ✅         | ✅                        | ❌                  | ❌            | ❌            |
@@ -188,7 +199,6 @@
 
 | Item                  | Status     | Ação Necessária                                      |
 | --------------------- | ---------- | ---------------------------------------------------- |
-| **DoWhile**           | ❌ 🔴 Crítico | Implementar no CParser + RustParser + PythonParser   |
 | **Serial.write/read** | ⚠️ parcial  | Verificar cobertura no ASLExecutor                   |
 | **Servo**             | ⚠️ parcial  | Implementar duration arg no tone/servo               |
 | **EEPROM**            | ❌          | Implementar via hardwareCall                         |
@@ -198,22 +208,23 @@
 | **pulseIn**           | ❌          | Implementar                                          |
 | **shiftOut**          | ❌          | Implementar                                          |
 | **EnumDeclaration**   | ❌          | Implementar em CParser (já suportado no executor via literal) |
-| **UnaryExpression Rust** | ❌       | `!`, `-`, `++`, `--` no RustParser                   |
-| **MemberExpression Rust** | ❌      | `struct.field` access no RustParser                  |
-| **Generators (ASL→C/Python/Rust)** | ❌ | Implementar CodeGenerator para cada linguagem      |
+| **CastExpression Rust** | ❌        | `as u8`, `as f32` no RustParser                      |
+| **ArrayInitializer Rust** | ❌      | `[0u8; N]`, `vec![]` no RustParser                   |
+| **AnalogWrite Rust**  | ❌          | PWM / `pwm.set_duty` no RustParser                   |
+| **millis/micros Rust** | ❌         | `Instant::now()` no RustParser                       |
 
 ---
 
 ## 10. Matriz de Cobertura por Linguagem
 
-> Actualizada em 28/02/2026 após branch `critical_Implementation`.
+> Actualizada em 28/02/2026 — sessão RustParser + RustGenerator.
 
 | Categoria         | C/C++ | Python Tree | Python Regex | Rust |
 | ----------------- | ----- | ----------- | ------------ | ---- |
-| **Controle**      | 100%  | 60%         | 20%          | 85%  |
+| **Controle**      | 100%  | 60%         | 20%          | 95%  |
 | **Declarações**   | 100%  | 70%         | 30%          | 65%  |
-| **Expressões**    | 100%  | 80%         | 40%          | 75%  |
-| **Hardware**      | 100%  | 40%         | 20%          | 50%  |
+| **Expressões**    | 100%  | 80%         | 40%          | 90%  |
+| **Hardware**      | 100%  | 40%         | 20%          | 55%  |
 | **Display I/O**   | 100%  | 0%          | 0%           | 0%   |
 | **Math Builtins** | 100%  | N/A         | N/A          | N/A  |
 
@@ -239,18 +250,29 @@
 - [x] SwitchStatement handler no statementRegistry
 - [x] StructDeclaration no-op handler no statementRegistry
 - [x] CastExpression + ConditionalExpression no exprTransform
+- [x] DoWhile no CParser (`do_statement`) — [060942cf](https://github.com/caiojordao84/neuroforge/commit/060942cf4be154ed76f358d373a66b819b59c865)
+- [x] UnaryExpression no RustParser (`!`, `-`, `*`, `&`, `&mut`) — [65cc7c88](https://github.com/caiojordao84/neuroforge/commit/65cc7c880be122e50660059f33585e0f75ee5d02)
+- [x] MemberExpression no RustParser (`struct.field`, `obj.method()`) — [65cc7c88](https://github.com/caiojordao84/neuroforge/commit/65cc7c880be122e50660059f33585e0f75ee5d02)
+- [x] reference_expression no RustParser (`&x`, `&mut x`) — [65cc7c88](https://github.com/caiojordao84/neuroforge/commit/65cc7c880be122e50660059f33585e0f75ee5d02)
+- [x] DoWhileLoop no RustGenerator (emulado) — [a6191adb](https://github.com/caiojordao84/neuroforge/commit/a6191adb7cc3170b3ee90e80916b465e929c5121)
+- [x] BreakStatement / ContinueStatement / ReturnStatement no RustGenerator — [a6191adb](https://github.com/caiojordao84/neuroforge/commit/a6191adb7cc3170b3ee90e80916b465e929c5121)
+- [x] IfStatement else / else-if no RustGenerator — [a6191adb](https://github.com/caiojordao84/neuroforge/commit/a6191adb7cc3170b3ee90e80916b465e929c5121)
+- [x] Loop infinito, Block, GpioRead no RustGenerator — [a6191adb](https://github.com/caiojordao84/neuroforge/commit/a6191adb7cc3170b3ee90e80916b465e929c5121)
+- [x] UnaryExpression / MemberExpression / ConditionalExpression no RustGenerator `genExpr` — [a6191adb](https://github.com/caiojordao84/neuroforge/commit/a6191adb7cc3170b3ee90e80916b465e929c5121)
+- [x] ASLExecutor.ts — verificado 100% completo (doWhile, switch, for, break/continue/return, todos os nós)
 
 ### 🔴 Prioridade Alta (próxima fase)
-- [ ] DoWhile em todos os parsers
-- [ ] UnaryExpression no RustParser (`!`, `-`, `++`, `--`)
-- [ ] MemberExpression no RustParser (`struct.field`)
-- [ ] Generators: ASL → C / Python / Rust code output
+- [ ] CastExpression Rust (`as u8`, `as f32`) no RustParser
+- [ ] ArrayInitializer Rust (`[0u8; N]`, `vec![]`) no RustParser
+- [ ] AnalogWrite Rust (PWM) no RustParser
+- [ ] millis/micros Rust (`Instant::now()`) no RustParser
+- [ ] EnumDeclaration no CParser / RustParser
 
 ### 🟡 Prioridade Média
-- [ ] Hardware periféricos (EEPROM, Wire/I2C, SPI)
+- [ ] Hardware periféricos (EEPROM, Wire/I2C, SPI) via hardwareCall
 - [ ] attachInterrupt / pulseIn / shiftOut
-- [ ] EnumDeclaration no RustParser
 - [ ] tone() duration arg
+- [ ] Python Parser melhorias (BreakStatement, array literals, RegexParser completar operadores)
 
 ---
 
@@ -260,6 +282,10 @@
 - `src/engine/asl/plugins/c/CParser.ts` (trata C e C++)
 - `src/engine/asl/plugins/python/PythonParser.ts`
 - `src/engine/asl/plugins/rust/RustParser.ts`
+
+### Generators
+- `src/engine/asl/plugins/c/CGenerator.ts`
+- `src/engine/asl/plugins/rust/RustGenerator.ts`
 
 ### Executors e Simulation
 - `src/engine/asl/ASLExecutor.ts`
