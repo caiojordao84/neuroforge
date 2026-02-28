@@ -207,7 +207,6 @@
 | **attachInterrupt**   | ❌          | Implementar modelo ISR                               |
 | **pulseIn**           | ❌          | Implementar                                          |
 | **shiftOut**          | ❌          | Implementar                                          |
-| **EnumDeclaration**   | ❌          | Implementar em CParser (já suportado no executor via literal) |
 | **CastExpression Rust** | ❌        | `as u8`, `as f32` no RustParser                      |
 | **ArrayInitializer Rust** | ❌      | `[0u8; N]`, `vec![]` no RustParser                   |
 | **AnalogWrite Rust**  | ❌          | PWM / `pwm.set_duty` no RustParser                   |
@@ -266,7 +265,7 @@
 - [ ] ArrayInitializer Rust (`[0u8; N]`, `vec![]`) no RustParser
 - [ ] AnalogWrite Rust (PWM) no RustParser
 - [ ] millis/micros Rust (`Instant::now()`) no RustParser
-- [ ] EnumDeclaration no CParser / RustParser
+- [ ] EnumDeclaration no RustParser
 
 ### 🟡 Prioridade Média
 - [ ] Hardware periféricos (EEPROM, Wire/I2C, SPI) via hardwareCall
