@@ -99,23 +99,23 @@ export class CGenerator {
             if (node.children[1]) {
                 node.children[1].children.forEach(c => this.genStmt(c, lines, indent + "  "));
             }
-            this.addLn(lines, `${indent}}`, node);
 
-            if (node.children[2]) {
-                const elseNode = node.children[2];
+            let current = node;
+            while (current.children[2]) {
+                const elseNode = current.children[2];
                 if (elseNode.nodeType === 'IfStatement') {
-                    lines[lines.length - 1] = lines[lines.length - 1] + " else ";
-                    // Recursively call genStmt but we need to avoid adding the indent again if we're chaining
-                    // Actually genStmt will add it. Let's adjust.
-                    const tempLines: string[] = [];
-                    this.genStmt(elseNode, tempLines, "");
-                    lines[lines.length - 1] += tempLines.join('\n').trim();
+                    this.addLn(lines, `${indent}} else if (${this.genExpr(elseNode.children[0])}) {`, elseNode);
+                    if (elseNode.children[1]) {
+                        elseNode.children[1].children.forEach(c => this.genStmt(c, lines, indent + "  "));
+                    }
+                    current = elseNode;
                 } else {
-                    lines[lines.length - 1] = lines[lines.length - 1] + " else {";
+                    this.addLn(lines, `${indent}} else {`, null);
                     elseNode.children.forEach(c => this.genStmt(c, lines, indent + "  "));
-                    this.addLn(lines, `${indent}}`, node);
+                    break;
                 }
             }
+            this.addLn(lines, `${indent}}`, current);
         }
         else if (node.nodeType === 'DoWhileLoop') {
             this.addLn(lines, `${indent}do {`, node);
