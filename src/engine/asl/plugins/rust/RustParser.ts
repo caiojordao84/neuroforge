@@ -212,7 +212,6 @@ class RustCstToAst {
         let isInclusive = false;
 
         if (iterator?.type === 'range_expression') {
-            // child(1) is '..' or '..='
             const rangeOp = iterator.child(1)?.text || '..';
             isInclusive = rangeOp === '..=';
             const left = iterator.child(0);
@@ -221,7 +220,6 @@ class RustCstToAst {
             if (right) maxVal = isNaN(parseInt(right.text)) ? right.text : parseInt(right.text);
         }
 
-        // For inclusive ranges (..=), use <= instead of <
         const condOp = isInclusive ? '<=' : '<';
 
         const initLiteral: BaseNode = typeof initVal === 'number'
@@ -408,6 +406,78 @@ class RustCstToAst {
         if (node.type === 'call_expression') return this.visitCall(node);
         if (node.type === 'macro_invocation') return this.visitMacro(node);
 
+        // ── NEW: UnaryExpression (!, -, *deref) ─────────────────────────────
+        if (node.type === 'unary_expression') {
+            const op = node.child(0)!.text;   // '!', '-', '*'
+            const arg = this.visitExpr(node.child(1)!);
+            return {
+                nodeType: 'UnaryExpression', id: `un-${node.id}`,
+                attributes: { operator: op, prefix: true },
+                children: [arg], metadata: meta
+            };
+        }
+
+        // ── NEW: Reference expression (&x, &mut x) ──────────────────────────
+        if (node.type === 'reference_expression') {
+            // children: '&' [mut] <expr>  — lastChild is always the inner expr
+            const hasMut = node.children.some((c: any) => c.type === 'mutable_specifier');
+            const op = hasMut ? '&mut ' : '&';
+            const inner = this.visitExpr(node.lastChild!);
+            return {
+                nodeType: 'UnaryExpression', id: `ref-${node.id}`,
+                attributes: { operator: op, prefix: true },
+                children: [inner], metadata: meta
+            };
+        }
+
+        // ── NEW: MemberExpression — struct.field ─────────────────────────────
+        if (node.type === 'field_expression') {
+            const obj = this.visitExpr(node.childForFieldName('value')!);
+            const field = node.childForFieldName('field')!.text;
+            return {
+                nodeType: 'MemberExpression', id: `mem-${node.id}`,
+                attributes: { property: field, operator: '.' },
+                children: [obj], metadata: meta
+            };
+        }
+
+        // ── NEW: Method call — obj.method(args) ──────────────────────────────
+        if (node.type === 'method_call_expression') {
+            const receiver = this.visitExpr(node.childForFieldName('receiver')!);
+            const method = node.childForFieldName('name')!.text;
+            const argsNode = node.childForFieldName('arguments');
+            const args = argsNode
+                ? argsNode.children
+                    .filter((c: any) => c.type !== '(' && c.type !== ')' && c.type !== ',')
+                    .map((c: any) => this.visitExpr(c))
+                : [];
+
+            const receiverName = receiver.nodeType === 'Identifier' ? receiver.attributes.name : null;
+            const meta2 = meta;
+
+            // Embassy Timer method chains: Timer::after_millis(n).await → already handled
+            // but catch .await suffix gracefully
+            if (method === 'await') {
+                // pass-through: the receiver is already the DelayMs or CallExpression
+                return receiver;
+            }
+
+            // Detect common embedded method calls and map to ASL nodes
+            if ((method === 'set_high' || method === 'set_low') && receiverName) {
+                const val: BaseNode = { nodeType: 'Literal', id: `v-${node.id}`, attributes: { value: method === 'set_high' ? 1 : 0 }, children: [] };
+                return { nodeType: 'GpioSet', id: `gs-${node.id}`, attributes: {}, children: [receiver, val], metadata: meta2 };
+            }
+            if (method === 'is_high' || method === 'is_low') {
+                return { nodeType: 'GpioRead', id: `gr-${node.id}`, attributes: { invert: method === 'is_low' }, children: [receiver], metadata: meta2 };
+            }
+
+            return {
+                nodeType: 'CallExpression', id: `mcall-${node.id}`,
+                attributes: { callee: method },
+                children: [receiver, ...args], metadata: meta2
+            };
+        }
+
         return { nodeType: 'Empty', id: 'empty', attributes: {}, children: [] };
     }
 
@@ -428,15 +498,12 @@ class RustCstToAst {
             return { nodeType: 'AnalogRead', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
 
         // ── Delays ────────────────────────────────────────────────────────────────
-        // Standard: delay(ms) / delay_ms(ms)
         if (funcName === 'delay' || funcName === 'delay_ms')
             return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
 
-        // Embassy async: Timer::after_millis(n).await  →  DelayMs(n)
         if (funcName === 'Timer::after_millis' || funcName.endsWith('::after_millis') || funcName.endsWith('.after_millis'))
             return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
 
-        // Embassy async: Timer::after_secs(n).await  →  DelayMs(n * 1000)
         if (funcName === 'Timer::after_secs' || funcName.endsWith('::after_secs') || funcName.endsWith('.after_secs')) {
             const secArg = args[0] || { nodeType: 'Literal', id: 'l', attributes: { value: 0 }, children: [] };
             const msArg: BaseNode = {
@@ -461,7 +528,6 @@ class RustCstToAst {
 
         const meta = { line: node.startPosition.row + 1 };
 
-        // Standard Rust: println!, print!
         if (name === 'println') {
             return { nodeType: 'Print', id: `p-${node.id}`, attributes: { newline: true }, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: text, isString: true }, children: [] }], metadata: meta };
         }
@@ -469,12 +535,10 @@ class RustCstToAst {
             return { nodeType: 'Print', id: `p-${node.id}`, attributes: { newline: false }, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: text, isString: true }, children: [] }], metadata: meta };
         }
 
-        // Embassy / defmt: info!, warn!, error!, debug!, trace!
         if (['info', 'warn', 'error', 'debug', 'trace'].includes(name)) {
             return { nodeType: 'Print', id: `p-${node.id}`, attributes: { newline: true }, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: `[${name.toUpperCase()}] ${text}`, isString: true }, children: [] }], metadata: meta };
         }
 
-        // RTIC / embedded: uprintln!, rprintln!, hprintln!
         if (['uprintln', 'rprintln', 'hprintln', 'uprint', 'rprint', 'hprint'].includes(name)) {
             const newline = name.endsWith('ln');
             return { nodeType: 'Print', id: `p-${node.id}`, attributes: { newline }, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: text, isString: true }, children: [] }], metadata: meta };
