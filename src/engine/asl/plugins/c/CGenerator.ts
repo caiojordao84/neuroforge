@@ -15,14 +15,7 @@ export class CGenerator {
         this.addLn(lines, "#include <Arduino.h>", null);
         this.addLn(lines, "", null);
 
-        // Globals / Variables
-        const vars = ast.children.filter(c => c.nodeType === 'VariableDeclaration');
-        vars.forEach(v => this.genStmt(v, lines, ""));
-        if (vars.length > 0) this.addLn(lines, "", null);
-
-        // Functions
-        const funcs = ast.children.filter(c => c.nodeType === 'Function');
-
+        // Top-level nodes (Variables, Functions, etc.)
         let finalNodes: BaseNode[] = ast.children;
 
         finalNodes.forEach(node => {
@@ -103,7 +96,48 @@ export class CGenerator {
         // ... rest of the method
         else if (node.nodeType === 'IfStatement') {
             this.addLn(lines, `${indent}if (${this.genExpr(node.children[0])}) {`, node);
+            if (node.children[1]) {
+                node.children[1].children.forEach(c => this.genStmt(c, lines, indent + "  "));
+            }
+            this.addLn(lines, `${indent}}`, node);
+
+            if (node.children[2]) {
+                const elseNode = node.children[2];
+                if (elseNode.nodeType === 'IfStatement') {
+                    lines[lines.length - 1] = lines[lines.length - 1] + " else ";
+                    // Recursively call genStmt but we need to avoid adding the indent again if we're chaining
+                    // Actually genStmt will add it. Let's adjust.
+                    const tempLines: string[] = [];
+                    this.genStmt(elseNode, tempLines, "");
+                    lines[lines.length - 1] += tempLines.join('\n').trim();
+                } else {
+                    lines[lines.length - 1] = lines[lines.length - 1] + " else {";
+                    elseNode.children.forEach(c => this.genStmt(c, lines, indent + "  "));
+                    this.addLn(lines, `${indent}}`, node);
+                }
+            }
+        }
+        else if (node.nodeType === 'DoWhileLoop') {
+            this.addLn(lines, `${indent}do {`, node);
             node.children.slice(1).forEach(c => this.genStmt(c, lines, indent + "  "));
+            this.addLn(lines, `${indent}} while (${this.genExpr(node.children[0])});`, node);
+        }
+        else if (node.nodeType === 'ReturnStatement') {
+            if (node.children.length > 0) {
+                this.addLn(lines, `${indent}return ${this.genExpr(node.children[0])};`, node);
+            } else {
+                this.addLn(lines, `${indent}return;`, node);
+            }
+        }
+        else if (node.nodeType === 'AnalogWrite') {
+            this.addLn(lines, `${indent}analogWrite(${this.genExpr(node.children[0])}, ${this.genExpr(node.children[1])});`, node);
+        }
+        else if (node.nodeType === 'GpioRead') {
+            this.addLn(lines, `${indent}digitalRead(${this.genExpr(node.children[0])});`, node);
+        }
+        else if (node.nodeType === 'Loop') {
+            this.addLn(lines, `${indent}for (;;) {`, node);
+            node.children.forEach(c => this.genStmt(c, lines, indent + "  "));
             this.addLn(lines, `${indent}}`, node);
         }
         else if (node.nodeType === 'WhileLoop') {
@@ -208,10 +242,18 @@ export class CGenerator {
             return `${callee}(${args})`;
         }
         if (node.nodeType === 'AnalogRead') return `analogRead(${this.genExpr(node.children[0])})`;
+        if (node.nodeType === 'GpioRead') return `digitalRead(${this.genExpr(node.children[0])})`;
         if (node.nodeType === 'SubscriptExpression') return `${this.genExpr(node.children[0])}[${this.genExpr(node.children[1])}]`;
         if (node.nodeType === 'ArrayInitializer') {
             const elements = node.children.map(c => this.genExpr(c)).join(', ');
             return `{ ${elements} }`;
+        }
+        if (node.nodeType === 'ConditionalExpression') {
+            return `(${this.genExpr(node.children[0])} ? ${this.genExpr(node.children[1])} : ${this.genExpr(node.children[2])})`;
+        }
+        if (node.nodeType === 'MemberExpression') {
+            const op = node.attributes.operator || '.';
+            return `${this.genExpr(node.children[0])}${op}${node.attributes.property}`;
         }
 
         return "";
