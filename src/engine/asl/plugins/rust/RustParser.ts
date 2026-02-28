@@ -209,23 +209,38 @@ class RustCstToAst {
 
         let initVal: any = 0;
         let maxVal: any = 10;
+        let isInclusive = false;
 
         if (iterator?.type === 'range_expression') {
+            // child(1) is '..' or '..='
+            const rangeOp = iterator.child(1)?.text || '..';
+            isInclusive = rangeOp === '..=';
             const left = iterator.child(0);
             const right = iterator.child(2);
-            if (left) initVal = parseInt(left.text) || 0;
-            if (right) maxVal = parseInt(right.text) || 0;
+            if (left) initVal = isNaN(parseInt(left.text)) ? left.text : parseInt(left.text);
+            if (right) maxVal = isNaN(parseInt(right.text)) ? right.text : parseInt(right.text);
         }
+
+        // For inclusive ranges (..=), use <= instead of <
+        const condOp = isInclusive ? '<=' : '<';
+
+        const initLiteral: BaseNode = typeof initVal === 'number'
+            ? { nodeType: 'Literal', id: 'l1', attributes: { value: initVal }, children: [] }
+            : { nodeType: 'Identifier', id: 'l1', attributes: { name: initVal }, children: [] };
+
+        const maxLiteral: BaseNode = typeof maxVal === 'number'
+            ? { nodeType: 'Literal', id: 'l2', attributes: { value: maxVal }, children: [] }
+            : { nodeType: 'Identifier', id: 'l2', attributes: { name: maxVal }, children: [] };
 
         const init: BaseNode = {
             nodeType: 'VariableDeclaration', id: 'init', attributes: { name: pattern, type: 'int' },
-            children: [{ nodeType: 'Literal', id: 'l1', attributes: { value: initVal }, children: [] }]
+            children: [initLiteral]
         };
         const condition: BaseNode = {
-            nodeType: 'BinaryExpression', id: 'cond', attributes: { operator: '<' },
+            nodeType: 'BinaryExpression', id: 'cond', attributes: { operator: condOp },
             children: [
                 { nodeType: 'Identifier', id: 'id', attributes: { name: pattern }, children: [] },
-                { nodeType: 'Literal', id: 'l2', attributes: { value: maxVal }, children: [] }
+                maxLiteral
             ]
         };
         const update: BaseNode = {
@@ -404,10 +419,34 @@ class RustCstToAst {
 
         const meta = { line: node.startPosition.row + 1 };
 
-        if (funcName === 'gpio_set' || funcName === 'digitalWrite') return { nodeType: 'GpioSet', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
-        if (funcName === 'gpio_get' || funcName === 'digitalRead') return { nodeType: 'GpioRead', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
-        if (funcName === 'adc_read' || funcName === 'analogRead') return { nodeType: 'AnalogRead', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
-        if (funcName === 'delay' || funcName === 'delay_ms') return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+        // ── GPIO ──────────────────────────────────────────────────────────────────
+        if (funcName === 'gpio_set' || funcName === 'digitalWrite')
+            return { nodeType: 'GpioSet', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+        if (funcName === 'gpio_get' || funcName === 'digitalRead')
+            return { nodeType: 'GpioRead', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+        if (funcName === 'adc_read' || funcName === 'analogRead')
+            return { nodeType: 'AnalogRead', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+
+        // ── Delays ────────────────────────────────────────────────────────────────
+        // Standard: delay(ms) / delay_ms(ms)
+        if (funcName === 'delay' || funcName === 'delay_ms')
+            return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+
+        // Embassy async: Timer::after_millis(n).await  →  DelayMs(n)
+        if (funcName === 'Timer::after_millis' || funcName.endsWith('::after_millis') || funcName.endsWith('.after_millis'))
+            return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+
+        // Embassy async: Timer::after_secs(n).await  →  DelayMs(n * 1000)
+        if (funcName === 'Timer::after_secs' || funcName.endsWith('::after_secs') || funcName.endsWith('.after_secs')) {
+            const secArg = args[0] || { nodeType: 'Literal', id: 'l', attributes: { value: 0 }, children: [] };
+            const msArg: BaseNode = {
+                nodeType: 'BinaryExpression',
+                id: `ms-${node.id}`,
+                attributes: { operator: '*' },
+                children: [secArg, { nodeType: 'Literal', id: 'l1000', attributes: { value: 1000 }, children: [] }]
+            };
+            return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: [msArg], metadata: meta };
+        }
 
         return { nodeType: 'CallExpression', id: `call-${node.id}`, attributes: { callee: funcName }, children: args, metadata: meta };
     }
@@ -422,9 +461,25 @@ class RustCstToAst {
 
         const meta = { line: node.startPosition.row + 1 };
 
+        // Standard Rust: println!, print!
         if (name === 'println') {
-            return { nodeType: 'Print', id: `p-${node.id}`, attributes: {}, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: text, isString: true }, children: [] }], metadata: meta };
+            return { nodeType: 'Print', id: `p-${node.id}`, attributes: { newline: true }, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: text, isString: true }, children: [] }], metadata: meta };
         }
+        if (name === 'print') {
+            return { nodeType: 'Print', id: `p-${node.id}`, attributes: { newline: false }, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: text, isString: true }, children: [] }], metadata: meta };
+        }
+
+        // Embassy / defmt: info!, warn!, error!, debug!, trace!
+        if (['info', 'warn', 'error', 'debug', 'trace'].includes(name)) {
+            return { nodeType: 'Print', id: `p-${node.id}`, attributes: { newline: true }, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: `[${name.toUpperCase()}] ${text}`, isString: true }, children: [] }], metadata: meta };
+        }
+
+        // RTIC / embedded: uprintln!, rprintln!, hprintln!
+        if (['uprintln', 'rprintln', 'hprintln', 'uprint', 'rprint', 'hprint'].includes(name)) {
+            const newline = name.endsWith('ln');
+            return { nodeType: 'Print', id: `p-${node.id}`, attributes: { newline }, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: text, isString: true }, children: [] }], metadata: meta };
+        }
+
         return { nodeType: 'Empty', id: 'e', attributes: {}, children: [] };
     }
 }
