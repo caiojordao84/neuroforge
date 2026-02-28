@@ -67,7 +67,18 @@ export class RustGenerator {
 
     private printComments(node: BaseNode, lines: string[], indent: string) {
         if (node.leadingComments) {
-            node.leadingComments.forEach(c => this.addLn(lines, `${indent}${c}`, null));
+            node.leadingComments.forEach(c => {
+                // Ensure it has a // prefix (if it doesn't already)
+                let clean = c.trim();
+                if (clean.startsWith('/*')) {
+                    // Keep block comments as is
+                    this.addLn(lines, `${indent}${clean}`, null);
+                } else if (clean.startsWith('//')) {
+                    this.addLn(lines, `${indent}${clean}`, null);
+                } else {
+                    this.addLn(lines, `${indent}// ${clean}`, null);
+                }
+            });
         }
     }
 
@@ -79,10 +90,26 @@ export class RustGenerator {
             this.addLn(lines, `${indent}let mut ${node.attributes.name} = ${val};`, node);
         }
         else if (node.nodeType === 'ExpressionStatement') {
-            this.addLn(lines, `${indent}${this.genExpr(node.children[0])};`, node);
+            const child = node.children[0];
+            if (child.nodeType === 'CallExpression') {
+                const callee = child.attributes.callee;
+                if (callee === 'pinMode') {
+                    return this.addLn(lines, `${indent}gpio_mode(${this.genExpr(child.children[0])}, ${this.genExpr(child.children[1])});`, node);
+                }
+                if (callee === 'Serial.begin') {
+                    return this.addLn(lines, `${indent}// Serial.begin(${this.genExpr(child.children[0])});`, node);
+                }
+            }
+            this.addLn(lines, `${indent}${this.genExpr(child)};`, node);
         }
         else if (node.nodeType === 'GpioSet') {
             this.addLn(lines, `${indent}gpio_set(${this.genExpr(node.children[0])}, ${this.genExpr(node.children[1])});`, node);
+        }
+        else if (node.nodeType === 'AnalogRead') {
+            this.addLn(lines, `${indent}adc.read(${this.genExpr(node.children[0])});`, node);
+        }
+        else if (node.nodeType === 'AnalogWrite') {
+            this.addLn(lines, `${indent}pwm.set_duty(${this.genExpr(node.children[0])}, ${this.genExpr(node.children[1])});`, node);
         }
         else if (node.nodeType === 'DelayMs') {
             this.addLn(lines, `${indent}delay.delay_ms(${this.genExpr(node.children[0])}u32);`, node);

@@ -101,7 +101,12 @@ export class PythonGenerator {
 
     private printComments(node: BaseNode, out: string[], indent: string) {
         if (node.leadingComments) {
-            node.leadingComments.forEach(c => this.addLn(out, `${indent}${c}`, null));
+            node.leadingComments.forEach(c => {
+                // Convert C-style // or /* */ to #
+                let clean = c.replace(/^\/\//, '').replace(/^\/\* ?/, '').replace(/ ?\*\/$/, '').trim();
+                if (clean) this.addLn(out, `${indent}# ${clean}`, null);
+                else this.addLn(out, `${indent}#`, null);
+            });
         }
     }
 
@@ -121,6 +126,26 @@ export class PythonGenerator {
             } else {
                 const boolVal = val === '1' || val === 'HIGH' ? 'True' : val === '0' || val === 'LOW' ? 'False' : `(${val} != 0)`;
                 return this.addLn(out, `${i}pin_${pin}.value = ${boolVal}`, n);
+            }
+        }
+
+        if (n.nodeType === 'AnalogRead') {
+            const pin = this.evalLit(n.children[0]);
+            if (this.flavor === 'MICROPYTHON') {
+                return this.addLn(out, `${i}machine.ADC(machine.Pin(${pin})).read_u16()`, n);
+            } else {
+                return this.addLn(out, `${i}analog_in_${pin}.value`, n);
+            }
+        }
+
+        if (n.nodeType === 'AnalogWrite') {
+            const pin = this.evalLit(n.children[0]);
+            const val = this.genExpr(n.children[1]);
+            if (this.flavor === 'MICROPYTHON') {
+                this.addLn(out, `${i}_pwm_${pin} = machine.PWM(machine.Pin(${pin}))`, n);
+                return this.addLn(out, `${i}_pwm_${pin}.duty_u16(int(${val} * 64))`, n); // Map 0-1023 to 0-65535 approx
+            } else {
+                return this.addLn(out, `${i}pwm_${pin}.duty_cycle = int(${val} * 64)`, n);
             }
         }
 
@@ -188,7 +213,21 @@ export class PythonGenerator {
         }
 
         if (n.nodeType === 'ExpressionStatement') {
-            return this.addLn(out, `${i}${this.genExpr(n.children[0])}`, n);
+            const child = n.children[0];
+            // If the normalizer missed it or it's a call we want to handle specially
+            if (child.nodeType === 'CallExpression') {
+                const callee = child.attributes.callee;
+                if (callee === 'pinMode') {
+                    const pin = this.genExpr(child.children[0]);
+                    const mode = this.genExpr(child.children[1]);
+                    const pyMode = mode === '1' || mode === 'OUTPUT' ? 'machine.Pin.OUT' : 'machine.Pin.IN';
+                    return this.addLn(out, `${i}machine.Pin(${pin}, ${pyMode})`, n);
+                }
+                if (callee === 'Serial.begin') {
+                    return this.addLn(out, `${i}# Serial.begin(${this.genExpr(child.children[0])})`, n);
+                }
+            }
+            return this.addLn(out, `${i}${this.genExpr(child)}`, n);
         }
 
         if (n.nodeType === 'SwitchStatement') {

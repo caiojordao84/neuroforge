@@ -25,7 +25,6 @@ export class Lexer {
         while (this.src[this.cursor] !== '\n' && this.cursor < this.src.length) {
           comment += this.src[this.cursor++];
         }
-        comment = comment.replace(/^\/\//, '').trim();
         tokens.push({ type: 'COMMENT', value: comment, line: startLine });
         continue;
       }
@@ -44,7 +43,6 @@ export class Lexer {
           if (this.src[this.cursor] === '\n') this.line++;
           this.cursor++;
         }
-        comment = comment.replace(/^\* ?/, '').replace(/ ?\*$/, '').trim();
         tokens.push({ type: 'COMMENT', value: comment, line: startLine });
         continue;
       }

@@ -23,27 +23,25 @@ export class CGenerator {
         // Functions
         const funcs = ast.children.filter(c => c.nodeType === 'Function');
 
-        // Handle script-like programs by wrapping in setup/loop
-        const orphans = ast.children.filter(c => c.nodeType !== 'Function' && c.nodeType !== 'VariableDeclaration');
+        let finalNodes: BaseNode[] = ast.children;
 
-        if (funcs.length === 0 && orphans.length > 0) {
-            this.addLn(lines, "void setup() {", null);
-            orphans.forEach(c => this.genStmt(c, lines, "  "));
-            this.addLn(lines, "}", null);
-            this.addLn(lines, "", null);
-            this.addLn(lines, "void loop() {", null);
-            this.addLn(lines, "}", null);
-        } else {
-            funcs.forEach(f => {
-                const name = f.attributes.name;
+        finalNodes.forEach(node => {
+            if (node.nodeType === 'VariableDeclaration') {
+                this.genStmt(node, lines, "");
+            } else if (node.nodeType === 'Function') {
+                const name = node.attributes.name;
                 const type = (name === 'setup' || name === 'loop') ? 'void' : 'void';
-                this.printComments(f, lines, "");
-                this.addLn(lines, `${type} ${name}() {`, f);
-                f.children.forEach(c => this.genStmt(c, lines, "  "));
-                this.addLn(lines, "}", f);
+                const comments = this.printComments(node);
+                if (comments) this.addLn(lines, comments, null);
+                this.addLn(lines, `${type} ${name}() {`, node);
+                node.children.forEach(c => this.genStmt(c, lines, "  "));
+                this.addLn(lines, "}", node);
                 this.addLn(lines, "", null);
-            });
-        }
+            } else {
+                // Other top-level nodes (should be rare after wrapping)
+                this.genStmt(node, lines, "");
+            }
+        });
 
         return { code: lines.join('\n'), map: this.sourceMap };
     }
@@ -56,14 +54,30 @@ export class CGenerator {
         this.currentLine += text.split('\n').length;
     }
 
-    private printComments(node: BaseNode, lines: string[], indent: string) {
-        if (node.leadingComments) {
-            node.leadingComments.forEach(c => this.addLn(lines, `${indent}${c}`, null));
-        }
+    private printComments(node: BaseNode): string {
+        if (!node.leadingComments || node.leadingComments.length === 0) return '';
+        return node.leadingComments
+            .map(c => {
+                let text = c.trim();
+                // Convert Python-style comments to C++ style
+                if (text.startsWith('#')) {
+                    text = '//' + text.substring(1);
+                }
+                // Ensure C++ style comments have //
+                if (!text.startsWith('//') && !text.startsWith('/*')) {
+                    text = '// ' + text;
+                }
+                return text;
+            })
+            .join('\n');
     }
 
+
     private genStmt(node: BaseNode, lines: string[], indent: string) {
-        this.printComments(node, lines, indent);
+        if (node.nodeType === 'Empty') return;
+
+        const comments = this.printComments(node);
+        if (comments) this.addLn(lines, `${indent}${comments}`, null);
 
         if (node.nodeType === 'VariableDeclaration') {
             const val = node.children.length > 0 ? this.genExpr(node.children[0]) : '0';
@@ -71,7 +85,8 @@ export class CGenerator {
             this.addLn(lines, `${indent}${type} ${node.attributes.name} = ${val};`, node);
         }
         else if (node.nodeType === 'ExpressionStatement') {
-            this.addLn(lines, `${indent}${this.genExpr(node.children[0])};`, node);
+            const expr = this.genExpr(node.children[0]);
+            if (expr) this.addLn(lines, `${indent}${expr};`, node);
         }
         else if (node.nodeType === 'BreakStatement') {
             this.addLn(lines, `${indent}break;`, node);
@@ -85,6 +100,7 @@ export class CGenerator {
         else if (node.nodeType === 'DelayMs') {
             this.addLn(lines, `${indent}delay(${this.genExpr(node.children[0])});`, node);
         }
+        // ... rest of the method
         else if (node.nodeType === 'IfStatement') {
             this.addLn(lines, `${indent}if (${this.genExpr(node.children[0])}) {`, node);
             node.children.slice(1).forEach(c => this.genStmt(c, lines, indent + "  "));
@@ -173,8 +189,21 @@ export class CGenerator {
             return `${this.genExpr(node.children[0])}${node.attributes.operator}`;
         }
         if (node.nodeType === 'CallExpression') {
-            const args = node.children.map(c => this.genExpr(c)).join(', ');
             const callee = node.attributes.callee;
+            let args = node.children.map(c => this.genExpr(c)).join(', ');
+
+            if (callee === 'pinMode') {
+                // Map mode constants
+                args = node.children.map((c, idx) => {
+                    const val = this.genExpr(c);
+                    if (idx === 1) {
+                        if (val === '1' || val === 'OUTPUT') return 'OUTPUT';
+                        if (val === '0' || val === 'INPUT') return 'INPUT';
+                    }
+                    return val;
+                }).join(', ');
+            }
+
             if (callee === 'servo') return `servo.write(${args})`;
             return `${callee}(${args})`;
         }

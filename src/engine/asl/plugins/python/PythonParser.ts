@@ -80,6 +80,8 @@ class RegexPythonParser {
         const rootNodes: BaseNode[] = [];
         const setupNodes: BaseNode[] = [];
         const loopNodes: BaseNode[] = [];
+        let pendingComments: string[] = [];
+
 
         interface BlockContext {
             node: BaseNode;
@@ -99,10 +101,17 @@ class RegexPythonParser {
             const trimmed = line.trim();
             const indent = line.length - line.trimStart().length;
 
-            if (!trimmed || trimmed.startsWith('#')) {
+            if (!trimmed) {
                 this.pos++;
                 continue;
             }
+
+            if (trimmed.startsWith('#')) {
+                pendingComments.push(trimmed);
+                this.pos++;
+                continue;
+            }
+
 
             // Unindent handling
             while (stack.length > 0 && indent <= stack[stack.length - 1].indent) {
@@ -274,12 +283,19 @@ class RegexPythonParser {
             // Standard line
             const node = this._parseLine(trimmed, this.pos + 1);
             if (node) {
+                if (pendingComments.length > 0) {
+                    node.leadingComments = [...pendingComments];
+                    pendingComments = [];
+                }
                 getActiveChildren().push(node);
                 if (node.nodeType === 'VariableDeclaration' && stack.length === 0) {
                     rootNodes.push(node);
                 }
+            } else {
+                // If we didn't get a node but have comments, maybe they belong to the next line
             }
             this.pos++;
+
         }
 
         // Post-process matches to add breaks to cases (Regex only)
@@ -332,11 +348,8 @@ class RegexPythonParser {
         const sleepMsM = trimmed.match(/^(?:time\.)?sleep_ms\s*\((.+)\)\s*$/);
         if (sleepMsM) {
             return {
-                nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
-                children: [{
-                    nodeType: 'DelayMs', id: `delay-${lineNum}`, attributes: {},
-                    children: [this._parseExpr(sleepMsM[1].trim(), lineNum)]
-                } as BaseNode],
+                nodeType: 'DelayMs', id: `delay-${lineNum}`, attributes: {},
+                children: [this._parseExpr(sleepMsM[1].trim(), lineNum)],
                 metadata: meta
             } as BaseNode;
         }
@@ -349,18 +362,63 @@ class RegexPythonParser {
                 ? { nodeType: 'Literal', id: `ms-${lineNum}`, attributes: { value: (arg.attributes.value as number) * 1000 }, children: [] }
                 : { nodeType: 'Literal', id: `ms-${lineNum}`, attributes: { value: 1000 }, children: [] };
             return {
-                nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
-                children: [{ nodeType: 'DelayMs', id: `delay-${lineNum}`, attributes: {}, children: [msArg] } as BaseNode],
+                nodeType: 'DelayMs', id: `delay-${lineNum}`, attributes: {},
+                children: [msArg],
                 metadata: meta
             } as BaseNode;
         }
+
 
         // ── utime.sleep_ms(n) / utime.sleep(n) ───────────────────────────────
         const utimeSleepM = trimmed.match(/^utime\.sleep(?:_ms)?\s*\((.+)\)\s*$/);
         if (utimeSleepM) {
             return {
-                nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
-                children: [{ nodeType: 'DelayMs', id: `delay-${lineNum}`, attributes: {}, children: [this._parseExpr(utimeSleepM[1].trim(), lineNum)] } as BaseNode],
+                nodeType: 'DelayMs', id: `delay-${lineNum}`, attributes: {}, children: [this._parseExpr(utimeSleepM[1].trim(), lineNum)],
+                metadata: meta
+            } as BaseNode;
+        }
+
+        // ── Serial.begin(baud) or # Serial.begin(baud) ───────────────────────
+        const serialBeginM = trimmed.match(/^(?:#\s*)?Serial\.begin\s*\((.+)\)\s*$/);
+        if (serialBeginM) {
+            return {
+                nodeType: 'ExpressionStatement', id: `serial-${lineNum}`, attributes: {},
+                children: [{
+                    nodeType: 'CallExpression', id: `call-${lineNum}`, attributes: { callee: 'Serial.begin' },
+                    children: [this._parseExpr(serialBeginM[1].trim(), lineNum)]
+                } as BaseNode],
+                metadata: meta
+            } as BaseNode;
+        }
+
+        // ── machine.Pin(n, ...).value(v) ──────────────────────────────────────
+        const chainedPinM = trimmed.match(/^(?:machine\.)?Pin\s*\(([^)]+)\)\.value\(([^)]+)\)\s*$/);
+        if (chainedPinM) {
+            const pinArgs = chainedPinM[1].split(',').map(s => s.trim());
+            const val = this._parseExpr(chainedPinM[2].trim(), lineNum);
+            return {
+                nodeType: 'GpioSet', id: `pinval-${lineNum}`, attributes: {},
+                children: [
+                    this._parseExpr(pinArgs[0], lineNum),
+                    val
+                ],
+                metadata: meta
+            } as BaseNode;
+        }
+
+        // ── Standalone (machine.)Pin(pin, mode) ────────────────────────────────
+        const standalonePinM = trimmed.match(/^(?:machine\.)?Pin\s*\(([^)]+)\)\s*$/);
+        if (standalonePinM) {
+            const args = standalonePinM[1].split(',').map(s => s.trim());
+            const pinNum = this._parseExpr(args[0], lineNum);
+            const modeStr = args[1] || 'Pin.OUT';
+            const mode = /IN/.test(modeStr) ? 0 : 1;
+            return {
+                nodeType: 'ExpressionStatement', id: `pin-stmt-${lineNum}`, attributes: {},
+                children: [{
+                    nodeType: 'CallExpression', id: `pin-call-${lineNum}`, attributes: { callee: 'Pin' },
+                    children: [pinNum, { nodeType: 'Literal', id: `mode-${lineNum}`, attributes: { value: mode }, children: [] } as BaseNode]
+                } as BaseNode],
                 metadata: meta
             } as BaseNode;
         }
@@ -369,22 +427,16 @@ class RegexPythonParser {
         const pinOnM = trimmed.match(/^(\w+)\.on\(\)\s*$/);
         if (pinOnM) {
             return {
-                nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
-                children: [{
-                    nodeType: 'CallExpression', id: `on-${lineNum}`, attributes: { callee: 'Pin.on' },
-                    children: [{ nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: pinOnM[1] }, children: [] } as BaseNode]
-                } as BaseNode],
+                nodeType: 'GpioSet', id: `on-${lineNum}`, attributes: { value: 1 },
+                children: [{ nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: pinOnM[1] }, children: [] } as BaseNode],
                 metadata: meta
             } as BaseNode;
         }
         const pinOffM = trimmed.match(/^(\w+)\.off\(\)\s*$/);
         if (pinOffM) {
             return {
-                nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
-                children: [{
-                    nodeType: 'CallExpression', id: `off-${lineNum}`, attributes: { callee: 'Pin.off' },
-                    children: [{ nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: pinOffM[1] }, children: [] } as BaseNode]
-                } as BaseNode],
+                nodeType: 'GpioSet', id: `off-${lineNum}`, attributes: { value: 0 },
+                children: [{ nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: pinOffM[1] }, children: [] } as BaseNode],
                 metadata: meta
             } as BaseNode;
         }
@@ -395,17 +447,15 @@ class RegexPythonParser {
             const objName = pinValSetM[1];
             const val = this._parseExpr(pinValSetM[2].trim(), lineNum);
             return {
-                nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
-                children: [{
-                    nodeType: 'CallExpression', id: `pinval-${lineNum}`, attributes: { callee: 'Pin.value' },
-                    children: [
-                        { nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: objName }, children: [] } as BaseNode,
-                        val
-                    ]
-                } as BaseNode],
+                nodeType: 'GpioSet', id: `pinval-${lineNum}`, attributes: {},
+                children: [
+                    { nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: objName }, children: [] } as BaseNode,
+                    val
+                ],
                 metadata: meta
             } as BaseNode;
         }
+
 
         // ── CircuitPython: led.value = True/False/0/1 ────────────────────────
         const cpDioM = trimmed.match(/^(\w+)\.value\s*=\s*(.+)\s*$/);
@@ -413,14 +463,11 @@ class RegexPythonParser {
             const objName = cpDioM[1];
             const val = this._parseBoolExpr(cpDioM[2].trim(), lineNum);
             return {
-                nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
-                children: [{
-                    nodeType: 'CallExpression', id: `pinval-${lineNum}`, attributes: { callee: 'Pin.value' },
-                    children: [
-                        { nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: objName }, children: [] } as BaseNode,
-                        val
-                    ]
-                } as BaseNode],
+                nodeType: 'GpioSet', id: `pinval-${lineNum}`, attributes: {},
+                children: [
+                    { nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: objName }, children: [] } as BaseNode,
+                    val
+                ],
                 metadata: meta
             } as BaseNode;
         }
@@ -742,11 +789,8 @@ class PythonCstToAst {
             const attr = leftExpr.childForFieldName('attribute')?.text;
             if (attr === 'value') {
                 return {
-                    nodeType: 'ExpressionStatement', id: `set-${node.id}`, attributes: {},
-                    children: [{
-                        nodeType: 'CallExpression', id: `v-${node.id}`, attributes: { callee: 'Pin.value' },
-                        children: [this.visitExpr(leftExpr.childForFieldName('object')), right]
-                    } as BaseNode],
+                    nodeType: 'GpioSet', id: `set-${node.id}`, attributes: {},
+                    children: [this.visitExpr(leftExpr.childForFieldName('object')), right],
                     metadata: meta
                 } as BaseNode;
             }
@@ -1213,16 +1257,16 @@ class PythonCstToAst {
 
                 // MicroPython: led.on() → Pin.on, led.off() → Pin.off
                 if (attr === 'on' && args.length === 0) {
-                    return { nodeType: 'CallExpression', id: `on-${node.id}`, attributes: { callee: 'Pin.on' }, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
+                    return { nodeType: 'GpioSet', id: `on-${node.id}`, attributes: { value: 1 }, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
                 }
                 if (attr === 'off' && args.length === 0) {
-                    return { nodeType: 'CallExpression', id: `off-${node.id}`, attributes: { callee: 'Pin.off' }, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
+                    return { nodeType: 'GpioSet', id: `off-${node.id}`, attributes: { value: 0 }, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
                 }
 
                 // MicroPython / CircuitPython: pin.value() / pin.value(val)
                 if (attr === 'value') {
                     if (args.length === 1) {
-                        return { nodeType: 'CallExpression', id: `set-${node.id}`, attributes: { callee: 'Pin.value' }, children: [this.visitExpr(func.childForFieldName('object'), env), args[0]], metadata: meta };
+                        return { nodeType: 'GpioSet', id: `set-${node.id}`, attributes: {}, children: [this.visitExpr(func.childForFieldName('object'), env), args[0]], metadata: meta };
                     } else if (args.length === 0) {
                         return { nodeType: 'CallExpression', id: `get-${node.id}`, attributes: { callee: 'Pin.value' }, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
                     }
@@ -1253,7 +1297,6 @@ class PythonCstToAst {
             }
             // CircuitPython: digitalio.DigitalInOut → Pin
             if (callee === 'digitalio.DigitalInOut') {
-                // args[0] is the board pin expr (already visited)
                 return { nodeType: 'CallExpression', id: `pin-${node.id}`, attributes: { callee: 'Pin' }, children: [...args, { nodeType: 'Literal', id: `m-${node.id}`, attributes: { value: 1 }, children: [] } as BaseNode], metadata: meta };
             }
 

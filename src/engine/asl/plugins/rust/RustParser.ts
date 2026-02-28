@@ -50,6 +50,16 @@ export class RustParser {
 class RustCstToAst {
     convert(node: any): ProgramNode {
         const children = this.visitBlockChildren(node);
+
+        // Automatic Unwrapping: If we have exactly one function named 'main',
+        // unwrap its children into the Program level.
+        const funcs = children.filter(c => c.nodeType === 'Function');
+        if (funcs.length === 1 && funcs[0].attributes.name === 'main') {
+            const mainBody = funcs[0].children;
+            const otherNodes = children.filter(c => c !== funcs[0]);
+            return { nodeType: 'Program', id: 'root', attributes: {}, children: [...otherNodes, ...mainBody] };
+        }
+
         return { nodeType: 'Program', id: 'root', attributes: {}, children };
     }
 
@@ -92,8 +102,28 @@ class RustCstToAst {
     }
 
     visitExpressionStatement(node: any): BaseNode {
-        const expr = this.visit(node.firstChild!);
-        if (!expr) return { nodeType: 'Empty', id: 'e', attributes: {}, children: [] };
+        const first = node.firstChild!;
+        const text = node.text || '';
+
+        // Enhanced Boilerplate Filtering
+        if (text.includes('esp_hal') ||
+            text.includes('no_std') ||
+            text.includes('no_main') ||
+            text.includes('entry') ||
+            text.includes('.split()') ||
+            text.includes('.freeze()')) {
+            return { nodeType: 'Empty', id: 'e', attributes: {}, children: [] };
+        }
+
+        const expr = this.visit(first);
+        if (!expr || expr.nodeType === 'Empty') return { nodeType: 'Empty', id: 'e', attributes: {}, children: [] };
+
+        // Rust control flow are expressions, but mapped to statements in ASL. Avoid wrapping them.
+        if (['WhileLoop', 'IfStatement', 'ForLoop', 'SwitchStatement'].includes(expr.nodeType)) {
+            // Keep comments attached
+            if (expr.metadata && !expr.metadata.line) expr.metadata.line = node.startPosition.row + 1;
+            return expr;
+        }
 
         return {
             nodeType: 'ExpressionStatement',
@@ -105,6 +135,17 @@ class RustCstToAst {
     }
 
     visitLet(node: any): BaseNode {
+        const text = node.text || '';
+        // Filter ESP-HAL boilerplate variables
+        if (text.includes('Peripherals::take') ||
+            text.includes('system.clock_control') ||
+            text.includes('ClockControl') ||
+            text.includes('Delay::new') ||
+            text.includes('.split()') ||
+            text.includes('.freeze()')) {
+            return { nodeType: 'Empty', id: 'e', attributes: {}, children: [] };
+        }
+
         const pattern = node.childForFieldName('pattern');
         const name = pattern?.text.replace('mut ', '').trim() || 'unknown';
         const valueNode = node.childForFieldName('value');
@@ -149,7 +190,7 @@ class RustCstToAst {
                 result.push(visited);
             }
         });
-        return result;
+        return result.filter(n => n.nodeType !== 'Empty');
     }
 
     visitIf(node: any): BaseNode {
@@ -175,7 +216,9 @@ class RustCstToAst {
     visitLoop(node: any): BaseNode {
         const bodyNode = node.childForFieldName('body');
         const children = bodyNode ? this.visitBlockChildren(bodyNode) : [];
-        const trueCond: BaseNode = { nodeType: 'Literal', id: 'true', attributes: { value: 1 }, children: [] };
+
+        // CGenerator expects WhileLoop with Literal(1) to treat as 'void loop()'
+        const trueCond: BaseNode = { nodeType: 'Literal', id: `true-${node.id}`, attributes: { value: 1 }, children: [] };
 
         return {
             nodeType: 'WhileLoop',
@@ -363,14 +406,34 @@ class RustCstToAst {
 
     visitCall(node: any): BaseNode {
         const funcNode = node.childForFieldName('function');
-        const funcName = funcNode?.text || '';
+        let funcName = funcNode?.text || '';
         const argsNode = node.childForFieldName('arguments');
         const args = argsNode ? argsNode.children.filter((c: any) => c.type !== '(' && c.type !== ')' && c.type !== ',').map((c: any) => this.visitExpr(c)) : [];
 
         const meta = { line: node.startPosition.row + 1 };
 
+        // Handle dot notation (delay.delay_ms, led.set_high, etc.)
+        if (funcName.includes('.')) {
+            const parts = funcName.split('.');
+            const method = parts[parts.length - 1];
+            if (method === 'delay_ms' || method === 'delay_us') {
+                return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+            }
+            if (method === 'set_high' || method === 'set_low') {
+                const val = method === 'set_high' ? 1 : 0;
+                return {
+                    nodeType: 'GpioSet', id: `c-${node.id}`, attributes: {}, children: [
+                        { nodeType: 'Literal', id: 'l', attributes: { value: 13 }, children: [] },
+                        { nodeType: 'Literal', id: 'v', attributes: { value: val }, children: [] }
+                    ], metadata: meta
+                };
+            }
+        }
+
         if (funcName === 'gpio_set' || funcName === 'digitalWrite') return { nodeType: 'GpioSet', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
         if (funcName === 'delay' || funcName === 'delay_ms') return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+        if (funcName === 'pinMode') return { nodeType: 'CallExpression', id: `c-${node.id}`, attributes: { callee: 'pinMode' }, children: args, metadata: meta };
+        if (funcName === 'Serial.begin') return { nodeType: 'CallExpression', id: `c-${node.id}`, attributes: { callee: 'Serial.begin' }, children: args, metadata: meta };
 
         return { nodeType: 'CallExpression', id: `call-${node.id}`, attributes: { callee: funcName }, children: args, metadata: meta };
     }
@@ -381,7 +444,13 @@ class RustCstToAst {
         const tokenTree = node.childForFieldName('tokens');
         let text = tokenTree?.text || '';
         if (text.startsWith('(') && text.endsWith(')')) text = text.substring(1, text.length - 1);
-        text = text.replace(/"/g, '');
+
+        if (text.includes(',')) {
+            const parts = text.split(',').map(s => s.trim().replace(/"/g, ''));
+            if (parts[0] === '{}' && parts[1]) text = parts[1];
+        } else {
+            text = text.replace(/"/g, '');
+        }
 
         const meta = { line: node.startPosition.row + 1 };
 

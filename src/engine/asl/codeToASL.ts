@@ -20,11 +20,11 @@ import { buildEmptyArray, deepCopyValue, resolveSize } from './helpers/arrayUtil
 import { transformExpr } from './transforms/exprTransform';
 
 export async function codeToASL(source: string, language: Language): Promise<ASLProgram> {
-  const programAst = await parseToProgramNode(source, language);
+  const programAst = await codeToAST(source, language);
   return astToASL(programAst, language);
 }
 
-async function parseToProgramNode(source: string, language: Language): Promise<ProgramNode> {
+export async function codeToAST(source: string, language: Language): Promise<ProgramNode> {
   switch (language) {
     case 'c':
     case 'cpp': {

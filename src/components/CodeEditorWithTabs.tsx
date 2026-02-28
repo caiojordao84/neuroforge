@@ -9,6 +9,7 @@ import { simulationEngine } from '@/engine/SimulationEngine';
 import { codeParser } from '@/engine/CodeParser';
 import type { Language } from '@/types';
 import { LANGUAGE_REGISTRY, getLanguageInfo } from '@/engine/asl/LanguageRegistry';
+import { transpileCode } from '@/engine/asl/transpile';
 import { cn } from '@/lib/utils';
 import {
   Select,
@@ -132,9 +133,48 @@ export const CodeEditorWithTabs: React.FC = () => {
 
   // Handle language change — directly update language and rename file extension
   const handleLanguageChange = useCallback(
-    (newLanguage: Language) => {
+    async (newLanguage: Language) => {
       if (!activeFile || !activeFileId || newLanguage === activeFile.language) return;
 
+      let finalCode = activeFile.code;
+
+      // If there's code and languages are different, try to transpile
+      if (activeFile.code.trim() && newLanguage !== activeFile.language) {
+        addTerminalLine(
+          `🔄 Transpiling from ${activeFile.language.toUpperCase()} to ${newLanguage.toUpperCase()}...`,
+          'info'
+        );
+
+        try {
+          const result = await transpileCode(
+            activeFile.code,
+            activeFile.language,
+            newLanguage
+          );
+
+          if (result.success) {
+            finalCode = result.code;
+            addTerminalLine(
+              `✅ Transpiled successfully from ${activeFile.language.toUpperCase()} to ${newLanguage.toUpperCase()}`,
+              'success'
+            );
+          } else {
+            // Transpilation failed - keep original code with warning
+            finalCode = result.code;
+            addTerminalLine(
+              `⚠️ Transpilation failed: ${result.warnings.join(', ')}`,
+              'warning'
+            );
+          }
+        } catch (error) {
+          addTerminalLine(
+            `❌ Transpilation error: ${error instanceof Error ? error.message : String(error)}`,
+            'error'
+          );
+        }
+      }
+
+      updateFileCode(activeFileId, finalCode);
       updateFileLanguage(activeFileId, newLanguage);
 
       // Rename file extension to match new language
@@ -143,11 +183,11 @@ export const CodeEditorWithTabs: React.FC = () => {
       renameFile(activeFileId, `${baseName}${newExt}`);
 
       addTerminalLine(
-        `🔤 Language changed to ${newLanguage.toUpperCase()} — file renamed to ${baseName}${newExt}`,
+        `🔤 Language changed to ${newLanguage.toUpperCase()}`,
         'info'
       );
     },
-    [activeFile, activeFileId, updateFileLanguage, renameFile, addTerminalLine]
+    [activeFile, activeFileId, updateFileCode, updateFileLanguage, renameFile, addTerminalLine]
   );
 
   // Handle create new file
@@ -283,9 +323,8 @@ export const CodeEditorWithTabs: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
-            disabled
-            title="Transpile: not implemented yet"
-            className="h-8 px-3 bg-transparent border-[rgba(0,217,255,0.15)] text-[#5a6472] cursor-not-allowed opacity-50"
+            onClick={() => activeFile && handleLanguageChange(activeFile.language as any)} // Forçar re-processamento
+            className="h-8 px-3 bg-transparent border-[rgba(0,217,255,0.3)] text-[#9ca3af] hover:text-[#00d9ff] hover:bg-[rgba(0,217,255,0.1)]"
           >
             <ArrowRightLeft className="w-4 h-4 mr-1" />
             Transpile
