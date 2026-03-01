@@ -72,7 +72,7 @@ class RegexPythonParser {
         interface BlockContext {
             node: BaseNode;
             indent: number;
-            type: 'while' | 'for' | 'match' | 'case' | 'if';
+            type: 'while' | 'dowhile' | 'for' | 'match' | 'case' | 'if';
         }
         const stack: BlockContext[] = [];
 
@@ -89,6 +89,28 @@ class RegexPythonParser {
 
             if (!trimmed) { this.pos++; continue; }
 
+            // ── do-while hint via comment: # do-while: <cond> ─────────────────
+            if (trimmed.startsWith('# do-while:')) {
+                const doCondStr = trimmed.replace(/^#\s*do-while:\s*/, '').trim();
+                const nextLine = this.lines[this.pos + 1]?.trim();
+                if (nextLine && /^while\s+(True|1)\s*:/.test(nextLine)) {
+                    const doWhileCond = this._parseExpr(doCondStr, this.pos + 1);
+                    const doNode: BaseNode = {
+                        nodeType: 'DoWhileLoop', id: `dw-${this.pos}`, attributes: {},
+                        children: [doWhileCond]
+                    };
+                    getActiveChildren().push(doNode);
+                    this.pos++; // skip the while True: line
+                    const whileIndent = (this.lines[this.pos]?.length ?? 0) - (this.lines[this.pos]?.trimStart().length ?? 0);
+                    stack.push({ node: doNode, indent: whileIndent, type: 'dowhile' });
+                    this.pos++;
+                    continue;
+                }
+                pendingComments.push(trimmed);
+                this.pos++;
+                continue;
+            }
+
             if (trimmed.startsWith('#')) {
                 pendingComments.push(trimmed);
                 this.pos++;
@@ -99,36 +121,52 @@ class RegexPythonParser {
 
             if (/^(import|from)\s/.test(trimmed)) { this.pos++; continue; }
 
-            // ── Enum-like class (class X: A=0; B=1) ─────────────────────────
+            // ── Enum or Struct class ──────────────────────────────────────────
             const classM = trimmed.match(/^class\s+(\w+)\s*(?:\([^)]*\))?\s*:/);
             if (classM) {
                 const className = classM[1];
                 const members: { name: string; value: number }[] = [];
+                const fields: { name: string; type: string }[] = [];
                 let j = this.pos + 1;
                 while (j < this.lines.length) {
                     const cl = this.lines[j].trim();
                     if (!cl || cl.startsWith('#')) { j++; continue; }
                     const memberM = cl.match(/^(\w+)\s*=\s*(\d+)\s*$/);
-                    if (memberM) { members.push({ name: memberM[1], value: parseInt(memberM[2]) }); j++; }
-                    else break;
+                    if (memberM) { members.push({ name: memberM[1], value: parseInt(memberM[2]) }); j++; continue; }
+                    const fieldAnnotM = cl.match(/^(\w+)\s*:\s*(\w+)/);
+                    if (fieldAnnotM) { fields.push({ name: fieldAnnotM[1], type: fieldAnnotM[2] }); j++; continue; }
+                    const selfFieldM = cl.match(/^self\.(\w+)\s*=\s*(.+)$/);
+                    if (selfFieldM) { fields.push({ name: selfFieldM[1], type: 'auto' }); j++; continue; }
+                    break;
                 }
-                const enumNode: BaseNode = {
-                    nodeType: 'EnumDeclaration', id: `enum-${this.pos}`,
-                    attributes: { name: className, members }, children: [],
+                const isEnum = members.length > 0 && fields.length === 0;
+                const structNode: BaseNode = {
+                    nodeType: isEnum ? 'EnumDeclaration' : 'StructDeclaration',
+                    id: `${isEnum ? 'enum' : 'struct'}-${this.pos}`,
+                    attributes: isEnum ? { name: className, members } : { name: className, fields },
+                    children: [],
                     metadata: { line: this.pos + 1 }
                 };
-                getActiveChildren().push(enumNode);
+                getActiveChildren().push(structNode);
                 this.pos = j;
                 continue;
             }
 
-            if (/^while\s+(True|1)\s*:/.test(trimmed)) {
+            // ── while <any condition>: ────────────────────────────────────────
+            const whileM = trimmed.match(/^while\s+(.+?)\s*:/);
+            if (whileM) {
+                const condStr = whileM[1].trim();
+                const isInfinite = condStr === 'True' || condStr === '1';
+                const condNode: BaseNode = isInfinite
+                    ? { nodeType: 'Literal', id: `lit-true-${this.pos}`, attributes: { value: 1 }, children: [] }
+                    : this._parseExpr(condStr, this.pos + 1);
                 const whileNode: BaseNode = {
-                    nodeType: 'WhileLoop', id: `while-${this.pos}`, attributes: {}, children: [
-                        { nodeType: 'Literal', id: `lit-true-${this.pos}`, attributes: { value: 1 }, children: [] }
-                    ]
+                    nodeType: 'WhileLoop', id: `while-${this.pos}`,
+                    attributes: { isInfinite },
+                    children: [condNode]
                 };
-                if (stack.length === 0) loopNodes.push(whileNode);
+                if (stack.length === 0 && isInfinite) loopNodes.push(whileNode);
+                else if (stack.length === 0) setupNodes.push(whileNode);
                 else getActiveChildren().push(whileNode);
                 stack.push({ node: whileNode, indent, type: 'while' });
                 this.pos++;
@@ -264,25 +302,25 @@ class RegexPythonParser {
         const utimeSleepM = trimmed.match(/^utime\.sleep(?:_ms)?\s*\((.+)\)\s*$/);
         if (utimeSleepM) return { nodeType: 'DelayMs', id: `delay-${lineNum}`, attributes: {}, children: [this._parseExpr(utimeSleepM[1].trim(), lineNum)], metadata: meta } as BaseNode;
 
-        // ── NEW: millis() / micros() ─────────────────────────────────────────
+        // ── millis() / micros() ──────────────────────────────────────────────
         if (/^(?:time|utime)\.ticks_ms\(\)/.test(trimmed)) return { nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {}, children: [{ nodeType: 'CallExpression', id: `ms-${lineNum}`, attributes: { callee: 'millis' }, children: [] }], metadata: meta } as BaseNode;
         if (/^(?:time|utime)\.ticks_us\(\)/.test(trimmed)) return { nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {}, children: [{ nodeType: 'CallExpression', id: `us-${lineNum}`, attributes: { callee: 'micros' }, children: [] }], metadata: meta } as BaseNode;
 
-        // ── NEW: GpioRead: var = pin.value() ─────────────────────────────────
+        // ── GpioRead: var = pin.value() ──────────────────────────────────────
         const pinReadM = trimmed.match(/^(\w+)\s*=\s*(\w+)\.value\(\)\s*$/);
         if (pinReadM) return { nodeType: 'VariableDeclaration', id: `decl-${lineNum}`, attributes: { name: pinReadM[1], type: 'auto' }, children: [{ nodeType: 'GpioRead', id: `gr-${lineNum}`, attributes: {}, children: [{ nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: pinReadM[2] }, children: [] }] }], metadata: meta } as BaseNode;
 
-        // ── NEW: random.randint / randrange ──────────────────────────────────
+        // ── random.randint / randrange ───────────────────────────────────────
         const randAssignM = trimmed.match(/^(\w+)\s*=\s*random\.rand(?:int|range)\s*\(([^)]+)\)\s*$/);
         if (randAssignM) {
             const args = randAssignM[2].split(',').map(a => this._parseExpr(a.trim(), lineNum));
             return { nodeType: 'VariableDeclaration', id: `decl-${lineNum}`, attributes: { name: randAssignM[1], type: 'auto' }, children: [{ nodeType: 'CallExpression', id: `rnd-${lineNum}`, attributes: { callee: 'random' }, children: args }], metadata: meta } as BaseNode;
         }
 
-        // ── NEW: Serial.available stub ────────────────────────────────────────
+        // ── Serial.available stub ─────────────────────────────────────────────
         if (/^(?:\w+\.any\(\)|Serial\.available\(\))/.test(trimmed)) return { nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {}, children: [{ nodeType: 'CallExpression', id: `sa-${lineNum}`, attributes: { callee: 'Serial.available' }, children: [] }], metadata: meta } as BaseNode;
 
-        // ── NEW: Serial.readString stub ───────────────────────────────────────
+        // ── Serial.readString stub ────────────────────────────────────────────
         const serialReadM = trimmed.match(/^(\w+)\s*=\s*(?:\w+\.read\(\)|Serial\.readString\(\))\s*$/);
         if (serialReadM) return { nodeType: 'VariableDeclaration', id: `decl-${lineNum}`, attributes: { name: serialReadM[1], type: 'auto' }, children: [{ nodeType: 'CallExpression', id: `sr-${lineNum}`, attributes: { callee: 'Serial.readString' }, children: [] }], metadata: meta } as BaseNode;
 
@@ -385,22 +423,22 @@ class RegexPythonParser {
         if (s === 'False' || s === 'LOW') return { nodeType: 'Literal', id: `l-${lineNum}`, attributes: { value: 0 }, children: [], metadata: meta };
         if (s === 'None') return { nodeType: 'Literal', id: `l-${lineNum}`, attributes: { value: 0 }, children: [], metadata: meta };
 
-        // ── NEW: millis / micros inline ──────────────────────────────────────
+        // ── millis / micros inline ───────────────────────────────────────────
         if (/^(?:time|utime)\.ticks_ms\(\)$/.test(s)) return { nodeType: 'CallExpression', id: `ms-${lineNum}`, attributes: { callee: 'millis' }, children: [], metadata: meta };
         if (/^(?:time|utime)\.ticks_us\(\)$/.test(s)) return { nodeType: 'CallExpression', id: `us-${lineNum}`, attributes: { callee: 'micros' }, children: [], metadata: meta };
 
-        // ── NEW: random inline ───────────────────────────────────────────────
+        // ── random inline ────────────────────────────────────────────────────
         const randInlineM = s.match(/^random\.rand(?:int|range)\s*\(([^)]+)\)$/);
         if (randInlineM) {
             const args = randInlineM[1].split(',').map(a => this._parseExpr(a.trim(), lineNum));
             return { nodeType: 'CallExpression', id: `rnd-${lineNum}`, attributes: { callee: 'random' }, children: args, metadata: meta };
         }
 
-        // ── NEW: GpioRead inline — pin.value() ───────────────────────────────
+        // ── GpioRead inline — pin.value() ────────────────────────────────────
         const pinValueM = s.match(/^(\w+)\.value\(\)$/);
         if (pinValueM) return { nodeType: 'GpioRead', id: `gr-${lineNum}`, attributes: {}, children: [{ nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: pinValueM[1] }, children: [] }], metadata: meta };
 
-        // ── NEW: ConditionalExpression — val if cond else other ───────────────
+        // ── ConditionalExpression — val if cond else other ────────────────────
         const condM = s.match(/^(.+?)\s+if\s+(.+?)\s+else\s+(.+)$/);
         if (condM) {
             return {
@@ -414,11 +452,11 @@ class RegexPythonParser {
             };
         }
 
-        // ── NEW: Unary ────────────────────────────────────────────────────────
+        // ── Unary ─────────────────────────────────────────────────────────────
         if (s.startsWith('not ')) return { nodeType: 'UnaryExpression', id: `un-${lineNum}`, attributes: { operator: '!', prefix: true }, children: [this._parseExpr(s.substring(4).trim(), lineNum)], metadata: meta };
         if (s.startsWith('-') && s.length > 1 && !/^-[\d]/.test(s)) return { nodeType: 'UnaryExpression', id: `un-${lineNum}`, attributes: { operator: '-', prefix: true }, children: [this._parseExpr(s.substring(1).trim(), lineNum)], metadata: meta };
 
-        // ── NEW: Binary & Comparison — all operators ─────────────────────────
+        // ── Binary & Comparison — all operators ──────────────────────────────
         for (const op of ['==', '!=', '<=', '>=', ' and ', ' or ', ' < ', ' > ', ' + ', ' - ', ' * ', ' / ', ' % ', ' & ', ' | ', ' ^ ']) {
             const idx = s.indexOf(op);
             if (idx > 0) {
@@ -431,7 +469,50 @@ class RegexPythonParser {
             }
         }
 
-        // Dictionary Literal
+        // ── Array literal: [a, b, c] or [[...], [...]] (2D) ──────────────────
+        if (s.startsWith('[') && s.endsWith(']')) {
+            const inner = s.slice(1, -1).trim();
+            if (!inner) return { nodeType: 'ArrayInitializer', id: `arr-${lineNum}`, attributes: { isArray: true }, children: [], metadata: meta };
+            const items: string[] = [];
+            let depth = 0, cur = '';
+            for (const ch of inner) {
+                if (ch === '[' || ch === '(') depth++;
+                else if (ch === ']' || ch === ')') depth--;
+                if (ch === ',' && depth === 0) { items.push(cur.trim()); cur = ''; }
+                else cur += ch;
+            }
+            if (cur.trim()) items.push(cur.trim());
+            const children = items.map(item => this._parseExpr(item, lineNum));
+            const is2D = children.length > 0 && children.every(c => c.nodeType === 'ArrayInitializer');
+            return { nodeType: 'ArrayInitializer', id: `arr-${lineNum}`, attributes: { isArray: true, is2D }, children, metadata: meta };
+        }
+
+        // ── List comprehension: [expr for var in iterable] ────────────────────
+        const lcM = s.match(/^\[(.+?)\s+for\s+(\w+)\s+in\s+(.+)\]$/);
+        if (lcM) {
+            const expr = lcM[1].trim();
+            const varName = lcM[2].trim();
+            const iterable = lcM[3].trim();
+            if (iterable.startsWith('range(')) {
+                const argStr = iterable.substring(6, iterable.length - 1);
+                const parts = argStr.split(',').map(p => p.trim());
+                let start = 0, stop = 10;
+                if (parts.length === 1) stop = parseInt(parts[0]) || 10;
+                else if (parts.length >= 2) { start = parseInt(parts[0]) || 0; stop = parseInt(parts[1]) || 10; }
+                const count = stop - start;
+                if (count > 0 && count <= 50) {
+                    const elements: BaseNode[] = [];
+                    for (let i = start; i < stop; i++) {
+                        const resolved = expr.replace(new RegExp(`\\b${varName}\\b`, 'g'), String(i));
+                        elements.push(this._parseExpr(resolved, lineNum));
+                    }
+                    return { nodeType: 'ArrayInitializer', id: `lc-${lineNum}`, attributes: { isArray: true }, children: elements, metadata: meta };
+                }
+            }
+            return { nodeType: 'ArrayInitializer', id: `lc-${lineNum}`, attributes: { isArray: true }, children: [], metadata: meta };
+        }
+
+        // ── Dictionary Literal ────────────────────────────────────────────────
         if (s.startsWith('{') && s.endsWith('}')) {
             const inner = s.slice(1, -1).trim();
             const pairs = inner.split(',').filter(p => p.trim());
@@ -443,7 +524,7 @@ class RegexPythonParser {
             return { nodeType: 'ObjectInitializer', id: `dict-${lineNum}`, attributes: {}, children, metadata: meta };
         }
 
-        // Subscript access: obj[key]
+        // ── Subscript access: obj[key] ────────────────────────────────────────
         const subscriptM = s.match(/^(\w+)\s*\[(.*)\]$/);
         if (subscriptM) return { nodeType: 'SubscriptExpression', id: `sub-${lineNum}`, attributes: {}, children: [{ nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: subscriptM[1] }, children: [] }, this._parseExpr(subscriptM[2].trim(), lineNum)], metadata: meta };
 
@@ -500,7 +581,6 @@ class PythonCstToAst {
             case 'continue_statement': return this.visitContinue(node);
             case 'match_statement': return this.visitMatch(node);
             case 'list_comprehension': return this.visitListComprehension(node);
-            // ── NEW: EnumDeclaration via class_definition ─────────────────────
             case 'class_definition': return this.visitClass(node);
             case 'import_statement':
             case 'import_from_statement':
@@ -529,12 +609,14 @@ class PythonCstToAst {
         return { nodeType: 'Function', id: `fn-${node.id}`, attributes: { name }, children: body ? this.visitBlockChildren(body) : [], metadata: { line: node.startPosition.row + 1 } };
     }
 
-    // ── NEW: visitClass — EnumDeclaration ─────────────────────────────────────
+    // ── visitClass — EnumDeclaration or StructDeclaration ────────────────────
     visitClass(node: any): BaseNode {
         const name = node.childForFieldName('name')?.text || 'Unknown';
         const body = node.childForFieldName('body');
         const meta = { line: node.startPosition.row + 1 };
         const members: { name: string; value: number }[] = [];
+        const fields: { name: string; type: string }[] = [];
+
         if (body) {
             body.children.forEach((c: any) => {
                 if (c.type === 'expression_statement') {
@@ -542,12 +624,21 @@ class PythonCstToAst {
                     if (a?.type === 'assignment') {
                         const lname = a.childForFieldName('left')?.text;
                         const rval = a.childForFieldName('right');
-                        if (lname && rval?.type === 'integer') members.push({ name: lname, value: parseInt(rval.text) });
+                        if (lname && rval?.type === 'integer') { members.push({ name: lname, value: parseInt(rval.text) }); return; }
                     }
+                }
+                if (c.type === 'annotated_assignment') {
+                    const lname = c.childForFieldName('name')?.text || c.child(0)?.text;
+                    const typ = c.childForFieldName('type')?.text || 'auto';
+                    if (lname) fields.push({ name: lname, type: typ });
                 }
             });
         }
-        return { nodeType: 'EnumDeclaration', id: `enum-${node.id}`, attributes: { name, members }, children: [], metadata: meta };
+
+        if (members.length > 0 && fields.length === 0) {
+            return { nodeType: 'EnumDeclaration', id: `enum-${node.id}`, attributes: { name, members }, children: [], metadata: meta };
+        }
+        return { nodeType: 'StructDeclaration', id: `struct-${node.id}`, attributes: { name, fields }, children: [], metadata: meta };
     }
 
     visitExprStmt(node: any): BaseNode {
@@ -604,10 +695,50 @@ class PythonCstToAst {
         return { nodeType: 'IfStatement', id: `if-${node.id}`, attributes: {}, children, metadata: { line: node.startPosition.row + 1 } };
     }
 
+    // ── visitWhile — WhileLoop (any cond) + DoWhileLoop heuristic ────────────
     visitWhile(node: any): BaseNode {
-        const cond = this.visitExpr(node.childForFieldName('condition')!);
+        const condNode = node.childForFieldName('condition');
         const body = node.childForFieldName('body');
-        return { nodeType: 'WhileLoop', id: `while-${node.id}`, attributes: {}, children: [cond, ...(body ? this.visitBlockChildren(body) : [])], metadata: { line: node.startPosition.row + 1 } };
+        const meta = { line: node.startPosition.row + 1 };
+        const condText = condNode?.text?.trim() || '';
+        const isInfinite = condText === 'True' || condText === '1';
+        const cond = this.visitExpr(condNode!);
+
+        // Heuristic do-while detection:
+        // while True:
+        //     <body>
+        //     if not <cond>: break
+        if (isInfinite && body) {
+            const bodyChildren = body.children.filter((c: any) =>
+                c.type !== ':' && c.type !== 'comment'
+            );
+            const last = bodyChildren[bodyChildren.length - 1];
+            if (last?.type === 'if_statement') {
+                const ifCond = last.childForFieldName('condition');
+                const ifBody = last.childForFieldName('consequence');
+                const hasBreak = ifBody?.children?.some((c: any) => c.type === 'break_statement');
+                if (hasBreak && ifCond) {
+                    const innerCond: BaseNode = ifCond.type === 'not_operator'
+                        ? this.visitExpr(ifCond.namedChild(0), undefined)
+                        : { nodeType: 'UnaryExpression', id: `neg-${node.id}`, attributes: { operator: '!', prefix: true }, children: [this.visitExpr(ifCond)] } as BaseNode;
+                    const realBodyNodes = bodyChildren.slice(0, -1)
+                        .map((c: any) => this.visit(c))
+                        .filter(Boolean) as BaseNode[];
+                    return {
+                        nodeType: 'DoWhileLoop', id: `dw-${node.id}`, attributes: {},
+                        children: [innerCond, ...realBodyNodes],
+                        metadata: meta
+                    };
+                }
+            }
+        }
+
+        return {
+            nodeType: 'WhileLoop', id: `while-${node.id}`,
+            attributes: { isInfinite },
+            children: [cond, ...(body ? this.visitBlockChildren(body) : [])],
+            metadata: meta
+        };
     }
 
     visitFor(node: any): BaseNode {
@@ -711,7 +842,7 @@ class PythonCstToAst {
     visitExpr(node: any, env?: Map<string, BaseNode>): BaseNode {
         const meta = { line: node.startPosition.row + 1 };
 
-        // ── NEW: conditional_expression — val if cond else other ──────────────
+        // ── conditional_expression — val if cond else other ───────────────────
         if (node.type === 'conditional_expression') {
             const body = node.child(0);
             const cond = node.child(2);
@@ -736,7 +867,9 @@ class PythonCstToAst {
         }
 
         if (node.type === 'list') {
-            return { nodeType: 'ArrayInitializer', id: `list-${node.id}`, attributes: { isArray: true }, children: node.namedChildren.map((c: any) => this.visitExpr(c, env)) as BaseNode[], metadata: meta };
+            const elements = node.namedChildren.map((c: any) => this.visitExpr(c, env)) as BaseNode[];
+            const is2D = elements.length > 0 && elements.every((e: BaseNode) => e.nodeType === 'ArrayInitializer');
+            return { nodeType: 'ArrayInitializer', id: `list-${node.id}`, attributes: { isArray: true, is2D }, children: elements, metadata: meta };
         }
 
         if (node.type === 'true' || (node.type === 'identifier' && node.text === 'True')) return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: 1 }, children: [], metadata: meta };
@@ -795,11 +928,7 @@ class PythonCstToAst {
                 }
                 if (attr === 'id' && args.length === 0) return { nodeType: 'CallExpression', id: `id-${node.id}`, attributes: { callee: 'Pin.id' }, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
                 if ((attr === 'read_u16' || attr === 'read') && args.length === 0) return { nodeType: 'AnalogRead', id: `adc-${node.id}`, attributes: {}, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
-
-                // ── NEW: AnalogWrite — pwm.duty / duty_u16 / duty_cycle ──────
                 if (attr === 'duty' || attr === 'duty_u16' || attr === 'duty_cycle') return { nodeType: 'AnalogWrite', id: `aw-${node.id}`, attributes: {}, children: [this.visitExpr(func.childForFieldName('object'), env), ...args], metadata: meta };
-
-                // ── NEW: Serial stubs ────────────────────────────────────────
                 if (attr === 'any') return { nodeType: 'CallExpression', id: `sa-${node.id}`, attributes: { callee: 'Serial.available' }, children: [], metadata: meta };
             }
 
@@ -814,19 +943,11 @@ class PythonCstToAst {
             }
             if (callee === 'Pin' || callee === 'machine.Pin') return { nodeType: 'CallExpression', id: `pin-${node.id}`, attributes: { callee: 'Pin' }, children: args, metadata: meta };
             if (callee === 'digitalio.DigitalInOut') return { nodeType: 'CallExpression', id: `pin-${node.id}`, attributes: { callee: 'Pin' }, children: [...args, { nodeType: 'Literal', id: `m-${node.id}`, attributes: { value: 1 }, children: [] } as BaseNode], metadata: meta };
-
-            // ── NEW: millis / micros ─────────────────────────────────────────
             if (callee === 'time.ticks_ms' || callee === 'utime.ticks_ms') return { nodeType: 'CallExpression', id: `ms-${node.id}`, attributes: { callee: 'millis' }, children: [], metadata: meta };
             if (callee === 'time.ticks_us' || callee === 'utime.ticks_us') return { nodeType: 'CallExpression', id: `us-${node.id}`, attributes: { callee: 'micros' }, children: [], metadata: meta };
-
-            // ── NEW: random ──────────────────────────────────────────────────
             if (callee === 'random.randint' || callee === 'random.randrange' || callee === 'urandom.randint') return { nodeType: 'CallExpression', id: `rnd-${node.id}`, attributes: { callee: 'random' }, children: args, metadata: meta };
             if (callee === 'random.random') return { nodeType: 'CallExpression', id: `rnd-${node.id}`, attributes: { callee: 'random' }, children: [], metadata: meta };
-
-            // ── NEW: tone — pyb.Timer ────────────────────────────────────────
             if (callee === 'pyb.Timer' || callee === 'machine.PWM') return { nodeType: 'CallExpression', id: `tone-${node.id}`, attributes: { callee: 'tone' }, children: args, metadata: meta };
-
-            // ── NEW: Serial stubs ────────────────────────────────────────────
             if (callee === 'Serial.begin' || callee === 'UART' || callee === 'machine.UART') return { nodeType: 'CallExpression', id: `sb-${node.id}`, attributes: { callee: 'Serial.begin' }, children: [], metadata: meta };
             if (callee === 'Serial.readString') return { nodeType: 'CallExpression', id: `sr-${node.id}`, attributes: { callee: 'Serial.readString' }, children: [], metadata: meta };
 
