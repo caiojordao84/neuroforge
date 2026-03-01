@@ -344,7 +344,6 @@ class RustCstToAst {
         };
     }
 
-    // ── NEW: EnumDeclaration ───────────────────────────────────────────────────────────
     visitEnum(node: any): BaseNode {
         const name = node.childForFieldName('name')?.text || 'UnknownEnum';
         const variants: BaseNode[] = [];
@@ -354,7 +353,6 @@ class RustCstToAst {
             bodyNode.children.forEach((c: any, idx: number) => {
                 if (c.type === 'enum_variant') {
                     const variantName = c.childForFieldName('name')?.text || c.child(0)?.text || `variant${idx}`;
-                    // Check for explicit discriminant value: enum Foo { A = 1 }
                     const discNode = c.childForFieldName('value');
                     const discVal = discNode ? this.visitExpr(discNode) : {
                         nodeType: 'Literal', id: `ev-${c.id}`, attributes: { value: idx }, children: []
@@ -422,7 +420,7 @@ class RustCstToAst {
 
         if (node.type === 'index_expression') {
             const target = this.visitExpr(node.child(0)!);
-            const index  = this.visitExpr(node.child(2)!); // child(1) is '['
+            const index  = this.visitExpr(node.child(2)!);
             return { nodeType: 'SubscriptExpression', id: `sub-${node.id}`, attributes: {}, children: [target, index], metadata: meta };
         }
 
@@ -442,7 +440,6 @@ class RustCstToAst {
         if (node.type === 'call_expression') return this.visitCall(node);
         if (node.type === 'macro_invocation') return this.visitMacro(node);
 
-        // ── UnaryExpression (!, -, *deref) ─────────────────────────────────────
         if (node.type === 'unary_expression') {
             const op = node.child(0)!.text;
             const arg = this.visitExpr(node.child(1)!);
@@ -453,7 +450,6 @@ class RustCstToAst {
             };
         }
 
-        // ── Reference expression (&x, &mut x) ─────────────────────────────
         if (node.type === 'reference_expression') {
             const hasMut = node.children.some((c: any) => c.type === 'mutable_specifier');
             const op = hasMut ? '&mut ' : '&';
@@ -465,7 +461,6 @@ class RustCstToAst {
             };
         }
 
-        // ── MemberExpression — struct.field ────────────────────────────────
         if (node.type === 'field_expression') {
             const obj = this.visitExpr(node.childForFieldName('value')!);
             const field = node.childForFieldName('field')!.text;
@@ -476,7 +471,6 @@ class RustCstToAst {
             };
         }
 
-        // ── Method call — obj.method(args) ─────────────────────────────────
         if (node.type === 'method_call_expression') {
             const receiver = this.visitExpr(node.childForFieldName('receiver')!);
             const method = node.childForFieldName('name')!.text;
@@ -496,14 +490,18 @@ class RustCstToAst {
             if (method === 'is_high' || method === 'is_low') {
                 return { nodeType: 'GpioRead', id: `gr-${node.id}`, attributes: { invert: method === 'is_low' }, children: [receiver], metadata: meta };
             }
-
-            // ── NEW: AnalogWrite via method — pwm.set_duty(channel, value) ─────────
             if (method === 'set_duty' || method === 'set_duty_cycle') {
-                // args[0] = channel/pin, args[1] = duty value
-                // receiver is the pwm object — pass as first child for context
                 const pin = args[0] ?? receiver;
                 const val = args[1] ?? args[0] ?? { nodeType: 'Literal', id: 'lv', attributes: { value: 0 }, children: [] };
                 return { nodeType: 'AnalogWrite', id: `aw-${node.id}`, attributes: {}, children: [pin, val], metadata: meta };
+            }
+
+            // ── NEW: .elapsed().as_millis() / .as_micros() ───────────────────────────
+            if (method === 'as_millis' || method === 'as_millis_u32') {
+                return { nodeType: 'CallExpression', id: `ms-${node.id}`, attributes: { callee: 'millis' }, children: [], metadata: meta };
+            }
+            if (method === 'as_micros' || method === 'as_micros_u32') {
+                return { nodeType: 'CallExpression', id: `us-${node.id}`, attributes: { callee: 'micros' }, children: [], metadata: meta };
             }
 
             return {
@@ -513,9 +511,7 @@ class RustCstToAst {
             };
         }
 
-        // ── NEW: CastExpression — x as u8, val as f32 ──────────────────────────
         if (node.type === 'type_cast_expression') {
-            // tree-sitter: child(0)=value, child(1)='as', child(2)=type
             const inner = this.visitExpr(node.child(0)!);
             const targetType = node.child(2)?.text || 'int';
             return {
@@ -525,30 +521,55 @@ class RustCstToAst {
             };
         }
 
-        // ── NEW: ArrayInitializer — [1, 2, 3] or [0u8; N] ─────────────────────
         if (node.type === 'array_expression') {
-            // Detect repeat syntax: [val; count] — child(1) is ';'
             const isRepeat = node.children.some((c: any) => c.type === ';');
             if (isRepeat) {
-                // [val; N] — child(0)=value, child(2)=count (after the ';')
                 const valNode = node.child(0)!;
                 const countNode = node.children.find((c: any, i: number) => i > 0 && c.type !== ';' && c.type !== '[' && c.type !== ']');
                 const valExpr = this.visitExpr(valNode);
                 const countExpr = countNode ? this.visitExpr(countNode) : { nodeType: 'Literal', id: 'lc', attributes: { value: 0 }, children: [] };
                 return {
                     nodeType: 'ArrayInitializer', id: `arr-${node.id}`,
-                    attributes: { repeat: true },
+                    attributes: { repeat: true, dimensions: 1 },
                     children: [valExpr, countExpr as BaseNode], metadata: meta
                 };
             }
-            // Normal array: [a, b, c]
+            // Normal array — check if any element is itself an array (2D)
             const elements = node.children
                 .filter((c: any) => c.type !== '[' && c.type !== ']' && c.type !== ',')
                 .map((c: any) => this.visitExpr(c));
+            const is2D = elements.some(e => e.nodeType === 'ArrayInitializer');
             return {
                 nodeType: 'ArrayInitializer', id: `arr-${node.id}`,
-                attributes: { repeat: false },
+                attributes: { repeat: false, dimensions: is2D ? 2 : 1 },
                 children: elements, metadata: meta
+            };
+        }
+
+        // ── NEW: struct_expression — Foo { x: 1, y: 2 } ─────────────────────────────
+        if (node.type === 'struct_expression') {
+            const structName = node.childForFieldName('name')?.text || '';
+            const fields: BaseNode[] = [];
+            node.children.forEach((c: any) => {
+                if (c.type === 'field_initializer') {
+                    const fieldName = c.childForFieldName('field')?.text || c.child(0)?.text || 'field';
+                    const fieldVal = c.childForFieldName('value') ?? c.lastChild;
+                    const valExpr = fieldVal ? this.visitExpr(fieldVal) : { nodeType: 'Literal', id: 'fv', attributes: { value: 0 }, children: [] };
+                    fields.push({
+                        nodeType: 'VariableDeclaration',
+                        id: `fi-${c.id}`,
+                        attributes: { name: fieldName },
+                        children: [valExpr as BaseNode],
+                        metadata: { line: c.startPosition.row + 1 }
+                    });
+                }
+            });
+            return {
+                nodeType: 'DesignatedInitializer',
+                id: `di-${node.id}`,
+                attributes: { structName },
+                children: fields,
+                metadata: meta
             };
         }
 
@@ -563,19 +584,14 @@ class RustCstToAst {
 
         const meta = { line: node.startPosition.row + 1 };
 
-        // ── GPIO ──────────────────────────────────────────────────────────────────
         if (funcName === 'gpio_set' || funcName === 'digitalWrite')
             return { nodeType: 'GpioSet', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
         if (funcName === 'gpio_get' || funcName === 'digitalRead')
             return { nodeType: 'GpioRead', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
         if (funcName === 'adc_read' || funcName === 'analogRead')
             return { nodeType: 'AnalogRead', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
-
-        // ── NEW: AnalogWrite (PWM) via free function ─────────────────────────────
         if (funcName === 'analogWrite' || funcName === 'pwm_write' || funcName === 'pwm_set_duty')
             return { nodeType: 'AnalogWrite', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
-
-        // ── Delays ────────────────────────────────────────────────────────────────
         if (funcName === 'delay' || funcName === 'delay_ms')
             return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
 
@@ -592,6 +608,12 @@ class RustCstToAst {
             };
             return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: [msArg], metadata: meta };
         }
+
+        // ── NEW: millis() / micros() ──────────────────────────────────────────
+        if (funcName === 'millis' || funcName === 'get_ms')
+            return { nodeType: 'CallExpression', id: `c-${node.id}`, attributes: { callee: 'millis' }, children: [], metadata: meta };
+        if (funcName === 'micros' || funcName === 'get_us')
+            return { nodeType: 'CallExpression', id: `c-${node.id}`, attributes: { callee: 'micros' }, children: [], metadata: meta };
 
         return { nodeType: 'CallExpression', id: `call-${node.id}`, attributes: { callee: funcName }, children: args, metadata: meta };
     }

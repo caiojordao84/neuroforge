@@ -148,7 +148,6 @@ export class RustGenerator {
             this.addLn(lines, `${indent}}`, node);
             this.addLn(lines, "", null);
         }
-        // ── NEW: EnumDeclaration ─────────────────────────────────────────────
         else if (node.nodeType === 'EnumDeclaration') {
             this.addLn(lines, `${indent}#[derive(Debug, Clone, Copy, PartialEq)]`, node);
             this.addLn(lines, `${indent}enum ${node.attributes.name} {`, node);
@@ -226,10 +225,15 @@ export class RustGenerator {
             }
             this.addLn(lines, `${indent}}`, node);
         }
+        // ── FIXED: DesignatedInitializer uses children (not attributes.fields) ──────────
         else if (node.nodeType === 'DesignatedInitializer') {
-            const fields = node.attributes.fields;
-            this.addLn(lines, `${indent}{`, node);
-            fields.forEach((f: any) => this.addLn(lines, `${indent}    ${f.name}: ${this.genExpr(f.value)},`, node));
+            const structName = node.attributes.structName || '';
+            const open = structName ? `${indent}${structName} {` : `${indent}{`;
+            this.addLn(lines, open, node);
+            node.children.forEach(f => {
+                const fieldVal = f.children.length > 0 ? this.genExpr(f.children[0]) : '0';
+                this.addLn(lines, `${indent}    ${f.attributes.name}: ${fieldVal},`, f);
+            });
             this.addLn(lines, `${indent}}`, node);
         }
         else if (node.nodeType === 'SwitchStatement') {
@@ -270,7 +274,6 @@ export class RustGenerator {
         }
         if (node.nodeType === 'UnaryExpression') {
             if (node.attributes.prefix) return `${node.attributes.operator}${this.genExpr(node.children[0])}`;
-            // postfix ++ / -- not native in Rust — emit as += 1 / -= 1
             const op = node.attributes.operator === '++' ? ' += 1' : ' -= 1';
             return `${this.genExpr(node.children[0])}${op}`;
         }
@@ -291,21 +294,33 @@ export class RustGenerator {
             const args = node.children.map(c => this.genExpr(c)).join(', ');
             return `${node.attributes.callee}(${args})`;
         }
-        // ── NEW: CastExpression — (expr) as type ───────────────────────────
         if (node.nodeType === 'CastExpression') {
             return `(${this.genExpr(node.children[0])}) as ${node.attributes.targetType}`;
         }
-        // ── NEW: ArrayInitializer — [val; N] or vec![a, b, c] ───────────────────
+        // ── UPDATED: ArrayInitializer — 2D support + [val;N] ────────────────────────
         if (node.nodeType === 'ArrayInitializer') {
             if (node.attributes.repeat && node.children.length === 2) {
-                // [val; count]
                 return `[${this.genExpr(node.children[0])}; ${this.genExpr(node.children[1])}]`;
             }
             const elements = node.children.map(c => this.genExpr(c)).join(', ');
+            if (node.attributes.dimensions === 2) {
+                return `vec![${elements}]`; // each inner element is already vec![...]
+            }
             return `vec![${elements}]`;
         }
         if (node.nodeType === 'SubscriptExpression') {
             return `${this.genExpr(node.children[0])}[${this.genExpr(node.children[1])}]`;
+        }
+        // ── NEW: DesignatedInitializer in expression context ──────────────────────
+        if (node.nodeType === 'DesignatedInitializer') {
+            const structName = node.attributes.structName || '';
+            const fields = node.children
+                .map(f => {
+                    const fieldVal = f.children.length > 0 ? this.genExpr(f.children[0]) : '0';
+                    return `${f.attributes.name}: ${fieldVal}`;
+                })
+                .join(', ');
+            return structName ? `${structName} { ${fields} }` : `{ ${fields} }`;
         }
         return "";
     }
