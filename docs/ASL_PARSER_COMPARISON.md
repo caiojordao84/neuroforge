@@ -57,6 +57,12 @@
 | 1.42 | `tone()` duration arg — auto noTone após delay | `ASLExecutor.ts` | ✅ [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce503d0e27f7134d15dc9e9a68599edd952) |
 | 1.43 | `pinMode` Rust — `gpio_init` / `into_push_pull_output` / `into_floating_input` | `RustParser.ts` | ✅ [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce503d0e27f7134d15dc9e9a68599edd952) |
 | 1.44 | `random()` Rust — `rand::random` / `rng.gen_range()` / `rng.gen()` | `RustParser.ts` | ✅ [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce503d0e27f7134d15dc9e9a68599edd952) |
+| 1.45 | `WhileLoop` Python — qualquer condição (`while <expr>:`) + flag `isInfinite` | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
+| 1.46 | `DoWhileLoop` Python Tree-sitter — heurística `while True + if not cond: break` | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
+| 1.47 | `DoWhileLoop` Python Regex — hint `# do-while: <cond>` + `while True:` | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
+| 1.48 | `StructDeclaration` Python (Tree-sitter + Regex) — campos anotados / `self.x` | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
+| 1.49 | `ArrayInitializer 2D` Python (Tree-sitter + Regex) — flag `is2D` | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
+| 1.50 | `ListComprehension` Python Regex — `[expr for var in range(N)]` expandida inline | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
 
 ---
 
@@ -74,15 +80,15 @@
 | Estrutura             | README.md | C/C++ (CParser) | Python Tree-sitter   | Python Regex               | RustParser           |
 | --------------------- | --------- | --------------- | -------------------- | -------------------------- | -------------------- |
 | **IfStatement**       | ✅         | ✅               | ✅ `if_statement`     | ✅                           | ✅ `if_expression`    |
-| **WhileLoop**         | ✅         | ✅               | ✅ `while_statement`  | ⚠️ apenas `while True:` | ✅ `while_expression` |
+| **WhileLoop**         | ✅         | ✅               | ✅ qualquer condição + `isInfinite` | ✅ qualquer condição + `isInfinite` | ✅ `while_expression` |
 | **ForLoop**           | ✅         | ✅               | ✅ `for_statement`    | ✅ `for ... in`             | ✅ `for_expression` (`0..N`, `0..=N`) |
-| **Loop (infinito)**   | ✅         | ✅ `while(1)`    | ✅ `while_statement`  | ✅ `while True:`             | ✅ `loop_expression`  |
+| **Loop (infinito)**   | ✅         | ✅ `while(1)`    | ✅ `while True:` → `isInfinite: true` | ✅ `while True:` → `isInfinite: true` | ✅ `loop_expression`  |
 | **SwitchStatement**   | ✅         | ✅               | ✅ `match_statement`  | ✅ `match/case`             | ✅ `match_expression` |
 | **CaseClause**        | ✅         | ✅               | ✅ `case_clause`      | ✅                          | ✅ `match_arm`        |
 | **BreakStatement**    | ✅         | ✅               | ✅                    | ⚠️ auto-add                 | ✅ `break_expression`    |
 | **ContinueStatement** | ✅         | ✅               | ✅                    | ✅                          | ✅ `continue_expression` |
 | **ReturnStatement**   | ✅         | ✅               | ✅ `return_statement` | ✅                          | ✅ `return_expression`   |
-| **DoWhile**           | ✅ 🟢      | ✅ `do_statement` | ❌ (inexistente em Python) | ❌ (inexistente em Python) | ✅ RustGenerator emula via `loop { if !(cond) { break; } }` |
+| **DoWhileLoop**       | ✅ 🟢      | ✅ `do_statement` | ✅ heurística `while True + if not cond: break` | ✅ hint `# do-while: <cond>` | ✅ RustGenerator emula via `loop { if !(cond) { break; } }` |
 
 ---
 
@@ -92,13 +98,13 @@
 | ----------------------- | --------- | --------------- | ----------------------- | -------------- | ------------------- |
 | **VariableDeclaration** | ✅         | ✅               | ✅ `let_declaration`     | ✅ `var = expr` | ✅ `let_declaration` |
 | **Function**            | ✅         | ✅               | ✅ `function_definition` | ✅ `def`        | ✅ `function_item`   |
-| **StructDeclaration**   | ✅         | ✅               | ❌                       | ❌              | ✅ `struct_item`     |
-| **EnumDeclaration**     | ✅         | ✅               | ❌                       | ❌              | ✅ `enum_item`       |
-| **ArrayInitializer 1D** | ✅         | ✅               | ✅ `list`                | ❌              | ✅ `array_expression` (`[a,b]` + `[val;N]`) |
-| **ArrayInitializer 2D** | ✅         | ✅               | ❌                       | ❌              | ✅ detecção aninhamento → `vec![vec![...]]` |
+| **StructDeclaration**   | ✅         | ✅               | ✅ campos anotados / `self.x` | ✅ campos anotados / `self.x` | ✅ `struct_item`     |
+| **EnumDeclaration**     | ✅         | ✅               | ✅ `class X: A=0; B=1` (int members) | ✅ `class X: A=0; B=1` | ✅ `enum_item`       |
+| **ArrayInitializer 1D** | ✅         | ✅               | ✅ `list`                | ✅ `[a, b, c]` bracket-aware | ✅ `array_expression` (`[a,b]` + `[val;N]`) |
+| **ArrayInitializer 2D** | ✅         | ✅               | ✅ `is2D` flag (listas aninhadas) | ✅ `is2D` flag (listas aninhadas) | ✅ detecção aninhamento → `vec![vec![...]]` |
 | **ArrayInitializer 3D** | ✅         | ✅               | ❌                       | ❌              | ❌                   |
 | **ObjectInitializer**   | ✅         | ❌               | ✅ `dictionary`          | ✅ `{k:v}`      | ✅ `struct_expression` → `DesignatedInitializer` |
-| **ListComprehension**   | ✅         | ❌               | ✅                       | ❌              | ❌                   |
+| **ListComprehension**   | ✅         | ❌               | ✅ `list_comprehension` + range expandido inline | ✅ `[expr for var in range(N)]` expandido inline (≤50 elem.) | ❌ (N/A Rust) |
 
 ---
 
@@ -111,12 +117,12 @@
 | **Literal (string)**              | ✅         | ✅               | ✅ `string`          | ✅            | ✅ `string_literal`  |
 | **Boolean**                       | ✅         | ✅               | ✅ `true/False`      | ✅            | ✅                   |
 | **Identifier**                    | ✅         | ✅               | ✅                   | ✅            | ✅                   |
-| **BinaryExpression (+,-,\*,/,%)** | ✅         | ✅               | ✅ `binary_operator` | ⚠️ apenas `+` | ✅                   |
-| **UnaryExpression (!,-,++,--)**   | ✅         | ✅               | ✅                   | ❌            | ✅ `unary_expression`, `reference_expression` |
-| **ComparisonOperator**            | ✅         | ✅               | ✅                   | ❌            | ✅ (`binary_expression`) |
+| **BinaryExpression (+,-,\*,/,%)** | ✅         | ✅               | ✅ `binary_operator` | ✅ todos os operadores | ✅                   |
+| **UnaryExpression (!,-,++,--)**   | ✅         | ✅               | ✅                   | ✅ `not`, `-` unário | ✅ `unary_expression`, `reference_expression` |
+| **ComparisonOperator**            | ✅         | ✅               | ✅                   | ✅ `==`,`!=`,`<=`,`>=`,`<`,`>` | ✅ (`binary_expression`) |
 | **SubscriptExpression**           | ✅         | ✅               | ✅ `subscript`       | ✅            | ✅ `index_expression` |
 | **MemberExpression**              | ✅         | ✅               | ✅ `attribute`       | ❌            | ✅ `field_expression`, `method_call_expression` |
-| **ConditionalExpression (? :)**   | ✅         | ✅               | ❌                   | ❌            | ✅ RustGenerator: `(if cond { a } else { b })` |
+| **ConditionalExpression (? :)**   | ✅         | ✅               | ✅ `conditional_expression` (`val if cond else other`) | ✅ `val if cond else other` | ✅ RustGenerator: `(if cond { a } else { b })` |
 | **CastExpression**                | ✅         | ✅               | ❌                   | ❌            | ✅ `type_cast_expression` (`x as u8`) |
 
 ---
@@ -126,14 +132,14 @@
 | Função ASL           | README.md | C/C++ (CParser)  | Python Tree-sitter | Python Regex | RustParser   |
 | -------------------- | --------- | ---------------- | ------------------ | ------------ | ------------ |
 | **GpioSet**          | ✅         | ✅ `digitalWrite` | ✅ `pin.value(1)`   | ✅            | ✅ `gpio_set` / `digitalWrite` / `set_high` / `set_low` |
-| **GpioRead**         | ✅         | ✅ `digitalRead`  | ❌                  | ❌            | ✅ `gpio_get` / `digitalRead` / `is_high` / `is_low` |
-| **AnalogWrite**      | ✅         | ✅ `analogWrite`  | ❌                  | ❌            | ✅ `analogWrite` / `pwm_write` / `pwm.set_duty` / `pwm.set_duty_cycle` |
-| **AnalogRead**       | ✅         | ✅ `analogRead`   | ✅ `ADC`            | ❌            | ✅ `adc_read` / `analogRead`   |
+| **GpioRead**         | ✅         | ✅ `digitalRead`  | ✅ `pin.value()`    | ✅ `pin.value()` | ✅ `gpio_get` / `digitalRead` / `is_high` / `is_low` |
+| **AnalogWrite**      | ✅         | ✅ `analogWrite`  | ✅ `duty`/`duty_u16`/`duty_cycle` | ❌ | ✅ `analogWrite` / `pwm_write` / `pwm.set_duty` / `pwm.set_duty_cycle` |
+| **AnalogRead**       | ✅         | ✅ `analogRead`   | ✅ `ADC` / `read_u16` | ✅ `adc.read()` | ✅ `adc_read` / `analogRead`   |
 | **DelayMs**          | ✅         | ✅ `delay`        | ✅ `time.sleep_ms`  | ✅            | ✅ `delay` / `delay_ms` / `Timer::after_millis` / `Timer::after_secs` |
-| **millis()**         | ✅         | ✅                | ❌                  | ❌            | ✅ `millis()` / `get_ms()` / `.elapsed().as_millis()` |
-| **micros()**         | ✅         | ✅                | ❌                  | ❌            | ✅ `micros()` / `get_us()` / `.elapsed().as_micros()` |
+| **millis()**         | ✅         | ✅                | ✅ `time.ticks_ms()` | ✅ `time.ticks_ms()` | ✅ `millis()` / `get_ms()` / `.elapsed().as_millis()` |
+| **micros()**         | ✅         | ✅                | ✅ `time.ticks_us()` | ✅ `time.ticks_us()` | ✅ `micros()` / `get_us()` / `.elapsed().as_micros()` |
 | **pinMode**          | ✅         | ✅                | ✅ `direction=`     | ✅            | ✅ `gpio_init` / `into_push_pull_output` / `into_floating_input` |
-| **random()**         | ✅         | ✅                | ❌                  | ❌            | ✅ `rand::random` / `rng.gen_range()` / `rng.gen()` |
+| **random()**         | ✅         | ✅                | ✅ `random.randint/randrange` | ✅ `random.randint/randrange` | ✅ `rand::random` / `rng.gen_range()` / `rng.gen()` |
 | **attachInterrupt**  | ✅         | ✅ `attachInterrupt` | ❌               | ❌            | ❌ (emit hardwareCall via CParser/Executor) |
 | **pulseIn**          | ✅         | ✅ `pulseIn`      | ❌                  | ❌            | ❌ (500µs simulado via CParser/Executor) |
 | **shiftOut/shiftIn** | ✅         | ✅ `shiftOut`     | ❌                  | ❌            | ❌ (emit hardwareCall via CParser/Executor) |
@@ -146,9 +152,9 @@
 | Função                | README.md | C/C++ (CParser)          | Python Tree-sitter | Python Regex | RustParser   |
 | --------------------- | --------- | ------------------------ | ------------------ | ------------ | ------------ |
 | **Print**             | ✅         | ✅ `Serial.print/println` | ✅ `print()`        | ✅            | ✅ `println!` / `print!` / `info!` / `warn!` / `error!` / `debug!` / `trace!` / `uprintln!` / `rprintln!` / `hprintln!` |
-| **Serial.begin**      | ✅         | ✅                        | ❌                  | ❌            | ❌            |
-| **Serial.available**  | ✅         | ✅                        | ❌                  | ❌            | ❌            |
-| **Serial.readString** | ✅         | ✅                        | ❌                  | ❌            | ❌            |
+| **Serial.begin**      | ✅         | ✅                        | ✅ `UART`/`machine.UART` | ✅ `Serial.begin` stub | ❌            |
+| **Serial.available**  | ✅         | ✅                        | ✅ `uart.any()`    | ✅ `uart.any()` | ❌            |
+| **Serial.readString** | ✅         | ✅                        | ✅ `uart.read()`   | ✅ `uart.read()` | ❌            |
 
 ---
 
@@ -219,30 +225,30 @@
 
 ## 9. Gaps Restantes
 
-| Item                       | Status | Notas                                            |
-| -------------------------- | ------ | ------------------------------------------------ |
-| **ArrayInitializer 3D Rust** | ❌    | Raramente utilizado em embedded                  |
-| **ListComprehension Rust** | ❌     | N/A para Rust                                    |
-| **EEPROM**                 | ❌     | Implementar via hardwareCall                     |
-| **Wire (I2C)**             | ❌     | Implementar via hardwareCall                     |
-| **SPI**                    | ❌     | Implementar via hardwareCall                     |
-| **EnumDeclaration Python** | ❌     | Sem equivalente directo em Python                |
-| **attachInterrupt Rust**   | ❌     | Requer modelo ISR específico para Rust           |
-| **pulseIn Rust**           | ❌     | Requer HAL específico para Rust                  |
-| **shiftOut Rust**          | ❌     | Requer HAL específico para Rust                  |
+| Item                         | Status | Notas                                                        |
+| ---------------------------- | ------ | ------------------------------------------------------------ |
+| **ArrayInitializer 3D Rust** | ❌      | Raramente utilizado em embedded                              |
+| **ListComprehension Rust**   | ❌      | N/A para Rust                                                |
+| **EEPROM**                   | ❌      | Implementar via hardwareCall                                 |
+| **Wire (I2C)**               | ❌      | Implementar via hardwareCall                                 |
+| **SPI**                      | ❌      | Implementar via hardwareCall                                 |
+| **Display I/O Python**       | ❌      | LCD/OLED MicroPython (`lcd.text`, `oled.fill`, `oled.show`)  |
+| **attachInterrupt Rust**     | ❌      | Requer modelo ISR específico para Rust                       |
+| **pulseIn Rust**             | ❌      | Requer HAL específico para Rust                              |
+| **shiftOut Rust**            | ❌      | Requer HAL específico para Rust                              |
 
 ---
 
 ## 10. Matriz de Cobertura por Linguagem
 
-> Actualizada em 01/03/2026 — sessão 3ª ronda: attachInterrupt + pulseIn + shiftOut + pinMode Rust + random Rust + tone duration.
+> Actualizada em 01/03/2026 — sessão 4ª ronda: WhileLoop(any cond) + DoWhileLoop + StructDeclaration + Array2D + ListComprehension Python.
 
 | Categoria         | C/C++ | Python Tree | Python Regex | Rust |
 | ----------------- | ----- | ----------- | ------------ | ---- |
-| **Controle**      | 100%  | 60%         | 20%          | 95%  |
-| **Declarações**   | 100%  | 70%         | 30%          | 90%  |
-| **Expressões**    | 100%  | 80%         | 40%          | 95%  |
-| **Hardware**      | 100%  | 40%         | 20%          | 80%  |
+| **Controle**      | 100%  | 90%         | 75%          | 95%  |
+| **Declarações**   | 100%  | 85%         | 60%          | 90%  |
+| **Expressões**    | 100%  | 95%         | 80%          | 95%  |
+| **Hardware**      | 100%  | 65%         | 55%          | 80%  |
 | **Display I/O**   | 100%  | 0%          | 0%           | 0%   |
 | **Math Builtins** | 100%  | N/A         | N/A          | N/A  |
 
@@ -261,6 +267,7 @@
 | [ce046d9f](https://github.com/caiojordao84/neuroforge/commit/ce046d9f9b3322490459430920dc6b3b488dbe99) | 01/03 | RustGenerator: EnumDeclaration + CastExpression + ArrayInitializer repeat |
 | [28177864](https://github.com/caiojordao84/neuroforge/commit/28177864fde9ed5972780923a0ff12c2f4204eec) | 01/03 | RustParser+Generator: millis/micros + ArrayInit 2D + ObjectInitializer |
 | [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce503d0e27f7134d15dc9e9a68599edd952) | 01/03 | attachInterrupt + pulseIn + shiftOut + pinMode Rust + random Rust + tone duration |
+| [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) | 01/03 | PythonParser: WhileLoop(any cond) + DoWhileLoop + StructDeclaration + Array2D + ListComprehension |
 
 ---
 
