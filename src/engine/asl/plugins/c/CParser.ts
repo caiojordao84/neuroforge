@@ -741,6 +741,12 @@ export class RecursiveDescentCParser {
                 if (t.value === 'digitalRead') return { nodeType: 'GpioRead', id: this.genId(), attributes: {}, children: args, metadata: meta };
                 if (t.value === 'analogRead') return { nodeType: 'AnalogRead', id: this.genId(), attributes: {}, children: args, metadata: meta };
                 if (t.value === 'pinMode') return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'pinMode' }, children: args, metadata: meta };
+                if (t.value === 'attachInterrupt') return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'attachInterrupt' }, children: args, metadata: meta };
+                if (t.value === 'detachInterrupt') return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'detachInterrupt' }, children: args, metadata: meta };
+                if (t.value === 'pulseIn') return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'pulseIn' }, children: args, metadata: meta };
+                if (t.value === 'pulseInLong') return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'pulseIn' }, children: args, metadata: meta };
+                if (t.value === 'shiftOut') return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'shiftOut' }, children: args, metadata: meta };
+                if (t.value === 'shiftIn') return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'shiftIn' }, children: args, metadata: meta };
 
                 return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: t.value }, children: args, metadata: meta };
             }

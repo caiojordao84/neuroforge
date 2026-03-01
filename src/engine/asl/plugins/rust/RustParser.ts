@@ -504,6 +504,25 @@ class RustCstToAst {
                 return { nodeType: 'CallExpression', id: `us-${node.id}`, attributes: { callee: 'micros' }, children: [], metadata: meta };
             }
 
+            // ── NEW: pinMode Rust — gpio.into_push_pull_output() / into_floating_input()
+            if (method === 'into_push_pull_output' || method === 'into_open_drain_output') {
+                const modeVal: BaseNode = { nodeType: 'Literal', id: `m-${node.id}`, attributes: { value: 1 }, children: [] };
+                return { nodeType: 'CallExpression', id: `pm-${node.id}`, attributes: { callee: 'pinMode' }, children: [receiver, modeVal], metadata: meta };
+            }
+            if (method === 'into_floating_input' || method === 'into_pull_down_input' || method === 'into_pull_up_input') {
+                const modeVal: BaseNode = { nodeType: 'Literal', id: `m-${node.id}`, attributes: { value: 0 }, children: [] };
+                return { nodeType: 'CallExpression', id: `pm-${node.id}`, attributes: { callee: 'pinMode' }, children: [receiver, modeVal], metadata: meta };
+            }
+
+            // ── NEW: random Rust — rng.gen_range(a..b) / rng.gen()
+            if (method === 'gen_range') {
+                // args contém o range — extrair limites se possível
+                return { nodeType: 'CallExpression', id: `rng-${node.id}`, attributes: { callee: 'random' }, children: args, metadata: meta };
+            }
+            if (method === 'gen') {
+                return { nodeType: 'CallExpression', id: `rng-${node.id}`, attributes: { callee: 'random' }, children: [], metadata: meta };
+            }
+
             return {
                 nodeType: 'CallExpression', id: `mcall-${node.id}`,
                 attributes: { callee: method },
@@ -614,6 +633,14 @@ class RustCstToAst {
             return { nodeType: 'CallExpression', id: `c-${node.id}`, attributes: { callee: 'millis' }, children: [], metadata: meta };
         if (funcName === 'micros' || funcName === 'get_us')
             return { nodeType: 'CallExpression', id: `c-${node.id}`, attributes: { callee: 'micros' }, children: [], metadata: meta };
+
+        // ── NEW: pinMode Rust ─────────────────────────────────────────────────
+        if (funcName === 'gpio_init' || funcName === 'pinMode')
+            return { nodeType: 'CallExpression', id: `c-${node.id}`, attributes: { callee: 'pinMode' }, children: args, metadata: meta };
+
+        // ── NEW: random() Rust ────────────────────────────────────────────────
+        if (funcName === 'rand::random' || funcName === 'random')
+            return { nodeType: 'CallExpression', id: `c-${node.id}`, attributes: { callee: 'random' }, children: args, metadata: meta };
 
         return { nodeType: 'CallExpression', id: `call-${node.id}`, attributes: { callee: funcName }, children: args, metadata: meta };
     }

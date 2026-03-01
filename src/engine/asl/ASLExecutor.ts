@@ -534,10 +534,37 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         ctx.engine.delayMicroseconds();
         return 0;
       }
+      // ── NEW: attachInterrupt / detachInterrupt ────────────────────────────
+      if (expr.callee === 'attachInterrupt' || expr.callee === 'detachInterrupt') {
+        const args = [];
+        for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
+        ctx.engine.emit('hardwareCall', { callee: expr.callee, args });
+        return 0;
+      }
+      // ── NEW: pulseIn / pulseInLong ────────────────────────────────────────
+      if (expr.callee === 'pulseIn') {
+        const args = [];
+        for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
+        ctx.engine.emit('hardwareCall', { callee: 'pulseIn', args });
+        return 500; // valor simulado fixo (microsegundos)
+      }
+      // ── NEW: shiftOut / shiftIn ───────────────────────────────────────────
+      if (expr.callee === 'shiftOut' || expr.callee === 'shiftIn') {
+        const args = [];
+        for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
+        ctx.engine.emit('hardwareCall', { callee: expr.callee, args });
+        return expr.callee === 'shiftIn' ? 0 : 0;
+      }
       if (expr.callee === 'tone' || expr.callee === 'noTone' || expr.callee === 'servo') {
         const args = [];
         for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
-        if (expr.callee === 'tone') ctx.engine.tone(args[0], args[1], args[2]);
+        if (expr.callee === 'tone') {
+          ctx.engine.tone(args[0], args[1], args[2]);
+          if (args[2] !== undefined && args[2] > 0) {
+            await ctx.engine.delay(args[2]);
+            ctx.engine.noTone(args[0]);
+          }
+        }
         if (expr.callee === 'noTone') ctx.engine.noTone(args[0]);
         if (expr.callee === 'servo') ctx.engine.emit('tone', { pin: args[0], frequency: 1000, angle: args[1] });
         return 0;
