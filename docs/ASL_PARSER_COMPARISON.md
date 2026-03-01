@@ -51,6 +51,12 @@
 | 1.36 | `ObjectInitializer` Rust (`struct_expression` → `DesignatedInitializer`) | `RustParser.ts` | ✅ [28177864](https://github.com/caiojordao84/neuroforge/commit/28177864fde9ed5972780923a0ff12c2f4204eec) |
 | 1.37 | `DesignatedInitializer` genExpr + genStmt fix (children vs attributes.fields) | `RustGenerator.ts` | ✅ [28177864](https://github.com/caiojordao84/neuroforge/commit/28177864fde9ed5972780923a0ff12c2f4204eec) |
 | 1.38 | `ArrayInitializer 2D` no RustGenerator (`vec![vec![...]]`) | `RustGenerator.ts` | ✅ [28177864](https://github.com/caiojordao84/neuroforge/commit/28177864fde9ed5972780923a0ff12c2f4204eec) |
+| 1.39 | `attachInterrupt` / `detachInterrupt` no CParser + ASLExecutor | `CParser.ts` + `ASLExecutor.ts` | ✅ [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce503d0e27f7134d15dc9e9a68599edd952) |
+| 1.40 | `pulseIn` / `pulseInLong` no CParser + ASLExecutor (retorna 500µs simulado) | `CParser.ts` + `ASLExecutor.ts` | ✅ [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce503d0e27f7134d15dc9e9a68599edd952) |
+| 1.41 | `shiftOut` / `shiftIn` no CParser + ASLExecutor | `CParser.ts` + `ASLExecutor.ts` | ✅ [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce503d0e27f7134d15dc9e9a68599edd952) |
+| 1.42 | `tone()` duration arg — auto noTone após delay | `ASLExecutor.ts` | ✅ [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce503d0e27f7134d15dc9e9a68599edd952) |
+| 1.43 | `pinMode` Rust — `gpio_init` / `into_push_pull_output` / `into_floating_input` | `RustParser.ts` | ✅ [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce503d0e27f7134d15dc9e9a68599edd952) |
+| 1.44 | `random()` Rust — `rand::random` / `rng.gen_range()` / `rng.gen()` | `RustParser.ts` | ✅ [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce503d0e27f7134d15dc9e9a68599edd952) |
 
 ---
 
@@ -117,17 +123,21 @@
 
 ## 4. Funções de Hardware (GPIO/Timing)
 
-| Função ASL      | README.md | C/C++ (CParser)  | Python Tree-sitter | Python Regex | RustParser   |
-| --------------- | --------- | ---------------- | ------------------ | ------------ | ------------ |
-| **GpioSet**     | ✅         | ✅ `digitalWrite` | ✅ `pin.value(1)`   | ✅            | ✅ `gpio_set` / `digitalWrite` / `set_high` / `set_low` |
-| **GpioRead**    | ✅         | ✅ `digitalRead`  | ❌                  | ❌            | ✅ `gpio_get` / `digitalRead` / `is_high` / `is_low` |
-| **AnalogWrite** | ✅         | ✅ `analogWrite`  | ❌                  | ❌            | ✅ `analogWrite` / `pwm_write` / `pwm.set_duty` / `pwm.set_duty_cycle` |
-| **AnalogRead**  | ✅         | ✅ `analogRead`   | ✅ `ADC`            | ❌            | ✅ `adc_read` / `analogRead`   |
-| **DelayMs**     | ✅         | ✅ `delay`        | ✅ `time.sleep_ms`  | ✅            | ✅ `delay` / `delay_ms` / `Timer::after_millis` / `Timer::after_secs` |
-| **millis()**    | ✅         | ✅                | ❌                  | ❌            | ✅ `millis()` / `get_ms()` / `.elapsed().as_millis()` |
-| **micros()**    | ✅         | ✅                | ❌                  | ❌            | ✅ `micros()` / `get_us()` / `.elapsed().as_micros()` |
-| **pinMode**     | ✅         | ✅                | ✅ `direction=`     | ✅            | ❌            |
-| **random()**    | ✅         | ✅                | ❌                  | ❌            | ❌            |
+| Função ASL           | README.md | C/C++ (CParser)  | Python Tree-sitter | Python Regex | RustParser   |
+| -------------------- | --------- | ---------------- | ------------------ | ------------ | ------------ |
+| **GpioSet**          | ✅         | ✅ `digitalWrite` | ✅ `pin.value(1)`   | ✅            | ✅ `gpio_set` / `digitalWrite` / `set_high` / `set_low` |
+| **GpioRead**         | ✅         | ✅ `digitalRead`  | ❌                  | ❌            | ✅ `gpio_get` / `digitalRead` / `is_high` / `is_low` |
+| **AnalogWrite**      | ✅         | ✅ `analogWrite`  | ❌                  | ❌            | ✅ `analogWrite` / `pwm_write` / `pwm.set_duty` / `pwm.set_duty_cycle` |
+| **AnalogRead**       | ✅         | ✅ `analogRead`   | ✅ `ADC`            | ❌            | ✅ `adc_read` / `analogRead`   |
+| **DelayMs**          | ✅         | ✅ `delay`        | ✅ `time.sleep_ms`  | ✅            | ✅ `delay` / `delay_ms` / `Timer::after_millis` / `Timer::after_secs` |
+| **millis()**         | ✅         | ✅                | ❌                  | ❌            | ✅ `millis()` / `get_ms()` / `.elapsed().as_millis()` |
+| **micros()**         | ✅         | ✅                | ❌                  | ❌            | ✅ `micros()` / `get_us()` / `.elapsed().as_micros()` |
+| **pinMode**          | ✅         | ✅                | ✅ `direction=`     | ✅            | ✅ `gpio_init` / `into_push_pull_output` / `into_floating_input` |
+| **random()**         | ✅         | ✅                | ❌                  | ❌            | ✅ `rand::random` / `rng.gen_range()` / `rng.gen()` |
+| **attachInterrupt**  | ✅         | ✅ `attachInterrupt` | ❌               | ❌            | ❌ (emit hardwareCall via CParser/Executor) |
+| **pulseIn**          | ✅         | ✅ `pulseIn`      | ❌                  | ❌            | ❌ (500µs simulado via CParser/Executor) |
+| **shiftOut/shiftIn** | ✅         | ✅ `shiftOut`     | ❌                  | ❌            | ❌ (emit hardwareCall via CParser/Executor) |
+| **tone() + duration**| ✅         | ✅                | ❌                  | ❌            | ❌ (Executor: auto noTone após delay) |
 
 ---
 
@@ -177,62 +187,62 @@
 
 ## 8. Builtins (ASLExecutor)
 
-| Função                   | README.md | Implementado | Notas |
-| ------------------------ | --------- | ------------ | ----- |
-| **abs()**                | ✅         | ✅            | `Math.abs` |
-| **sqrt()**               | ✅         | ✅            | `Math.sqrt` |
-| **pow()**                | ✅         | ✅            | `Math.pow` |
-| **sin/cos/tan**          | ✅         | ✅            | `Math.sin/cos/tan` |
-| **log()**                | ✅         | ✅            | `Math.log` |
-| **min/max**              | ✅         | ✅            | `Math.min/max` |
-| **round/floor/ceil**     | ✅         | ✅            | `Math.round/floor/ceil` |
-| **random(min,max)**      | ✅         | ✅            | |
-| **random(max)**          | ✅         | ✅            | |
-| **map()**                | ✅         | ✅            | |
-| **constrain()**          | ✅         | ✅            | |
-| **int()/float()/String()**| ✅        | ✅            | Cast / conversão de tipo |
-| **sizeof()**             | ✅         | ✅            | Array.length / string.length / 4 para primitivos |
-| **millis()**             | ✅         | ✅            | |
-| **micros()**             | ✅         | ✅            | |
-| **delayMicroseconds()**  | ✅         | ✅            | |
-| **tone()** (parcial)     | ✅         | ⚠️            | Duration arg não implementado |
-| **len()**                | ✅         | ✅            | Alias `__len` |
-| **format()**             | ✅         | ✅            | Substituição `{}` |
-| **enumerate()**          | ✅         | ✅            | Retorna `[idx, val][]` |
-| **reversed()**           | ✅         | ✅            | |
+| Função                    | README.md | Implementado | Notas |
+| ------------------------- | --------- | ------------ | ----- |
+| **abs()**                 | ✅         | ✅            | `Math.abs` |
+| **sqrt()**                | ✅         | ✅            | `Math.sqrt` |
+| **pow()**                 | ✅         | ✅            | `Math.pow` |
+| **sin/cos/tan**           | ✅         | ✅            | `Math.sin/cos/tan` |
+| **log()**                 | ✅         | ✅            | `Math.log` |
+| **min/max**               | ✅         | ✅            | `Math.min/max` |
+| **round/floor/ceil**      | ✅         | ✅            | `Math.round/floor/ceil` |
+| **random(min,max)**       | ✅         | ✅            | |
+| **random(max)**           | ✅         | ✅            | |
+| **map()**                 | ✅         | ✅            | |
+| **constrain()**           | ✅         | ✅            | |
+| **int()/float()/String()** | ✅        | ✅            | Cast / conversão de tipo |
+| **sizeof()**              | ✅         | ✅            | Array.length / string.length / 4 para primitivos |
+| **millis()**              | ✅         | ✅            | |
+| **micros()**              | ✅         | ✅            | |
+| **delayMicroseconds()**   | ✅         | ✅            | |
+| **tone() + duration**     | ✅         | ✅            | Auto `noTone` após delay |
+| **noTone()**              | ✅         | ✅            | |
+| **attachInterrupt()**     | ✅         | ✅            | emit `hardwareCall` (sem ISR real na simulação) |
+| **pulseIn()**             | ✅         | ✅            | Retorna 500µs simulado |
+| **shiftOut()/shiftIn()**  | ✅         | ✅            | emit `hardwareCall` |
+| **len()**                 | ✅         | ✅            | Alias `__len` |
+| **format()**              | ✅         | ✅            | Substituição `{}` |
+| **enumerate()**           | ✅         | ✅            | Retorna `[idx, val][]` |
+| **reversed()**            | ✅         | ✅            | |
 
 ---
 
 ## 9. Gaps Restantes
 
-| Item                  | Status     | Notas                                                |
-| --------------------- | ---------- | ---------------------------------------------------- |
-| **ArrayInitializer 3D Rust** | ❌   | Raramente utilizado em embedded                      |
-| **ListComprehension Rust** | ❌    | N/A para Rust                                        |
-| **Serial.write/read** | ⚠️ parcial  | Verificar cobertura no ASLExecutor                   |
-| **Servo / tone() duration** | ⚠️  | Implementar duration arg                             |
-| **EEPROM**            | ❌          | Implementar via hardwareCall                         |
-| **Wire (I2C)**        | ❌          | Implementar via hardwareCall                         |
-| **SPI**               | ❌          | Implementar via hardwareCall                         |
-| **attachInterrupt**   | ❌          | Implementar modelo ISR                               |
-| **pulseIn**           | ❌          | Implementar                                          |
-| **shiftOut**          | ❌          | Implementar                                          |
-| **pinMode Rust**      | ❌          | `gpio.into_push_pull_output()` no RustParser         |
-| **random() Rust**     | ❌          | `rand` crate no RustParser                           |
-| **EnumDeclaration Python** | ❌    | Sem equivalente directo em Python                    |
+| Item                       | Status | Notas                                            |
+| -------------------------- | ------ | ------------------------------------------------ |
+| **ArrayInitializer 3D Rust** | ❌    | Raramente utilizado em embedded                  |
+| **ListComprehension Rust** | ❌     | N/A para Rust                                    |
+| **EEPROM**                 | ❌     | Implementar via hardwareCall                     |
+| **Wire (I2C)**             | ❌     | Implementar via hardwareCall                     |
+| **SPI**                    | ❌     | Implementar via hardwareCall                     |
+| **EnumDeclaration Python** | ❌     | Sem equivalente directo em Python                |
+| **attachInterrupt Rust**   | ❌     | Requer modelo ISR específico para Rust           |
+| **pulseIn Rust**           | ❌     | Requer HAL específico para Rust                  |
+| **shiftOut Rust**          | ❌     | Requer HAL específico para Rust                  |
 
 ---
 
 ## 10. Matriz de Cobertura por Linguagem
 
-> Actualizada em 01/03/2026 — sessão millis/micros + ArrayInit 2D + ObjectInitializer.
+> Actualizada em 01/03/2026 — sessão 3ª ronda: attachInterrupt + pulseIn + shiftOut + pinMode Rust + random Rust + tone duration.
 
 | Categoria         | C/C++ | Python Tree | Python Regex | Rust |
 | ----------------- | ----- | ----------- | ------------ | ---- |
 | **Controle**      | 100%  | 60%         | 20%          | 95%  |
 | **Declarações**   | 100%  | 70%         | 30%          | 90%  |
 | **Expressões**    | 100%  | 80%         | 40%          | 95%  |
-| **Hardware**      | 100%  | 40%         | 20%          | 70%  |
+| **Hardware**      | 100%  | 40%         | 20%          | 80%  |
 | **Display I/O**   | 100%  | 0%          | 0%           | 0%   |
 | **Math Builtins** | 100%  | N/A         | N/A          | N/A  |
 
@@ -250,6 +260,7 @@
 | [342e8df3](https://github.com/caiojordao84/neuroforge/commit/342e8df3c599194cd00e4da0be3ee1daa37979a3) | 01/03 | RustParser: EnumDeclaration + CastExpression + ArrayInit + AnalogWrite |
 | [ce046d9f](https://github.com/caiojordao84/neuroforge/commit/ce046d9f9b3322490459430920dc6b3b488dbe99) | 01/03 | RustGenerator: EnumDeclaration + CastExpression + ArrayInitializer repeat |
 | [28177864](https://github.com/caiojordao84/neuroforge/commit/28177864fde9ed5972780923a0ff12c2f4204eec) | 01/03 | RustParser+Generator: millis/micros + ArrayInit 2D + ObjectInitializer |
+| [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce503d0e27f7134d15dc9e9a68599edd952) | 01/03 | attachInterrupt + pulseIn + shiftOut + pinMode Rust + random Rust + tone duration |
 
 ---
 
