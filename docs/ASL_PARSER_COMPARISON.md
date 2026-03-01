@@ -1,6 +1,6 @@
 # Tabela Comparativa: ASL Parser Implementation
 
-> Documento actualizado em 01 Março 2026
+> Documento actualizado em **01 Março 2026 — Sessão 5**
 > Comparação entre a documentação (`notyet/README.md`) e a implementação real dos parsers ASL
 >
 > 📋 **Para o plano de implementação padrão, consulte**: [IMPLEMENTATION_STANDARD.md](./IMPLEMENTATION_STANDARD.md)
@@ -63,6 +63,20 @@
 | 1.48 | `StructDeclaration` Python (Tree-sitter + Regex) — campos anotados / `self.x` | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
 | 1.49 | `ArrayInitializer 2D` Python (Tree-sitter + Regex) — flag `is2D` | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
 | 1.50 | `ListComprehension` Python Regex — `[expr for var in range(N)]` expandida inline | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
+| 1.51 | `attachInterrupt` Python Tree-sitter — `pin.irq(handler=cb, trigger=...)` | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
+| 1.52 | `attachInterrupt` Python Regex — `var.irq(handler=cb, trigger=...)` | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
+| 1.53 | `pulseIn` Python Tree-sitter — `machine.time_pulse_us(...)` | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
+| 1.54 | `pulseIn` Python Regex — `machine.time_pulse_us(...)` stmt + assign + inline | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
+| 1.55 | `shiftOut/shiftIn` Python Tree-sitter | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
+| 1.56 | `shiftOut/shiftIn` Python Regex | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
+| 1.57 | `LCD` Python Tree-sitter — `LCD_METHODS` array (`move_to`, `putstr`, `clear`, ...) | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
+| 1.58 | `LCD` Python Regex — `lcdM` regex (`move_to`, `putstr`, `clear`, ...) | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
+| 1.59 | `OLED` Python Tree-sitter — `OLED_METHODS` array (`fill`, `text`, `show`, ...) | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
+| 1.60 | `OLED` Python Regex — `oledM` regex (`fill`, `text`, `show`, ...) | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
+| 1.61 | `MemberExpression (obj.attr)` Python Regex — `memberM` em `_parseExpr` | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
+| 1.62 | `MemberExpression (obj.attr)` Python Tree-sitter — fallback genérico em `visitExpr` `attribute` | `PythonParser.ts` | ✅ [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
+| 1.63 | `isnan` / `isinf` no ASLExecutor | `ASLExecutor.ts` | ✅ [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b6061f34d9a0390a00495d22af616e6f3171) |
+| 1.64 | `strlen` / `strcmp` / `atoi` / `atof` / `dtostrf` no ASLExecutor | `ASLExecutor.ts` | ✅ [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b6061f34d9a0390a00495d22af616e6f3171) |
 
 ---
 
@@ -121,7 +135,7 @@
 | **UnaryExpression (!,-,++,--)**   | ✅         | ✅               | ✅                   | ✅ `not`, `-` unário | ✅ `unary_expression`, `reference_expression` |
 | **ComparisonOperator**            | ✅         | ✅               | ✅                   | ✅ `==`,`!=`,`<=`,`>=`,`<`,`>` | ✅ (`binary_expression`) |
 | **SubscriptExpression**           | ✅         | ✅               | ✅ `subscript`       | ✅            | ✅ `index_expression` |
-| **MemberExpression**              | ✅         | ✅               | ✅ `attribute`       | ❌            | ✅ `field_expression`, `method_call_expression` |
+| **MemberExpression**              | ✅         | ✅               | ✅ fallback genérico `attribute` → `MemberExpression` | ✅ `memberM` em `_parseExpr` | ✅ `field_expression`, `method_call_expression` |
 | **ConditionalExpression (? :)**   | ✅         | ✅               | ✅ `conditional_expression` (`val if cond else other`) | ✅ `val if cond else other` | ✅ RustGenerator: `(if cond { a } else { b })` |
 | **CastExpression**                | ✅         | ✅               | ❌                   | ❌            | ✅ `type_cast_expression` (`x as u8`) |
 
@@ -131,19 +145,19 @@
 
 | Função ASL           | README.md | C/C++ (CParser)  | Python Tree-sitter | Python Regex | RustParser   |
 | -------------------- | --------- | ---------------- | ------------------ | ------------ | ------------ |
-| **GpioSet**          | ✅         | ✅ `digitalWrite` | ✅ `pin.value(1)`   | ✅            | ✅ `gpio_set` / `digitalWrite` / `set_high` / `set_low` |
-| **GpioRead**         | ✅         | ✅ `digitalRead`  | ✅ `pin.value()`    | ✅ `pin.value()` | ✅ `gpio_get` / `digitalRead` / `is_high` / `is_low` |
-| **AnalogWrite**      | ✅         | ✅ `analogWrite`  | ✅ `duty`/`duty_u16`/`duty_cycle` | ❌ | ✅ `analogWrite` / `pwm_write` / `pwm.set_duty` / `pwm.set_duty_cycle` |
-| **AnalogRead**       | ✅         | ✅ `analogRead`   | ✅ `ADC` / `read_u16` | ✅ `adc.read()` | ✅ `adc_read` / `analogRead`   |
-| **DelayMs**          | ✅         | ✅ `delay`        | ✅ `time.sleep_ms`  | ✅            | ✅ `delay` / `delay_ms` / `Timer::after_millis` / `Timer::after_secs` |
-| **millis()**         | ✅         | ✅                | ✅ `time.ticks_ms()` | ✅ `time.ticks_ms()` | ✅ `millis()` / `get_ms()` / `.elapsed().as_millis()` |
-| **micros()**         | ✅         | ✅                | ✅ `time.ticks_us()` | ✅ `time.ticks_us()` | ✅ `micros()` / `get_us()` / `.elapsed().as_micros()` |
+| **GpioSet**          | ✅         | ✅ `digitalWrite` | ✅ `pin.value(1)`   | ✅            | ✅ `gpio_set` / `set_high` / `set_low` |
+| **GpioRead**         | ✅         | ✅ `digitalRead`  | ✅ `pin.value()`    | ✅ `pin.value()` | ✅ `gpio_get` / `is_high` / `is_low` |
+| **AnalogWrite**      | ✅         | ✅ `analogWrite`  | ✅ `duty`/`duty_u16`/`duty_cycle` | ❌ | ✅ `analogWrite` / `pwm.set_duty` |
+| **AnalogRead**       | ✅         | ✅ `analogRead`   | ✅ `ADC` / `read_u16` | ✅ `adc.read()` | ✅ `adc_read` / `analogRead` |
+| **DelayMs**          | ✅         | ✅ `delay`        | ✅ `time.sleep_ms`  | ✅            | ✅ `delay` / `Timer::after_millis` / `Timer::after_secs` |
+| **millis()**         | ✅         | ✅                | ✅ `time.ticks_ms()` | ✅           | ✅ `millis()` / `.elapsed().as_millis()` |
+| **micros()**         | ✅         | ✅                | ✅ `time.ticks_us()` | ✅           | ✅ `micros()` / `.elapsed().as_micros()` |
 | **pinMode**          | ✅         | ✅                | ✅ `direction=`     | ✅            | ✅ `gpio_init` / `into_push_pull_output` / `into_floating_input` |
-| **random()**         | ✅         | ✅                | ✅ `random.randint/randrange` | ✅ `random.randint/randrange` | ✅ `rand::random` / `rng.gen_range()` / `rng.gen()` |
-| **attachInterrupt**  | ✅         | ✅ `attachInterrupt` | ❌               | ❌            | ❌ (emit hardwareCall via CParser/Executor) |
-| **pulseIn**          | ✅         | ✅ `pulseIn`      | ❌                  | ❌            | ❌ (500µs simulado via CParser/Executor) |
-| **shiftOut/shiftIn** | ✅         | ✅ `shiftOut`     | ❌                  | ❌            | ❌ (emit hardwareCall via CParser/Executor) |
-| **tone() + duration**| ✅         | ✅                | ❌                  | ❌            | ❌ (Executor: auto noTone após delay) |
+| **random()**         | ✅         | ✅                | ✅ `random.randint/randrange` | ✅ `random.randint/randrange` | ✅ `rand::random` / `rng.gen_range()` |
+| **attachInterrupt**  | ✅         | ✅ `attachInterrupt` | ✅ `pin.irq(handler=cb, trigger=...)` | ✅ `var.irq(handler=cb, trigger=...)` | ❌ (requer ISR específico Rust) |
+| **pulseIn**          | ✅         | ✅ `pulseIn`      | ✅ `machine.time_pulse_us(...)` | ✅ `machine.time_pulse_us(...)` | ❌ (requer HAL específico Rust) |
+| **shiftOut/shiftIn** | ✅         | ✅ `shiftOut`     | ✅ `shiftOut(...)` / `shiftIn(...)` | ✅ `shiftOut(...)` / `shiftIn(...)` | ❌ (requer HAL específico Rust) |
+| **tone() + duration**| ✅         | ✅                | ⚠️ via `pyb.Timer`/`machine.PWM` (não `tone()` directo) | ❌ sem padrão `tone(pin,freq,dur)` | ❌ |
 
 ---
 
@@ -151,21 +165,30 @@
 
 | Função                | README.md | C/C++ (CParser)          | Python Tree-sitter | Python Regex | RustParser   |
 | --------------------- | --------- | ------------------------ | ------------------ | ------------ | ------------ |
-| **Print**             | ✅         | ✅ `Serial.print/println` | ✅ `print()`        | ✅            | ✅ `println!` / `print!` / `info!` / `warn!` / `error!` / `debug!` / `trace!` / `uprintln!` / `rprintln!` / `hprintln!` |
+| **Print**             | ✅         | ✅ `Serial.print/println` | ✅ `print()`        | ✅            | ✅ `println!` / `info!` / `warn!` / `uprintln!` / `rprintln!` |
 | **Serial.begin**      | ✅         | ✅                        | ✅ `UART`/`machine.UART` | ✅ `Serial.begin` stub | ❌            |
 | **Serial.available**  | ✅         | ✅                        | ✅ `uart.any()`    | ✅ `uart.any()` | ❌            |
 | **Serial.readString** | ✅         | ✅                        | ✅ `uart.read()`   | ✅ `uart.read()` | ❌            |
 
 ---
 
-## 6. Hardware Específico (C/Arduino Only)
+## 6. Display I/O
+
+| Módulo            | README.md | C/C++ (CParser) | Python Tree-sitter | Python Regex | Notas |
+| ----------------- | --------- | --------------- | ------------------ | ------------ | ----- |
+| **LCD**           | ✅         | ✅               | ✅ `LCD_METHODS` array (`move_to`, `putstr`, `clear`, ...) | ✅ `lcdM` regex | Implementado em [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
+| **OLED**          | ✅         | ✅               | ✅ `OLED_METHODS` array (`fill`, `text`, `show`, ...) | ✅ `oledM` regex | Implementado em [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) |
+| **Seven Segment** | ✅         | ✅               | ❌                  | ❌            | Gap restante |
+| **Keypad**        | ✅         | ✅               | ❌                  | ❌            | Gap restante |
+| **DHT**           | ✅         | ✅               | ❌                  | ❌            | via hardwareCall genérico |
+| **Ultrasonic**    | ✅         | ✅               | ❌                  | ❌            | via hardwareCall genérico |
+
+---
+
+## 7. Hardware Específico (C/Arduino Only)
 
 | Módulo            | README.md | C/C++ (CParser) | Notas                            |
 | ----------------- | --------- | --------------- | -------------------------------- |
-| **LCD**           | ✅         | ✅               | `lcd.print/clear/setCursor`      |
-| **OLED**          | ✅         | ✅               | `oled.text/show/clear`           |
-| **Seven Segment** | ✅         | ✅               | `sevseg.print/setNumber`         |
-| **Keypad**        | ✅         | ✅               | `keypad.getKey`                  |
 | **DHT**           | ✅         | ✅               | `dht.readTemp/Hum`               |
 | **Ultrasonic**    | ✅         | ✅               | `ultrasonic.read`                |
 | **LDR**           | ✅         | ✅               | `ldr.read`                       |
@@ -179,7 +202,7 @@
 
 ---
 
-## 7. Operadores Matemáticos (ASLExecutor)
+## 8. Operadores Matemáticos (ASLExecutor)
 
 | Operador           | README.md | Implementado |
 | ------------------ | --------- | ------------ |
@@ -191,7 +214,7 @@
 
 ---
 
-## 8. Builtins (ASLExecutor)
+## 9. Builtins (ASLExecutor)
 
 | Função                    | README.md | Implementado | Notas |
 | ------------------------- | --------- | ------------ | ----- |
@@ -202,6 +225,13 @@
 | **log()**                 | ✅         | ✅            | `Math.log` |
 | **min/max**               | ✅         | ✅            | `Math.min/max` |
 | **round/floor/ceil**      | ✅         | ✅            | `Math.round/floor/ceil` |
+| **isnan()**               | ✅         | ✅            | `isNaN()` — [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b6061f34d9a0390a00495d22af616e6f3171) |
+| **isinf()**               | ✅         | ✅            | `!isFinite()` — [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b6061f34d9a0390a00495d22af616e6f3171) |
+| **strlen()**              | ✅         | ✅            | `String(s).length` — [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b6061f34d9a0390a00495d22af616e6f3171) |
+| **strcmp()**              | ✅         | ✅            | `String(a) === String(b) ? 0 : 1` — [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b6061f34d9a0390a00495d22af616e6f3171) |
+| **atoi()**                | ✅         | ✅            | `parseInt(String(s), 10)` — [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b6061f34d9a0390a00495d22af616e6f3171) |
+| **atof()**                | ✅         | ✅            | `parseFloat(String(s))` — [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b6061f34d9a0390a00495d22af616e6f3171) |
+| **dtostrf()**             | ✅         | ✅            | `Number(val).toFixed(prec)` — [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b6061f34d9a0390a00495d22af616e6f3171) |
 | **random(min,max)**       | ✅         | ✅            | |
 | **random(max)**           | ✅         | ✅            | |
 | **map()**                 | ✅         | ✅            | |
@@ -223,38 +253,47 @@
 
 ---
 
-## 9. Gaps Restantes
+## 10. Gaps Restantes
 
-| Item                         | Status | Notas                                                        |
-| ---------------------------- | ------ | ------------------------------------------------------------ |
-| **ArrayInitializer 3D Rust** | ❌      | Raramente utilizado em embedded                              |
-| **ListComprehension Rust**   | ❌      | N/A para Rust                                                |
-| **EEPROM**                   | ❌      | Implementar via hardwareCall                                 |
-| **Wire (I2C)**               | ❌      | Implementar via hardwareCall                                 |
-| **SPI**                      | ❌      | Implementar via hardwareCall                                 |
-| **Display I/O Python**       | ❌      | LCD/OLED MicroPython (`lcd.text`, `oled.fill`, `oled.show`)  |
-| **attachInterrupt Rust**     | ❌      | Requer modelo ISR específico para Rust                       |
-| **pulseIn Rust**             | ❌      | Requer HAL específico para Rust                              |
-| **shiftOut Rust**            | ❌      | Requer HAL específico para Rust                              |
+> Actualizado em 01/03/2026 — sessão 5.
+> Muitos itens anteriormente marcados como ❌ já estavam implementados.
+> Lista abaixo reflecte apenas gaps **reais e confirmados** por leitura do código.
+
+| Item | Status | Notas |
+| ---- | ------ | ----- |
+| **`tone()` directo Python Regex** | ❌ | Sem padrão `tone(pin, freq, dur)` no Regex parser |
+| **`tone()` directo Python Tree** | ⚠️ | Apenas via `pyb.Timer`/`machine.PWM`, não `tone()` directo |
+| **SevSeg Python Tree + Regex** | ❌ | `sevseg.setNumber`, `sevseg.print`, etc. |
+| **Keypad Python Tree + Regex** | ❌ | `keypad.getKey`, `KeypadRead`, etc. |
+| **EEPROM (todas as linguagens)** | ❌ | Implementar via hardwareCall |
+| **Wire / I2C (todas as linguagens)** | ❌ | Implementar via hardwareCall |
+| **SPI (todas as linguagens)** | ❌ | Implementar via hardwareCall |
+| **attachInterrupt Rust** | ❌ | Requer modelo ISR específico para Rust |
+| **pulseIn Rust** | ❌ | Requer HAL específico para Rust |
+| **shiftOut/shiftIn Rust** | ❌ | Requer HAL específico para Rust |
+| **ArrayInitializer 3D (Python + Rust)** | ❌ | Raramente utilizado em embedded |
+| **ListComprehension Rust** | ❌ | N/A para Rust — sem prioridade |
 
 ---
 
-## 10. Matriz de Cobertura por Linguagem
+## 11. Matriz de Cobertura por Linguagem
 
-> Actualizada em 01/03/2026 — sessão 4ª ronda: WhileLoop(any cond) + DoWhileLoop + StructDeclaration + Array2D + ListComprehension Python.
+> Actualizada em 01/03/2026 — sessão 5.
 
 | Categoria         | C/C++ | Python Tree | Python Regex | Rust |
 | ----------------- | ----- | ----------- | ------------ | ---- |
-| **Controle**      | 100%  | 90%         | 75%          | 95%  |
-| **Declarações**   | 100%  | 85%         | 60%          | 90%  |
-| **Expressões**    | 100%  | 95%         | 80%          | 95%  |
-| **Hardware**      | 100%  | 65%         | 55%          | 80%  |
-| **Display I/O**   | 100%  | 0%          | 0%           | 0%   |
+| **Controle**      | 100%  | 100%        | 90%          | 95%  |
+| **Declarações**   | 100%  | 85%         | 75%          | 90%  |
+| **Expressões**    | 100%  | 95%         | 90%          | 95%  |
+| **Hardware GPIO** | 100%  | 90%         | 80%          | 80%  |
+| **Hardware Avançado** | 100% | 85%      | 75%          | 30%  |
+| **Display I/O**   | 100%  | 50%         | 50%          | 0%   |
 | **Math Builtins** | 100%  | N/A         | N/A          | N/A  |
+| **String Builtins** | 100% | N/A        | N/A          | N/A  |
 
 ---
 
-## 11. Histórico de Commits (branch `critical_Implementation`)
+## 12. Histórico de Commits (branch `critical_Implementation`)
 
 | Commit | Data | Descrição |
 |--------|------|-----------|
@@ -267,11 +306,12 @@
 | [ce046d9f](https://github.com/caiojordao84/neuroforge/commit/ce046d9f9b3322490459430920dc6b3b488dbe99) | 01/03 | RustGenerator: EnumDeclaration + CastExpression + ArrayInitializer repeat |
 | [28177864](https://github.com/caiojordao84/neuroforge/commit/28177864fde9ed5972780923a0ff12c2f4204eec) | 01/03 | RustParser+Generator: millis/micros + ArrayInit 2D + ObjectInitializer |
 | [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce503d0e27f7134d15dc9e9a68599edd952) | 01/03 | attachInterrupt + pulseIn + shiftOut + pinMode Rust + random Rust + tone duration |
-| [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) | 01/03 | PythonParser: WhileLoop(any cond) + DoWhileLoop + StructDeclaration + Array2D + ListComprehension |
+| [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e) | 01/03 | PythonParser: WhileLoop + DoWhileLoop + StructDeclaration + Array2D + ListComprehension + LCD + OLED + attachInterrupt + pulseIn + shiftOut + MemberExpression |
+| [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b6061f34d9a0390a00495d22af616e6f3171) | 01/03 | ASLExecutor: isnan + isinf + strlen + strcmp + atoi + atof + dtostrf |
 
 ---
 
-## 12. Arquivos Analisados
+## 13. Arquivos Analisados
 
 ### Parsers
 - `src/engine/asl/plugins/c/CParser.ts`
