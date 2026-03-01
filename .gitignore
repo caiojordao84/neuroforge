@@ -94,3 +94,6 @@ temp/
 .tmp.drivedownload
 .tmp.drivedownload.zip
 neuroforge.code-workspace
+.snapshots/config.json
+.snapshots/readme.md
+.snapshots/sponsors.md
