@@ -17,8 +17,13 @@ export class RustGenerator {
         this.addLn(lines, "", null);
 
         const funcs = ast.children.filter(c => c.nodeType === 'Function');
+        const topLevel = ast.children.filter(c => c.nodeType !== 'Function');
         const setup = funcs.find(f => f.attributes.name === 'setup');
         const loop_ = funcs.find(f => f.attributes.name === 'loop');
+
+        // Emit top-level declarations (structs, enums) before functions
+        topLevel.forEach(c => this.genStmt(c, lines, ""));
+        if (topLevel.length > 0) this.addLn(lines, "", null);
 
         if (setup || loop_) {
             this.addLn(lines, "#[entry]", null);
@@ -135,10 +140,28 @@ export class RustGenerator {
                 this.addLn(lines, `${indent}return;`, node);
             }
         }
+        else if (node.nodeType === 'StructDeclaration') {
+            this.addLn(lines, `${indent}struct ${node.attributes.name} {`, node);
+            node.children.forEach(f => {
+                this.addLn(lines, `${indent}    ${f.attributes.name}: ${f.attributes.type || 'i32'},`, f);
+            });
+            this.addLn(lines, `${indent}}`, node);
+            this.addLn(lines, "", null);
+        }
+        // ── NEW: EnumDeclaration ─────────────────────────────────────────────
+        else if (node.nodeType === 'EnumDeclaration') {
+            this.addLn(lines, `${indent}#[derive(Debug, Clone, Copy, PartialEq)]`, node);
+            this.addLn(lines, `${indent}enum ${node.attributes.name} {`, node);
+            node.children.forEach(variant => {
+                const discrim = variant.children.length > 0
+                    ? ` = ${this.genExpr(variant.children[0])}`
+                    : '';
+                this.addLn(lines, `${indent}    ${variant.attributes.name}${discrim},`, variant);
+            });
+            this.addLn(lines, `${indent}}`, node);
+            this.addLn(lines, "", null);
+        }
         else if (node.nodeType === 'IfStatement') {
-            // children[0] = condition
-            // children[1] = Block (then)
-            // children[2] = Block (else) | IfStatement (else if) — optional
             const cond = this.genExpr(node.children[0]);
             this.addLn(lines, `${indent}if ${cond} {`, node);
             if (node.children[1]) {
@@ -151,17 +174,14 @@ export class RustGenerator {
             if (node.children[2]) {
                 const elseNode = node.children[2];
                 if (elseNode.nodeType === 'IfStatement') {
-                    // else if — rewrite last closing brace
                     lines[lines.length - 1] = `${indent}} else `;
                     const tempLines: string[] = [];
                     this.genStmt(elseNode, tempLines, "");
-                    // attach first line inline, rest as new lines
                     const [first, ...rest] = tempLines;
                     lines[lines.length - 1] += first.trim();
                     rest.forEach(l => lines.push(indent + l.trimStart()));
                     this.currentLine += rest.length;
                 } else {
-                    // plain else block
                     lines[lines.length - 1] = `${indent}} else {`;
                     const elseChildren = elseNode.nodeType === 'Block' ? elseNode.children : [elseNode];
                     elseChildren.forEach(c => this.genStmt(c, lines, indent + "    "));
@@ -170,14 +190,11 @@ export class RustGenerator {
             }
         }
         else if (node.nodeType === 'Loop') {
-            // Infinite loop
             this.addLn(lines, `${indent}loop {`, node);
             node.children.forEach(c => this.genStmt(c, lines, indent + "    "));
             this.addLn(lines, `${indent}}`, node);
         }
         else if (node.nodeType === 'DoWhileLoop') {
-            // Rust has no do-while — emulate with loop + trailing condition break
-            // children[0] = condition, children[1..] = body
             this.addLn(lines, `${indent}loop {`, node);
             node.children.slice(1).forEach(c => this.genStmt(c, lines, indent + "    "));
             this.addLn(lines, `${indent}    if !(${this.genExpr(node.children[0])}) { break; }`, node);
@@ -262,7 +279,6 @@ export class RustGenerator {
             return `${this.genExpr(node.children[0])}${op}${node.attributes.property}`;
         }
         if (node.nodeType === 'ConditionalExpression') {
-            // Rust has no ternary — use if/else expression
             return `(if ${this.genExpr(node.children[0])} { ${this.genExpr(node.children[1])} } else { ${this.genExpr(node.children[2])} })`;
         }
         if (node.nodeType === 'GpioRead') {
@@ -275,7 +291,16 @@ export class RustGenerator {
             const args = node.children.map(c => this.genExpr(c)).join(', ');
             return `${node.attributes.callee}(${args})`;
         }
+        // ── NEW: CastExpression — (expr) as type ───────────────────────────
+        if (node.nodeType === 'CastExpression') {
+            return `(${this.genExpr(node.children[0])}) as ${node.attributes.targetType}`;
+        }
+        // ── NEW: ArrayInitializer — [val; N] or vec![a, b, c] ───────────────────
         if (node.nodeType === 'ArrayInitializer') {
+            if (node.attributes.repeat && node.children.length === 2) {
+                // [val; count]
+                return `[${this.genExpr(node.children[0])}; ${this.genExpr(node.children[1])}]`;
+            }
             const elements = node.children.map(c => this.genExpr(c)).join(', ');
             return `vec![${elements}]`;
         }
