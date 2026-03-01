@@ -1,6 +1,6 @@
 # Tabela Comparativa: ASL Parser Implementation
 
-> Documento actualizado em 28 Fevereiro 2026
+> Documento actualizado em 01 Março 2026
 > Comparação entre a documentação (`notyet/README.md`) e a implementação real dos parsers ASL
 >
 > 📋 **Para o plano de implementação padrão, consulte**: [IMPLEMENTATION_STANDARD.md](./IMPLEMENTATION_STANDARD.md)
@@ -9,7 +9,7 @@
 
 ## 🏁 Lista Crítica (branch `critical_Implementation`) — **100% CONCLUÍDA**
 
-> Todos os itens abaixo foram verificados e/ou implementados na sessão de 28/02/2026.
+> Todos os itens abaixo foram verificados e/ou implementados nas sessões de 28/02/2026 e 01/03/2026.
 
 | # | Tarefa | Ficheiro | Commit / Estado |
 |---|---|---|---|
@@ -41,6 +41,13 @@
 | 1.26 | `UnaryExpression`, `MemberExpression`, `ConditionalExpression`, `GpioRead` no RustGenerator `genExpr` | `RustGenerator.ts` | ✅ [a6191adb](https://github.com/caiojordao84/neuroforge/commit/a6191adb7cc3170b3ee90e80916b465e929c5121) |
 | 1.27 | `DoWhile` no CParser (`do_statement`) | `CParser.ts` | ✅ [060942cf](https://github.com/caiojordao84/neuroforge/commit/060942cf4be154ed76f358d373a66b819b59c865) |
 | 1.28 | `ASLExecutor.ts` — `doWhile`, `switch`, `for`, todos os nós | `ASLExecutor.ts` | ✅ Já existia completo |
+| 1.29 | `EnumDeclaration` no RustParser (`enum_item`) | `RustParser.ts` | ✅ [342e8df3](https://github.com/caiojordao84/neuroforge/commit/342e8df3c599194cd00e4da0be3ee1daa37979a3) |
+| 1.30 | `CastExpression` no RustParser (`type_cast_expression`: `x as u8`) | `RustParser.ts` | ✅ [342e8df3](https://github.com/caiojordao84/neuroforge/commit/342e8df3c599194cd00e4da0be3ee1daa37979a3) |
+| 1.31 | `ArrayInitializer` no RustParser (`array_expression`: `[a,b]` + `[val;N]`) | `RustParser.ts` | ✅ [342e8df3](https://github.com/caiojordao84/neuroforge/commit/342e8df3c599194cd00e4da0be3ee1daa37979a3) |
+| 1.32 | `AnalogWrite` (PWM) no RustParser (`analogWrite`/`pwm_write`/`set_duty`) | `RustParser.ts` | ✅ [342e8df3](https://github.com/caiojordao84/neuroforge/commit/342e8df3c599194cd00e4da0be3ee1daa37979a3) |
+| 1.33 | `EnumDeclaration` no RustGenerator (`enum X { A = 0, ... }` + `#[derive(...)]`) | `RustGenerator.ts` | ✅ [ce046d9f](https://github.com/caiojordao84/neuroforge/commit/ce046d9f9b3322490459430920dc6b3b488dbe99) |
+| 1.34 | `CastExpression` no RustGenerator (`(expr) as type`) | `RustGenerator.ts` | ✅ [ce046d9f](https://github.com/caiojordao84/neuroforge/commit/ce046d9f9b3322490459430920dc6b3b488dbe99) |
+| 1.35 | `ArrayInitializer` repeat no RustGenerator (`[val; N]` vs `vec![...]`) | `RustGenerator.ts` | ✅ [ce046d9f](https://github.com/caiojordao84/neuroforge/commit/ce046d9f9b3322490459430920dc6b3b488dbe99) |
 
 ---
 
@@ -77,8 +84,8 @@
 | **VariableDeclaration** | ✅         | ✅               | ✅ `let_declaration`     | ✅ `var = expr` | ✅ `let_declaration` |
 | **Function**            | ✅         | ✅               | ✅ `function_definition` | ✅ `def`        | ✅ `function_item`   |
 | **StructDeclaration**   | ✅         | ✅               | ❌                       | ❌              | ✅ `struct_item`     |
-| **EnumDeclaration**     | ✅         | ✅               | ❌                       | ❌              | ❌                   |
-| **ArrayInitializer 1D** | ✅         | ✅               | ✅ `list`                | ❌              | ❌                   |
+| **EnumDeclaration**     | ✅         | ✅               | ❌                       | ❌              | ✅ `enum_item`       |
+| **ArrayInitializer 1D** | ✅         | ✅               | ✅ `list`                | ❌              | ✅ `array_expression` (`[a,b]` + `[val;N]`) |
 | **ArrayInitializer 2D** | ✅         | ✅               | ❌                       | ❌              | ❌                   |
 | **ArrayInitializer 3D** | ✅         | ✅               | ❌                       | ❌              | ❌                   |
 | **ObjectInitializer**   | ✅         | ❌               | ✅ `dictionary`          | ✅ `{k:v}`      | ❌                   |
@@ -101,7 +108,7 @@
 | **SubscriptExpression**           | ✅         | ✅               | ✅ `subscript`       | ✅            | ✅ `index_expression` |
 | **MemberExpression**              | ✅         | ✅               | ✅ `attribute`       | ❌            | ✅ `field_expression`, `method_call_expression` |
 | **ConditionalExpression (? :)**   | ✅         | ✅               | ❌                   | ❌            | ✅ RustGenerator: `(if cond { a } else { b })` |
-| **CastExpression**                | ✅         | ✅               | ❌                   | ❌            | ❌                   |
+| **CastExpression**                | ✅         | ✅               | ❌                   | ❌            | ✅ `type_cast_expression` (`x as u8`) |
 
 ---
 
@@ -111,7 +118,7 @@
 | --------------- | --------- | ---------------- | ------------------ | ------------ | ------------ |
 | **GpioSet**     | ✅         | ✅ `digitalWrite` | ✅ `pin.value(1)`   | ✅            | ✅ `gpio_set` / `digitalWrite` / `set_high` / `set_low` |
 | **GpioRead**    | ✅         | ✅ `digitalRead`  | ❌                  | ❌            | ✅ `gpio_get` / `digitalRead` / `is_high` / `is_low` |
-| **AnalogWrite** | ✅         | ✅ `analogWrite`  | ❌                  | ❌            | ❌            |
+| **AnalogWrite** | ✅         | ✅ `analogWrite`  | ❌                  | ❌            | ✅ `analogWrite` / `pwm_write` / `pwm.set_duty` / `pwm.set_duty_cycle` |
 | **AnalogRead**  | ✅         | ✅ `analogRead`   | ✅ `ADC`            | ❌            | ✅ `adc_read` / `analogRead`   |
 | **DelayMs**     | ✅         | ✅ `delay`        | ✅ `time.sleep_ms`  | ✅            | ✅ `delay` / `delay_ms` / `Timer::after_millis` / `Timer::after_secs` |
 | **millis()**    | ✅         | ✅                | ❌                  | ❌            | ❌            |
@@ -195,35 +202,35 @@
 
 ## 9. Gaps Identificados (README vs Implementação)
 
-> Items que ainda carecem de atenção após a lista crítica.
+> Items que ainda carecem de atenção (pós lista crítica).
 
 | Item                  | Status     | Ação Necessária                                      |
 | --------------------- | ---------- | ---------------------------------------------------- |
 | **Serial.write/read** | ⚠️ parcial  | Verificar cobertura no ASLExecutor                   |
-| **Servo**             | ⚠️ parcial  | Implementar duration arg no tone/servo               |
+| **Servo / tone() duration** | ⚠️ parcial | Implementar duration arg                        |
 | **EEPROM**            | ❌          | Implementar via hardwareCall                         |
 | **Wire (I2C)**        | ❌          | Implementar via hardwareCall                         |
 | **SPI**               | ❌          | Implementar via hardwareCall                         |
 | **attachInterrupt**   | ❌          | Implementar modelo ISR                               |
 | **pulseIn**           | ❌          | Implementar                                          |
 | **shiftOut**          | ❌          | Implementar                                          |
-| **CastExpression Rust** | ❌        | `as u8`, `as f32` no RustParser                      |
-| **ArrayInitializer Rust** | ❌      | `[0u8; N]`, `vec![]` no RustParser                   |
-| **AnalogWrite Rust**  | ❌          | PWM / `pwm.set_duty` no RustParser                   |
-| **millis/micros Rust** | ❌         | `Instant::now()` no RustParser                       |
+| **millis/micros Rust** | ❌         | `Instant::now()` no RustParser / RustGenerator       |
+| **ArrayInitializer 2D/3D Rust** | ❌ | Suporte a arrays multi-dimensionais no RustParser  |
+| **ObjectInitializer Rust** | ❌    | Struct literal `Foo { x: 1, y: 2 }` no RustParser   |
+| **EnumDeclaration Python** | ❌    | Sem equivalente directo em Python                    |
 
 ---
 
 ## 10. Matriz de Cobertura por Linguagem
 
-> Actualizada em 28/02/2026 — sessão RustParser + RustGenerator.
+> Actualizada em 01/03/2026 — sessão EnumDeclaration + CastExpression + ArrayInitializer + AnalogWrite Rust.
 
 | Categoria         | C/C++ | Python Tree | Python Regex | Rust |
 | ----------------- | ----- | ----------- | ------------ | ---- |
 | **Controle**      | 100%  | 60%         | 20%          | 95%  |
-| **Declarações**   | 100%  | 70%         | 30%          | 65%  |
-| **Expressões**    | 100%  | 80%         | 40%          | 90%  |
-| **Hardware**      | 100%  | 40%         | 20%          | 55%  |
+| **Declarações**   | 100%  | 70%         | 30%          | 80%  |
+| **Expressões**    | 100%  | 80%         | 40%          | 95%  |
+| **Hardware**      | 100%  | 40%         | 20%          | 65%  |
 | **Display I/O**   | 100%  | 0%          | 0%           | 0%   |
 | **Math Builtins** | 100%  | N/A         | N/A          | N/A  |
 
@@ -231,7 +238,7 @@
 
 ## 11. Próximos Passos
 
-### 🟢 Lista Crítica — CONCLUÍDA (28/02/2026)
+### 🟢 Lista Crítica — CONCLUÍDA (28/02/2026 – 01/03/2026)
 - [x] switch/case no Executor (fall-through + default)
 - [x] sizeof no Executor
 - [x] cast (int/float/String) no Executor
@@ -245,33 +252,30 @@
 - [x] SubscriptExpression (index_expression) no RustParser
 - [x] GpioRead no RustParser
 - [x] ForLoop com range `0..N` e `0..=N` no RustParser
-- [x] StructDeclaration no RustParser
+- [x] StructDeclaration no RustParser + RustGenerator
 - [x] SwitchStatement handler no statementRegistry
 - [x] StructDeclaration no-op handler no statementRegistry
 - [x] CastExpression + ConditionalExpression no exprTransform
 - [x] DoWhile no CParser (`do_statement`) — [060942cf](https://github.com/caiojordao84/neuroforge/commit/060942cf4be154ed76f358d373a66b819b59c865)
-- [x] UnaryExpression no RustParser (`!`, `-`, `*`, `&`, `&mut`) — [65cc7c88](https://github.com/caiojordao84/neuroforge/commit/65cc7c880be122e50660059f33585e0f75ee5d02)
-- [x] MemberExpression no RustParser (`struct.field`, `obj.method()`) — [65cc7c88](https://github.com/caiojordao84/neuroforge/commit/65cc7c880be122e50660059f33585e0f75ee5d02)
-- [x] reference_expression no RustParser (`&x`, `&mut x`) — [65cc7c88](https://github.com/caiojordao84/neuroforge/commit/65cc7c880be122e50660059f33585e0f75ee5d02)
+- [x] UnaryExpression no RustParser + RustGenerator — [65cc7c88](https://github.com/caiojordao84/neuroforge/commit/65cc7c880be122e50660059f33585e0f75ee5d02)
+- [x] MemberExpression no RustParser + RustGenerator — [65cc7c88](https://github.com/caiojordao84/neuroforge/commit/65cc7c880be122e50660059f33585e0f75ee5d02)
 - [x] DoWhileLoop no RustGenerator (emulado) — [a6191adb](https://github.com/caiojordao84/neuroforge/commit/a6191adb7cc3170b3ee90e80916b465e929c5121)
 - [x] BreakStatement / ContinueStatement / ReturnStatement no RustGenerator — [a6191adb](https://github.com/caiojordao84/neuroforge/commit/a6191adb7cc3170b3ee90e80916b465e929c5121)
-- [x] IfStatement else / else-if no RustGenerator — [a6191adb](https://github.com/caiojordao84/neuroforge/commit/a6191adb7cc3170b3ee90e80916b465e929c5121)
-- [x] Loop infinito, Block, GpioRead no RustGenerator — [a6191adb](https://github.com/caiojordao84/neuroforge/commit/a6191adb7cc3170b3ee90e80916b465e929c5121)
-- [x] UnaryExpression / MemberExpression / ConditionalExpression no RustGenerator `genExpr` — [a6191adb](https://github.com/caiojordao84/neuroforge/commit/a6191adb7cc3170b3ee90e80916b465e929c5121)
-- [x] ASLExecutor.ts — verificado 100% completo (doWhile, switch, for, break/continue/return, todos os nós)
+- [x] IfStatement else / else-if, Loop infinito, Block, GpioRead no RustGenerator — [a6191adb](https://github.com/caiojordao84/neuroforge/commit/a6191adb7cc3170b3ee90e80916b465e929c5121)
+- [x] ASLExecutor.ts — verificado 100% completo
+- [x] EnumDeclaration no RustParser + RustGenerator — [342e8df3](https://github.com/caiojordao84/neuroforge/commit/342e8df3c599194cd00e4da0be3ee1daa37979a3) / [ce046d9f](https://github.com/caiojordao84/neuroforge/commit/ce046d9f9b3322490459430920dc6b3b488dbe99)
+- [x] CastExpression no RustParser + RustGenerator — [342e8df3](https://github.com/caiojordao84/neuroforge/commit/342e8df3c599194cd00e4da0be3ee1daa37979a3) / [ce046d9f](https://github.com/caiojordao84/neuroforge/commit/ce046d9f9b3322490459430920dc6b3b488dbe99)
+- [x] ArrayInitializer 1D no RustParser + RustGenerator (`[a,b]` + `[val;N]`) — [342e8df3](https://github.com/caiojordao84/neuroforge/commit/342e8df3c599194cd00e4da0be3ee1daa37979a3) / [ce046d9f](https://github.com/caiojordao84/neuroforge/commit/ce046d9f9b3322490459430920dc6b3b488dbe99)
+- [x] AnalogWrite (PWM) no RustParser + RustGenerator — [342e8df3](https://github.com/caiojordao84/neuroforge/commit/342e8df3c599194cd00e4da0be3ee1daa37979a3) / [ce046d9f](https://github.com/caiojordao84/neuroforge/commit/ce046d9f9b3322490459430920dc6b3b488dbe99)
 
-### 🔴 Prioridade Alta (próxima fase)
-- [ ] CastExpression Rust (`as u8`, `as f32`) no RustParser
-- [ ] ArrayInitializer Rust (`[0u8; N]`, `vec![]`) no RustParser
-- [ ] AnalogWrite Rust (PWM) no RustParser
-- [ ] millis/micros Rust (`Instant::now()`) no RustParser
-- [ ] EnumDeclaration no RustParser
-
-### 🟡 Prioridade Média
+### 🔴 Próxima Fase
+- [ ] millis/micros Rust (`Instant::now()`)
+- [ ] ArrayInitializer 2D/3D Rust
+- [ ] ObjectInitializer Rust (struct literal `Foo { x: 1 }`)
 - [ ] Hardware periféricos (EEPROM, Wire/I2C, SPI) via hardwareCall
 - [ ] attachInterrupt / pulseIn / shiftOut
 - [ ] tone() duration arg
-- [ ] Python Parser melhorias (BreakStatement, array literals, RegexParser completar operadores)
+- [ ] Python Parser melhorias (RegexParser operadores binários, array literals)
 
 ---
 
