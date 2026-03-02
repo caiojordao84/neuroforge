@@ -305,6 +305,18 @@ async function executeStatements(
         break;
       }
 
+      case 'setIndex3D': {
+        const d1 = await evalExpr(s.d1Index, localEnv, ctx);
+        const d2 = await evalExpr(s.d2Index, localEnv, ctx);
+        const d3 = await evalExpr(s.d3Index, localEnv, ctx);
+        const val = await evalExpr(s.value, localEnv, ctx);
+        const arr = getVar(s.target, localEnv, ctx.globals);
+        if (Array.isArray(arr) && Array.isArray(arr[d1]) && Array.isArray(arr[d1][d2])) {
+          arr[d1][d2][d3] = val;
+        }
+        break;
+      }
+
       case 'setMember': {
         const targetObj = await evalExpr(s.target, localEnv, ctx);
         const val = await evalExpr(s.value, localEnv, ctx);
@@ -392,6 +404,17 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       const row = await evalExpr(expr.rowIndex, env, ctx);
       const col = await evalExpr(expr.colIndex, env, ctx);
       if (Array.isArray(arr) && Array.isArray(arr[row])) return arr[row][col];
+      return 0;
+    }
+
+    case 'index3D': {
+      const arr = await evalExpr(expr.array, env, ctx);
+      const d1 = await evalExpr(expr.d1Index, env, ctx);
+      const d2 = await evalExpr(expr.d2Index, env, ctx);
+      const d3 = await evalExpr(expr.d3Index, env, ctx);
+      if (Array.isArray(arr) && Array.isArray(arr[d1]) && Array.isArray(arr[d1][d2])) {
+        return arr[d1][d2][d3];
+      }
       return 0;
     }
 
@@ -653,7 +676,6 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         return parseFloat(String(s)) || 0;
       }
       if (expr.callee === 'dtostrf') {
-        // dtostrf(val, width, prec, buf) — returns formatted string (buf ignorado em simulação)
         const val  = await evalExpr(expr.args[0], env, ctx);
         const prec = expr.args[2] ? await evalExpr(expr.args[2], env, ctx) : 2;
         return Number(val).toFixed(Math.max(0, Number(prec) || 0));
