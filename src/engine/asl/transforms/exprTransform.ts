@@ -22,9 +22,22 @@ export function transformExpr(node: BaseNode | undefined): ASLExpr {
   }
 
   if (node.nodeType === 'UnaryExpression') {
+    const op = node.attributes.operator as string;
+
+    // ++/-- that reach here (prefix form like ++i, or postfix not caught by
+    // normalizer) are converted to binary +/-1 to avoid the -v fallthrough.
+    if (op === '++' || op === '--') {
+      return {
+        kind: 'binary',
+        op: op === '++' ? '+' : '-',
+        left: transformExpr(node.children[0]),
+        right: { kind: 'literal', value: 1 },
+      } as ASLExpr;
+    }
+
     return {
       kind: 'unary',
-      op: node.attributes.operator as any,
+      op: op as any,
       expr: transformExpr(node.children[0]),
     } as ASLExpr;
   }
@@ -110,7 +123,6 @@ export function transformExpr(node: BaseNode | undefined): ASLExpr {
 
   if (node.nodeType === 'SizeofExpression') {
     const child = node.children[0];
-
     if (child) {
       return {
         kind: 'call',
@@ -118,14 +130,13 @@ export function transformExpr(node: BaseNode | undefined): ASLExpr {
         args: [transformExpr(child)],
       } as ASLExpr;
     }
-
     return { kind: 'literal', value: 1 } as ASLExpr;
   }
 
   if (node.nodeType === 'ArrayInitializer') {
     return {
       kind: 'array',
-      elements: node.children.map(transformExpr)
+      elements: node.children.map(transformExpr),
     } as ASLExpr;
   }
 
@@ -137,10 +148,7 @@ export function transformExpr(node: BaseNode | undefined): ASLExpr {
         value: transformExpr(node.children[i + 1]),
       });
     }
-    return {
-      kind: 'object',
-      properties,
-    } as ASLExpr;
+    return { kind: 'object', properties } as ASLExpr;
   }
 
   if (node.nodeType === 'CastExpression') {
@@ -149,12 +157,7 @@ export function transformExpr(node: BaseNode | undefined): ASLExpr {
     let callee = 'int';
     if (targetType === 'float' || targetType === 'double') callee = 'float';
     if (targetType === 'String') callee = 'String';
-
-    return {
-      kind: 'call',
-      callee,
-      args: [operand],
-    } as ASLExpr;
+    return { kind: 'call', callee, args: [operand] } as ASLExpr;
   }
 
   if (node.nodeType === 'ConditionalExpression') {
