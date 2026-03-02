@@ -18,9 +18,11 @@ import { transformBlock } from './transforms/blockTransform';
 import { mapToASLType } from './helpers/typeUtils';
 import { buildEmptyArray, deepCopyValue, resolveSize } from './helpers/arrayUtils';
 import { transformExpr } from './transforms/exprTransform';
+import { normalizeAST } from './transforms/astNormalizer';
 
 export async function codeToASL(source: string, language: Language): Promise<ASLProgram> {
-  const programAst = await codeToAST(source, language);
+  let programAst = await codeToAST(source, language);
+  programAst = normalizeAST(programAst);
   return astToASL(programAst, language);
 }
 
