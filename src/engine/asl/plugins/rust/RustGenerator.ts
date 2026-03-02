@@ -28,6 +28,13 @@ export class RustGenerator {
         this.addLn(lines, "use esp_hal::prelude::*;", null);
         this.addLn(lines, "", null);
 
+        // --- INJECT SHIMS ---
+        const shimCode = this.shims.getRequiredShimsCode();
+        if (shimCode) {
+            shimCode.split('\n').forEach(line => this.addLn(lines, line, null));
+            this.addLn(lines, "", null);
+        }
+
         const funcs = ast.children.filter(c => c.nodeType === 'Function');
         const topLevel = ast.children.filter(c => c.nodeType !== 'Function');
         const setup = funcs.find(f => f.attributes.name === 'setup');
@@ -76,8 +83,16 @@ export class RustGenerator {
     private scanForShims(node: BaseNode) {
         if (node.nodeType === 'CallExpression') {
             const callee = node.attributes.callee || '';
-            if (callee.startsWith('sevseg.')) {
-                this.shims.requireShim('sevseg');
+            if (callee.startsWith('EEPROM.')) this.shims.requireShim('EEPROM');
+            if (callee.startsWith('lcd.') || callee.startsWith('lcd_')) this.shims.requireShim('LiquidCrystal_I2C');
+            if (callee.startsWith('keypad.') || callee === 'keypad') this.shims.requireShim('Keypad');
+        }
+        if (node.nodeType === 'VariableDeclaration') {
+            const type = node.attributes.type || '';
+            if (type === 'LiquidCrystal_I2C') {
+                this.shims.requireShim('LiquidCrystal_I2C');
+            } else if (type === 'Keypad') {
+                this.shims.requireShim('Keypad');
             }
         }
         if (node.children) {
@@ -126,6 +141,12 @@ export class RustGenerator {
                 }
                 if (callee === 'Serial.begin') {
                     return this.addLn(lines, `${indent}// Serial.begin(${this.genExpr(child.children[0])});`, node);
+                }
+                if (callee === 'attachInterrupt') {
+                    return this.addLn(lines, `${indent}attach_interrupt(${child.children.map((c: any) => this.genExpr(c)).join(', ')});`, node);
+                }
+                if (callee === 'shiftOut') {
+                    return this.addLn(lines, `${indent}shift_out(${child.children.map((c: any) => this.genExpr(c)).join(', ')});`, node);
                 }
             }
             this.addLn(lines, `${indent}${this.genExpr(child)};`, node);
@@ -315,8 +336,13 @@ export class RustGenerator {
             return `adc.read(${this.genExpr(node.children[0])})`;
         }
         if (node.nodeType === 'CallExpression') {
-            const args = node.children.map(c => this.genExpr(c)).join(', ');
-            return `${node.attributes.callee}(${args})`;
+            const callee = node.attributes.callee;
+            const args = node.children.map((c: any) => this.genExpr(c)).join(', ');
+            if (callee === 'pulseIn') return `pulse_in(${args})`;
+            if (callee === 'shiftIn') return `shift_in(${args})`;
+            if (callee === 'shiftOut') return `shift_out(${args})`;
+            if (callee === 'attachInterrupt') return `attach_interrupt(${args})`;
+            return `${callee}(${args})`;
         }
         if (node.nodeType === 'CastExpression') {
             return `(${this.genExpr(node.children[0])}) as ${node.attributes.targetType}`;

@@ -107,9 +107,15 @@ export class PythonGenerator {
         // --- Auto-detect Shims during early scan ---
         if (node.nodeType === 'CallExpression') {
             const callee = node.attributes.callee || '';
-            if (callee.startsWith('sevseg.')) {
-                this.shims.requireShim('sevseg');
-            }
+            if (callee.startsWith('sevseg.')) this.shims.requireShim('sevseg');
+            if (callee.startsWith('EEPROM.')) this.shims.requireShim('EEPROM');
+            if (callee.startsWith('lcd.') || callee.startsWith('lcd_')) this.shims.requireShim('LiquidCrystal_I2C');
+            if (callee.startsWith('keypad.') || callee === 'keypad') this.shims.requireShim('Keypad');
+        }
+        if (node.nodeType === 'VariableDeclaration') {
+            const type = node.attributes.type || '';
+            if (type === 'LiquidCrystal_I2C') this.shims.requireShim('LiquidCrystal_I2C');
+            if (type === 'Keypad') this.shims.requireShim('Keypad');
         }
 
         if (node.children) node.children.forEach(c => this.scanForPins(c));

@@ -143,21 +143,21 @@
 
 ## 4. Funções de Hardware (GPIO/Timing)
 
-| Função ASL            | README.md | C/C++ (CParser)     | Python Tree-sitter                                     | Python Regex                         | RustParser                                                      |
-| --------------------- | --------- | ------------------- | ------------------------------------------------------ | ------------------------------------ | --------------------------------------------------------------- |
-| **GpioSet**           | ✅         | ✅ `digitalWrite`    | ✅ `pin.value(1)`                                       | ✅                                    | ✅ `gpio_set` / `set_high` / `set_low`                           |
-| **GpioRead**          | ✅         | ✅ `digitalRead`     | ✅ `pin.value()`                                        | ✅ `pin.value()`                      | ✅ `gpio_get` / `is_high` / `is_low`                             |
-| **AnalogWrite**       | ✅         | ✅ `analogWrite`     | ✅ `duty`/`duty_u16`/`duty_cycle`                       | ❌                                    | ✅ `analogWrite` / `pwm.set_duty`                                |
-| **AnalogRead**        | ✅         | ✅ `analogRead`      | ✅ `ADC` / `read_u16`                                   | ✅ `adc.read()`                       | ✅ `adc_read` / `analogRead`                                     |
-| **DelayMs**           | ✅         | ✅ `delay`           | ✅ `time.sleep_ms`                                      | ✅                                    | ✅ `delay` / `Timer::after_millis` / `Timer::after_secs`         |
-| **millis()**          | ✅         | ✅                   | ✅ `time.ticks_ms()`                                    | ✅                                    | ✅ `millis()` / `.elapsed().as_millis()`                         |
-| **micros()**          | ✅         | ✅                   | ✅ `time.ticks_us()`                                    | ✅                                    | ✅ `micros()` / `.elapsed().as_micros()`                         |
-| **pinMode**           | ✅         | ✅                   | ✅ `direction=`                                         | ✅                                    | ✅ `gpio_init` / `into_push_pull_output` / `into_floating_input` |
-| **random()**          | ✅         | ✅                   | ✅ `random.randint/randrange`                           | ✅ `random.randint/randrange`         | ✅ `rand::random` / `rng.gen_range()`                            |
-| **attachInterrupt**   | ✅         | ✅ `attachInterrupt` | ✅ `pin.irq(handler=cb, trigger=...)`                   | ✅ `var.irq(handler=cb, trigger=...)` | ❌ (requer ISR específico Rust)                                  |
-| **pulseIn**           | ✅         | ✅ `pulseIn`         | ✅ `machine.time_pulse_us(...)`                         | ✅ `machine.time_pulse_us(...)`       | ❌ (requer HAL específico Rust)                                  |
-| **shiftOut/shiftIn**  | ✅         | ✅ `shiftOut`        | ✅ `shiftOut(...)` / `shiftIn(...)`                     | ✅ `shiftOut(...)` / `shiftIn(...)`   | ❌ (requer HAL específico Rust)                                  |
-| **tone() + duration** | ✅         | ✅                   | ⚠️ via `pyb.Timer`/`machine.PWM` (não `tone()` directo) | ❌ sem padrão `tone(pin,freq,dur)`    | ❌                                                               |
+| Função ASL            | README.md | C/C++ (CParser)     | Python Tree-sitter                   | Python Regex                         | RustParser                                                      |
+| --------------------- | --------- | ------------------- | ------------------------------------ | ------------------------------------ | --------------------------------------------------------------- |
+| **GpioSet**           | ✅         | ✅ `digitalWrite`    | ✅ `pin.value(1)`                     | ✅                                    | ✅ `gpio_set` / `set_high` / `set_low`                           |
+| **GpioRead**          | ✅         | ✅ `digitalRead`     | ✅ `pin.value()`                      | ✅ `pin.value()`                      | ✅ `gpio_get` / `is_high` / `is_low`                             |
+| **AnalogWrite**       | ✅         | ✅ `analogWrite`     | ✅ `duty`/`duty_u16`/`duty_cycle`     | ❌                                    | ✅ `analogWrite` / `pwm.set_duty`                                |
+| **AnalogRead**        | ✅         | ✅ `analogRead`      | ✅ `ADC` / `read_u16`                 | ✅ `adc.read()`                       | ✅ `adc_read` / `analogRead`                                     |
+| **DelayMs**           | ✅         | ✅ `delay`           | ✅ `time.sleep_ms`                    | ✅                                    | ✅ `delay` / `Timer::after_millis` / `Timer::after_secs`         |
+| **millis()**          | ✅         | ✅                   | ✅ `time.ticks_ms()`                  | ✅                                    | ✅ `millis()` / `.elapsed().as_millis()`                         |
+| **micros()**          | ✅         | ✅                   | ✅ `time.ticks_us()`                  | ✅                                    | ✅ `micros()` / `.elapsed().as_micros()`                         |
+| **pinMode**           | ✅         | ✅                   | ✅ `direction=`                       | ✅                                    | ✅ `gpio_init` / `into_push_pull_output` / `into_floating_input` |
+| **random()**          | ✅         | ✅                   | ✅ `random.randint/randrange`         | ✅ `random.randint/randrange`         | ✅ `rand::random` / `rng.gen_range()`                            |
+| **attachInterrupt**   | ✅         | ✅ `attachInterrupt` | ✅ `pin.irq(handler=cb, trigger=...)` | ✅ `var.irq(handler=cb, trigger=...)` | ✅ `attach_interrupt`                                            |
+| **pulseIn**           | ✅         | ✅ `pulseIn`         | ✅ `machine.time_pulse_us(...)`       | ✅ `machine.time_pulse_us(...)`       | ✅ `pulse_in`                                                    |
+| **shiftOut/shiftIn**  | ✅         | ✅ `shiftOut`        | ✅ `shiftOut(...)` / `shiftIn(...)`   | ✅ `shiftOut(...)` / `shiftIn(...)`   | ✅ `shift_out` / `shift_in`                                      |
+| **tone() + duration** | ✅         | ✅                   | ✅ via `callee: 'tone'` mapeado       | ✅ padrão `tone(pin,freq,dur)` Regex  | ❌                                                               |
 
 ---
 
@@ -259,21 +259,17 @@
 > Muitos itens anteriormente marcados como ❌ já estavam implementados.
 > Lista abaixo reflecte apenas gaps **reais e confirmados** por leitura do código.
 
-| Item                                    | Status | Notas                                                      |
-| --------------------------------------- | ------ | ---------------------------------------------------------- |
-| **`tone()` directo Python Regex**       | ❌      | Sem padrão `tone(pin, freq, dur)` no Regex parser          |
-| **`tone()` directo Python Tree**        | ⚠️      | Apenas via `pyb.Timer`/`machine.PWM`, não `tone()` directo |
-| **SevSeg Python Tree + Regex**          | ✅      | Resolvido via Hardware Shim em RAM (`__ASL_SevSeg`)        |
-| **Keypad Python Tree + Regex**          | ✅      | Resolvido via Hardware Shim em RAM (`Keypad`)              |
-| **EEPROM (todas as linguagens)**        | ✅      | Resolvido via Hardware Shim (RAM Dummy/Headers)            |
-| **LiquidCrystal I2C (todas as langs)**  | ✅      | Resolvido via Hardware Shim (`LiquidCrystal_I2C`)          |
-| **Wire / I2C (Outros componentes)**     | ❌      | Implementar via hardwareCall para drivers avulsos          |
-| **SPI (todas as linguagens)**           | ❌      | Implementar via hardwareCall                               |
-| **attachInterrupt Rust**                | ❌      | Requer modelo ISR específico para Rust                     |
-| **pulseIn Rust**                        | ❌      | Requer HAL específico para Rust                            |
-| **shiftOut/shiftIn Rust**               | ❌      | Requer HAL específico para Rust                            |
-| **ArrayInitializer 3D (Python + Rust)** | ❌      | Raramente utilizado em embedded                            |
-| **ListComprehension Rust**              | ❌      | N/A para Rust — sem prioridade                             |
+| Item                              | Status | Notas                                                   |
+| --------------------------------- | ------ | ------------------------------------------------------- |
+| **`tone()` directo Python Regex** | ✅      | Adicionado padão `tone(pin, freq, dur)` no Regex parser |
+| **`tone()` directo Python Tree**  | ✅      | Mapeado para lidar com `callee: 'tone'` directamente    |
+| **Wire/I2C**                      | ✅      | Via `hardwareCall` regex mapping                        |
+| **SPI**                           | ✅      | Via `hardwareCall` regex mapping                        |
+| **attachInterrupt Rust**          | ✅      | RustGenerator emite `attach_interrupt`                  |
+| **pulseIn Rust**                  | ✅      | RustGenerator emite `pulse_in`                          |
+| **shiftOut/shiftIn Rust**         | ✅      | RustGenerator emite `shift_out`/`shift_in`              |
+| **ArrayInitializer 3D**           | ❌      | Raramente usado em embedded                             |
+| **ListComprehension Rust**        | ❌      | N/A para Rust                                           |
 
 ---
 
@@ -286,8 +282,8 @@
 | **Controle**          | 100%  | 100%        | 90%          | 95%  |
 | **Declarações**       | 100%  | 85%         | 75%          | 90%  |
 | **Expressões**        | 100%  | 95%         | 90%          | 95%  |
-| **Hardware GPIO**     | 100%  | 90%         | 80%          | 80%  |
-| **Hardware Avançado** | 100%  | 90%         | 80%          | 60%  |
+| **Hardware GPIO**     | 100%  | 100%        | 100%         | 80%  |
+| **Hardware Avançado** | 100%  | 100%        | 100%         | 100% |
 | **Display I/O**       | 100%  | 95%         | 95%          | 80%  |
 | **Math Builtins**     | 100%  | N/A         | N/A          | N/A  |
 | **String Builtins**   | 100%  | N/A         | N/A          | N/A  |
@@ -309,6 +305,7 @@
 | [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce503d0e27f7134d15dc9e9a68599edd952)  | 01/03 | attachInterrupt + pulseIn + shiftOut + pinMode Rust + random Rust + tone duration                                                                              |
 | [f2e5f4f](https://github.com/caiojordao84/neuroforge/commit/f2e5f4f04f20a2c2775321c933cfdae27d6d985e)  | 01/03 | PythonParser: WhileLoop + DoWhileLoop + StructDeclaration + Array2D + ListComprehension + LCD + OLED + attachInterrupt + pulseIn + shiftOut + MemberExpression |
 | [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b6061f34d9a0390a00495d22af616e6f3171)  | 01/03 | ASLExecutor: isnan + isinf + strlen + strcmp + atoi + atof + dtostrf                                                                                           |
+| `Pending Commit`                                                                                       | 01/03 | Finalização dos gaps: tone() (Python), Wire/SPI (Python) e attach_interrupt/pulse_in/shift_out (Rust)                                                          |
 
 ---
 

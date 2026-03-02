@@ -1,5 +1,4 @@
-// src/hooks/useRunSimulation.ts
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useSimulationStore } from '@/stores/useSimulationStore';
 import { useSerialStore } from '@/stores/useSerialStore';
 import { useQEMUStore } from '@/stores/useQEMUStore';
@@ -11,6 +10,8 @@ import { codeToASL } from '@/engine/asl/codeToASL';
 import { getASLSupportedLanguages, getLanguageInfo } from '@/engine/asl/LanguageRegistry';
 
 export function useRunSimulation() {
+    const abortControllerRef = useRef<AbortController | null>(null);
+
     const {
         status,
         speed,
@@ -94,8 +95,11 @@ export function useRunSimulation() {
                     const aslProgram = await codeToASL(processedCode, activeMCU.language);
                     addTerminalLine(`✅ ASL Program generated (${aslProgram.globals.length} globals, ${aslProgram.tasks.length} tasks)`, 'success');
 
+                    abortControllerRef.current = new AbortController();
+                    const abortSignal = abortControllerRef.current.signal;
+
                     // Initialize the real runtime sandbox
-                    const runtime = createASLRuntime(aslProgram);
+                    const runtime = createASLRuntime(aslProgram, { abortSignal });
 
                     startSimulation();
                     // The ASLExecutor replaces the legacy regex parsing logic
@@ -127,6 +131,11 @@ export function useRunSimulation() {
     }, [mode, speed, isBackendConnected, getActiveMCU, startSimulation, compileAndStart, addTerminalLine, getAllMCUs]);
 
     const handleStop = useCallback(async () => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+        }
+
         if (mode === 'qemu') {
             await stopQEMU();
             addTerminalLine('⏹️ QEMU simulation stopped', 'info');

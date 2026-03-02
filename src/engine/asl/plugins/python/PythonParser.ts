@@ -405,10 +405,14 @@ class RegexPythonParser {
         const lcdM = trimmed.match(/^(\w+)\.(move_to|putstr|clear|backlight_on|backlight_off|hide_cursor|show_cursor|blink_cursor_on|blink_cursor_off)\s*\(([^)]*)\)\s*$/);
         if (lcdM) {
             const args = lcdM[3] ? lcdM[3].split(',').map(a => this._parseExpr(a.trim(), lineNum)) : [];
-            return { nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
-                children: [{ nodeType: 'CallExpression', id: `lcd-${lineNum}`,
-                    attributes: { callee: `lcd.${lcdM[2]}` }, children: args } as BaseNode],
-                metadata: meta } as BaseNode;
+            return {
+                nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
+                children: [{
+                    nodeType: 'CallExpression', id: `lcd-${lineNum}`,
+                    attributes: { callee: `lcd.${lcdM[2]}` }, children: args
+                } as BaseNode],
+                metadata: meta
+            } as BaseNode;
         }
 
         // ── OLED SSD1306 (MicroPython framebuf) ───────────────────────────────
@@ -416,10 +420,14 @@ class RegexPythonParser {
         const oledM = trimmed.match(/^(\w+)\.(fill|text|show|fill_rect|pixel|hline|vline|line|rect|scroll|invert|contrast|poweroff|poweron)\s*\(([^)]*)\)\s*$/);
         if (oledM) {
             const args = oledM[3] ? oledM[3].split(',').map(a => this._parseExpr(a.trim(), lineNum)) : [];
-            return { nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
-                children: [{ nodeType: 'CallExpression', id: `oled-${lineNum}`,
-                    attributes: { callee: `oled.${oledM[2]}` }, children: args } as BaseNode],
-                metadata: meta } as BaseNode;
+            return {
+                nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
+                children: [{
+                    nodeType: 'CallExpression', id: `oled-${lineNum}`,
+                    attributes: { callee: `oled.${oledM[2]}` }, children: args
+                } as BaseNode],
+                metadata: meta
+            } as BaseNode;
         }
 
         // ── attachInterrupt: pin.irq(handler=cb, trigger=Pin.IRQ_RISING) ──────
@@ -433,55 +441,103 @@ class RegexPythonParser {
             const triggerNode: BaseNode = triggerM
                 ? this._parseExpr(triggerM[1].trim(), lineNum)
                 : { nodeType: 'Literal', id: `trig-${lineNum}`, attributes: { value: 1 }, children: [] };
-            return { nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
-                children: [{ nodeType: 'CallExpression', id: `irq-${lineNum}`,
+            return {
+                nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
+                children: [{
+                    nodeType: 'CallExpression', id: `irq-${lineNum}`,
                     attributes: { callee: 'attachInterrupt' },
                     children: [
                         { nodeType: 'Identifier', id: `pin-${lineNum}`, attributes: { name: irqM[1] }, children: [] } as BaseNode,
                         handlerNode,
                         triggerNode
-                    ] } as BaseNode],
-                metadata: meta } as BaseNode;
+                    ]
+                } as BaseNode],
+                metadata: meta
+            } as BaseNode;
         }
 
         // ── pulseIn: machine.time_pulse_us(pin, level, timeout) ───────────────
         const pulseM = trimmed.match(/^(?:machine\.)?time_pulse_us\s*\(([^)]+)\)\s*$/);
         if (pulseM) {
             const args = pulseM[1].split(',').map(a => this._parseExpr(a.trim(), lineNum));
-            return { nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
-                children: [{ nodeType: 'CallExpression', id: `pulse-${lineNum}`,
-                    attributes: { callee: 'pulseIn' }, children: args } as BaseNode],
-                metadata: meta } as BaseNode;
+            return {
+                nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
+                children: [{
+                    nodeType: 'CallExpression', id: `pulse-${lineNum}`,
+                    attributes: { callee: 'pulseIn' }, children: args
+                } as BaseNode],
+                metadata: meta
+            } as BaseNode;
         }
 
         // ── pulseIn assign: var = machine.time_pulse_us(...) ─────────────────
         const pulseAssignM = trimmed.match(/^(\w+)\s*=\s*(?:machine\.)?time_pulse_us\s*\(([^)]+)\)\s*$/);
         if (pulseAssignM) {
             const args = pulseAssignM[2].split(',').map(a => this._parseExpr(a.trim(), lineNum));
-            return { nodeType: 'VariableDeclaration', id: `decl-${lineNum}`, attributes: { name: pulseAssignM[1], type: 'auto' },
-                children: [{ nodeType: 'CallExpression', id: `pulse-${lineNum}`,
-                    attributes: { callee: 'pulseIn' }, children: args } as BaseNode],
-                metadata: meta } as BaseNode;
+            return {
+                nodeType: 'VariableDeclaration', id: `decl-${lineNum}`, attributes: { name: pulseAssignM[1], type: 'auto' },
+                children: [{
+                    nodeType: 'CallExpression', id: `pulse-${lineNum}`,
+                    attributes: { callee: 'pulseIn' }, children: args
+                } as BaseNode],
+                metadata: meta
+            } as BaseNode;
         }
 
         // ── shiftOut stub ─────────────────────────────────────────────────────
         const shiftOutM = trimmed.match(/^shiftOut\s*\(([^)]*)\)\s*$/);
         if (shiftOutM) {
             const args = shiftOutM[1].split(',').map(a => this._parseExpr(a.trim(), lineNum));
-            return { nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
-                children: [{ nodeType: 'CallExpression', id: `shift-${lineNum}`,
-                    attributes: { callee: 'shiftOut' }, children: args } as BaseNode],
-                metadata: meta } as BaseNode;
+            return {
+                nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
+                children: [{
+                    nodeType: 'CallExpression', id: `shift-${lineNum}`,
+                    attributes: { callee: 'shiftOut' }, children: args
+                } as BaseNode],
+                metadata: meta
+            } as BaseNode;
         }
 
         // ── shiftIn assign stub ───────────────────────────────────────────────
         const shiftInM = trimmed.match(/^(\w+)\s*=\s*shiftIn\s*\(([^)]*)\)\s*$/);
         if (shiftInM) {
             const args = shiftInM[2].split(',').map(a => this._parseExpr(a.trim(), lineNum));
-            return { nodeType: 'VariableDeclaration', id: `decl-${lineNum}`, attributes: { name: shiftInM[1], type: 'auto' },
-                children: [{ nodeType: 'CallExpression', id: `shift-${lineNum}`,
-                    attributes: { callee: 'shiftIn' }, children: args } as BaseNode],
-                metadata: meta } as BaseNode;
+            return {
+                nodeType: 'VariableDeclaration', id: `decl-${lineNum}`, attributes: { name: shiftInM[1], type: 'auto' },
+                children: [{
+                    nodeType: 'CallExpression', id: `shift-${lineNum}`,
+                    attributes: { callee: 'shiftIn' }, children: args
+                } as BaseNode],
+                metadata: meta
+            } as BaseNode;
+        }
+
+        // ── tone() ────────────────────────────────────────────────────────────
+        const toneM = trimmed.match(/^tone\s*\(([^)]+)\)\s*$/);
+        if (toneM) {
+            const args = toneM[1].split(',').map(a => this._parseExpr(a.trim(), lineNum));
+            return {
+                nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
+                children: [{
+                    nodeType: 'CallExpression', id: `tone-${lineNum}`,
+                    attributes: { callee: 'tone' }, children: args
+                } as BaseNode],
+                metadata: meta
+            } as BaseNode;
+        }
+
+        // ── Wire / I2C / SPI hardwareCall ─────────────────────────────────────
+        const hwM = trimmed.match(/^(Wire|SPI)\.(\w+)\s*\(([^)]*)\)\s*$/);
+        if (hwM) {
+            const args = hwM[3] ? hwM[3].split(',').map(a => this._parseExpr(a.trim(), lineNum)) : [];
+            return {
+                nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
+                children: [{
+                    nodeType: 'CallExpression', id: `hw-${lineNum}`,
+                    attributes: { callee: `${hwM[1]}.${hwM[2]}` }, children: args
+                } as BaseNode],
+                metadata: meta
+            } as BaseNode;
         }
 
         // ── MemberExpression genérico: obj.method(args) ───────────────────────
@@ -489,10 +545,14 @@ class RegexPythonParser {
         const genericCallM = trimmed.match(/^(\w+)\.(\w+)\s*\(([^)]*)\)\s*$/);
         if (genericCallM) {
             const args = genericCallM[3] ? genericCallM[3].split(',').map(a => this._parseExpr(a.trim(), lineNum)) : [];
-            return { nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
-                children: [{ nodeType: 'CallExpression', id: `call-${lineNum}`,
-                    attributes: { callee: `${genericCallM[1]}.${genericCallM[2]}` }, children: args } as BaseNode],
-                metadata: meta } as BaseNode;
+            return {
+                nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {},
+                children: [{
+                    nodeType: 'CallExpression', id: `call-${lineNum}`,
+                    attributes: { callee: `${genericCallM[1]}.${genericCallM[2]}` }, children: args
+                } as BaseNode],
+                metadata: meta
+            } as BaseNode;
         }
 
         // ── Generic assignment ───────────────────────────────────────────────
@@ -654,20 +714,24 @@ class RegexPythonParser {
         // ── MemberExpression genérico: obj.prop (sem parênteses) ─────────────
         const memberM = s.match(/^(\w+)\.(\w+)$/);
         if (memberM) {
-            return { nodeType: 'MemberExpression', id: `mem-${lineNum}`,
+            return {
+                nodeType: 'MemberExpression', id: `mem-${lineNum}`,
                 attributes: { object: memberM[1], property: memberM[2] },
                 children: [
                     { nodeType: 'Identifier', id: `obj-${lineNum}`, attributes: { name: memberM[1] }, children: [] },
                     { nodeType: 'Identifier', id: `prop-${lineNum}`, attributes: { name: memberM[2] }, children: [] },
-                ], metadata: meta };
+                ], metadata: meta
+            };
         }
 
         // ── obj.method(args) inline como expressão ───────────────────────────
         const inlineCallM = s.match(/^(\w+)\.(\w+)\s*\(([^)]*)\)$/);
         if (inlineCallM) {
             const args = inlineCallM[3] ? inlineCallM[3].split(',').map(a => this._parseExpr(a.trim(), lineNum)) : [];
-            return { nodeType: 'CallExpression', id: `call-${lineNum}`,
-                attributes: { callee: `${inlineCallM[1]}.${inlineCallM[2]}` }, children: args, metadata: meta };
+            return {
+                nodeType: 'CallExpression', id: `call-${lineNum}`,
+                attributes: { callee: `${inlineCallM[1]}.${inlineCallM[2]}` }, children: args, metadata: meta
+            };
         }
 
         return { nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: s }, children: [], metadata: meta };
@@ -1060,34 +1124,44 @@ class PythonCstToAst {
 
                 // ── LCD methods ───────────────────────────────────────────────
                 if (LCD_METHODS.includes(attr)) {
-                    return { nodeType: 'CallExpression', id: `lcd-${node.id}`,
-                        attributes: { callee: `lcd.${attr}` }, children: args, metadata: meta };
+                    return {
+                        nodeType: 'CallExpression', id: `lcd-${node.id}`,
+                        attributes: { callee: `lcd.${attr}` }, children: args, metadata: meta
+                    };
                 }
 
                 // ── OLED methods ──────────────────────────────────────────────
                 if (OLED_METHODS.includes(attr)) {
-                    return { nodeType: 'CallExpression', id: `oled-${node.id}`,
-                        attributes: { callee: `oled.${attr}` }, children: args, metadata: meta };
+                    return {
+                        nodeType: 'CallExpression', id: `oled-${node.id}`,
+                        attributes: { callee: `oled.${attr}` }, children: args, metadata: meta
+                    };
                 }
 
                 // ── pin.irq → attachInterrupt ─────────────────────────────────
                 if (attr === 'irq') {
-                    return { nodeType: 'CallExpression', id: `irq-${node.id}`,
+                    return {
+                        nodeType: 'CallExpression', id: `irq-${node.id}`,
                         attributes: { callee: 'attachInterrupt' },
-                        children: [this.visitExpr(func.childForFieldName('object'), env), ...args], metadata: meta };
+                        children: [this.visitExpr(func.childForFieldName('object'), env), ...args], metadata: meta
+                    };
                 }
             }
 
             // ── pulseIn: machine.time_pulse_us(...) ───────────────────────────
             if (callee === 'machine.time_pulse_us' || callee === 'time_pulse_us') {
-                return { nodeType: 'CallExpression', id: `pulse-${node.id}`,
-                    attributes: { callee: 'pulseIn' }, children: args, metadata: meta };
+                return {
+                    nodeType: 'CallExpression', id: `pulse-${node.id}`,
+                    attributes: { callee: 'pulseIn' }, children: args, metadata: meta
+                };
             }
 
             // ── shiftOut / shiftIn ────────────────────────────────────────────
             if (callee === 'shiftOut' || callee === 'shiftIn') {
-                return { nodeType: 'CallExpression', id: `shift-${node.id}`,
-                    attributes: { callee }, children: args, metadata: meta };
+                return {
+                    nodeType: 'CallExpression', id: `shift-${node.id}`,
+                    attributes: { callee }, children: args, metadata: meta
+                };
             }
 
             if (callee === 'print') return { nodeType: 'Print', id: `p-${node.id}`, attributes: { newline: true }, children: args, metadata: meta };
@@ -1105,7 +1179,7 @@ class PythonCstToAst {
             if (callee === 'time.ticks_us' || callee === 'utime.ticks_us') return { nodeType: 'CallExpression', id: `us-${node.id}`, attributes: { callee: 'micros' }, children: [], metadata: meta };
             if (callee === 'random.randint' || callee === 'random.randrange' || callee === 'urandom.randint') return { nodeType: 'CallExpression', id: `rnd-${node.id}`, attributes: { callee: 'random' }, children: args, metadata: meta };
             if (callee === 'random.random') return { nodeType: 'CallExpression', id: `rnd-${node.id}`, attributes: { callee: 'random' }, children: [], metadata: meta };
-            if (callee === 'pyb.Timer' || callee === 'machine.PWM') return { nodeType: 'CallExpression', id: `tone-${node.id}`, attributes: { callee: 'tone' }, children: args, metadata: meta };
+            if (callee === 'pyb.Timer' || callee === 'machine.PWM' || callee === 'tone') return { nodeType: 'CallExpression', id: `tone-${node.id}`, attributes: { callee: 'tone' }, children: args, metadata: meta };
             if (callee === 'Serial.begin' || callee === 'UART' || callee === 'machine.UART') return { nodeType: 'CallExpression', id: `sb-${node.id}`, attributes: { callee: 'Serial.begin' }, children: [], metadata: meta };
             if (callee === 'Serial.readString') return { nodeType: 'CallExpression', id: `sr-${node.id}`, attributes: { callee: 'Serial.readString' }, children: [], metadata: meta };
 
