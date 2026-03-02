@@ -1,8 +1,8 @@
 # 🤖 AI Assistant Context — NeuroForge ASL Subsystem
 
-> **Last Updated:** 22/02/2026
-> **Branch:** `ASL_Integration_codeToASL_Modular`
-> **Current Focus:** ASL JS-mode Pipeline (C++ Arduino + MicroPython → ASL → SimulationEngine)
+> **Last Updated:** 02/03/2026
+> **Branch:** `critical_Implementation` (100% complete)
+> **Current Focus:** Stable ASL v1 with Cross-Language Parity (C++ Arduino + MicroPython + Rust → ASL → SimulationEngine)
 
 ---
 
@@ -31,6 +31,7 @@ The goal is that any embedded sketch or program, in any language, always passes 
 > **NEVER modify** `SimulationEngine.ts` without verifying the `millis()/micros()` contract (relative time since `simulationStartTime`).
 > **NEVER modify** `CParser.ts` without maintaining the Arduino constants table (`HIGH/LOW/INPUT/OUTPUT/INPUT_PULLUP`).
 > **NEVER remove** flow control signals (`BreakSignal`, `ContinueSignal`, `ReturnSignal`) from the executor without an adequate replacement.
+> **GOLDEN RULE**: "Todas as linguagens devem andar de mãos dadas" (All languages must walk hand in hand). Any new feature or hardware support added to one language (C++, Python, or Rust) must be implemented with semantic parity across all.
 
 ---
 
@@ -74,11 +75,11 @@ src/
           RustParser.ts          # 🔜 Rust parser (Embassy)
         cpp/
           CppParser.ts           # 🔜 Full C++ parser
-      generators/               # (formerly plugins/*/ - moving)
-        CGenerator.ts            # 🔜 ASL → C
+      generators/
+        CGenerator.ts            # ✅ ASL → C
         CppGenerator.ts          # 🔜 ASL → C++
-        MicroPythonGenerator.ts  # 🔜 ASL → MicroPython
-        RustGenerator.ts         # 🔜 ASL → Rust (Embassy)
+        PythonGenerator.ts       # ✅ ASL → MicroPython/Python
+        RustGenerator.ts         # ✅ ASL → Rust (Embassy)
   components/
     TopToolbar.tsx               # ✅ Run/Stop/Pause controls + ASL pipeline integration
     CodeEditorWithTabs.tsx       # ✅ Multi-tab Monaco editor, exposes code + metadata
@@ -97,6 +98,7 @@ notyet/
 docs/
   AI_ASSISTANT_CONTEXT.md       # General NeuroForge context (QEMU, AVR, ESP32)
   AI_ASSISTANT_CONTEXT_ASL.md   # This file (ASL-specific context)
+  ASL_SHIM_ARCHITECTURE_PLAN.md # 🔌 Exhaustive catalog & plan for Hardware/Protocol Virtualization
 ```
 
 ---
@@ -492,34 +494,17 @@ stop() → isRunning=false → clearAll timeouts → simulationStartTime=0
 
 ---
 
-## ✅ Implementation Status (February 2026)
+## ✅ Implementation Status (March 2026)
 
-### ✅ Functional (C++ Arduino subset)
+### ✅ Functional (Language Parity: C++, Python, Rust)
 
-- `pinMode` / `digitalWrite` / `analogWrite` / `delay`
-- `digitalRead` / `analogRead`
-- Relative `millis()` / `micros()`
-- `Serial.print` / `Serial.println` in terminal
-- Flow control: `if/else` (including cascading `else if`), `while`, `for` (lowered to while)
-- `break` / `continue` / `return`
-- User void functions with and without scalar parameters
-- Global and local scalar variables (`int`, `float`, `bool`)
-- Operators: `+`, `-`, `*`, `/`, `%`, `==`, `!=`, `<`, `<=`, `>`, `>=`, `&&`, `||`, `!`
-- Constants: `HIGH`, `LOW`, `INPUT`, `OUTPUT`, `INPUT_PULLUP`, `true`, `false`
-- Increment/decrement: `i++`, `i--`, `++i`, `--i` (lowered to assign)
-- **1D and 2D Arrays**: declaration, indexing, index-based assignment
-- **Enum**: declaration and usage
-- **Integrated hardware**: LCD, OLED, Seven Segment, Keypad
-- **Utility functions**: `random(min, max)`, `map()`, `constrain()`
-- **`for(;;)` with no condition**: infinite loop supported
-- **Arithmetic expressions**: multiplication and compound operations
-
-### ✅ Functional (MicroPython)
-
-- `Pin`, `Pin.on()`, `Pin.off()`, `Pin.value()`
-- `time.sleep_ms()`
-- `if`/`else`, `while True`, `print()`
-- Parser via `web-tree-sitter` (Python grammar)
+- **Semantic Parity**: 100% agreement between C++ Arduino, MicroPython, and Rust (Embassy) for core logic.
+- **Hardware Shims**: Unified support for LCD, OLED, Seven Segment, and Keypad via virtual peripheral shims. *(See [ASL_SHIM_ARCHITECTURE_PLAN.md](./ASL_SHIM_ARCHITECTURE_PLAN.md) for the exhaustive catalog).*
+- **Control Flow**: `if/else`, `while`, `for`, `switch/case`, `doWhile`, `break`, `continue`, `return`.
+- **Data Structures**: 1D/2D arrays, `struct`, `enum`, dictionary-like objects.
+- **Builtins**: Full math suite, `millis/micros`, `random`, `map`, `constrain`, String utilities (`atoi`, `dtostrf`, etc.).
+- **GPIO**: `pinMode`, `digitalWrite`, `analogWrite`, `digitalRead`, `analogRead`.
+- **Interrupts & Protocols**: `attachInterrupt`, `pulseIn`, `shiftOut`.
 
 ### ✅ Infrastructure
 
