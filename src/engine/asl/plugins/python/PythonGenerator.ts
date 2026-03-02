@@ -1,5 +1,6 @@
-
 import type { ProgramNode, BaseNode, SourceMapEntry } from '@/system/types';
+import { ShimManager } from '../core/ShimManager';
+import { pythonShims } from './shims';
 
 export type PythonFlavor = 'MICROPYTHON' | 'CIRCUITPYTHON';
 
@@ -9,6 +10,12 @@ export class PythonGenerator {
     private flavor: PythonFlavor = 'MICROPYTHON';
     private usedPins: Set<number> = new Set();
     private pwmPins: Set<number> = new Set();
+    private shims: ShimManager;
+
+    constructor() {
+        this.shims = new ShimManager('python');
+        this.shims.registerShims(pythonShims);
+    }
 
     generate(ast: ProgramNode, flavor: PythonFlavor = 'MICROPYTHON'): { code: string, map: SourceMapEntry[] } {
         this.sourceMap = [];
@@ -16,6 +23,7 @@ export class PythonGenerator {
         this.flavor = flavor;
         this.usedPins.clear();
         this.pwmPins.clear();
+        this.shims.resetRuntime();
 
         // First pass to find used pins for CircuitPython setup
         this.scanForPins(ast);
@@ -47,6 +55,12 @@ export class PythonGenerator {
                 }
             });
             this.addLn(output, '', null);
+        }
+
+        // --- INJECT SHIMS ---
+        const shimCode = this.shims.getRequiredShimsCode();
+        if (shimCode) {
+            shimCode.split('\n').forEach(line => this.addLn(output, line, null));
         }
 
         this.addLn(output, '# Main Program', null);
@@ -88,6 +102,21 @@ export class PythonGenerator {
         if (node.nodeType === 'HardwarePwm') {
             this.pwmPins.add(node.attributes.pin);
         }
+
+        // --- Auto-detect Shims during early scan ---
+        if (node.nodeType === 'CallExpression') {
+            const callee = node.attributes.callee || '';
+            if (callee.startsWith('sevseg.')) this.shims.requireShim('sevseg');
+            if (callee.startsWith('EEPROM.')) this.shims.requireShim('EEPROM');
+            if (callee.startsWith('lcd.') || callee.startsWith('lcd_')) this.shims.requireShim('LiquidCrystal_I2C');
+            if (callee.startsWith('keypad.') || callee === 'keypad') this.shims.requireShim('Keypad');
+        }
+        if (node.nodeType === 'VariableDeclaration') {
+            const type = node.attributes.type || '';
+            if (type === 'LiquidCrystal_I2C') this.shims.requireShim('LiquidCrystal_I2C');
+            if (type === 'Keypad') this.shims.requireShim('Keypad');
+        }
+
         if (node.children) node.children.forEach(c => this.scanForPins(c));
     }
 
@@ -101,12 +130,39 @@ export class PythonGenerator {
 
     private printComments(node: BaseNode, out: string[], indent: string) {
         if (node.leadingComments) {
-            node.leadingComments.forEach(c => this.addLn(out, `${indent}${c}`, null));
+            node.leadingComments.forEach(c => {
+                // Convert C-style // or /* */ to #
+                let clean = c.replace(/^\/\//, '').replace(/^\/\* ?/, '').replace(/ ?\*\/$/, '').trim();
+                if (clean) this.addLn(out, `${indent}# ${clean}`, null);
+                else this.addLn(out, `${indent}#`, null);
+            });
         }
     }
 
     private genStmt(n: BaseNode, i: string, out: string[]) {
         this.printComments(n, out, i);
+
+        if (n.nodeType === 'Empty') return;
+
+        if (n.nodeType === 'Block') {
+            n.children.forEach(c => this.genStmt(c, i, out));
+            return;
+        }
+
+        if (n.nodeType === 'BreakStatement') {
+            return this.addLn(out, `${i}break`, n);
+        }
+
+        if (n.nodeType === 'ContinueStatement') {
+            return this.addLn(out, `${i}continue`, n);
+        }
+
+        if (n.nodeType === 'ReturnStatement') {
+            if (n.children.length > 0) {
+                return this.addLn(out, `${i}return ${this.genExpr(n.children[0])}`, n);
+            }
+            return this.addLn(out, `${i}return`, n);
+        }
 
         if (n.nodeType === 'VariableDeclaration') {
             const val = n.children.length > 0 ? this.genExpr(n.children[0]) : '0';
@@ -121,6 +177,26 @@ export class PythonGenerator {
             } else {
                 const boolVal = val === '1' || val === 'HIGH' ? 'True' : val === '0' || val === 'LOW' ? 'False' : `(${val} != 0)`;
                 return this.addLn(out, `${i}pin_${pin}.value = ${boolVal}`, n);
+            }
+        }
+
+        if (n.nodeType === 'AnalogRead') {
+            const pin = this.evalLit(n.children[0]);
+            if (this.flavor === 'MICROPYTHON') {
+                return this.addLn(out, `${i}machine.ADC(machine.Pin(${pin})).read_u16()`, n);
+            } else {
+                return this.addLn(out, `${i}analog_in_${pin}.value`, n);
+            }
+        }
+
+        if (n.nodeType === 'AnalogWrite') {
+            const pin = this.evalLit(n.children[0]);
+            const val = this.genExpr(n.children[1]);
+            if (this.flavor === 'MICROPYTHON') {
+                this.addLn(out, `${i}_pwm_${pin} = machine.PWM(machine.Pin(${pin}))`, n);
+                return this.addLn(out, `${i}_pwm_${pin}.duty_u16(int(${val} * 64))`, n);
+            } else {
+                return this.addLn(out, `${i}pwm_${pin}.duty_cycle = int(${val} * 64)`, n);
             }
         }
 
@@ -150,22 +226,71 @@ export class PythonGenerator {
 
         if (n.nodeType === 'IfStatement') {
             this.addLn(out, `${i}if ${this.genExpr(n.children[0])}:`, n);
+
+            // then block — children[1]
+            const thenNode = n.children[1];
+            const thenChildren = thenNode
+                ? (thenNode.nodeType === 'Block' ? thenNode.children : [thenNode])
+                : [];
+            if (thenChildren.length === 0) {
+                this.addLn(out, `${i}    pass`, null);
+            } else {
+                thenChildren.forEach(c => this.genStmt(c, i + '    ', out));
+            }
+
+            // else / elif — children[2]
+            if (n.children[2]) {
+                const elseNode = n.children[2];
+                if (elseNode.nodeType === 'IfStatement') {
+                    // elif chain: generate into temp buffer, replace first 'if' with 'elif'
+                    const tempOut: string[] = [];
+                    const savedLineNum = this.currentLineNum;
+                    this.genStmt(elseNode, i, tempOut);
+                    this.currentLineNum = savedLineNum;
+                    if (tempOut.length > 0) {
+                        tempOut[0] = tempOut[0].replace(/^(\s*)if /, '$1elif ');
+                        tempOut.forEach(l => { out.push(l); this.currentLineNum++; });
+                    }
+                } else {
+                    // plain else block
+                    this.addLn(out, `${i}else:`, null);
+                    const elseChildren = elseNode.nodeType === 'Block'
+                        ? elseNode.children
+                        : [elseNode];
+                    if (elseChildren.length === 0) {
+                        this.addLn(out, `${i}    pass`, null);
+                    } else {
+                        elseChildren.forEach(c => this.genStmt(c, i + '    ', out));
+                    }
+                }
+            }
+            return;
+        }
+
+        if (n.nodeType === 'DoWhileLoop') {
+            // Python: while True: <body> \n if not <cond>: break
+            this.addLn(out, `${i}while True:`, n);
             n.children.slice(1).forEach(c => this.genStmt(c, i + '    ', out));
+            this.addLn(out, `${i}    if not (${this.genExpr(n.children[0])}):`, null);
+            this.addLn(out, `${i}        break`, null);
             return;
         }
 
         if (n.nodeType === 'WhileLoop') {
             this.addLn(out, `${i}while ${this.genExpr(n.children[0])}:`, n);
-            n.children.slice(1).forEach(c => this.genStmt(c, i + '    ', out));
+            const body = n.children.slice(1);
+            if (body.length === 0) {
+                this.addLn(out, `${i}    pass`, null);
+            } else {
+                body.forEach(c => this.genStmt(c, i + '    ', out));
+            }
             return;
         }
 
         if (n.nodeType === 'ForLoop') {
-            // Basic C-style for loop as while loop in Python
             let childIdx = 0;
             if (n.attributes.hasInit && n.children[childIdx]) {
-                const initNode = n.children[childIdx];
-                this.genStmt(initNode, i, out);
+                this.genStmt(n.children[childIdx], i, out);
                 childIdx++;
             }
             const cond = n.children[childIdx] ? this.genExpr(n.children[childIdx]) : 'True';
@@ -188,7 +313,23 @@ export class PythonGenerator {
         }
 
         if (n.nodeType === 'ExpressionStatement') {
-            return this.addLn(out, `${i}${this.genExpr(n.children[0])}`, n);
+            const child = n.children[0];
+            if (child.nodeType === 'CallExpression') {
+                const callee = child.attributes.callee;
+                if (callee === 'pinMode') {
+                    const pin = this.genExpr(child.children[0]);
+                    const mode = this.genExpr(child.children[1]);
+                    const pyMode = mode === '1' || mode === 'OUTPUT' ? 'machine.Pin.OUT' : 'machine.Pin.IN';
+                    return this.addLn(out, `${i}machine.Pin(${pin}, ${pyMode})`, n);
+                }
+                if (callee === 'Serial.begin') {
+                    return this.addLn(out, `${i}# Serial.begin(${this.genExpr(child.children[0])})`, n);
+                }
+                if (callee.startsWith('sevseg.')) {
+                    this.shims.requireShim('sevseg');
+                }
+            }
+            return this.addLn(out, `${i}${this.genExpr(child)}`, n);
         }
 
         if (n.nodeType === 'SwitchStatement') {
@@ -205,7 +346,6 @@ export class PythonGenerator {
                 const ifStmt = firstCase ? 'if' : 'elif';
                 this.addLn(out, `${i}${ifStmt} ${swDiscVar} == ${caseVal}:`, caseNode);
 
-                // Filter out BreakStatements from the body
                 const body = caseNode.children.slice(1).filter(c => c.nodeType !== 'BreakStatement');
                 if (body.length === 0) {
                     this.addLn(out, `${i}    pass`, caseNode);
@@ -215,7 +355,6 @@ export class PythonGenerator {
                 firstCase = false;
             }
 
-            // Default case
             const defaultCase = n.children.find(c => c.attributes.isDefault);
             if (defaultCase) {
                 this.addLn(out, `${i}else:`, defaultCase);
@@ -240,7 +379,18 @@ export class PythonGenerator {
         }
         if (n.nodeType === 'Identifier') return n.attributes.name;
         if (n.nodeType === 'BinaryExpression') return `${this.genExpr(n.children[0])} ${n.attributes.operator} ${this.genExpr(n.children[1])}`;
-
+        if (n.nodeType === 'UnaryExpression') {
+            return n.attributes.prefix
+                ? `${n.attributes.operator}${this.genExpr(n.children[0])}`
+                : `${this.genExpr(n.children[0])}${n.attributes.operator}`;
+        }
+        if (n.nodeType === 'ConditionalExpression') {
+            return `(${this.genExpr(n.children[1])} if ${this.genExpr(n.children[0])} else ${this.genExpr(n.children[2])})`;
+        }
+        if (n.nodeType === 'MemberExpression') {
+            const op = n.attributes.operator || '.';
+            return `${this.genExpr(n.children[0])}${op}${n.attributes.property}`;
+        }
         if (n.nodeType === 'CallExpression') {
             const args = n.children.map(c => this.genExpr(c)).join(', ');
             return `${n.attributes.callee}(${args})`;
@@ -252,11 +402,15 @@ export class PythonGenerator {
         if (n.nodeType === 'SubscriptExpression') {
             return `${this.genExpr(n.children[0])}[${this.genExpr(n.children[1])}]`;
         }
-
         if (n.nodeType === 'GpioRead') {
             const pin = this.evalLit(n.children[0]);
             if (this.flavor === 'MICROPYTHON') return `machine.Pin(${pin}).value()`;
             return `(1 if pin_${pin}.value else 0)`;
+        }
+        if (n.nodeType === 'AnalogRead') {
+            const pin = this.evalLit(n.children[0]);
+            if (this.flavor === 'MICROPYTHON') return `machine.ADC(machine.Pin(${pin})).read_u16()`;
+            return `analog_in_${pin}.value`;
         }
         return '0';
     }

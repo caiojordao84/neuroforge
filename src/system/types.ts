@@ -1,7 +1,7 @@
 
 export type NodeType =
     | 'Program' | 'Function' | 'Block'
-    | 'VariableDeclaration' | 'Assignment' | 'IfStatement' | 'WhileLoop' | 'ForLoop'
+    | 'VariableDeclaration' | 'Assignment' | 'IfStatement' | 'WhileLoop' | 'ForLoop' | 'DoWhileLoop' | 'Loop'
     | 'GpioConfig' | 'GpioSet' | 'GpioRead' | 'AnalogRead' | 'AnalogWrite'
     | 'DelayMs' | 'Print' | 'ReturnStatement' | 'BreakStatement' | 'ContinueStatement'
     | 'LcdPrint' | 'LcdCursor' | 'LcdClear'

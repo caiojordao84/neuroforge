@@ -23,7 +23,8 @@ export const ASLViewer: React.FC = () => {
         if (activeFile.language !== 'cpp' &&
             activeFile.language !== 'micropython' &&
             activeFile.language !== 'circuitpython' &&
-            activeFile.language !== 'python') {
+            activeFile.language !== 'python' &&
+            activeFile.language !== 'rust') {
             setAslJson(`// ASL generation not supported for language: ${activeFile.language}`);
             setError(null);
             return;

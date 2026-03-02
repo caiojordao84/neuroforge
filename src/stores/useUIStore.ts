@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { WindowState } from '@/types';
 
 // Export WindowId type - includes properties window for FEATURE 2.4
-export type WindowId = 'codeEditor' | 'componentsLibrary' | 'serialMonitor' | 'terminal' | 'properties' | 'libraries' | 'aslViewer';
+export type WindowId = 'codeEditor' | 'componentsLibrary' | 'serialMonitor' | 'terminal' | 'properties' | 'libraries' | 'aslViewer' | 'serialTerminal';
 
 interface UIStore {
   windows: Record<WindowId, WindowState>;
@@ -19,6 +19,9 @@ interface UIStore {
   bringToFront: (id: WindowId) => void;
   updateWindowPosition: (id: WindowId, position: { x: number; y: number }) => void;
   updateWindowSize: (id: WindowId, size: { width: number; height: number }) => void;
+  dockWindow: (id: WindowId) => void;
+  undockWindow: (id: WindowId) => void;
+  updateDockWidth: (id: WindowId, width: number) => void;
   resetWindows: () => void;
 }
 
@@ -31,6 +34,8 @@ const defaultWindows: Record<WindowId, WindowState> = {
     size: { width: 600, height: 500 },
     zIndex: 10,
     title: 'Code Editor',
+    isDocked: true,
+    dockWidth: 20,
   },
   componentsLibrary: {
     id: 'componentsLibrary',
@@ -40,6 +45,8 @@ const defaultWindows: Record<WindowId, WindowState> = {
     size: { width: 280, height: 400 },
     zIndex: 10,
     title: 'Components Library',
+    isDocked: true,
+    dockWidth: 20,
   },
   serialMonitor: {
     id: 'serialMonitor',
@@ -49,6 +56,8 @@ const defaultWindows: Record<WindowId, WindowState> = {
     size: { width: 500, height: 250 },
     zIndex: 10,
     title: 'Serial Monitor',
+    isDocked: true,
+    dockWidth: 20,
   },
   terminal: {
     id: 'terminal',
@@ -58,6 +67,8 @@ const defaultWindows: Record<WindowId, WindowState> = {
     size: { width: 450, height: 250 },
     zIndex: 10,
     title: 'Terminal',
+    isDocked: true,
+    dockWidth: 20,
   },
   properties: {
     id: 'properties',
@@ -67,6 +78,8 @@ const defaultWindows: Record<WindowId, WindowState> = {
     size: { width: 300, height: 400 },
     zIndex: 10,
     title: 'Properties',
+    isDocked: true,
+    dockWidth: 20,
   },
   libraries: {
     id: 'libraries',
@@ -76,6 +89,8 @@ const defaultWindows: Record<WindowId, WindowState> = {
     size: { width: 600, height: 500 },
     zIndex: 10,
     title: 'Libraries Management',
+    isDocked: true,
+    dockWidth: 20,
   },
   aslViewer: {
     id: 'aslViewer',
@@ -85,6 +100,19 @@ const defaultWindows: Record<WindowId, WindowState> = {
     size: { width: 540, height: 480 },
     zIndex: 10,
     title: 'ASL Viewer',
+    isDocked: true,
+    dockWidth: 20,
+  },
+  serialTerminal: {
+    id: 'serialTerminal',
+    isOpen: false,
+    isMinimized: false,
+    position: { x: 80, y: 580 },
+    size: { width: 500, height: 400 },
+    zIndex: 10,
+    title: 'Serial & Terminal',
+    isDocked: true,
+    dockWidth: 20,
   },
 };
 
@@ -107,13 +135,30 @@ export const useUIStore = create<UIStore>()(
       openWindow: (id) => {
         set((state) => {
           const newZIndex = state.highestZIndex + 1;
+          const targetWindow = state.windows[id];
+          const isDocked = targetWindow.isDocked !== false; // Default to docked if undefined
+
+          // If opening a docked window and there's another docked window open, close it
+          // But keep floating windows open
+          const updatedWindows = { ...state.windows };
+          
+          if (isDocked) {
+            Object.keys(updatedWindows).forEach((key) => {
+              const win = updatedWindows[key as WindowId];
+              if (win.isOpen && win.isDocked !== false && key !== id) {
+                updatedWindows[key as WindowId] = { ...win, isOpen: false, isMinimized: false };
+              }
+            });
+          }
+
           return {
             windows: {
-              ...state.windows,
+              ...updatedWindows,
               [id]: {
                 ...state.windows[id],
                 isOpen: true,
                 isMinimized: false,
+                isDocked: isDocked,
                 zIndex: newZIndex,
               },
             },
@@ -214,6 +259,43 @@ export const useUIStore = create<UIStore>()(
             [id]: {
               ...state.windows[id],
               size,
+            },
+          },
+        }));
+      },
+
+      dockWindow: (id) => {
+        set((state) => ({
+          windows: {
+            ...state.windows,
+            [id]: {
+              ...state.windows[id],
+              isDocked: true,
+              position: { x: 60, y: 56 },
+            },
+          },
+        }));
+      },
+
+      undockWindow: (id) => {
+        set((state) => ({
+          windows: {
+            ...state.windows,
+            [id]: {
+              ...state.windows[id],
+              isDocked: false,
+            },
+          },
+        }));
+      },
+
+      updateDockWidth: (id, width) => {
+        set((state) => ({
+          windows: {
+            ...state.windows,
+            [id]: {
+              ...state.windows[id],
+              dockWidth: width,
             },
           },
         }));

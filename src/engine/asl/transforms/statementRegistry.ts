@@ -4,6 +4,7 @@ import type { TransformContext } from './context';
 import { transformExpr } from './exprTransform';
 import { transformCallToStmt, tryTransformRead } from './callTransform';
 import { buildEmptyArray, deepCopyValue, resolveSize } from '../helpers/arrayUtils';
+import { extractPostfix, resetPostfixTempCounter } from './postfixUtils';
 
 const HARDWARE_CALLEE_MAP: Record<string, string> = {
   'LcdPrint': 'lcd.print',
@@ -23,8 +24,10 @@ export type StatementHandler = (node: BaseNode, ctx: TransformContext) => ASLSta
 export const statementRegistry: Record<string, StatementHandler> = {
   IfStatement: handleIfStatement,
   WhileLoop: handleWhileLoop,
+  DoWhileLoop: handleDoWhileLoop,
   ForLoop: handleForLoop,
   SwitchStatement: handleSwitchStatement,
+  StructDeclaration: handleStructDeclaration,
   ReturnStatement: handleReturnStatement,
   BreakStatement: handleBreakStatement,
   ContinueStatement: handleContinueStatement,
@@ -39,6 +42,16 @@ export const statementRegistry: Record<string, StatementHandler> = {
     return acc;
   }, {} as Record<string, StatementHandler>)
 };
+
+/**
+ * StructDeclaration — no-op handler.
+ * Struct registration is handled upstream in codeToASL.ts (ASLProgram.structs[]).
+ * This handler prevents spurious assign() statements when StructDeclaration
+ * nodes appear inside function/loop blocks (e.g. from RustParser or CParser).
+ */
+function handleStructDeclaration(_node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [];
+}
 
 function handleSwitchStatement(node: BaseNode, ctx: TransformContext): ASLStatement[] {
   // children[0] = discriminant expr
@@ -108,6 +121,17 @@ function handleWhileLoop(node: BaseNode, ctx: TransformContext): ASLStatement[] 
   } as ASLStatement];
 }
 
+function handleDoWhileLoop(node: BaseNode, ctx: TransformContext): ASLStatement[] {
+  const bodyNodes = node.children.slice(1);
+  const body = ctx.transformBlock ? ctx.transformBlock(bodyNodes, ctx) : [];
+
+  return [{
+    kind: 'doWhile',
+    condition: transformExpr(node.children[0]),
+    body,
+  } as ASLStatement];
+}
+
 function handleForLoop(node: BaseNode, ctx: TransformContext): ASLStatement[] {
   const result: ASLStatement[] = [];
 
@@ -123,26 +147,54 @@ function handleForLoop(node: BaseNode, ctx: TransformContext): ASLStatement[] {
   if (node.attributes.hasUpdate) idx++;
 
   const bodyNodes = node.children.slice(idx);
+
+  // Desugar condition
+  const condSideEffects: BaseNode[] = [];
+  resetPostfixTempCounter();
+  const desugaredCond = cond ? extractPostfix(cond, condSideEffects) : null;
+
+  // We need to transform the body, but also potentially inject condition side-effects
+  // IF those side effects should run every iteration. In C, for(init; cond; update),
+  // the cond is evaluated every iteration. If cond has side effects, they happen every time.
+  // The most reliable way is to prepend condSideEffects to the body.
   const bodyStmts = ctx.transformBlock ? ctx.transformBlock(bodyNodes, ctx) : [];
 
-  // Build update statements separately so the executor can run them even on continue
+  if (condSideEffects.length > 0) {
+    const condSideStmts: ASLStatement[] = [];
+    condSideEffects.forEach(se => {
+      condSideStmts.push(...handleAssignment(se));
+    });
+    bodyStmts.unshift(...condSideStmts);
+  }
+
+  // Build update statements separately
   const updateStmts: ASLStatement[] = [];
   if (update && ctx.transformBlock) {
+    const updateSideEffects: BaseNode[] = [];
+    resetPostfixTempCounter();
+    const desugaredUpdate = extractPostfix(update, updateSideEffects);
+
     updateStmts.push(...ctx.transformBlock([
-      update.nodeType === 'ExpressionStatement'
-        ? update
+      desugaredUpdate.nodeType === 'ExpressionStatement'
+        ? desugaredUpdate
         : ({
           nodeType: 'ExpressionStatement',
           id: 'u',
           attributes: {},
-          children: [update],
+          children: [desugaredUpdate],
         } as BaseNode),
     ], ctx));
+
+    if (updateSideEffects.length > 0) {
+      updateSideEffects.forEach(se => {
+        updateStmts.push(...handleAssignment(se));
+      });
+    }
   }
 
   result.push({
     kind: 'for',
-    condition: cond ? transformExpr(cond) : { kind: 'literal', value: true },
+    condition: desugaredCond ? transformExpr(desugaredCond) : { kind: 'literal', value: true },
     body: bodyStmts,
     update: updateStmts,
   } as ASLStatement);
@@ -151,10 +203,23 @@ function handleForLoop(node: BaseNode, ctx: TransformContext): ASLStatement[] {
 }
 
 function handleReturnStatement(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
-  return [{
+  const expr = node.children[0];
+  if (!expr) return [{ kind: 'return' } as ASLStatement];
+
+  const sideEffects: BaseNode[] = [];
+  const desugaredExpr = extractPostfix(expr, sideEffects);
+  const stmts: ASLStatement[] = [];
+
+  sideEffects.forEach(se => {
+    stmts.push(...handleAssignment(se));
+  });
+
+  stmts.push({
     kind: 'return',
-    value: node.children[0] ? transformExpr(node.children[0]) : undefined,
-  } as ASLStatement];
+    value: transformExpr(desugaredExpr),
+  } as ASLStatement);
+
+  return stmts;
 }
 
 function handleBreakStatement(_node: BaseNode, _ctx: TransformContext): ASLStatement[] {
@@ -253,7 +318,6 @@ function handleVariableDeclaration(node: BaseNode, _ctx: TransformContext): ASLS
             if (j < structDef.fields.length) {
               const field = structDef.fields[j];
               const expr = transformExpr(c);
-              // Access arr[i].fieldName
               stmts.push({
                 kind: 'setMember',
                 target: { kind: 'index', target: { kind: 'var', name }, index: { kind: 'literal', value: i } },
@@ -328,7 +392,19 @@ function handleVariableDeclaration(node: BaseNode, _ctx: TransformContext): ASLS
   }
 
   if (valNode) {
-    return [{ kind: 'assign', target: name, value: transformExpr(valNode) }];
+    const sideEffects: BaseNode[] = [];
+    const desugaredVal = extractPostfix(valNode, sideEffects);
+    const resultStmts: ASLStatement[] = [];
+
+    // Reset counter for each top-level statement to keep names predictable or at least isolated
+    resetPostfixTempCounter();
+
+    sideEffects.forEach(se => {
+      resultStmts.push(...handleAssignment(se));
+    });
+
+    resultStmts.push({ kind: 'assign', target: name, value: transformExpr(desugaredVal) });
+    return resultStmts;
   }
 
   return [];
@@ -368,16 +444,34 @@ function handleExpressionStatement(node: BaseNode, _ctx: TransformContext): ASLS
   if (expr.nodeType === 'UnaryExpression' && ['++', '--'].includes(expr.attributes.operator)) {
     const child = expr.children[0];
     if (child.nodeType === 'Identifier') {
-      return [{
-        kind: 'assign',
-        target: child.attributes.name,
-        value: {
-          kind: 'binary',
-          op: expr.attributes.operator === '++' ? '+' : '-',
-          left: { kind: 'var', name: child.attributes.name },
-          right: { kind: 'literal', value: 1 },
-        },
-      } as ASLStatement];
+      const varName = child.attributes.name;
+      const isPostfix = expr.attributes.prefix === false;
+
+      if (isPostfix) {
+        // i++ -> i = i + 1
+        return [{
+          kind: 'assign',
+          target: varName,
+          value: {
+            kind: 'binary',
+            op: expr.attributes.operator === '++' ? '+' : '-',
+            left: { kind: 'var', name: varName },
+            right: { kind: 'literal', value: 1 },
+          },
+        } as ASLStatement];
+      } else {
+        // ++i as statement is the same as i++
+        return [{
+          kind: 'assign',
+          target: varName,
+          value: {
+            kind: 'binary',
+            op: expr.attributes.operator === '++' ? '+' : '-',
+            left: { kind: 'var', name: varName },
+            right: { kind: 'literal', value: 1 },
+          },
+        } as ASLStatement];
+      }
     }
   }
 
@@ -398,6 +492,25 @@ function handleExpressionStatement(node: BaseNode, _ctx: TransformContext): ASLS
     return handleHardware(expr);
   }
 
+  // Fallback for general expressions that might have postfix side-effects
+  const sideEffects: BaseNode[] = [];
+  resetPostfixTempCounter();
+  const desugared = extractPostfix(expr, sideEffects);
+  const resultStmts: ASLStatement[] = [];
+
+  sideEffects.forEach(se => {
+    resultStmts.push(...handleAssignment(se));
+  });
+
+  // If there's something left of the expression and it wasn't a call handled above
+  // we might need to emit it, but usually handled by specific cases.
+  // For now, if we had side effects, we return them.
+  if (resultStmts.length > 0) {
+    // If the expression was JUST i++, we already handled it in the UnaryExpression block above.
+    // If it was something like `i++ + j++`, then both are in sideEffects.
+    return resultStmts;
+  }
+
   return [];
 }
 
@@ -409,13 +522,27 @@ function handleAssignment(expr: BaseNode): ASLStatement[] {
   if (left.nodeType === 'Identifier') {
     const target = left.attributes.name;
     if (op === '=') {
-      const readStmt = tryTransformRead(target, right);
-      if (readStmt) return [readStmt];
-      return [{
+      const sideEffects: BaseNode[] = [];
+      resetPostfixTempCounter();
+      const desugaredRight = extractPostfix(right, sideEffects);
+      const resStmts: ASLStatement[] = [];
+
+      sideEffects.forEach(se => {
+        resStmts.push(...handleAssignment(se));
+      });
+
+      const readStmt = tryTransformRead(target, desugaredRight);
+      if (readStmt) {
+        resStmts.push(readStmt);
+        return resStmts;
+      }
+
+      resStmts.push({
         kind: 'assign',
         target,
-        value: transformExpr(right),
-      } as ASLStatement];
+        value: transformExpr(desugaredRight),
+      } as ASLStatement);
+      return resStmts;
     } else {
       const binOp = op.charAt(0) as '+' | '-' | '*' | '/';
       return [{

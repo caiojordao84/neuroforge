@@ -379,71 +379,7 @@ const CanvasInner: React.FC = () => {
           maskColor="rgba(10, 14, 20, 0.8)"
         />
 
-        <Panel position="top-center" className="m-4">
-          <div
-            className={cn(
-              'flex items-center gap-4 px-4 py-2 rounded-lg',
-              'bg-[#151b24] border border-[rgba(0,217,255,0.3)]',
-              'shadow-lg shadow-black/30'
-            )}
-          >
-            <div className="flex items-center gap-2">
-              <FastForward className="w-4 h-4 text-[#9ca3af]" />
-              <Select value={speed.toString()} onValueChange={(v) => handleSpeedChange(parseInt(v, 10))}>
-                <SelectTrigger className="w-[70px] h-8 bg-[#0a0e14] border-[rgba(0,217,255,0.3)] text-[#e6e6e6] text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-[#151b24] border-[rgba(0,217,255,0.3)]">
-                  {[1, 2, 5, 10].map((s) => (
-                    <SelectItem
-                      key={s}
-                      value={s.toString()}
-                      className="text-[#e6e6e6] hover:bg-[rgba(0,217,255,0.1)] focus:bg-[rgba(0,217,255,0.1)] text-xs"
-                    >
-                      {s}x
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
-            <div className="w-px h-6 bg-[rgba(0,217,255,0.2)]" />
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleReset}
-                className="h-8 px-3 bg-transparent border-[rgba(0,217,255,0.3)] text-[#9ca3af] hover:text-[#00d9ff] hover:bg-[rgba(0,217,255,0.1)]"
-              >
-                <RotateCcw className="w-4 h-4 mr-1" />
-                Reset
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleRun}
-                className={cn(
-                  'h-8 px-4',
-                  status === 'running'
-                    ? 'bg-red-500 hover:bg-red-600 text-white'
-                    : 'bg-[#00d9ff] hover:bg-[#00a8cc] text-[#0a0e14]'
-                )}
-              >
-                {status === 'running' ? (
-                  <>
-                    <Square className="w-4 h-4 mr-1" fill="currentColor" />
-                    Stop
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4 h-4 mr-1" fill="currentColor" />
-                    Run
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </Panel>
 
         <Panel position="bottom-left" className="m-4 ml-16">
           <div

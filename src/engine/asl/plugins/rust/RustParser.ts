@@ -64,6 +64,11 @@ class RustCstToAst {
             case 'while_expression': return this.visitWhile(node);
             case 'for_expression': return this.visitFor(node);
             case 'match_expression': return this.visitMatch(node);
+            case 'struct_item': return this.visitStruct(node);
+            case 'enum_item': return this.visitEnum(node);
+            case 'break_expression': return this.visitBreak(node);
+            case 'continue_expression': return this.visitContinue(node);
+            case 'return_expression': return this.visitReturn(node);
             case 'call_expression':
             case 'binary_expression':
             case 'assignment_expression':
@@ -205,23 +210,36 @@ class RustCstToAst {
 
         let initVal: any = 0;
         let maxVal: any = 10;
+        let isInclusive = false;
 
         if (iterator?.type === 'range_expression') {
+            const rangeOp = iterator.child(1)?.text || '..';
+            isInclusive = rangeOp === '..=';
             const left = iterator.child(0);
             const right = iterator.child(2);
-            if (left) initVal = parseInt(left.text) || 0;
-            if (right) maxVal = parseInt(right.text) || 0;
+            if (left) initVal = isNaN(parseInt(left.text)) ? left.text : parseInt(left.text);
+            if (right) maxVal = isNaN(parseInt(right.text)) ? right.text : parseInt(right.text);
         }
+
+        const condOp = isInclusive ? '<=' : '<';
+
+        const initLiteral: BaseNode = typeof initVal === 'number'
+            ? { nodeType: 'Literal', id: 'l1', attributes: { value: initVal }, children: [] }
+            : { nodeType: 'Identifier', id: 'l1', attributes: { name: initVal }, children: [] };
+
+        const maxLiteral: BaseNode = typeof maxVal === 'number'
+            ? { nodeType: 'Literal', id: 'l2', attributes: { value: maxVal }, children: [] }
+            : { nodeType: 'Identifier', id: 'l2', attributes: { name: maxVal }, children: [] };
 
         const init: BaseNode = {
             nodeType: 'VariableDeclaration', id: 'init', attributes: { name: pattern, type: 'int' },
-            children: [{ nodeType: 'Literal', id: 'l1', attributes: { value: initVal }, children: [] }]
+            children: [initLiteral]
         };
         const condition: BaseNode = {
-            nodeType: 'BinaryExpression', id: 'cond', attributes: { operator: '<' },
+            nodeType: 'BinaryExpression', id: 'cond', attributes: { operator: condOp },
             children: [
                 { nodeType: 'Identifier', id: 'id', attributes: { name: pattern }, children: [] },
-                { nodeType: 'Literal', id: 'l2', attributes: { value: maxVal }, children: [] }
+                maxLiteral
             ]
         };
         const update: BaseNode = {
@@ -299,13 +317,112 @@ class RustCstToAst {
         };
     }
 
+    visitStruct(node: any): BaseNode {
+        const name = node.childForFieldName('name')?.text || 'UnknownStruct';
+        const fields: BaseNode[] = [];
+
+        node.children.forEach((c: any) => {
+            if (c.type === 'field_declaration') {
+                const fieldName = c.childForFieldName('name')?.text || 'field';
+                const fieldType = c.childForFieldName('type')?.text || 'int';
+                fields.push({
+                    nodeType: 'VariableDeclaration',
+                    id: `field-${c.id}`,
+                    attributes: { name: fieldName, type: fieldType },
+                    children: [],
+                    metadata: { line: c.startPosition.row + 1 }
+                });
+            }
+        });
+
+        return {
+            nodeType: 'StructDeclaration',
+            id: `struct-${node.id}`,
+            attributes: { name },
+            children: fields,
+            metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
+    visitEnum(node: any): BaseNode {
+        const name = node.childForFieldName('name')?.text || 'UnknownEnum';
+        const variants: BaseNode[] = [];
+
+        const bodyNode = node.childForFieldName('body');
+        if (bodyNode) {
+            bodyNode.children.forEach((c: any, idx: number) => {
+                if (c.type === 'enum_variant') {
+                    const variantName = c.childForFieldName('name')?.text || c.child(0)?.text || `variant${idx}`;
+                    const discNode = c.childForFieldName('value');
+                    const discVal = discNode ? this.visitExpr(discNode) : {
+                        nodeType: 'Literal', id: `ev-${c.id}`, attributes: { value: idx }, children: []
+                    };
+                    variants.push({
+                        nodeType: 'VariableDeclaration',
+                        id: `variant-${c.id}`,
+                        attributes: { name: variantName, type: 'enum_variant' },
+                        children: [discVal as BaseNode],
+                        metadata: { line: c.startPosition.row + 1 }
+                    });
+                }
+            });
+        }
+
+        return {
+            nodeType: 'EnumDeclaration',
+            id: `enum-${node.id}`,
+            attributes: { name },
+            children: variants,
+            metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
+    visitBreak(node: any): BaseNode {
+        return {
+            nodeType: 'BreakStatement',
+            id: `brk-${node.id}`,
+            attributes: {},
+            children: [],
+            metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
+    visitContinue(node: any): BaseNode {
+        return {
+            nodeType: 'ContinueStatement',
+            id: `cont-${node.id}`,
+            attributes: {},
+            children: [],
+            metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
+    visitReturn(node: any): BaseNode {
+        const valueNode = node.childForFieldName('value');
+        const val = valueNode ? this.visitExpr(valueNode) : null;
+        return {
+            nodeType: 'ReturnStatement',
+            id: `ret-${node.id}`,
+            attributes: {},
+            children: val ? [val] : [],
+            metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
     visitExpr(node: any): BaseNode {
         const meta = { line: node.startPosition.row + 1 };
 
         if (node.type === 'integer_literal') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: parseInt(node.text) }, children: [], metadata: meta };
+        if (node.type === 'float_literal') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: parseFloat(node.text) }, children: [], metadata: meta };
         if (node.type === 'string_literal') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: node.text.replace(/"/g, ''), isString: true }, children: [], metadata: meta };
         if (node.type === 'boolean_literal') return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: node.text === 'true' ? 1 : 0 }, children: [], metadata: meta };
         if (node.type === 'identifier') return { nodeType: 'Identifier', id: `i-${node.id}`, attributes: { name: node.text }, children: [], metadata: meta };
+
+        if (node.type === 'index_expression') {
+            const target = this.visitExpr(node.child(0)!);
+            const index  = this.visitExpr(node.child(2)!);
+            return { nodeType: 'SubscriptExpression', id: `sub-${node.id}`, attributes: {}, children: [target, index], metadata: meta };
+        }
 
         if (node.type === 'binary_expression') {
             const left = this.visitExpr(node.child(0)!);
@@ -323,6 +440,158 @@ class RustCstToAst {
         if (node.type === 'call_expression') return this.visitCall(node);
         if (node.type === 'macro_invocation') return this.visitMacro(node);
 
+        if (node.type === 'unary_expression') {
+            const op = node.child(0)!.text;
+            const arg = this.visitExpr(node.child(1)!);
+            return {
+                nodeType: 'UnaryExpression', id: `un-${node.id}`,
+                attributes: { operator: op, prefix: true },
+                children: [arg], metadata: meta
+            };
+        }
+
+        if (node.type === 'reference_expression') {
+            const hasMut = node.children.some((c: any) => c.type === 'mutable_specifier');
+            const op = hasMut ? '&mut ' : '&';
+            const inner = this.visitExpr(node.lastChild!);
+            return {
+                nodeType: 'UnaryExpression', id: `ref-${node.id}`,
+                attributes: { operator: op, prefix: true },
+                children: [inner], metadata: meta
+            };
+        }
+
+        if (node.type === 'field_expression') {
+            const obj = this.visitExpr(node.childForFieldName('value')!);
+            const field = node.childForFieldName('field')!.text;
+            return {
+                nodeType: 'MemberExpression', id: `mem-${node.id}`,
+                attributes: { property: field, operator: '.' },
+                children: [obj], metadata: meta
+            };
+        }
+
+        if (node.type === 'method_call_expression') {
+            const receiver = this.visitExpr(node.childForFieldName('receiver')!);
+            const method = node.childForFieldName('name')!.text;
+            const argsNode = node.childForFieldName('arguments');
+            const args = argsNode
+                ? argsNode.children
+                    .filter((c: any) => c.type !== '(' && c.type !== ')' && c.type !== ',')
+                    .map((c: any) => this.visitExpr(c))
+                : [];
+
+            if (method === 'await') return receiver;
+
+            if (method === 'set_high' || method === 'set_low') {
+                const val: BaseNode = { nodeType: 'Literal', id: `v-${node.id}`, attributes: { value: method === 'set_high' ? 1 : 0 }, children: [] };
+                return { nodeType: 'GpioSet', id: `gs-${node.id}`, attributes: {}, children: [receiver, val], metadata: meta };
+            }
+            if (method === 'is_high' || method === 'is_low') {
+                return { nodeType: 'GpioRead', id: `gr-${node.id}`, attributes: { invert: method === 'is_low' }, children: [receiver], metadata: meta };
+            }
+            if (method === 'set_duty' || method === 'set_duty_cycle') {
+                const pin = args[0] ?? receiver;
+                const val = args[1] ?? args[0] ?? { nodeType: 'Literal', id: 'lv', attributes: { value: 0 }, children: [] };
+                return { nodeType: 'AnalogWrite', id: `aw-${node.id}`, attributes: {}, children: [pin, val], metadata: meta };
+            }
+
+            // ── NEW: .elapsed().as_millis() / .as_micros() ───────────────────────────
+            if (method === 'as_millis' || method === 'as_millis_u32') {
+                return { nodeType: 'CallExpression', id: `ms-${node.id}`, attributes: { callee: 'millis' }, children: [], metadata: meta };
+            }
+            if (method === 'as_micros' || method === 'as_micros_u32') {
+                return { nodeType: 'CallExpression', id: `us-${node.id}`, attributes: { callee: 'micros' }, children: [], metadata: meta };
+            }
+
+            // ── NEW: pinMode Rust — gpio.into_push_pull_output() / into_floating_input()
+            if (method === 'into_push_pull_output' || method === 'into_open_drain_output') {
+                const modeVal: BaseNode = { nodeType: 'Literal', id: `m-${node.id}`, attributes: { value: 1 }, children: [] };
+                return { nodeType: 'CallExpression', id: `pm-${node.id}`, attributes: { callee: 'pinMode' }, children: [receiver, modeVal], metadata: meta };
+            }
+            if (method === 'into_floating_input' || method === 'into_pull_down_input' || method === 'into_pull_up_input') {
+                const modeVal: BaseNode = { nodeType: 'Literal', id: `m-${node.id}`, attributes: { value: 0 }, children: [] };
+                return { nodeType: 'CallExpression', id: `pm-${node.id}`, attributes: { callee: 'pinMode' }, children: [receiver, modeVal], metadata: meta };
+            }
+
+            // ── NEW: random Rust — rng.gen_range(a..b) / rng.gen()
+            if (method === 'gen_range') {
+                // args contém o range — extrair limites se possível
+                return { nodeType: 'CallExpression', id: `rng-${node.id}`, attributes: { callee: 'random' }, children: args, metadata: meta };
+            }
+            if (method === 'gen') {
+                return { nodeType: 'CallExpression', id: `rng-${node.id}`, attributes: { callee: 'random' }, children: [], metadata: meta };
+            }
+
+            return {
+                nodeType: 'CallExpression', id: `mcall-${node.id}`,
+                attributes: { callee: method },
+                children: [receiver, ...args], metadata: meta
+            };
+        }
+
+        if (node.type === 'type_cast_expression') {
+            const inner = this.visitExpr(node.child(0)!);
+            const targetType = node.child(2)?.text || 'int';
+            return {
+                nodeType: 'CastExpression', id: `cast-${node.id}`,
+                attributes: { targetType },
+                children: [inner], metadata: meta
+            };
+        }
+
+        if (node.type === 'array_expression') {
+            const isRepeat = node.children.some((c: any) => c.type === ';');
+            if (isRepeat) {
+                const valNode = node.child(0)!;
+                const countNode = node.children.find((c: any, i: number) => i > 0 && c.type !== ';' && c.type !== '[' && c.type !== ']');
+                const valExpr = this.visitExpr(valNode);
+                const countExpr = countNode ? this.visitExpr(countNode) : { nodeType: 'Literal', id: 'lc', attributes: { value: 0 }, children: [] };
+                return {
+                    nodeType: 'ArrayInitializer', id: `arr-${node.id}`,
+                    attributes: { repeat: true, dimensions: 1 },
+                    children: [valExpr, countExpr as BaseNode], metadata: meta
+                };
+            }
+            // Normal array — check if any element is itself an array (2D)
+            const elements = node.children
+                .filter((c: any) => c.type !== '[' && c.type !== ']' && c.type !== ',')
+                .map((c: any) => this.visitExpr(c));
+            const is2D = elements.some(e => e.nodeType === 'ArrayInitializer');
+            return {
+                nodeType: 'ArrayInitializer', id: `arr-${node.id}`,
+                attributes: { repeat: false, dimensions: is2D ? 2 : 1 },
+                children: elements, metadata: meta
+            };
+        }
+
+        // ── NEW: struct_expression — Foo { x: 1, y: 2 } ─────────────────────────────
+        if (node.type === 'struct_expression') {
+            const structName = node.childForFieldName('name')?.text || '';
+            const fields: BaseNode[] = [];
+            node.children.forEach((c: any) => {
+                if (c.type === 'field_initializer') {
+                    const fieldName = c.childForFieldName('field')?.text || c.child(0)?.text || 'field';
+                    const fieldVal = c.childForFieldName('value') ?? c.lastChild;
+                    const valExpr = fieldVal ? this.visitExpr(fieldVal) : { nodeType: 'Literal', id: 'fv', attributes: { value: 0 }, children: [] };
+                    fields.push({
+                        nodeType: 'VariableDeclaration',
+                        id: `fi-${c.id}`,
+                        attributes: { name: fieldName },
+                        children: [valExpr as BaseNode],
+                        metadata: { line: c.startPosition.row + 1 }
+                    });
+                }
+            });
+            return {
+                nodeType: 'DesignatedInitializer',
+                id: `di-${node.id}`,
+                attributes: { structName },
+                children: fields,
+                metadata: meta
+            };
+        }
+
         return { nodeType: 'Empty', id: 'empty', attributes: {}, children: [] };
     }
 
@@ -334,8 +603,44 @@ class RustCstToAst {
 
         const meta = { line: node.startPosition.row + 1 };
 
-        if (funcName === 'gpio_set' || funcName === 'digitalWrite') return { nodeType: 'GpioSet', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
-        if (funcName === 'delay' || funcName === 'delay_ms') return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+        if (funcName === 'gpio_set' || funcName === 'digitalWrite')
+            return { nodeType: 'GpioSet', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+        if (funcName === 'gpio_get' || funcName === 'digitalRead')
+            return { nodeType: 'GpioRead', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+        if (funcName === 'adc_read' || funcName === 'analogRead')
+            return { nodeType: 'AnalogRead', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+        if (funcName === 'analogWrite' || funcName === 'pwm_write' || funcName === 'pwm_set_duty')
+            return { nodeType: 'AnalogWrite', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+        if (funcName === 'delay' || funcName === 'delay_ms')
+            return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+
+        if (funcName === 'Timer::after_millis' || funcName.endsWith('::after_millis') || funcName.endsWith('.after_millis'))
+            return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+
+        if (funcName === 'Timer::after_secs' || funcName.endsWith('::after_secs') || funcName.endsWith('.after_secs')) {
+            const secArg = args[0] || { nodeType: 'Literal', id: 'l', attributes: { value: 0 }, children: [] };
+            const msArg: BaseNode = {
+                nodeType: 'BinaryExpression',
+                id: `ms-${node.id}`,
+                attributes: { operator: '*' },
+                children: [secArg, { nodeType: 'Literal', id: 'l1000', attributes: { value: 1000 }, children: [] }]
+            };
+            return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: [msArg], metadata: meta };
+        }
+
+        // ── NEW: millis() / micros() ──────────────────────────────────────────
+        if (funcName === 'millis' || funcName === 'get_ms')
+            return { nodeType: 'CallExpression', id: `c-${node.id}`, attributes: { callee: 'millis' }, children: [], metadata: meta };
+        if (funcName === 'micros' || funcName === 'get_us')
+            return { nodeType: 'CallExpression', id: `c-${node.id}`, attributes: { callee: 'micros' }, children: [], metadata: meta };
+
+        // ── NEW: pinMode Rust ─────────────────────────────────────────────────
+        if (funcName === 'gpio_init' || funcName === 'pinMode')
+            return { nodeType: 'CallExpression', id: `c-${node.id}`, attributes: { callee: 'pinMode' }, children: args, metadata: meta };
+
+        // ── NEW: random() Rust ────────────────────────────────────────────────
+        if (funcName === 'rand::random' || funcName === 'random')
+            return { nodeType: 'CallExpression', id: `c-${node.id}`, attributes: { callee: 'random' }, children: args, metadata: meta };
 
         return { nodeType: 'CallExpression', id: `call-${node.id}`, attributes: { callee: funcName }, children: args, metadata: meta };
     }
@@ -351,8 +656,21 @@ class RustCstToAst {
         const meta = { line: node.startPosition.row + 1 };
 
         if (name === 'println') {
-            return { nodeType: 'Print', id: `p-${node.id}`, attributes: {}, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: text, isString: true }, children: [] }], metadata: meta };
+            return { nodeType: 'Print', id: `p-${node.id}`, attributes: { newline: true }, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: text, isString: true }, children: [] }], metadata: meta };
         }
+        if (name === 'print') {
+            return { nodeType: 'Print', id: `p-${node.id}`, attributes: { newline: false }, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: text, isString: true }, children: [] }], metadata: meta };
+        }
+
+        if (['info', 'warn', 'error', 'debug', 'trace'].includes(name)) {
+            return { nodeType: 'Print', id: `p-${node.id}`, attributes: { newline: true }, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: `[${name.toUpperCase()}] ${text}`, isString: true }, children: [] }], metadata: meta };
+        }
+
+        if (['uprintln', 'rprintln', 'hprintln', 'uprint', 'rprint', 'hprint'].includes(name)) {
+            const newline = name.endsWith('ln');
+            return { nodeType: 'Print', id: `p-${node.id}`, attributes: { newline }, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: text, isString: true }, children: [] }], metadata: meta };
+        }
+
         return { nodeType: 'Empty', id: 'e', attributes: {}, children: [] };
     }
 }

@@ -3,10 +3,7 @@ import { useSimulationStore } from '@/stores/useSimulationStore';
 import { useSerialStore } from '@/stores/useSerialStore';
 import { useQEMUStore } from '@/stores/useQEMUStore';
 import { useQEMUSimulation } from '@/hooks/useQEMUSimulation';
-import { simulationEngine } from '@/engine/SimulationEngine';
-import { codeParser } from '@/engine/CodeParser';
-import { createASLRuntime } from '@/engine/asl/ASLExecutor';
-import { codeToASL } from '@/engine/asl/codeToASL';
+import { useRunSimulation } from '@/hooks/useRunSimulation';
 import { LANGUAGE_REGISTRY, getASLSupportedLanguages, getLanguageInfo } from '@/engine/asl/LanguageRegistry';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -29,30 +26,19 @@ import {
 } from 'lucide-react';
 
 export const TopToolbar: React.FC = () => {
-  const {
-    status,
-    speed,
-    setSpeed,
-    language,
-    getAllMCUs,
-    activeMCUId,
-    startSimulation,
-    stopSimulation,
-    resetSimulation,
-  } = useSimulationStore();
+  const { speed, setSpeed, getAllMCUs } = useSimulationStore();
+  const { addTerminalLine } = useSerialStore();
+  const { mode, isCompiling, compilationError, setCompilationError } = useQEMUStore();
+  const { isBackendConnected } = useQEMUSimulation();
 
-  const { addTerminalLine, clearSerial, clearTerminal } = useSerialStore();
   const {
-    mode,
-    isCompiling,
     isSimulationRunning,
-    compilationError,
-    setCompilationError
-  } = useQEMUStore();
-  const { compileAndStart, stopQEMU, isBackendConnected } = useQEMUSimulation();
-
-  // Determine if simulation is running (handles both modes)
-  const isRunning = mode === 'qemu' ? isSimulationRunning : status === 'running';
+    handleStart,
+    handleStop,
+    handleRunStop,
+    handleReset,
+    getActiveMCU
+  } = useRunSimulation();
 
   // Show compilation errors
   useEffect(() => {
@@ -67,172 +53,14 @@ export const TopToolbar: React.FC = () => {
   }, [setCompilationError]);
 
   /**
-   * Get active MCU from canvas
-   */
-  const getActiveMCU = useCallback(() => {
-    const allMCUs = getAllMCUs();
-
-    if (allMCUs.length === 0) {
-      return null;
-    }
-
-    // If there's an active MCU selected, use it
-    if (activeMCUId) {
-      const activeMCU = allMCUs.find(m => m.id === activeMCUId);
-      if (activeMCU) return activeMCU;
-    }
-
-    // Otherwise, use the first MCU
-    return allMCUs[0];
-  }, [getAllMCUs, activeMCUId]);
-
-  /**
-   * Handle START simulation
-   */
-  const handleStart = useCallback(async () => {
-    const activeMCU = getActiveMCU();
-    if (!activeMCU) {
-      addTerminalLine('❌ No MCU found on canvas. Drag an MCU from Components Library.', 'error');
-      return;
-    }
-
-    const isPython = getLanguageInfo(activeMCU.language)?.monacoLanguage === 'python';
-
-    if (mode === 'qemu' && !isPython) {
-      // QEMU Mode with auto-detection (C++ only for now)
-      if (!isBackendConnected) {
-        addTerminalLine('❌ QEMU Backend is not connected. Start server: cd server && npm run dev', 'error');
-        return;
-      }
-
-      // Proactive Sync: Try to get latest code from FileStore
-      // This is a safety measure in case the background sync in CodeEditorWithTabs missed an update
-      const { files, activeFileId } = (await import('@/stores/useFileStore')).useFileStore.getState();
-      const activeFile = files.find(f => f.id === activeFileId);
-
-      let codeToCompile = activeMCU.code;
-      let source = 'SimulationStore (MCU)';
-
-      if (activeFile) {
-        // Use active file if it's explicitly assigned to this MCU 
-        // OR if there's only one MCU and the file isn't assigned elsewhere
-        const isAssignedToThis = activeFile.mcuId === activeMCU.id;
-        const isAutoEligible = !activeFile.mcuId && getAllMCUs().length === 1;
-
-        if (isAssignedToThis || isAutoEligible) {
-          codeToCompile = activeFile.code;
-          source = `FileStore (Active Tab: ${activeFile.name})`;
-        }
-      }
-
-      addTerminalLine(`🔨 Compiling ${activeMCU.label} (${activeMCU.type})...`, 'info');
-      addTerminalLine(`📄 Source: ${source}`, 'info');
-
-      // FIX: Update simulation status to 'running' so MCUNode can detect it
-      startSimulation();
-
-      await compileAndStart(codeToCompile, activeMCU.type);
-
-    } else {
-      // Fake Mode (ASL) or forcing ASL for Python/Micropython
-      if (mode === 'qemu' && isPython) {
-        addTerminalLine(`ℹ️ Python is simulated locally (ASL Engine) instead of QEMU.`, 'info');
-      }
-
-      // Preprocess code to inject libraries
-      const processedCode = simulationEngine.preprocess(activeMCU.code, activeMCU.language);
-
-      let startedWithASL = false;
-
-      addTerminalLine(`🚀 Starting simulation (Language: ${activeMCU.language}, Mode: ${isPython ? 'local' : mode})`, 'info');
-
-
-      // Experimento ASL: para C++ e MicroPython/CircuitPython/Python
-      const isASLSupported = getASLSupportedLanguages().includes(activeMCU.language);
-
-      if (isASLSupported) {
-        try {
-          const aslProgram = await codeToASL(processedCode, activeMCU.language);
-          addTerminalLine(`✅ ASL Program generated (${aslProgram.globals.length} globals, ${aslProgram.tasks.length} tasks)`, 'success');
-
-          const runtime = createASLRuntime(aslProgram);
-
-          startSimulation();
-          simulationEngine.start(runtime.setup, runtime.loop, speed);
-          addTerminalLine(`▶️ Simulation (ASL) started on ${activeMCU.label}`, 'info');
-          startedWithASL = true;
-        } catch (err) {
-          console.error('[ASL] Failed to run via ASL', err);
-          const errorMsg = err instanceof Error ? err.message : String(err);
-          addTerminalLine(`❌ ASL Error: ${errorMsg}`, 'error');
-          addTerminalLine('⚠️ Falling back to legacy parser...', 'warning');
-        }
-      }
-
-      // Fallback para o parser antigo se ASL não rodar ou se não for C++
-      if (!startedWithASL) {
-        codeParser.setLanguage(activeMCU.language);
-
-        const parsed = codeParser.parse(processedCode);
-
-        if (parsed) {
-          startSimulation();
-          simulationEngine.start(parsed.setup, parsed.loop, speed);
-          addTerminalLine(`▶️ Simulation started on ${activeMCU.label}`, 'info');
-        } else {
-          addTerminalLine('❌ Failed to parse code', 'error');
-        }
-      }
-    }
-  }, [mode, speed, isBackendConnected, getActiveMCU, startSimulation, compileAndStart, addTerminalLine]);
-
-  /**
-   * Handle STOP simulation
-   */
-  const handleStop = useCallback(async () => {
-    if (mode === 'qemu') {
-      await stopQEMU();
-      addTerminalLine('⏹️ QEMU simulation stopped', 'info');
-    } else {
-      simulationEngine.stop();
-      addTerminalLine('⏹️ Simulation stopped', 'info');
-    }
-
-    stopSimulation();
-  }, [mode, stopQEMU, stopSimulation, addTerminalLine]);
-
-  /**
-   * Handle Run/Stop toggle
-   */
-  const handleRunStop = useCallback(async () => {
-    if (isRunning) {
-      await handleStop();
-    } else {
-      await handleStart();
-    }
-  }, [isRunning, handleStart, handleStop]);
-
-  /**
-   * Handle reset
-   */
-  const handleReset = useCallback(() => {
-    if (mode === 'qemu') {
-      stopQEMU();
-    }
-    resetSimulation();
-    simulationEngine.reset();
-    clearSerial();
-    clearTerminal();
-    addTerminalLine('🔄 Simulation reset', 'info');
-  }, [mode, resetSimulation, stopQEMU, clearSerial, clearTerminal, addTerminalLine]);
-
-  /**
    * Handle speed change
    */
   const handleSpeedChange = useCallback((newSpeed: number) => {
     setSpeed(newSpeed);
     if (mode === 'fake') {
-      simulationEngine.setSpeed(newSpeed);
+      import('@/engine/SimulationEngine').then(({ simulationEngine }) => {
+        simulationEngine.setSpeed(newSpeed);
+      });
     }
   }, [mode, setSpeed]);
 
@@ -320,7 +148,7 @@ export const TopToolbar: React.FC = () => {
           variant="outline"
           size="sm"
           onClick={handleReset}
-          disabled={status === 'idle' && !isSimulationRunning || isCompiling}
+          disabled={!isSimulationRunning && isCompiling}
           className="h-9 px-3 bg-transparent border-[rgba(0,217,255,0.3)] text-[#9ca3af] hover:text-[#00d9ff] hover:bg-[rgba(0,217,255,0.1)]"
         >
           <RotateCcw className="w-4 h-4 mr-1" />
@@ -334,11 +162,11 @@ export const TopToolbar: React.FC = () => {
           disabled={
             isCompiling ||
             !activeMCU ||
-            (mode === 'qemu' && !isBackendConnected && !isRunning)
+            (mode === 'qemu' && !isBackendConnected && !isSimulationRunning)
           }
           className={cn(
             'h-9 px-5',
-            isRunning
+            isSimulationRunning
               ? 'bg-red-500 hover:bg-red-600 text-white'
               : 'bg-[#00d9ff] hover:bg-[#00a8cc] text-[#0a0e14]'
           )}
@@ -348,7 +176,7 @@ export const TopToolbar: React.FC = () => {
               <Loader2 className="w-4 h-4 mr-1 animate-spin" />
               Compiling...
             </>
-          ) : isRunning ? (
+          ) : isSimulationRunning ? (
             <>
               <Square className="w-4 h-4 mr-1" fill="currentColor" />
               STOP
@@ -360,8 +188,8 @@ export const TopToolbar: React.FC = () => {
             </>
           )}
         </Button>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 

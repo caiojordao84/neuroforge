@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { motion, useDragControls } from 'framer-motion';
-import { X, Minus, Maximize2 } from 'lucide-react';
+import { X, Minus, Maximize2, Square, ArrowUpRight } from 'lucide-react';
 import { useUIStore, type WindowId } from '@/stores/useUIStore';
 import { cn } from '@/lib/utils';
 
@@ -13,6 +13,9 @@ interface FloatingWindowProps {
   maxWidth?: number;
   maxHeight?: number;
 }
+
+const SIDEBAR_WIDTH = 60;
+const HEADER_HEIGHT = 56;
 
 export const FloatingWindow: React.FC<FloatingWindowProps> = ({
   windowId,
@@ -31,6 +34,9 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
     bringToFront,
     updateWindowPosition,
     updateWindowSize,
+    dockWindow,
+    undockWindow,
+    updateDockWidth,
   } = useUIStore();
 
   const windowState = windows[windowId];
@@ -38,48 +44,71 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
   const resizeHandleRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
 
-  // Guard: if window state doesn't exist (e.g. new window type added but not in persisted storage), return null
   if (!windowState) return null;
+
+  const { isOpen, isMinimized, isDocked, position, size, zIndex, title, dockWidth } = windowState;
+  const isDockedMode = isDocked && isOpen && !isMinimized;
 
   const [isResizing, setIsResizing] = useState(false);
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [isResizingDock, setIsResizingDock] = useState(false);
+
+  // Calculate docked dimensions
+  const getDockedWidth = useCallback(() => {
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
+    return (dockWidth / 100) * viewportWidth;
+  }, [dockWidth]);
+
+  const dockedWidth = getDockedWidth();
 
   // Handle window focus
   const handleMouseDown = useCallback(() => {
     bringToFront(windowId);
   }, [bringToFront, windowId]);
 
-  // Handle drag end with smooth position update
+  // Handle dock/undock toggle
+  const handleDockToggle = useCallback(() => {
+    if (isDocked) {
+      undockWindow(windowId);
+    } else {
+      dockWindow(windowId);
+    }
+  }, [isDocked, dockWindow, undockWindow, windowId]);
+
+  // Handle drag end for floating windows
   const handleDragEnd = useCallback(
     (_: unknown, info: { point: { x: number; y: number }; offset: { x: number; y: number } }) => {
-      // Calculate new position based on current position + drag offset
-      const currentX = windowState.position.x;
-      const currentY = windowState.position.y;
+      const currentX = position.x;
+      const currentY = position.y;
 
       const newPosition = {
         x: currentX + info.offset.x,
         y: currentY + info.offset.y,
       };
 
-      // Constrain to viewport with padding
       const padding = 20;
       const constrainedPosition = {
         x: Math.max(
           padding,
-          Math.min(window.innerWidth - windowState.size.width - padding, newPosition.x)
+          Math.min(window.innerWidth - size.width - padding, newPosition.x)
         ),
         y: Math.max(
           padding,
-          Math.min(window.innerHeight - windowState.size.height - padding, newPosition.y)
+          Math.min(window.innerHeight - size.height - padding, newPosition.y)
         ),
       };
 
+      // Auto-undock if dragged away from docked position
+      if (isDocked && (Math.abs(newPosition.x - SIDEBAR_WIDTH) > 50 || Math.abs(newPosition.y - HEADER_HEIGHT) > 50)) {
+        undockWindow(windowId);
+      }
+
       updateWindowPosition(windowId, constrainedPosition);
     },
-    [updateWindowPosition, windowId, windowState.position, windowState.size]
+    [updateWindowPosition, windowId, position, size, isDocked, undockWindow]
   );
 
-  // Handle resize start
+  // Handle resize start (for floating windows)
   const handleResizeStart = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
@@ -88,29 +117,53 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
       setResizeStart({
         x: e.clientX,
         y: e.clientY,
-        width: windowState.size.width,
-        height: windowState.size.height,
+        width: size.width,
+        height: size.height,
       });
     },
-    [windowState.size]
+    [size]
+  );
+
+  // Handle dock resize start
+  const handleDockResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsResizingDock(true);
+      setResizeStart({
+        x: e.clientX,
+        y: e.clientY,
+        width: dockedWidth,
+        height: 0,
+      });
+    },
+    [dockedWidth]
   );
 
   // Handle resize move
   useEffect(() => {
-    if (!isResizing) return;
+    if (!isResizing && !isResizingDock) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const deltaX = e.clientX - resizeStart.x;
-      const deltaY = e.clientY - resizeStart.y;
+      if (isResizing) {
+        const deltaX = e.clientX - resizeStart.x;
+        const deltaY = e.clientY - resizeStart.y;
 
-      const newWidth = Math.max(minWidth, Math.min(maxWidth, resizeStart.width + deltaX));
-      const newHeight = Math.max(minHeight, Math.min(maxHeight, resizeStart.height + deltaY));
+        const newWidth = Math.max(minWidth, Math.min(maxWidth, resizeStart.width + deltaX));
+        const newHeight = Math.max(minHeight, Math.min(maxHeight, resizeStart.height + deltaY));
 
-      updateWindowSize(windowId, { width: newWidth, height: newHeight });
+        updateWindowSize(windowId, { width: newWidth, height: newHeight });
+      } else if (isResizingDock) {
+        const deltaX = e.clientX - resizeStart.x;
+        const viewportWidth = window.innerWidth;
+        const newWidthPercent = Math.max(10, Math.min(50, ((resizeStart.width + deltaX) / viewportWidth) * 100));
+        updateDockWidth(windowId, newWidthPercent);
+      }
     };
 
     const handleMouseUp = () => {
       setIsResizing(false);
+      setIsResizingDock(false);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -120,15 +173,15 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isResizing, resizeStart, minWidth, minHeight, maxWidth, maxHeight, updateWindowSize, windowId]);
+  }, [isResizing, isResizingDock, resizeStart, minWidth, minHeight, maxWidth, maxHeight, updateWindowSize, updateDockWidth, windowId]);
 
   // Don't render if window is closed
-  if (!windowState.isOpen) {
+  if (!isOpen) {
     return null;
   }
 
   // Render minimized state
-  if (windowState.isMinimized) {
+  if (isMinimized) {
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
@@ -144,13 +197,111 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
           )}
           onClick={() => restoreWindow(windowId)}
         >
-          <span className="text-[#e6e6e6] text-sm">{windowState.title}</span>
+          <span className="text-[#e6e6e6] text-sm">{title}</span>
           <Maximize2 className="w-4 h-4 text-[#9ca3af]" />
         </div>
       </motion.div>
     );
   }
 
+  // Render docked state
+  if (isDockedMode) {
+    return (
+      <motion.div
+        ref={windowRef}
+        onMouseDown={handleMouseDown}
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        transition={{ duration: 0.15 }}
+        style={{
+          position: 'fixed',
+          left: SIDEBAR_WIDTH,
+          top: HEADER_HEIGHT,
+          width: dockedWidth,
+          height: `calc(100% - ${HEADER_HEIGHT}px)`,
+          zIndex: zIndex,
+        }}
+        className={cn(
+          'flex flex-col rounded-lg overflow-hidden',
+          'bg-[#151b24] border border-[rgba(0,217,255,0.3)] border-l-0',
+          'shadow-2xl shadow-black/50',
+          'cursor-default',
+          className
+        )}
+      >
+        {/* Header */}
+        <div
+          className={cn(
+            'flex items-center justify-between px-3 py-2',
+            'bg-[#0a0e14] border-b border-[rgba(0,217,255,0.2)]',
+            'select-none'
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDockToggle();
+              }}
+              className={cn(
+                'p-1 rounded hover:bg-[rgba(0,217,255,0.1)]',
+                'transition-colors'
+              )}
+              title="Undock Window"
+            >
+              <ArrowUpRight className="w-4 h-4 text-[#9ca3af] hover:text-[#00d9ff]" />
+            </button>
+            <span className="text-[#e6e6e6] text-sm font-medium">{title}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                minimizeWindow(windowId);
+              }}
+              className={cn(
+                'p-1.5 rounded hover:bg-[rgba(0,217,255,0.1)]',
+                'transition-colors'
+              )}
+            >
+              <Minus className="w-4 h-4 text-[#9ca3af] hover:text-[#00d9ff]" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                closeWindow(windowId);
+              }}
+              className={cn(
+                'p-1.5 rounded hover:bg-red-500/20',
+                'transition-colors'
+              )}
+            >
+              <X className="w-4 h-4 text-[#9ca3af] hover:text-red-400" />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-auto relative">
+          {children}
+        </div>
+
+        {/* Dock resize handle */}
+        <div
+          onMouseDown={handleDockResizeStart}
+          className={cn(
+            'absolute top-0 right-0 w-2 h-full cursor-ew-resize',
+            'hover:bg-[#00d9ff]/50 transition-colors',
+            'z-10'
+          )}
+          title="Resize width"
+        />
+      </motion.div>
+    );
+  }
+
+  // Render floating state
   return (
     <motion.div
       ref={windowRef}
@@ -166,16 +317,14 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      transition={{
-        duration: 0.15
-      }}
+      transition={{ duration: 0.15 }}
       style={{
         position: 'fixed',
-        left: windowState.position.x,
-        top: windowState.position.y,
-        width: windowState.size.width,
-        height: windowState.size.height,
-        zIndex: windowState.zIndex,
+        left: position.x,
+        top: position.y,
+        width: size.width,
+        height: size.height,
+        zIndex: zIndex,
         willChange: 'transform',
       }}
       className={cn(
@@ -195,9 +344,23 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
           'cursor-move select-none'
         )}
       >
-        <span className="text-[#e6e6e6] text-sm font-medium">{windowState.title}</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDockToggle();
+            }}
+            className={cn(
+              'p-1 rounded hover:bg-[rgba(0,217,255,0.1)]',
+              'transition-colors'
+            )}
+            title="Dock Window"
+          >
+            <Square className="w-4 h-4 text-[#9ca3af] hover:text-[#00d9ff]" />
+          </button>
+          <span className="text-[#e6e6e6] text-sm font-medium">{title}</span>
+        </div>
         <div className="flex items-center gap-1">
-          {/* Minimize button */}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -210,7 +373,6 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
           >
             <Minus className="w-4 h-4 text-[#9ca3af] hover:text-[#00d9ff]" />
           </button>
-          {/* Close button */}
           <button
             onClick={(e) => {
               e.stopPropagation();

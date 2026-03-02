@@ -95,6 +95,7 @@ export type ASLStatement =
   | ASLIf
   | ASLWhile
   | ASLFor
+  | ASLDoWhile
   | ASLDelay
   | ASLAssign
   | ASLSetIndex
@@ -188,6 +189,15 @@ export interface ASLFor {
   condition: ASLExpr;
   body: ASLStatement[];
   update: ASLStatement[];
+}
+
+/**
+ * Do-while loop: executes body at least once, then checks condition.
+ */
+export interface ASLDoWhile {
+  kind: 'doWhile';
+  condition: ASLExpr;
+  body: ASLStatement[];
 }
 
 /**

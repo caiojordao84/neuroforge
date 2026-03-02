@@ -182,6 +182,25 @@ async function executeStatements(
         break;
       }
 
+      case 'doWhile': {
+        let cycles = 0;
+        do {
+          if (ctx.abortSignal?.aborted) return;
+          try {
+            await executeStatements(s.body, localEnv, ctx);
+          } catch (e) {
+            if (e instanceof BreakSignal) break;
+            if (e instanceof ContinueSignal) continue;
+            throw e;
+          }
+          cycles++;
+          if (cycles % 10 === 0) {
+            await new Promise((r) => setTimeout(r, 0));
+          }
+        } while (await evalExpr(s.condition, localEnv, ctx));
+        break;
+      }
+
       case 'for': {
         let cycles = 0;
         while (await evalExpr(s.condition, localEnv, ctx)) {
@@ -218,21 +237,19 @@ async function executeStatements(
 
             if (c.test === null) {
               defaultIdx = i;
-              continue; // não executar default agora; só se nenhum case casar
+              continue;
             }
 
             if (!matched) {
               const testVal = await evalExpr(c.test, localEnv, ctx);
-              if (discVal == testVal) matched = true; // == para semântica C (int/enum)
+              if (discVal == testVal) matched = true;
             }
 
             if (matched) {
               await executeStatements(c.body, localEnv, ctx);
-              // fall-through: não sair — continuar para case seguinte
             }
           }
 
-          // Se nenhum case casou, executar default e subsequentes (fall-through do default)
           if (!matched && defaultIdx >= 0) {
             for (let i = defaultIdx; i < s.cases.length; i++) {
               await executeStatements(s.cases[i].body, localEnv, ctx);
@@ -240,7 +257,6 @@ async function executeStatements(
           }
         } catch (e) {
           if (!(e instanceof BreakSignal)) throw e;
-          // BreakSignal consumido aqui — NÃO propaga para loops externos
         }
 
         break;
@@ -285,6 +301,18 @@ async function executeStatements(
         const arr = getVar(s.target, localEnv, ctx.globals);
         if (Array.isArray(arr) && Array.isArray(arr[row])) {
           arr[row][col] = val;
+        }
+        break;
+      }
+
+      case 'setIndex3D': {
+        const d1 = await evalExpr(s.d1Index, localEnv, ctx);
+        const d2 = await evalExpr(s.d2Index, localEnv, ctx);
+        const d3 = await evalExpr(s.d3Index, localEnv, ctx);
+        const val = await evalExpr(s.value, localEnv, ctx);
+        const arr = getVar(s.target, localEnv, ctx.globals);
+        if (Array.isArray(arr) && Array.isArray(arr[d1]) && Array.isArray(arr[d1][d2])) {
+          arr[d1][d2][d3] = val;
         }
         break;
       }
@@ -379,6 +407,17 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       return 0;
     }
 
+    case 'index3D': {
+      const arr = await evalExpr(expr.array, env, ctx);
+      const d1 = await evalExpr(expr.d1Index, env, ctx);
+      const d2 = await evalExpr(expr.d2Index, env, ctx);
+      const d3 = await evalExpr(expr.d3Index, env, ctx);
+      if (Array.isArray(arr) && Array.isArray(arr[d1]) && Array.isArray(arr[d1][d2])) {
+        return arr[d1][d2][d3];
+      }
+      return 0;
+    }
+
     case 'member': {
       const obj = await evalExpr(expr.target, env, ctx);
       if (obj && typeof obj === 'object') return (obj as any)[expr.property];
@@ -391,7 +430,6 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         if (target.kind === 'var') {
           return { __isPtr: true, target: target.name };
         }
-        // Fallback or complex & handled elsewhere
         return 0;
       }
 
@@ -468,6 +506,28 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       }
 
       if (expr.callee === 'Serial.begin') return 0;
+      if (expr.callee === 'Serial.available') {
+        return ctx.engine.serialAvailable();
+      }
+      if (expr.callee === 'Serial.read') {
+        return ctx.engine.serialRead();
+      }
+      if (expr.callee === 'Serial.write') {
+        const val = await evalExpr(expr.args[0], env, ctx);
+        return ctx.engine.serialWrite(val);
+      }
+      if (expr.callee === 'Serial.readString') {
+        let str = '';
+        let byte = ctx.engine.serialRead();
+        while (byte !== -1) {
+          str += String.fromCharCode(byte);
+          byte = ctx.engine.serialRead();
+        }
+        return str;
+      }
+      if (expr.callee === 'Serial.parseInt') {
+        return ctx.engine.serialParseInt();
+      }
       if (expr.callee === 'random') {
         const min = expr.args[0] ? await evalExpr(expr.args[0], env, ctx) : 0;
         const max = expr.args[1] ? await evalExpr(expr.args[1], env, ctx) : 100;
@@ -483,10 +543,44 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       }
       if (expr.callee === 'millis') return ctx.engine.millis();
       if (expr.callee === 'micros') return ctx.engine.micros();
+      if (expr.callee === 'sizeof') {
+        const val = await evalExpr(expr.args[0], env, ctx);
+        if (Array.isArray(val)) return val.length;
+        if (typeof val === 'string') return val.length;
+        return 4;
+      }
+      if (expr.callee === 'delayMicroseconds') {
+        ctx.engine.delayMicroseconds();
+        return 0;
+      }
+      if (expr.callee === 'attachInterrupt' || expr.callee === 'detachInterrupt') {
+        const args = [];
+        for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
+        ctx.engine.emit('hardwareCall', { callee: expr.callee, args });
+        return 0;
+      }
+      if (expr.callee === 'pulseIn') {
+        const args = [];
+        for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
+        ctx.engine.emit('hardwareCall', { callee: 'pulseIn', args });
+        return 500;
+      }
+      if (expr.callee === 'shiftOut' || expr.callee === 'shiftIn') {
+        const args = [];
+        for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
+        ctx.engine.emit('hardwareCall', { callee: expr.callee, args });
+        return expr.callee === 'shiftIn' ? 0 : 0;
+      }
       if (expr.callee === 'tone' || expr.callee === 'noTone' || expr.callee === 'servo') {
         const args = [];
         for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
-        if (expr.callee === 'tone') ctx.engine.tone(args[0], args[1], args[2]);
+        if (expr.callee === 'tone') {
+          ctx.engine.tone(args[0], args[1], args[2]);
+          if (args[2] !== undefined && args[2] > 0) {
+            await ctx.engine.delay(args[2]);
+            ctx.engine.noTone(args[0]);
+          }
+        }
         if (expr.callee === 'noTone') ctx.engine.noTone(args[0]);
         if (expr.callee === 'servo') ctx.engine.emit('tone', { pin: args[0], frequency: 1000, angle: args[1] });
         return 0;
@@ -502,68 +596,68 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         return ctx.engine.constrain(args[0], args[1], args[2]);
       }
 
-      // ── Math builtins ──────────────────────────────────────────────────────
+      // ── Math builtins ─────────────────────────────────────────────────────
       if (expr.callee === 'abs') {
-        const v = await evalExpr(expr.args[0], env, ctx);
-        return Math.abs(Number(v));
+        const arg = await evalExpr(expr.args[0], env, ctx);
+        return Math.abs(Number(arg));
       }
       if (expr.callee === 'sqrt') {
-        const v = await evalExpr(expr.args[0], env, ctx);
-        return Math.sqrt(Number(v));
+        const arg = await evalExpr(expr.args[0], env, ctx);
+        return Math.sqrt(Number(arg));
       }
       if (expr.callee === 'pow') {
-        const base = await evalExpr(expr.args[0], env, ctx);
-        const exp  = await evalExpr(expr.args[1], env, ctx);
-        return Math.pow(Number(base), Number(exp));
+        const arg0 = await evalExpr(expr.args[0], env, ctx);
+        const arg1 = await evalExpr(expr.args[1], env, ctx);
+        return Math.pow(Number(arg0), Number(arg1));
       }
       if (expr.callee === 'sin') {
-        const v = await evalExpr(expr.args[0], env, ctx);
-        return Math.sin(Number(v));
+        const arg = await evalExpr(expr.args[0], env, ctx);
+        return Math.sin(Number(arg));
       }
       if (expr.callee === 'cos') {
-        const v = await evalExpr(expr.args[0], env, ctx);
-        return Math.cos(Number(v));
+        const arg = await evalExpr(expr.args[0], env, ctx);
+        return Math.cos(Number(arg));
       }
       if (expr.callee === 'tan') {
-        const v = await evalExpr(expr.args[0], env, ctx);
-        return Math.tan(Number(v));
+        const arg = await evalExpr(expr.args[0], env, ctx);
+        return Math.tan(Number(arg));
       }
       if (expr.callee === 'log') {
-        const v = await evalExpr(expr.args[0], env, ctx);
-        return Math.log(Number(v));
+        const arg = await evalExpr(expr.args[0], env, ctx);
+        return Math.log(Number(arg));
       }
       if (expr.callee === 'min') {
-        const a = await evalExpr(expr.args[0], env, ctx);
-        const b = await evalExpr(expr.args[1], env, ctx);
-        return Math.min(Number(a), Number(b));
+        const arg0 = await evalExpr(expr.args[0], env, ctx);
+        const arg1 = await evalExpr(expr.args[1], env, ctx);
+        return Math.min(Number(arg0), Number(arg1));
       }
       if (expr.callee === 'max') {
-        const a = await evalExpr(expr.args[0], env, ctx);
-        const b = await evalExpr(expr.args[1], env, ctx);
-        return Math.max(Number(a), Number(b));
+        const arg0 = await evalExpr(expr.args[0], env, ctx);
+        const arg1 = await evalExpr(expr.args[1], env, ctx);
+        return Math.max(Number(arg0), Number(arg1));
       }
       if (expr.callee === 'round') {
-        const v = await evalExpr(expr.args[0], env, ctx);
-        return Math.round(Number(v));
+        const arg = await evalExpr(expr.args[0], env, ctx);
+        return Math.round(Number(arg));
       }
       if (expr.callee === 'floor') {
-        const v = await evalExpr(expr.args[0], env, ctx);
-        return Math.floor(Number(v));
+        const arg = await evalExpr(expr.args[0], env, ctx);
+        return Math.floor(Number(arg));
       }
       if (expr.callee === 'ceil') {
-        const v = await evalExpr(expr.args[0], env, ctx);
-        return Math.ceil(Number(v));
+        const arg = await evalExpr(expr.args[0], env, ctx);
+        return Math.ceil(Number(arg));
       }
       if (expr.callee === 'isnan') {
-        const v = await evalExpr(expr.args[0], env, ctx);
-        return isNaN(Number(v)) ? 1 : 0;
+        const arg = await evalExpr(expr.args[0], env, ctx);
+        return isNaN(Number(arg)) ? 1 : 0;
       }
       if (expr.callee === 'isinf') {
-        const v = await evalExpr(expr.args[0], env, ctx);
-        return !isFinite(Number(v)) ? 1 : 0;
+        const arg = await evalExpr(expr.args[0], env, ctx);
+        return !isFinite(Number(arg)) ? 1 : 0;
       }
 
-      // ── String / C stdlib builtins ─────────────────────────────────────────
+      // ── String / C stdlib builtins ────────────────────────────────────────
       if (expr.callee === 'strlen') {
         const s = await evalExpr(expr.args[0], env, ctx);
         return String(s ?? '').length;
@@ -582,13 +676,12 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         return parseFloat(String(s)) || 0;
       }
       if (expr.callee === 'dtostrf') {
-        // dtostrf(val, width, prec, buf) — returns formatted string (simulation: ignore buf)
-        const val  = await evalExpr(expr.args[0], env, ctx);
+        const val = await evalExpr(expr.args[0], env, ctx);
         const prec = expr.args[2] ? await evalExpr(expr.args[2], env, ctx) : 2;
         return Number(val).toFixed(Math.max(0, Number(prec) || 0));
       }
 
-      // ── Type conversions ───────────────────────────────────────────────────
+      // ── Type conversions ──────────────────────────────────────────────────
       if (expr.callee === 'String') return String(await evalExpr(expr.args[0] || { kind: 'literal', value: '' }, env, ctx));
       if (expr.callee === 'int') return Math.floor(Number(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx)) || 0);
       if (expr.callee === 'float') return Number(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx)) || 0;

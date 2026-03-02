@@ -6,8 +6,7 @@ import { LeftSidebar } from '@/components/LeftSidebar';
 import { FloatingWindow } from '@/components/FloatingWindow';
 import { CodeEditorWithTabs } from '@/components/CodeEditorWithTabs';
 import { ComponentsLibrary } from '@/components/ComponentsLibrary';
-import { SerialMonitor } from '@/components/SerialMonitor';
-import { Terminal } from '@/components/Terminal';
+import { SerialTerminalPanel } from '@/components/SerialTerminalPanel';
 import { CanvasArea } from '@/components/CanvasArea';
 import { TopToolbar } from '@/components/TopToolbar';
 import { PropertiesPanel } from '@/components/PropertiesPanel';
@@ -58,12 +57,8 @@ const AppContent: React.FC = () => {
         <ComponentsLibrary />
       </FloatingWindow>
 
-      <FloatingWindow windowId="serialMonitor" minWidth={400} minHeight={250}>
-        <SerialMonitor />
-      </FloatingWindow>
-
-      <FloatingWindow windowId="terminal" minWidth={400} minHeight={250}>
-        <Terminal />
+      <FloatingWindow windowId="serialTerminal" minWidth={400} minHeight={300}>
+        <SerialTerminalPanel />
       </FloatingWindow>
 
       <FloatingWindow windowId="properties" minWidth={350} minHeight={400}>
