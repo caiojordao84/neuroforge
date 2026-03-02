@@ -5,8 +5,7 @@ import { useNodes } from '@xyflow/react';
 import { useFileStore } from '@/stores/useFileStore';
 import { useSimulationStore } from '@/stores/useSimulationStore';
 import { useSerialStore } from '@/stores/useSerialStore';
-import { simulationEngine } from '@/engine/SimulationEngine';
-import { codeParser } from '@/engine/CodeParser';
+import { useRunSimulation } from '@/hooks/useRunSimulation';
 import type { Language } from '@/types';
 import { LANGUAGE_REGISTRY, getLanguageInfo } from '@/engine/asl/LanguageRegistry';
 import { transpileCode } from '@/engine/asl/transpile';
@@ -70,14 +69,12 @@ export const CodeEditorWithTabs: React.FC = () => {
     mcus,
     updateMCUCode,
     updateMCULanguage,
-    startSimulation,
-    stopSimulation,
-    resetSimulation,
   } = useSimulationStore();
 
   const getAllMCUs = useCallback(() => Array.from(mcus.values()), [mcus]);
 
   const { addTerminalLine } = useSerialStore();
+  const { isSimulationRunning, handleRunStop: handleRun, handleReset } = useRunSimulation();
 
   const [showNewFileDialog, setShowNewFileDialog] = useState(false);
   const [newFileName, setNewFileName] = useState('');
@@ -222,41 +219,7 @@ export const CodeEditorWithTabs: React.FC = () => {
 
 
 
-  // Handle run button
-  const handleRun = useCallback(() => {
-    if (status === 'running') {
-      stopSimulation();
-      simulationEngine.stop();
-    } else {
-      // Get active MCU
-      const allMCUs = getAllMCUs();
-      if (allMCUs.length === 0) {
-        addTerminalLine('❌ No MCU found. Drag an MCU from Components Library.', 'error');
-        return;
-      }
 
-      const activeMCU = allMCUs[0];
-      codeParser.setLanguage(activeMCU.language);
-
-      // Preprocess code to inject libraries
-      const processedCode = simulationEngine.preprocess(activeMCU.code, activeMCU.language);
-      const parsed = codeParser.parse(processedCode);
-
-      if (parsed) {
-        startSimulation();
-        addTerminalLine('▶️ Starting simulation...', 'success');
-        simulationEngine.start(parsed.setup, parsed.loop, useSimulationStore.getState().speed);
-      } else {
-        addTerminalLine('❌ Failed to parse code', 'error');
-      }
-    }
-  }, [status, getAllMCUs, startSimulation, stopSimulation, addTerminalLine]);
-
-  // Handle reset button
-  const handleReset = useCallback(() => {
-    resetSimulation();
-    addTerminalLine('🔄 Simulation reset', 'info');
-  }, [resetSimulation, addTerminalLine]);
 
   // Get editor language for Monaco
   const getEditorLanguage = (lang: Language): string => {
@@ -273,7 +236,7 @@ export const CodeEditorWithTabs: React.FC = () => {
     lineNumbers: 'on' as const,
     roundedSelection: false,
     scrollBeyondLastLine: false,
-    readOnly: status === 'running',
+    readOnly: isSimulationRunning,
     automaticLayout: true,
     padding: { top: 16 },
     folding: true,
@@ -344,13 +307,13 @@ export const CodeEditorWithTabs: React.FC = () => {
             onClick={handleRun}
             className={cn(
               'h-8 px-4',
-              status === 'running'
+              status === 'idle'
                 ? 'bg-red-500 hover:bg-red-600 text-white'
                 : 'bg-[#00d9ff] hover:bg-[#00a8cc] text-[#0a0e14]'
             )}
           >
             <Play className="w-4 h-4 mr-1" />
-            {status === 'running' ? 'Stop' : 'Run'}
+            {isSimulationRunning ? 'Stop' : 'Run'}
           </Button>
         </div>
       </div>
@@ -605,7 +568,7 @@ export const CodeEditorWithTabs: React.FC = () => {
           <span
             className={cn(
               'flex items-center gap-1',
-              status === 'running' && 'text-green-400',
+              isSimulationRunning && 'text-green-400',
               status === 'error' && 'text-red-400'
             )}
           >
@@ -613,13 +576,13 @@ export const CodeEditorWithTabs: React.FC = () => {
               className={cn(
                 'w-2 h-2 rounded-full',
                 status === 'idle' && 'bg-[#9ca3af]',
-                status === 'running' && 'bg-green-400 animate-pulse',
+                isSimulationRunning && 'bg-green-400 animate-pulse',
                 status === 'paused' && 'bg-yellow-400',
                 status === 'error' && 'bg-red-400'
               )}
             />
             {status === 'idle' && 'Ready'}
-            {status === 'running' && 'Running'}
+            {isSimulationRunning && 'Running'}
             {status === 'paused' && 'Paused'}
             {status === 'error' && 'Error'}
           </span>

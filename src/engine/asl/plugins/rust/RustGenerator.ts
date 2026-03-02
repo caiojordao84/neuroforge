@@ -1,13 +1,25 @@
 import type { ProgramNode, BaseNode, SourceMapEntry } from '@/system/types';
+import { ShimManager } from '../core/ShimManager';
+import { rustShims } from './shims';
 
 export class RustGenerator {
     private sourceMap: SourceMapEntry[] = [];
     private currentLine: number = 1;
+    private shims: ShimManager;
+
+    constructor() {
+        this.shims = new ShimManager('rust');
+        this.shims.registerShims(rustShims);
+    }
 
     generate(ast: ProgramNode): { code: string, map: SourceMapEntry[] } {
         this.sourceMap = [];
         this.currentLine = 1;
+        this.shims.resetRuntime();
         const lines: string[] = [];
+
+        // First pass to detect shims
+        this.scanForShims(ast);
 
         this.addLn(lines, "// Generated Rust Code", null);
         this.addLn(lines, "#![no_std]", null);
@@ -59,6 +71,18 @@ export class RustGenerator {
         }
 
         return { code: lines.join('\n'), map: this.sourceMap };
+    }
+
+    private scanForShims(node: BaseNode) {
+        if (node.nodeType === 'CallExpression') {
+            const callee = node.attributes.callee || '';
+            if (callee.startsWith('sevseg.')) {
+                this.shims.requireShim('sevseg');
+            }
+        }
+        if (node.children) {
+            node.children.forEach(c => this.scanForShims(c));
+        }
     }
 
     private addLn(lines: string[], text: string, node: BaseNode | null) {

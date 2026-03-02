@@ -341,6 +341,24 @@ export class SimulationEngine extends EventEmitter {
 
   digitalRead(pin: number): 'HIGH' | 'LOW' {
     const simulationStore = useSimulationStore.getState();
+    const pinState = simulationStore.getPinState(pin);
+
+    if (!pinState) {
+      const serialStore = useSerialStore.getState();
+      serialStore.addTerminalLine(
+        `⚠️ Warning: digitalRead on Pin ${pin} but mode not set. Auto-assuming INPUT.`,
+        'warning'
+      );
+      // Auto-set to INPUT to prevent crash, mimicking real arduino floating state
+      simulationStore.setPinMode(pin, 'INPUT');
+    } else if (pinState.mode !== 'INPUT' && pinState.mode !== 'INPUT_PULLUP') {
+      const serialStore = useSerialStore.getState();
+      serialStore.addTerminalLine(
+        `⚠️ Warning: digitalRead on Pin ${pin} which is in ${pinState.mode} mode. Result may be unreliable.`,
+        'warning'
+      );
+    }
+
     return simulationStore.digitalRead(pin);
   }
 
@@ -378,6 +396,18 @@ export class SimulationEngine extends EventEmitter {
 
   analogRead(pin: number): number {
     const simulationStore = useSimulationStore.getState();
+    const pinState = simulationStore.getPinState(pin);
+
+    if (!pinState) {
+      const serialStore = useSerialStore.getState();
+      // Arduino implicitly handles analogRead without pinMode, but we warn in sim for good practice
+      serialStore.addTerminalLine(
+        `ℹ️ Notice: analogRead on Pin ${pin} without pinMode. This works, but explicit pinMode(INPUT) is better.`,
+        'info'
+      );
+      simulationStore.setPinMode(pin, 'INPUT');
+    }
+
     return simulationStore.analogRead(pin);
   }
 
@@ -475,8 +505,8 @@ export class SimulationEngine extends EventEmitter {
 
   serialWrite(value: number | string): number {
     const text = typeof value === 'number'
-        ? String.fromCharCode(value)
-        : String(value);
+      ? String.fromCharCode(value)
+      : String(value);
     this.serialPrint(text);
     return text.length;
   }
@@ -484,20 +514,20 @@ export class SimulationEngine extends EventEmitter {
   serialParseInt(): number {
     let str = '';
     while (this.serialRxBuffer.length > 0) {
-        const ch = String.fromCharCode(this.serialRxBuffer[0]);
-        if (/[\d\-]/.test(ch)) {
-            str += ch;
-            this.serialRxBuffer.shift();
-        } else {
-            break;
-        }
+      const ch = String.fromCharCode(this.serialRxBuffer[0]);
+      if (/[\d\-]/.test(ch)) {
+        str += ch;
+        this.serialRxBuffer.shift();
+      } else {
+        break;
+      }
     }
     return str ? parseInt(str, 10) : 0;
   }
 
   serialInject(text: string): void {
     for (let i = 0; i < text.length; i++) {
-        this.serialRxBuffer.push(text.charCodeAt(i));
+      this.serialRxBuffer.push(text.charCodeAt(i));
     }
     this.emit('serialData', { text });
   }

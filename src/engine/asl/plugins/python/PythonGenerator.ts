@@ -1,5 +1,7 @@
 
 import type { ProgramNode, BaseNode, SourceMapEntry } from '@/system/types';
+import { ShimManager } from '../core/ShimManager';
+import { pythonShims } from './shims';
 
 export type PythonFlavor = 'MICROPYTHON' | 'CIRCUITPYTHON';
 
@@ -9,6 +11,12 @@ export class PythonGenerator {
     private flavor: PythonFlavor = 'MICROPYTHON';
     private usedPins: Set<number> = new Set();
     private pwmPins: Set<number> = new Set();
+    private shims: ShimManager;
+
+    constructor() {
+        this.shims = new ShimManager('python');
+        this.shims.registerShims(pythonShims);
+    }
 
     generate(ast: ProgramNode, flavor: PythonFlavor = 'MICROPYTHON'): { code: string, map: SourceMapEntry[] } {
         this.sourceMap = [];
@@ -16,6 +24,7 @@ export class PythonGenerator {
         this.flavor = flavor;
         this.usedPins.clear();
         this.pwmPins.clear();
+        this.shims.resetRuntime();
 
         // First pass to find used pins for CircuitPython setup
         this.scanForPins(ast);
@@ -47,6 +56,12 @@ export class PythonGenerator {
                 }
             });
             this.addLn(output, '', null);
+        }
+
+        // --- INJECT SHIMS ---
+        const shimCode = this.shims.getRequiredShimsCode();
+        if (shimCode) {
+            shimCode.split('\n').forEach(line => this.addLn(output, line, null));
         }
 
         this.addLn(output, '# Main Program', null);
@@ -88,6 +103,15 @@ export class PythonGenerator {
         if (node.nodeType === 'HardwarePwm') {
             this.pwmPins.add(node.attributes.pin);
         }
+
+        // --- Auto-detect Shims during early scan ---
+        if (node.nodeType === 'CallExpression') {
+            const callee = node.attributes.callee || '';
+            if (callee.startsWith('sevseg.')) {
+                this.shims.requireShim('sevseg');
+            }
+        }
+
         if (node.children) node.children.forEach(c => this.scanForPins(c));
     }
 
@@ -225,6 +249,9 @@ export class PythonGenerator {
                 }
                 if (callee === 'Serial.begin') {
                     return this.addLn(out, `${i}# Serial.begin(${this.genExpr(child.children[0])})`, n);
+                }
+                if (callee.startsWith('sevseg.')) {
+                    this.shims.requireShim('sevseg');
                 }
             }
             return this.addLn(out, `${i}${this.genExpr(child)}`, n);

@@ -1,19 +1,37 @@
 
 import type { ProgramNode, BaseNode, SourceMapEntry } from '@/system/types';
+import { ShimManager } from '../core/ShimManager';
+import { cShims } from './shims';
 
 export class CGenerator {
     private sourceMap: SourceMapEntry[] = [];
     private currentLine: number = 1;
+    private shims: ShimManager;
+
+    constructor() {
+        this.shims = new ShimManager('c');
+        this.shims.registerShims(cShims);
+    }
 
     generate(ast: ProgramNode): { code: string, map: SourceMapEntry[] } {
         this.sourceMap = [];
         this.currentLine = 1;
+        this.shims.resetRuntime();
         const lines: string[] = [];
+
+        // First pass to detect shims
+        this.scanForShims(ast);
 
         // Header
         this.addLn(lines, "// Generated C++ / Arduino Code", null);
-        this.addLn(lines, "#include <Arduino.h>", null);
-        this.addLn(lines, "", null);
+        this.addLn(lines, '#include <Arduino.h>', null);
+
+        // --- INJECT SHIMS ---
+        const shimCode = this.shims.getRequiredShimsCode();
+        if (shimCode) {
+            shimCode.split('\n').forEach(line => this.addLn(lines, line, null));
+        }
+        this.addLn(lines, '', null);
 
         // Top-level nodes (Variables, Functions, etc.)
         let finalNodes: BaseNode[] = ast.children;
@@ -37,6 +55,18 @@ export class CGenerator {
         });
 
         return { code: lines.join('\n'), map: this.sourceMap };
+    }
+
+    private scanForShims(node: BaseNode) {
+        if (node.nodeType === 'CallExpression') {
+            const callee = node.attributes.callee || '';
+            if (callee.startsWith('sevseg.')) {
+                this.shims.requireShim('sevseg');
+            }
+        }
+        if (node.children) {
+            node.children.forEach(c => this.scanForShims(c));
+        }
     }
 
     private addLn(lines: string[], text: string, node: BaseNode | null) {
