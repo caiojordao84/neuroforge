@@ -502,6 +502,93 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         return ctx.engine.constrain(args[0], args[1], args[2]);
       }
 
+      // ── Math builtins ──────────────────────────────────────────────────────
+      if (expr.callee === 'abs') {
+        const v = await evalExpr(expr.args[0], env, ctx);
+        return Math.abs(Number(v));
+      }
+      if (expr.callee === 'sqrt') {
+        const v = await evalExpr(expr.args[0], env, ctx);
+        return Math.sqrt(Number(v));
+      }
+      if (expr.callee === 'pow') {
+        const base = await evalExpr(expr.args[0], env, ctx);
+        const exp  = await evalExpr(expr.args[1], env, ctx);
+        return Math.pow(Number(base), Number(exp));
+      }
+      if (expr.callee === 'sin') {
+        const v = await evalExpr(expr.args[0], env, ctx);
+        return Math.sin(Number(v));
+      }
+      if (expr.callee === 'cos') {
+        const v = await evalExpr(expr.args[0], env, ctx);
+        return Math.cos(Number(v));
+      }
+      if (expr.callee === 'tan') {
+        const v = await evalExpr(expr.args[0], env, ctx);
+        return Math.tan(Number(v));
+      }
+      if (expr.callee === 'log') {
+        const v = await evalExpr(expr.args[0], env, ctx);
+        return Math.log(Number(v));
+      }
+      if (expr.callee === 'min') {
+        const a = await evalExpr(expr.args[0], env, ctx);
+        const b = await evalExpr(expr.args[1], env, ctx);
+        return Math.min(Number(a), Number(b));
+      }
+      if (expr.callee === 'max') {
+        const a = await evalExpr(expr.args[0], env, ctx);
+        const b = await evalExpr(expr.args[1], env, ctx);
+        return Math.max(Number(a), Number(b));
+      }
+      if (expr.callee === 'round') {
+        const v = await evalExpr(expr.args[0], env, ctx);
+        return Math.round(Number(v));
+      }
+      if (expr.callee === 'floor') {
+        const v = await evalExpr(expr.args[0], env, ctx);
+        return Math.floor(Number(v));
+      }
+      if (expr.callee === 'ceil') {
+        const v = await evalExpr(expr.args[0], env, ctx);
+        return Math.ceil(Number(v));
+      }
+      if (expr.callee === 'isnan') {
+        const v = await evalExpr(expr.args[0], env, ctx);
+        return isNaN(Number(v)) ? 1 : 0;
+      }
+      if (expr.callee === 'isinf') {
+        const v = await evalExpr(expr.args[0], env, ctx);
+        return !isFinite(Number(v)) ? 1 : 0;
+      }
+
+      // ── String / C stdlib builtins ─────────────────────────────────────────
+      if (expr.callee === 'strlen') {
+        const s = await evalExpr(expr.args[0], env, ctx);
+        return String(s ?? '').length;
+      }
+      if (expr.callee === 'strcmp') {
+        const a = await evalExpr(expr.args[0], env, ctx);
+        const b = await evalExpr(expr.args[1], env, ctx);
+        return String(a) === String(b) ? 0 : 1;
+      }
+      if (expr.callee === 'atoi') {
+        const s = await evalExpr(expr.args[0], env, ctx);
+        return parseInt(String(s), 10) || 0;
+      }
+      if (expr.callee === 'atof') {
+        const s = await evalExpr(expr.args[0], env, ctx);
+        return parseFloat(String(s)) || 0;
+      }
+      if (expr.callee === 'dtostrf') {
+        // dtostrf(val, width, prec, buf) — returns formatted string (simulation: ignore buf)
+        const val  = await evalExpr(expr.args[0], env, ctx);
+        const prec = expr.args[2] ? await evalExpr(expr.args[2], env, ctx) : 2;
+        return Number(val).toFixed(Math.max(0, Number(prec) || 0));
+      }
+
+      // ── Type conversions ───────────────────────────────────────────────────
       if (expr.callee === 'String') return String(await evalExpr(expr.args[0] || { kind: 'literal', value: '' }, env, ctx));
       if (expr.callee === 'int') return Math.floor(Number(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx)) || 0);
       if (expr.callee === 'float') return Number(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx)) || 0;
