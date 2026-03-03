@@ -1,118 +1,354 @@
-# ROADMAP_TO_ASL
+# NeuroForge ASL — Architecture, Status & Roadmap
 
-This document describes the evolution of NeuroForge as a simulation and transpilation platform for embedded systems, with ASL (Abstract Simulation Language) as the universal intermediate representation. The guiding thread is the full integration of the contents of `notyet/` into the core (`src/engine`), eliminating that folder at the end of the process.
+> **Last Updated:** 03/Mar/2026
+> **Branch:** `critical_Implementation`
+> **Purpose:** This document is the single source of truth for the ASL subsystem's current state and evolution roadmap. The guiding thread is the full integration of the contents of `notyet/` into the core (`src/engine`), eliminating that folder at the end of the process.
 
 > 📋 **Implementation Standard**: See [docs/IMPLEMENTATION_STANDARD.md](../docs/IMPLEMENTATION_STANDARD.md) for the implementation pattern that ensures parity across all languages.
 >
-> 📊 **Parser Comparison Table**: See [docs/ASL_PARSER_COMPARISON.md](../docs/ASL_PARSER_COMPARISON.md) for the full verified implementation matrix (last updated: 02 Mar 2026 — Sessão 6).
+> 📊 **Parser Comparison Table**: See [docs/ASL_PARSER_COMPARISON.md](../docs/ASL_PARSER_COMPARISON.md) for the full verified implementation matrix.
 >
 > 🔌 **Hardware Shim Architecture**: See [docs/ASL_SHIM_ARCHITECTURE_PLAN.md](../docs/ASL_SHIM_ARCHITECTURE_PLAN.md) for the complete hardware and protocol virtualization strategy ("The Middle Path").
 
-Status markers:
+**Status markers:**
 - `[x]` Completed
-- `[~]` In progress / stabilizing
+- `[~]` In progress / partial
 - `[ ]` Planned
-- `[?]` Under research / to be defined
+- `[?]` Under research
 
 ---
 
-## 0. Current State (Baseline)
+# Part I — What is ASL?
 
-### 0.1. ASL in the Core
+## 1. Abstract Simulation Language (ASL)
 
-- [x] `ASLTypes.ts`: AST definition — `ASLProgram`, globals, functions, tasks, statements, expressions (including `SwitchStatement`, `ASLObject`).
-- [x] `ASLExecutor.ts`: JS executor that traverses the ASL and calls `SimulationEngine` (supports `switch/case`, dictionary lookup, `format`).
-- [x] `codeToASL.ts` + `transforms/`: modularized transpiler for C++ Arduino subset → ASL (v1).
-- [x] `transforms/statementRegistry.ts`: Handler Registry pattern for statement extensibility.
-- [x] Integration in `TopToolbar`: JS mode in C++ tries ASL first, falls back to legacy `CodeParser`.
+**ASL** (Abstract Simulation Language) is NeuroForge's **universal Intermediate Representation (IR)**. It is a JSON-based schema that captures the complete semantics of an embedded program — control flow, hardware operations, data structures — in a language-agnostic format.
 
-### 0.2. Current Workflow (C++ / MicroPython → ASL → SimulationEngine)
+### 1.1. Why ASL Exists
 
-- [x] `CodeEditorWithTabs.tsx`
-- [x] `LanguageRegistry.ts`
-- [x] `TopToolbar.tsx`
-- [x] `codeToASL.ts` + `transforms/`
-- [x] `ASLTypes.ts`
-- [x] `ASLExecutor.ts`
-- [x] `SimulationEngine.ts`
-- [x] `ASLViewer.tsx`
+NeuroForge supports multiple programming languages (C++, MicroPython, Rust, and more in the future) and multiple representation modes (Blockly, Flowchart, Ladder). Without a central IR, every new language or visual editor would require N×M integrations. ASL reduces this to N+M:
 
-### 0.3. Supported C++ Subset (v0) — Full Detail
+```
+            ┌─────┐ ┌────────┐ ┌──────┐ ┌─────────┐ ┌─────────┐
+            │ C++ │ │ Python │ │ Rust │ │ Blockly │ │Flowchart│ ...
+            └──┬──┘ └───┬────┘ └──┬───┘ └────┬────┘ └────┬────┘
+               │        │        │           │           │
+        ┌──────▼────────▼────────▼───────────▼───────────▼──────┐
+        │                    PARSERS (input)                      │
+        │   CParser · PythonParser · RustParser · BlocklyToASL   │
+        └──────────────────────────┬─────────────────────────────┘
+                                   │
+                            ┌──────▼──────┐
+                            │ ASLProgram  │  ← The Universal Pivot
+                            │   (JSON)    │
+                            └──┬──────┬───┘
+                               │      │
+              ┌────────────────┘      └────────────────┐
+              │                                        │
+    ┌─────────▼──────────┐                  ┌──────────▼──────────┐
+    │    ASLExecutor      │                  │    GENERATORS       │
+    │  (Runtime in JS)    │                  │  C · Python · Rust  │
+    │       │             │                  │  Blockly · Flow     │
+    │  SimulationEngine   │                  │  (output)           │
+    │  GPIO, delay, I2C   │                  └─────────────────────┘
+    │  Serial, Shims      │
+    └─────────────────────┘
+```
+
+### 1.2. ASL vs AST — Key Distinction
+
+| Concept         | AST (Abstract Syntax Tree)                    | ASL (Abstract Simulation Language)               |
+| --------------- | --------------------------------------------- | ------------------------------------------------ |
+| **Level**       | Syntax-level, language-specific               | Semantic-level, language-agnostic                |
+| **Produced by** | Each parser (`CParser`, `PythonParser`, etc.) | `codeToASL()` transformation                     |
+| **Format**      | `ProgramNode` with children                   | `ASLProgram { globals, functions, tasks }`       |
+| **Purpose**     | Intermediate structure for parsing            | Universal pivot for execution and generation     |
+| **Lifespan**    | Temporary — consumed by `codeToASL`           | Persistent — consumed by Executor and Generators |
+
+**Flow:** Source Code → *Parser* → **AST** (`ProgramNode`) → *codeToASL* → **ASL** (`ASLProgram`) → Executor / Generators
+
+### 1.3. The Golden Rule
+
+> "Todas as linguagens devem andar de mãos dadas" — All languages must walk hand in hand.
+>
+> Any new feature or hardware support added to one language (C++, Python, or Rust) must be implemented with semantic parity across all supported languages.
+
+### 1.4. ASLProgram Schema (Summary)
+
+```typescript
+interface ASLProgram {
+  metadata: { name?, description?, version?, targetBoard? };
+  structs: ASLStructDef[];     // struct definitions
+  globals: ASLGlobalVar[];     // global variables declared outside setup/loop
+  functions: ASLFunction[];    // setup() + user functions
+  tasks: ASLTask[];            // [0] = mainLoop (derived from loop() / while True)
+}
+```
+
+**Supported Statement Kinds:** `pinMode`, `digitalWrite`, `analogWrite`, `read`, `if`, `while`, `for`, `doWhile`, `switch`, `delay`, `assign`, `setIndex`, `setMember`, `expr`, `return`, `print`, `break`, `continue`, `comment`
+
+**Supported Expression Kinds:** `literal`, `var`, `index`, `member`, `unary`, `binary`, `call`, `ternary`, `cast`, `object`
+
+---
+
+# Part II — Current Architecture
+
+## 2. File Structure (Verified 03/Mar/2026)
+
+```
+src/engine/
+  SimulationEngine.ts              ✅ Simulation runtime (GPIO, delay, millis, Serial)
+  CodeParser.ts                    ⬜ Legacy parser (fallback when ASL doesn't cover something)
+  Transpiler.ts                    ✅ Transpilation orchestration
+
+  asl/
+    ASLTypes.ts                    ✅ Single source of truth for the ASL schema
+    ASLExecutor.ts                 ✅ ASL interpreter/runtime → SimulationEngine
+    codeToASL.ts                   ✅ Transpiler: AST → ASLProgram
+    LanguageRegistry.ts            ✅ Central registry of supported languages
+    TreeSitterLoader.ts            ✅ Lazy loader for web-tree-sitter
+    transpile.ts                   ✅ Transpilation helpers
+    index.ts                       ✅ Barrel exports
+
+    transforms/                    ✅ codeToASL modules (Handler Registry pattern)
+      index.ts                       Barrel exports
+      context.ts                     TransformContext interface
+      statementRegistry.ts           Handler registry by nodeType (~30 handlers)
+      blockTransform.ts              Orchestrator using registry
+      exprTransform.ts               Expression transformation
+      callTransform.ts               Function call transformation
+      astNormalizer.ts               AST normalization pass
+      postfixUtils.ts                Postfix increment/decrement utilities
+
+    helpers/                       ✅ Shared utilities
+      index.ts
+      arrayUtils.ts                  resolveSize, buildEmptyArray, deepCopyValue
+      typeUtils.ts                   mapToASLType
+
+    plugins/
+      core/
+        ShimManager.ts             ✅ Shim orchestrator (registration, dependency DAG, injection)
+
+      c/
+        CParser.ts                 ✅ Recursive descent parser for C/C++ Arduino subset
+        CGenerator.ts              ✅ ASL → C code generator
+        shims/
+          display/
+            liquid_crystal_i2c_shim.ts   ✅
+          input/
+            keypad_shim.ts               ✅
+          memory/
+            eeprom_shim.ts               ✅
+          index.ts                       ✅ Barrel + registration
+
+      cpp/
+        CppParser.ts               ✅ Full C++ parser
+
+      python/
+        PythonParser.ts            ✅ MicroPython/CircuitPython parser via tree-sitter
+        PythonGenerator.ts         ✅ ASL → Python code generator
+        shims/
+          display/
+            liquid_crystal_i2c_shim.ts   ✅
+            sevseg_shim.ts               ✅
+          input/
+            keypad_shim.ts               ✅
+          memory/
+            eeprom_shim.ts               ✅
+          index.ts                       ✅
+
+      rust/
+        RustParser.ts              ✅ Rust (Embassy) parser
+        RustGenerator.ts           ✅ ASL → Rust (Embassy) code generator
+        shims/
+          display/
+            liquid_crystal_i2c_shim.ts   ✅
+          input/
+            keypad_shim.ts               ✅
+          memory/
+            eeprom_shim.ts               ✅
+          index.ts                       ✅
+
+      zig/                         ⬜ Empty — reserved for future Zig parser
+
+      analysis/
+        PatternDetector.ts         ✅ Hardware pattern detection (4 detectors)
+
+      optimizer/
+        Optimizer.ts               ✅ AST optimization (3 passes)
+
+src/components/
+  TopToolbar.tsx                   ✅ Run/Stop/Pause + ASL pipeline integration
+  CodeEditorWithTabs.tsx           ✅ Multi-tab Monaco editor
+  ASLViewer.tsx                    ✅ Debug viewer for generated ASLProgram
+
+notyet/
+  README.md                        📋 This file
+  app/                             ⬜ Pending integration (flow/, blockly/, simulator/)
+```
+
+---
+
+## 3. Implementation Status (Verified Against Codebase)
+
+### 3.1. Parsers (Source Code → AST)
+
+| Parser                | Language(s)                 | Technology                   | File                             | Status     |
+| --------------------- | --------------------------- | ---------------------------- | -------------------------------- | ---------- |
+| `CParser`             | C / C++ Arduino subset      | Recursive descent            | `plugins/c/CParser.ts`           | ✅ Complete |
+| `CppParser`           | Full C++                    | Recursive descent            | `plugins/cpp/CppParser.ts`       | ✅ Complete |
+| `PythonParser`        | MicroPython / CircuitPython | tree-sitter + regex fallback | `plugins/python/PythonParser.ts` | ✅ Complete |
+| `RustParser`          | Rust (Embassy)              | Recursive descent            | `plugins/rust/RustParser.ts`     | ✅ Complete |
+| Assembly parser       | AVR / ARM Thumb             | —                            | —                                | ⬜ Planned  |
+| ST IEC 61131-3 parser | Structured Text             | —                            | —                                | ⬜ Planned  |
+| JS/TS parser          | JavaScript / TypeScript     | —                            | —                                | ⬜ Planned  |
+
+### 3.2. Generators (ASL → Target Code)
+
+| Generator                | Target Language      | File                                | Status     |
+| ------------------------ | -------------------- | ----------------------------------- | ---------- |
+| `CGenerator`             | C / Arduino C++      | `plugins/c/CGenerator.ts`           | ✅ Complete |
+| `PythonGenerator`        | MicroPython / Python | `plugins/python/PythonGenerator.ts` | ✅ Complete |
+| `RustGenerator`          | Rust (Embassy)       | `plugins/rust/RustGenerator.ts`     | ✅ Complete |
+| C++ generator            | Full C++             | —                                   | ⬜ Planned  |
+| CircuitPython generator  | CircuitPython        | —                                   | ⬜ Planned  |
+| Assembly generator       | AVR / ARM            | —                                   | ⬜ Planned  |
+| ST IEC 61131-3 generator | Structured Text      | —                                   | ⬜ Planned  |
+| JS/TS generator          | JavaScript           | —                                   | ⬜ Planned  |
+
+### 3.3. Visual Round-trip (Code ↔ ASL ↔ Visual)
+
+| Path            | Direction        | File              | Status                |
+| --------------- | ---------------- | ----------------- | --------------------- |
+| Blockly → ASL   | Input parser     | `BlocklyToASL.ts` | ⬜ Planned (Session 8) |
+| ASL → Blockly   | Output generator | `ASLToBlockly.ts` | ⬜ Planned (Session 8) |
+| Flowchart → ASL | Input parser     | `FlowToASL.ts`    | ⬜ Planned (Session 7) |
+| ASL → Flowchart | Output generator | `ASLToFlow.ts`    | ⬜ Planned (Session 7) |
+| Ladder → ASL    | Input parser     | —                 | ⬜ Planned             |
+| ASL → Ladder    | Output generator | `ASLToLadder.ts`  | ⬜ Planned             |
+
+### 3.4. Hardware Shims (Virtual Peripherals)
+
+> 🔌 Full architecture: [ASL_SHIM_ARCHITECTURE_PLAN.md](../docs/ASL_SHIM_ARCHITECTURE_PLAN.md)
+
+| Shim                      | Device            | Status               | C   | Python | Rust |
+| ------------------------- | ----------------- | -------------------- | --- | ------ | ---- |
+| `liquid_crystal_i2c_shim` | LCD 16×2 / 20×4   | ✅                    | ✅   | ✅      | ✅    |
+| `oled_ssd1306_shim`       | OLED SSD1306      | ✅                    | ✅   | ✅      | ✅    |
+| `sevseg_shim`             | 7-Segment Display | ✅                    | ⬜   | ✅      | ⬜    |
+| `keypad_shim`             | Matrix Keypad 4×4 | ✅                    | ✅   | ✅      | ✅    |
+| `buzzer_shim`             | Piezo Buzzer      | ✅                    | ✅   | ✅      | ✅    |
+| `eeprom_shim`             | Virtual EEPROM    | ✅                    | ✅   | ✅      | ✅    |
+| Wire (I2C)                | I2C bus           | ✅ via `hardwareCall` | ✅   | ✅      | ✅    |
+| SPI                       | SPI bus           | ✅ via `hardwareCall` | ✅   | ✅      | ✅    |
+| `servo_shim`              | Servo Motor       | ⬜                    | —   | —      | —    |
+| `dht_shim`                | DHT11/22          | ⬜                    | —   | —      | —    |
+| `ultrasonic_shim`         | HC-SR04           | ⬜                    | —   | —      | —    |
+
+> ⚠️ Seven Segment (`sevseg_shim`) is only implemented for Python. C and Rust need generator shim injection.
+
+### 3.5. ASLExecutor Builtins (Verified in `ASLExecutor.ts`)
+
+**All implemented:**
+
+| Category                | Builtins                                                                                                   |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **GPIO**                | `pinMode`, `digitalWrite`, `analogWrite`, `digitalRead`, `analogRead`                                      |
+| **Timing**              | `delay`, `delayMicroseconds`, `millis`, `micros`                                                           |
+| **Serial**              | `Serial.begin/print/println/read/write/available/parseInt/readString`                                      |
+| **Math**                | `abs`, `sqrt`, `pow`, `sin`, `cos`, `tan`, `log`, `min`, `max`, `round`, `floor`, `ceil`, `isnan`, `isinf` |
+| **Utility**             | `random`, `map`, `constrain`                                                                               |
+| **String / C stdlib**   | `strlen`, `strcmp`, `atoi`, `atof`, `dtostrf`                                                              |
+| **Type conversion**     | `int()`, `float()`, `String()`                                                                             |
+| **Hardware events**     | `lcd.*`, `oled.*`, `sevseg.*`, `keypad.*` → `engine.emit('hardwareCall', ...)`                             |
+| **Tone**                | `tone(pin, freq)`, `tone(pin, freq, dur)`, `noTone(pin)`                                                   |
+| **Interrupts/Protocol** | `attachInterrupt`, `detachInterrupt`, `pulseIn`, `shiftOut`, `shiftIn`                                     |
+| **Python extras**       | `len()`, `format()`, `enumerate()`, `reversed()`                                                           |
+| **sizeof**              | `sizeof(arr)` → array length                                                                               |
+
+### 3.6. Supported C++ Subset
 
 #### Statements
+- [x] Global/local variable declarations (scalars, arrays, strings, PROGMEM)
+- [x] `#define` for constants and array sizes
+- [x] All assignment forms (simple, array, 2D/3D, compound, pointer dereference)
+- [x] All hardware: `pinMode`, `digitalWrite`, `analogWrite`, `delay`, `digitalRead`
+- [x] Control flow: `if/else`, `while`, `for`, `doWhile`, `switch/case`, `return`, `break`, `continue`
 
-**Globals and Locals:**
-- [x] Simple global declaration: `int x = 0;`
-- [x] Simple local declaration: `int i = 0;`
-- [x] Global array declaration: `const int LED_PINS[6] = {3, 4, 5, 6, 7, 8};`
-- [x] Local array declaration: `int values[5] = {1, 2, 3, 4, 5};`
-- [x] #define for array size: `#define SIZE 10` + `int arr[SIZE]`
-- [x] PROGMEM arrays: `const int arr[] PROGMEM`
-- [~] Local declaration with expression: `int delayTime = 1000 - (i * 100);`
+#### Expressions
+- [x] Arithmetic: `+ - * / %`, Bitwise: `& | ^ << >>`, Logical: `&& ||`
+- [x] Comparisons: `== != < <= > >=`
+- [x] Unary: `! - ++ --` (prefix and postfix)
+- [x] Ternary: `cond ? a : b`
+- [x] Array indexing, member access, function calls, `sizeof`
 
-**Assignments:**
-- [x] Increment/decrement: `i = i + 1;`, `i = i - 1;`
-- [x] Array subscript postfix: `arr[i]++`, `arr[i]--`
-- [x] Array subscript prefix: `++arr[i]`, `--arr[i]`
-- [x] Generic simple assignment: `x = expr;`
-- [x] Array element assignment: `LED_PINS[2] = 10;`
-- [x] Array compound assignment 2D: `arr[i][j] += val`
-- [x] Partial array initialization: `int arr[10] = {1, 2}`
-- [x] String literal to char array: `char str[] = "hello"`
-- [x] Pointer dereference assignment: `*ptr = val;`
-- [x] Dereference compound assignment: `*ptr += val;`
-
-**Hardware operations:**
-- [x] `pinMode`, `pinMode` with array
-- [x] `digitalWrite`, `digitalWrite` with array
-- [x] `analogWrite`
-- [x] `delay`
-- [x] Digital read (declaration + assignment)
-
-**Control flow:**
-- [x] `if/else`, cascading `else if`
-- [x] `while`
-- [x] Simple `for`, `for` with no condition
-- [x] `switch/case` (native ASL support with fall-through)
-- [x] `return`, `break`, `continue`
-- [x] `doWhile` — `do { ... } while(cond)` (ASLExecutor + CParser)
-
-#### Expressions in Conditions
-- [x] `!flag`, `a == b`, `a != b`, `i < 10`, `i <= max`, `i > 0`, `i >= 0`
-- [x] Bare literals/variables
-- [x] Compound logical: `a && b`, `a || b`
-
-#### Expressions on the RHS
-- [x] Literal/constant, simple var, simple binary
-- [x] Multiplication, compound expression
-- [x] Array indexing, array initializer, partial array init
-- [x] String literal to char array
-- [x] `sizeof()` builtin
-- [x] Zero-init: `int arr[5] = {}` or `= {0}`
-- [x] Complex expressions: `x = a + b * c / 2;`
-
-#### Data Types and Structures
-- [x] Scalar variables, static arrays, index access
+#### Data Types
+- [x] Scalars, static arrays (1D/2D/3D), strings (`char[]`)
 - [x] Type qualifiers: `const`, `volatile`, `static`
-- [x] Pointer types, address-of operator
-- [x] Range-based for: `for (auto x : arr)`
-- [x] Strings: `char msg[] = "Hello";`
-- [x] 3D array declaration, access (`index3D`), assignment (`setIndex3D`)
-- [x] Array of string pointers: `const char* labels[] = {"a","b"}`
+- [x] Pointers, address-of operator
 - [x] Structs (data only): `struct Point { int x, y; };`
-- [x] `std::array<int, 3>` and `std::vector<int>`
-- [x] Extern variables (safely ignored)
-- [x] Designated initializers: `int arr[5] = {[0]=1, [3]=99}`
+- [x] Enums: `enum Phase { ... };`
+- [x] `std::array<int, N>`, `std::vector<int>`
+- [x] Range-based for: `for (auto x : arr)`
 
-#### Arithmetic / Bitwise Operators
-- [x] `+ - * / %`
-- [x] `&& ||`
-- [x] `& | ^ << >>`
+### 3.7. PatternDetector & Optimizer
 
-### 0.4. Tools in `notyet/` (to integrate)
+> **Files:** `plugins/analysis/PatternDetector.ts`, `plugins/optimizer/Optimizer.ts`
 
-- [x] `notyet/app/system/Lexer.ts` (integrated into `CParser`)
-- [x] `notyet/app/system/SymbolTable.ts` (integrated into `CParser`)
+#### PatternDetector — 4 Detection Methods
+
+| Method               | Pattern                                        | Severity   | Description                                         |
+| -------------------- | ---------------------------------------------- | ---------- | --------------------------------------------------- |
+| `detectPwmBitBang`   | GPIO HIGH → delay → GPIO LOW → delay           | ⚠️ WARNING  | Software PWM detected; suggests using `analogWrite` |
+| `detectPollingLoop`  | `while(digitalRead(...))` without delay        | 🔴 CRITICAL | Blocking polling loop freezes multitasking          |
+| `detectStateMachine` | `if (state == ...)` with state/mode/phase vars | ℹ️ INFO     | FSM pattern detected, useful for flow visualization |
+| `detectLongDelays`   | `delay(>500ms)` inside loop                    | ⚠️ WARNING  | Long blocking delay; suggests `millis()` pattern    |
+
+#### Optimizer — 3 Optimization Passes
+
+| Pass | Method              | Description                                                                     |
+| ---- | ------------------- | ------------------------------------------------------------------------------- |
+| 1    | `replacePwmBitBang` | Replaces GPIO-HIGH → delay → GPIO-LOW → delay sequences with `HardwarePwm` node |
+| 2    | `mergeDelays`       | Merges consecutive `delay()` calls into a single delay                          |
+| 3    | `batchGpio`         | Groups consecutive `GpioSet` operations into a single `GpioBatch` node          |
+
+### 3.8. Additional Supported Structures
+
+- [x] Enum declarations: `enum Phase { ACCELERATING, DECELERATING, STOPPED };`
+- [x] Enum in conditions: `if (phase == STOPPED)`
+- [x] Global expression initialization: `float intervalMin = initialInterval * 0.50;`
+- [x] User-defined functions with parameters and return values
+- [x] `for` desugared to `while` in ASL (`init → while(cond) { body; update }`)
+
+---
+
+## 4. Known Gaps & Limitations
+
+> See also: [docs/ASL_PARSER_COMPARISON.md](../docs/ASL_PARSER_COMPARISON.md)
+
+### 4.1. Missing Language Features
+
+| Priority    | Gap                                          | Status                                    |
+| ----------- | -------------------------------------------- | ----------------------------------------- |
+| 🟠 Important | Cast `(byte)`, `(uint8_t)`, `(char)`         | [ ] Only `int`/`float`/`String` handled   |
+| 🟡 Medium    | `CommaExpression` — `for(int i=0, j=0; ...)` | [ ] Falls to `literal 0`                  |
+| 🟡 Medium    | `sizeof(type)` without variable              | [ ] Only variable-based `sizeof` handled  |
+| 🟢 Low       | `typedef` / `using` type aliases             | [ ] Affects `mapToASLType`                |
+| 🟢 Low       | `AddressOf` in complex lvalue                | [ ] Only `&varName` and `&arr[i]` handled |
+| 🟢 Low       | String concatenation `"text" + String(val)`  | [ ] JS `+` coercion may mismatch          |
+
+### 4.2. Incomplete `evaluateInitializer`
+
+- [ ] Array of string literals as globals: `const char* arr[] = {"on","off"}` — inconsistent
+- [ ] Conditional/ternary initializer: `const int X = (A > B) ? A : B` — unsupported
+
+### 4.3. Missing Hardware Builtins
+
+- [ ] `Servo.attach/write/read` → needs UI servo widget
+- [ ] `pgm_read_byte(addr)` → should be transparent in simulation
+
+### 4.4. Tools in `notyet/` Still to Integrate
+
 - [ ] `notyet/app/system/flow/CfgBuilder.ts`
 - [ ] `notyet/app/system/flow/FlowValidator.ts`
 - [ ] `notyet/app/system/flow/FlowToAst.ts`
@@ -120,732 +356,390 @@ Status markers:
 - [ ] `notyet/app/system/blockly/CodeToBlockly.ts`
 - [ ] `notyet/app/system/simulator/SimulatorInterpreter.ts`
 
-### 0.5. Additional Hardware Supported
+---
 
-**Displays:**
-- [x] LCD: `lcd.print()`, `lcd.setCursor()`, `lcd.clear()`
-- [x] OLED: `oled.text()`, `oled.show()`, `oled.clear()`
-- [x] Seven Segment: `sevseg.print()`
+# Part III — Roadmap
 
-**Sensors/Input:**
-- [x] Keypad: `keypad.getKey()`
+## 5. Integration Sessions
 
-### 0.6. Utility Functions Implemented
+### Session Summary
 
-> ✅ **Actualizado em 02/03/2026 — Sessão 1**: todos os itens abaixo foram verificados como implementados em `ASLExecutor.ts` (commits `79a6b60`, `3af7dce` e anteriores). O roadmap anterior continha listas "NOT YET" que já estavam implementadas.
+| Session | Description                 | Status         | Priority |
+| ------- | --------------------------- | -------------- | -------- |
+| **S1**  | ASLExecutor Builtins        | ✅ **Complete** | —        |
+| **S2**  | CGenerator                  | ✅ **Complete** | —        |
+| **S3**  | PythonGenerator             | ✅ **Complete** | —        |
+| **S4**  | RustGenerator               | ✅ **Complete** | —        |
+| **S5**  | ASLTypes Schema Extensions  | [~] Partial    | 🟡 P2     |
+| **S6**  | Hardware Shims Extras       | [~] Partial    | 🟡 P2     |
+| **S7**  | FlowToASL + ASLToFlow       | [ ] Pending    | 🟠 P1     |
+| **S8**  | BlocklyToASL + ASLToBlockly | [ ] Pending    | 🟠 P1     |
 
-**Mathematical and utility functions in `ASLExecutor`:**
-- [x] `random(min, max)`: random between min and max
-- [x] `random(max)`: random between 0 and max-1
-- [x] `map(value, fromMin, fromMax, toMin, toMax)`
-- [x] `constrain(value, min, max)`
-
-**Math functions (ALL implemented — `Math.*` wrappers):**
-- [x] `abs(x)` → `Math.abs(x)`
-- [x] `sqrt(x)` → `Math.sqrt(x)`
-- [x] `pow(base, exp)` → `Math.pow(base, exp)`
-- [x] `sin(x)` / `cos(x)` / `tan(x)` → `Math.sin/cos/tan`
-- [x] `log(x)` → `Math.log(x)`
-- [x] `min(a, b)` / `max(a, b)` → `Math.min/max`
-- [x] `round(x)` / `floor(x)` / `ceil(x)` → `Math.round/floor/ceil`
-- [x] `isnan(x)` → `isNaN(x)` — commit [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b6061f34d9a0390a00495d22af616e6f3171)
-- [x] `isinf(x)` → `!isFinite(x)` — commit [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b6061f34d9a0390a00495d22af616e6f3171)
-
-**Type conversion builtins:**
-- [x] `int(val)`: truncates to integer (`Math.floor`)
-- [x] `float(val)`: converts to float (`Number(val)`)
-- [x] `String(val)`: converts to string (`String(val)`)
-
-**String / C stdlib functions (ALL implemented):**
-- [x] `strlen(s)` → `String(s).length` — commit [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b6061f34d9a0390a00495d22af616e6f3171)
-- [x] `strcmp(a, b)` → `a === b ? 0 : 1` — commit [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b6061f34d9a0390a00495d22af616e6f3171)
-- [x] `atoi(s)` → `parseInt(String(s), 10)` — commit [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b6061f34d9a0390a00495d22af616e6f3171)
-- [x] `atof(s)` → `parseFloat(String(s))` — commit [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b6061f34d9a0390a00495d22af616e6f3171)
-- [x] `dtostrf(val, width, prec, buf)` → `Number(val).toFixed(prec)` — commit [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b6061f34d9a0390a00495d22af616e6f3171)
-
-**sizeof builtin:**
-- [x] `sizeof(arr)` → `arr.length` (1D) or `arr[0].length` (2D) via `__sizeof` callee
-
-**Serial extensions (ALL implemented):**
-- [x] `Serial.write(b)` → `engine.serialWrite(b)`
-- [x] `Serial.read()` → `engine.serialRead()` (returns `-1` if empty)
-- [x] `Serial.available()` → `engine.serialAvailable()`
-- [x] `Serial.parseInt()` → `engine.serialParseInt()`
-- [x] `Serial.readString()` → reads from simulated RX buffer
-
-**Hardware event builtins:**
-- [x] `lcd.print`, `lcd.setCursor`, `lcd.clear` → `engine.emit('hardwareCall', ...)`
-- [x] `oled.text`, `oled.show`, `oled.clear` → `engine.emit('hardwareCall', ...)`
-- [x] `sevseg.print` → `engine.emit('hardwareCall', ...)`
-- [x] `KeypadRead` → `engine.emit('hardwareCall', ...)`
-
-**Time functions:**
-- [x] `millis()` → ms since simulation start
-- [x] `micros()` → µs since simulation start
-- [x] `delayMicroseconds()` → no-op in simulation (instant)
-
-**Tone/Buzzer:**
-- [x] `tone(pin, freq)` → tone at given frequency
-- [x] `tone(pin, freq, duration)` → auto `noTone` after delay — commit [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce503d0e27f7134d15dc9e9a68599edd952)
-- [x] `noTone(pin)` → stops tone generation
-
-**Hardware interrupt/protocol builtins:**
-- [x] `attachInterrupt(pin, fn, mode)` / `detachInterrupt(pin)` — commit [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce503d0e27f7134d15dc9e9a68599edd952)
-- [x] `pulseIn(pin, val)` / `pulseInLong(pin, val)` → returns 500µs simulated — commit [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce503d0e27f7134d15dc9e9a68599edd952)
-- [x] `shiftOut(pin, clock, order, val)` / `shiftIn` → emit `hardwareCall` — commit [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce503d0e27f7134d15dc9e9a68599edd952)
-
-**Python/utility extras:**
-- [x] `len()` → alias `__len`
-- [x] `format()` → `{}` substitution
-- [x] `enumerate()` → returns `[idx, val][]`
-- [x] `reversed()`
-
-### 0.7. Hardware Shims (Virtual Peripheral Support)
-
-NeuroForge uses the **Hardware Shim** pattern to provide consistent peripheral support across all languages. The shims translate high-level ASL calls into virtual device interactions.
-> 🔌 **Detailed Architecture**: Read [The Middle Path: Shim Architecture](../docs/ASL_SHIM_ARCHITECTURE_PLAN.md) for the exhaustive catalog of current and future shims.
-
-- [x] `liquid_crystal_i2c_shim`: Full LCD support (`print`, `clear`, `setCursor`)
-- [x] `oled_ssd1306_shim`: OLED support (`text`, `show`, `fill`)
-- [x] `sevseg_shim`: Seven Segment Display support (`print`)
-- [x] `keypad_shim`: Matrix Keypad support (`getKey`)
-- [x] `buzzer_shim`: Tone/NoTone support with automatic duration handling
-- [x] `eeprom_shim`: Virtual EEPROM (`read`, `write`) — commit [1cf0961](https://github.com/caiojordao84/neuroforge/commit/1cf0961)
-
-#### Shim Availability by Language
-
-| Shim | C/C++ | Python | Rust |
-|------|-------|--------|------|
-| LCD (liquid_crystal_i2c) | ✅ | ✅ | ✅ |
-| OLED (oled_ssd1306) | ✅ | ✅ | ✅ |
-| Seven Segment | ⬜ | ✅ | ⬜ |
-| Keypad | ✅ | ✅ | ✅ |
-| Buzzer (tone/noTone) | ✅ | ✅ | ✅ |
-| EEPROM | ✅ | ✅ | ✅ |
-| Wire (I2C) | ✅ | ✅ | ✅ |
-| SPI | ✅ | ✅ | ✅ |
-| attachInterrupt | ✅ | ✅ | ✅ |
-| pulseIn | ✅ | ✅ | ✅ |
-| shiftOut/shiftIn | ✅ | ✅ | ✅ |
-
-> ⚠️ **Note**: Seven Segment (`sevseg_shim`) is only implemented for Python. C and Rust require generator shim injection. See [ASL_SHIM_ARCHITECTURE_PLAN.md](../docs/ASL_SHIM_ARCHITECTURE_PLAN.md) Section 4.2.
-
-### 0.8. Additional Supported Structures
-
-- [x] Enum declarations: `enum Phase { ACCELERATING, DECELERATING, STOPPED };`
-- [x] Enum in conditions: `if (phase == STOPPED)`
-- [x] Global variables resolve expressions: `float intervalMin = initialInterval * 0.50;`
+> 💡 **Language Parity Achieved**: The system has reached a state where C++, Python, and Rust walk "hand in hand". Any control logic implemented in one of these languages is faithfully represented in ASL and regenerated for the others with semantic parity.
 
 ---
 
-## 0.8. Known Gaps in the Current ASL Subset
+### S1 — ASLExecutor Builtins ✅ COMPLETE
 
-> ✅ **Actualizado em 02/03/2026**: Muitos itens desta secção foram resolvidos. Ver lista completa e verificada em [`docs/ASL_PARSER_COMPARISON.md`](../docs/ASL_PARSER_COMPARISON.md).
-
-### 0.8.1. Missing Statements
-
-| Priority | Gap                             | Status                                                   |
-| -------- | ------------------------------- | -------------------------------------------------------- |
-| 🟢 Low    | `switch/case`                   | ✅ **IMPLEMENTED** — native ASL + all generators          |
-| 🟢 Low    | `doWhile`                       | ✅ **IMPLEMENTED** — ASLExecutor + CParser `do_statement` |
-| 🟢 Low    | `delayMicroseconds`             | ✅ **IMPLEMENTED** — no-op in SimulationEngine            |
-| 🟡 Medium | range-based `for` (C++11)       | [x] CParser tracks `FASE 3.15`                           |
-| 🟢 Low    | `typedef` / `using`             | [ ] Type aliases — affects `mapToASLType`                |
-| 🟢 Low    | `struct` declaration + instance | ✅ **IMPLEMENTED** — Phase 4                              |
-
-### 0.8.2. Missing Expressions
-
-| Priority    | Gap                                         | Status                                              |
-| ----------- | ------------------------------------------- | --------------------------------------------------- |
-| 🔴 Critical  | `TernaryExpression`                         | ✅ **IMPLEMENTED** — `ConditionalExpression`         |
-| 🟠 Important | Cast `(byte)`, `(uint8_t)`, `(char)`        | [ ] Only `int`/`float`/`String` handled             |
-| 🟠 Important | Negative literal in `evaluateInitializer`   | ✅ **IMPLEMENTED**                                   |
-| 🟠 Important | String literal as global initializer        | ✅ **IMPLEMENTED**                                   |
-| 🟡 Medium    | `CommaExpression`                           | [ ] `for(int i=0, j=0; ...)` → falls to `literal 0` |
-| 🟡 Medium    | `sizeof(type)` (without variable)           | [ ] Only variable-based `sizeof` handled            |
-| 🟢 Low       | `AddressOf` in complex lvalue               | [ ] Only `&varName` and `&arr[i]` handled           |
-| 🟢 Low       | String concatenation `"text" + String(val)` | [ ] JS `+` coercion may mismatch                    |
-
-### 0.8.3. Builtins in ASLExecutor
-
-> ✅ **Actualizado em 02/03/2026 — Sessão 1**: todos os itens desta secção estão implementados. Ver secção 0.6 para detalhes e commits.
-
-**Math functions — ALL IMPLEMENTED:**
-- [x] `abs/sqrt/pow/sin/cos/tan/log/min/max/round/floor/ceil/isnan/isinf`
-
-**String / C stdlib — ALL IMPLEMENTED:**
-- [x] `strlen/strcmp/atoi/atof/dtostrf`
-
-**Serial extensions — ALL IMPLEMENTED:**
-- [x] `Serial.write/read/available/parseInt/readString`
-
-**Hardware libraries (via `engine.emit('hardwareCall', ...)`):**
-- [ ] `Servo.attach/write/read` → engine servo simulation
-- [ ] `EEPROM.read/write` → simulated EEPROM (Map or array)
-- [ ] `Wire.*` (I2C bus simulation)
-- [ ] `SPI.begin/transfer` (SPI bus simulation)
-- [ ] `pgm_read_byte(addr)` → transparent in simulation
-
-### 0.8.4. Incomplete `evaluateInitializer`
-
-- [x] `UnaryExpression` with `-`: `const int OFFSET = -10`
-- [x] String literal: `const char* name = "hello"`
-- [ ] Array of string literals: `const char* arr[] = {"on","off"}` — inconsistency for globals
-- [ ] Conditional/ternary initializer: `const int X = (A > B) ? A : B` — explicit unsupported
+| #    | Task                                                                   | File                                     | Status                                                                 |
+| ---- | ---------------------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------- |
+| S1.1 | Math builtins: `abs/sqrt/pow/sin/cos/tan/log/min/max/round/floor/ceil` | `ASLExecutor.ts`                         | ✅                                                                      |
+| S1.2 | Math extras: `isnan/isinf`                                             | `ASLExecutor.ts`                         | ✅ [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b60) |
+| S1.3 | String builtins: `strlen/strcmp/atoi/atof/dtostrf`                     | `ASLExecutor.ts`                         | ✅ [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b60) |
+| S1.4 | Serial extensions: `write/read/available/parseInt/readString`          | `ASLExecutor.ts`                         | ✅                                                                      |
+| S1.5 | `doWhile` in executor                                                  | `ASLExecutor.ts`                         | ✅                                                                      |
+| S1.6 | `delayMicroseconds` in executor + SimulationEngine                     | `ASLExecutor.ts` + `SimulationEngine.ts` | ✅                                                                      |
+| S1.7 | `tone(pin, freq, duration)` — auto noTone                              | `ASLExecutor.ts`                         | ✅ [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce) |
+| S1.8 | `sizeof(arr)` builtin                                                  | `ASLExecutor.ts`                         | ✅                                                                      |
+| S1.9 | `attachInterrupt/detachInterrupt/pulseIn/shiftOut/shiftIn`             | `ASLExecutor.ts` + `CParser.ts`          | ✅ [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce) |
 
 ---
 
-## 0.9. Integration Checklist — ASL Branch
+### S2 — CGenerator ✅ COMPLETE
 
-> Created 02/03/2026. Operational checklist for integration sessions.
-> ⚠️ **Status updated 03/03/2026** — Some entries corrected to reflect actual implementation state.
-> See also: [`docs/ASL_PARSER_COMPARISON.md](../docs/ASL_PARSER_COMPARISON.md)
-
-### SESSION 1 — ASLExecutor Builtins ✅ COMPLETE
-
-| #    | Tarefa                                                                 | Ficheiro                                 | Estado                                                                                                         |
-| ---- | ---------------------------------------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| S1.1 | Math builtins: `abs/sqrt/pow/sin/cos/tan/log/min/max/round/floor/ceil` | `ASLExecutor.ts`                         | ✅                                                                                                              |
-| S1.2 | Math extras: `isnan/isinf`                                             | `ASLExecutor.ts`                         | ✅ commit [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b6061f34d9a0390a00495d22af616e6f3171) |
-| S1.3 | String builtins: `strlen/strcmp/atoi/atof/dtostrf`                     | `ASLExecutor.ts`                         | ✅ commit [79a6b60](https://github.com/caiojordao84/neuroforge/commit/79a6b6061f34d9a0390a00495d22af616e6f3171) |
-| S1.4 | Serial extensions: `write/read/available/parseInt/readString`          | `ASLExecutor.ts`                         | ✅                                                                                                              |
-| S1.5 | `doWhile` no executor                                                  | `ASLExecutor.ts`                         | ✅                                                                                                              |
-| S1.6 | `delayMicroseconds` no executor + SimulationEngine                     | `ASLExecutor.ts` + `SimulationEngine.ts` | ✅                                                                                                              |
-| S1.7 | `tone(pin, freq, duration)` — auto noTone                              | `ASLExecutor.ts`                         | ✅ commit [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce503d0e27f7134d15dc9e9a68599edd952) |
-| S1.8 | `sizeof(arr)` builtin                                                  | `ASLExecutor.ts`                         | ✅                                                                                                              |
-| S1.9 | `attachInterrupt/detachInterrupt/pulseIn/shiftOut/shiftIn`             | `ASLExecutor.ts` + `CParser.ts`          | ✅ commit [3af7dce](https://github.com/caiojordao84/neuroforge/commit/3af7dce503d0e27f7134d15dc9e9a68599edd952) |
+| #     | Task                            | File                      | Status |
+| ----- | ------------------------------- | ------------------------- | ------ |
+| S2.1  | Core and structural support     | `plugins/c/CGenerator.ts` | ✅      |
+| S2.2  | Full control flow               | `CGenerator.ts`           | ✅      |
+| S2.3  | do-while support                | `CGenerator.ts`           | ✅      |
+| S2.11 | Globals, arrays, structs, enums | `CGenerator.ts`           | ✅      |
 
 ---
 
-### SESSÃO 2 — CGenerator ✅ COMPLETA
+### S3 — PythonGenerator ✅ COMPLETE
 
-| #     | Tarefa                                       | Ficheiro                  | Estado |
-| ----- | -------------------------------------------- | ------------------------- | ------ |
-| S2.1  | `CGenerator.ts` — suporte core e estrutural  | `plugins/c/CGenerator.ts` | ✅      |
-| S2.2  | `genStmt`: controlo de fluxo completo        | `CGenerator.ts`           | ✅      |
-| S2.3  | `genStmt`: do-while suporte                  | `CGenerator.ts`           | ✅      |
-| S2.11 | Declarações: globais, arrays, structs, enums | `CGenerator.ts`           | ✅      |
+| #    | Task                         | File                                | Status |
+| ---- | ---------------------------- | ----------------------------------- | ------ |
+| S3.1 | ASL-compatible Python output | `plugins/python/PythonGenerator.ts` | ✅      |
+| S3.2 | Control flow and GPIO        | `PythonGenerator.ts`                | ✅      |
 
 ---
 
-### SESSÃO 3 — PythonGenerator ✅ COMPLETA
+### S4 — RustGenerator ✅ COMPLETE
 
-| #    | Tarefa                                            | Ficheiro                            | Estado |
-| ---- | ------------------------------------------------- | ----------------------------------- | ------ |
-| S3.1 | `PythonGenerator.ts` — suporte compatível com ASL | `plugins/python/PythonGenerator.ts` | ✅      |
-| S3.2 | `genStmt`: controlo de fluxo e GPIO               | `PythonGenerator.ts`                | ✅      |
-
----
-
-### SESSÃO 4 — RustGenerator ✅ COMPLETA
-
-| #    | Tarefa                                      | Ficheiro           | Estado |
-| ---- | ------------------------------------------- | ------------------ | ------ |
-| S4.1 | Suporte Serial, Time e GPIO em Rust/Embassy | `RustGenerator.ts` | ✅      |
-| S4.2 | `tone/noTone` stubs e interrupções          | `RustGenerator.ts` | ✅      |
+| #    | Task                               | File               | Status |
+| ---- | ---------------------------------- | ------------------ | ------ |
+| S4.1 | Serial, Time, GPIO in Rust/Embassy | `RustGenerator.ts` | ✅      |
+| S4.2 | `tone/noTone` stubs and interrupts | `RustGenerator.ts` | ✅      |
 
 ---
 
-### SESSÃO 5 — ASLTypes Schema Extensions 🟡 PENDENTE
+### S5 — ASLTypes Schema Extensions [~] Partial
 
-> Novos nós ASL necessários para as CIs de hardware avançado.
+> New ASL nodes needed for advanced hardware CIs.
 
-| #    | Tarefa                                                             | Ficheiro               | Estado |
+| #    | Task                                                               | File                   | Status |
 | ---- | ------------------------------------------------------------------ | ---------------------- | ------ |
 | S5.1 | `UARTWrite/Read` formal ASL nodes                                  | `ASLTypes.ts`          | [ ]    |
 | S5.2 | `I2CRead/Write` formal ASL nodes                                   | `ASLTypes.ts`          | [ ]    |
 | S5.3 | `SPIRead/Write` formal ASL nodes                                   | `ASLTypes.ts`          | [ ]    |
 | S5.4 | `PWMInit/SetDuty/SetFreq/Stop`                                     | `ASLTypes.ts`          | [ ]    |
 | S5.5 | `TimerTON/TOF/TP`, `CounterCTU/CTD`, `LatchSR/RS`, `TrigR/F` (IEC) | `ASLTypes.ts`          | [ ]    |
-| S5.6 | Executor handlers para os novos nós                                | `ASLExecutor.ts`       | [ ]    |
-| S5.7 | Registry handlers para os novos nós                                | `statementRegistry.ts` | [ ]    |
+| S5.6 | Executor handlers for new nodes                                    | `ASLExecutor.ts`       | [ ]    |
+| S5.7 | Registry handlers for new nodes                                    | `statementRegistry.ts` | [ ]    |
 
 ---
 
-### SESSÃO 6 — Hardware Shims Extras [~] Parcial
+### S6 — Hardware Shims Extras [~] Partial
 
-> Phase 6 focused on LCD/OLED/Seven Segment/Keypad. This covers the remaining shims.
-> ⚠️ **Correction (03 Mar 2026)**: Status updated to reflect actual implementation state.
+> ⚠️ **Status updated 03/Mar/2026** to reflect actual implementation state.
 
-| #    | Task                                               | File                                 | Status |
-| ---- | -------------------------------------------------- | ------------------------------------ | ------ |
-| S6.1 | `Servo.attach/write/read` — servo simulation       | `ASLExecutor.ts` + `SimulationEngine.ts` | [ ]    |
-| S6.2 | `EEPROM.read/write` — Map-backed simulation        | `ASLExecutor.ts` + `SimulationEngine.ts` | ✅ commit [1cf0961](https://github.com/caiojordao84/neuroforge/commit/1cf0961) |
-| S6.3 | `Wire.*` (I2C) — basic bus simulation              | `ASLExecutor.ts`                     | ✅ via `hardwareCall` |
-| S6.4 | `SPI.begin/transfer` — basic bus simulation        | `ASLExecutor.ts`                     | ✅ via `hardwareCall` |
-| S6.5 | `pgm_read_byte(addr)` — transparent in simulation  | `ASLExecutor.ts`                     | [ ]    |
-| S6.6 | DHT Python (Tree-sitter + Regex)                  | `PythonParser.ts`                    | [ ]    |
-| S6.7 | Ultrasonic Python (Tree-sitter + Regex)           | `PythonParser.ts`                    | [ ]    |
-
----
-
-### SESSÃO 7 — FlowToASL + ASLToFlow (Visual Round-trip) 🔴 PENDENTE
-
-> **Impacto:** 18 dos 21 CIs dependem de `ASLToFlow.ts` ou `FlowToASL.ts`.
-
-| #    | Tarefa                                                                              | Ficheiro                  | Estado |
-| ---- | ----------------------------------------------------------------------------------- | ------------------------- | ------ |
-| S7.1 | Migrar `notyet/app/system/flow/FlowToAst.ts` → `src/engine/tools/flow/FlowToASL.ts` | `tools/flow/FlowToASL.ts` | [ ]    |
-| S7.2 | Migrar `CfgBuilder.ts` e `FlowValidator.ts`                                         | `tools/flow/`             | [ ]    |
-| S7.3 | Criar `ASLToFlow.ts`: `If` → Decision node, `While` → Loop node                     | `tools/flow/ASLToFlow.ts` | [ ]    |
-| S7.4 | FSM pattern: `switch` em loop → estados e transições                                | `tools/flow/ASLToFlow.ts` | [ ]    |
-| S7.5 | Industrial blocks: `TON/TOF` timers como nós de flow                                | `tools/flow/`             | [ ]    |
-| S7.6 | Registar no pipeline e expor via UI                                                 | `TopToolbar.tsx`          | [ ]    |
+| #    | Task                                              | File                                     | Status                                                                 |
+| ---- | ------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------- |
+| S6.1 | `Servo.attach/write/read` — servo simulation      | `ASLExecutor.ts` + `SimulationEngine.ts` | [ ]                                                                    |
+| S6.2 | `EEPROM.read/write` — Map-backed simulation       | `ASLExecutor.ts` + `SimulationEngine.ts` | ✅ [1cf0961](https://github.com/caiojordao84/neuroforge/commit/1cf0961) |
+| S6.3 | `Wire.*` (I2C) — basic bus simulation             | `ASLExecutor.ts`                         | ✅ via `hardwareCall`                                                   |
+| S6.4 | `SPI.begin/transfer` — basic bus simulation       | `ASLExecutor.ts`                         | ✅ via `hardwareCall`                                                   |
+| S6.5 | `pgm_read_byte(addr)` — transparent in simulation | `ASLExecutor.ts`                         | [ ]                                                                    |
+| S6.6 | DHT (Python) — tree-sitter + regex                | `PythonParser.ts`                        | [ ]                                                                    |
+| S6.7 | Ultrasonic (Python) — tree-sitter + regex         | `PythonParser.ts`                        | [ ]                                                                    |
 
 ---
 
-### SESSÃO 8 — BlocklyToASL + ASLToBlockly 🔴 PENDENTE
+### S7 — FlowToASL + ASLToFlow (Visual Round-trip) ⬜ PENDING
 
-> **Impacto:** 16 dos 21 CIs dependem do round-trip com Blockly.
+> **Impact:** 18 of 21 CIs depend on `ASLToFlow.ts` or `FlowToASL.ts`.
 
-| #    | Tarefa                                                                  | Ficheiro                        | Estado |
-| ---- | ----------------------------------------------------------------------- | ------------------------------- | ------ |
-| S8.1 | Migrar `notyet/app/system/blockly/BlocklyParser.ts` → `BlocklyToASL.ts` | `tools/blockly/BlocklyToASL.ts` | [ ]    |
-| S8.2 | Migrar `CodeToBlockly.ts` → `ASLToBlockly.ts`                           | `tools/blockly/ASLToBlockly.ts` | [ ]    |
-| S8.3 | Biblioteca de blocos: GPIO, timing, PWM, comunicação                    | `tools/blockly/`                | [ ]    |
-| S8.4 | Definições de blocos: aparência, campos, validação de tipos             | `tools/blockly/`                | [ ]    |
-| S8.5 | Preview de código em tempo real (blocos → código multi-linguagem)       | UI                              | [ ]    |
-
----
-
-### Resumo do Estado de Integração
-
-| Sessão | Descrição                        | Estado           | Prioridade |
-| ------ | -------------------------------- | ---------------- | ---------- |
-| **S1** | ASLExecutor Builtins             | ✅ **COMPLETA**   | —          |
-| **S2** | CGenerator                       | ✅ **COMPLETA**   | —          |
-| **S3** | PythonGenerator                  | ✅ **COMPLETA**   | —          |
-| **S4** | RustGenerator                    | ✅ **COMPLETA**   | —          |
-| **S5** | ASLTypes Schema Extensions       | [~] Parcial       | —          |
-| **S6** | Hardware Shims (LCD, OLED, etc.) | [~] Parcial       | —          |
-| **S7** | FlowToASL + ASLToFlow            | [~] Em progresso | 🟠 P1       |
-| **S8** | BlocklyToASL + ASLToBlockly      | [~] Em progresso | 🟠 P1       |
-
-> 💡 **Equidade Linguística**: O sistema atingiu um estado onde C++, Python e Rust caminham "de mãos dadas". Qualquer lógica de controlo implementada numa destas linguagens é fielmente representada no ASL e regenerada para as outras com paridade semântica.
+| #    | Task                                                   | File                      | Status |
+| ---- | ------------------------------------------------------ | ------------------------- | ------ |
+| S7.1 | Migrate `FlowToAst.ts` → `FlowToASL.ts`                | `tools/flow/FlowToASL.ts` | [ ]    |
+| S7.2 | Migrate `CfgBuilder.ts` and `FlowValidator.ts`         | `tools/flow/`             | [ ]    |
+| S7.3 | Create `ASLToFlow.ts`: `If` → Decision, `While` → Loop | `tools/flow/ASLToFlow.ts` | [ ]    |
+| S7.4 | FSM pattern: `switch` in loop → states and transitions | `tools/flow/ASLToFlow.ts` | [ ]    |
+| S7.5 | Industrial blocks: `TON/TOF` timers as flow nodes      | `tools/flow/`             | [ ]    |
+| S7.6 | Register in pipeline and expose via UI                 | `TopToolbar.tsx`          | [ ]    |
 
 ---
 
-## 0.10. PatternDetector and Optimizer
+### S8 — BlocklyToASL + ASLToBlockly ⬜ PENDING
 
-> **Added in commit 9878421fa** — Pattern detection and optimization pipeline for hardware operations.
+> **Impact:** 16 of 21 CIs depend on the Blockly round-trip.
 
-The PatternDetector identifies common hardware patterns in ASL and transforms them into optimized equivalents, reducing simulation overhead and enabling better code generation.
-
-### PatternDetector Features
-
-| Pattern | Description | Status |
-|---------|-------------|--------|
-| `DelayLoop` | `delay()` in loop → calculate iterations | ✅ Implemented |
-| `DigitalToggle` | Multiple `digitalWrite(pin, HIGH/LOW)` → toggle | ✅ Implemented |
-| `ArrayPinAccess` | Sequential array pin access → batch operation | ✅ Implemented |
-| `PWMGroup` | Multiple `analogWrite()` → PWM group | ✅ Implemented |
-| `SerialBatch` | Multiple `Serial.print()` → single buffer | ✅ Implemented |
-
-### Optimizer Features
-
-| Optimization | Description | Status |
-|--------------|-------------|--------|
-| `DeadCodeElimination` | Remove unreachable code | ✅ Implemented |
-| `ConstantFolding` | Evaluate constant expressions at compile time | ✅ Implemented |
-| `DelayCalculation` | Replace `delay()` loops with precise timing | ✅ Implemented |
-| `PinBatching` | Group pin operations | ✅ Implemented |
-| `StringPooling` | Reuse identical string literals | ✅ Implemented |
-
-### API Usage
-
-```typescript
-import { PatternDetector, Optimizer } from '@/engine/asl/optimizer';
-
-// Detect patterns in ASL
-const patterns = PatternDetector.detect(aslProgram);
-
-// Optimize ASL
-const optimized = Optimizer.optimize(aslProgram, {
-  enableDelayCalculation: true,
-  enablePinBatching: true,
-  enableDeadCodeElimination: true,
-});
-```
+| #    | Task                                                   | File                            | Status |
+| ---- | ------------------------------------------------------ | ------------------------------- | ------ |
+| S8.1 | Migrate `BlocklyParser.ts` → `BlocklyToASL.ts`         | `tools/blockly/BlocklyToASL.ts` | [ ]    |
+| S8.2 | Migrate `CodeToBlockly.ts` → `ASLToBlockly.ts`         | `tools/blockly/ASLToBlockly.ts` | [ ]    |
+| S8.3 | Block library: GPIO, timing, PWM, communication        | `tools/blockly/`                | [ ]    |
+| S8.4 | Block definitions: appearance, fields, type validation | `tools/blockly/`                | [ ]    |
+| S8.5 | Real-time code preview (blocks → multi-language code)  | UI                              | [ ]    |
 
 ---
 
-## 1. Architectural Decisions (Mandatory ADRs)
+## 6. Architectural Decisions (ADRs)
 
-Before any integration, these decisions must be made and documented in `docs/architecture/`.
+### 6.1. ASL Schema
+- [x] Core statement/expression types defined in `ASLTypes.ts`
+- [ ] Define schema levels: Core, Hardware, Language-specific
+- [ ] Schema validation: Zod, JSON Schema, or pure TypeScript types
+- [ ] Define the "raw code" policy
 
-### 1.1. ASL Schema
-- [ ] Define schema levels: Core, Hardware, Language-specific.
-- [ ] Formalize node types currently missing: `For`, `Switch`, `FunctionDef`, `FunctionCall`, `Millis`, `TimerTON/TOF/TP`, `CounterCTU/CTD`, `LatchSR/RS`, `TrigR/F`, `PWMInit/SetDuty/SetFreq/Stop`, `UARTWrite/Read`, `I2CRead/Write`.
-- [ ] Define the "raw code" policy.
-- [ ] Schema validation: Zod, JSON Schema, or pure TypeScript types.
-
-### 1.2. Multi-pass Pipeline
-- [ ] Formalize the passes: Parsing → Normalization → Analysis/Verification → Pattern Detection → Light Optimization → ASL Emission.
-- [ ] Define whether an intermediate IR exists.
-- [ ] Plugin system: plugin API, lifecycle, inter-plugin communication.
-
-### 1.3. Parser Technology
-- [x] Evaluate `web-tree-sitter` for C, C++, Python.
-- [ ] Define where custom parsers are necessary: Assembly, Ada, Forth, Zig.
-- [x] Fallback strategy implemented in `TopToolbar`.
-
-### 1.4. Executor and Runtime
-- [ ] Confirm `ASLExecutor` as the only official runtime for JS simulation.
-- [ ] Define the role of `SimulatorInterpreter`.
-- [ ] Ensure `SimulationEngine.reset()` clears all state before each execution.
-
-### 1.5. Round-trip as a Core Product Feature
-- [ ] Formalize ASL as the pivot for all conversions in both directions.
-- [ ] Define the "information loss" policy.
-
----
-
-## 2. Target Core Structure (Folder Tree)
-
-```text
-src/
-  engine/
-    SimulationEngine.ts
-    QEMUSimulationEngine.ts
-    QEMURunner.ts
-    CodeParser.ts          (legacy, removed when ASL covers 100% of the subset)
-    Transpiler.ts
-
-    asl/
-      ASLTypes.ts
-      ASLExecutor.ts
-      index.ts
-      codeToASL.ts
-
-      transforms/
-        index.ts
-        context.ts
-        statementRegistry.ts
-        blockTransform.ts
-        exprTransform.ts
-        callTransform.ts
-
-      helpers/
-        index.ts
-        arrayUtils.ts
-        typeUtils.ts
-
-      plugins/
-        c/
-          CParser.ts
-          CGenerator.ts       ← SESSÃO 2 (criar)
-        cpp/
-          CppParser.ts
-        python/
-          PythonParser.ts
-          PythonGenerator.ts  ← SESSÃO 3 (criar)
-        rust/
-          RustParser.ts
-          RustGenerator.ts    ← SESSÃO 4 (completar)
-
-      LanguageRegistry.ts
-
-    tools/
-      lexer/
-        Lexer.ts
-      symbols/
-        SymbolTable.ts
-
-      flow/
-        CfgBuilder.ts         ← SESSÃO 7
-        FlowValidator.ts      ← SESSÃO 7
-        FlowToASL.ts          ← SESSÃO 7
-        ASLToFlow.ts          ← SESSÃO 7
-        flow.types.ts
-
-      blockly/
-        BlocklyToASL.ts       ← SESSÃO 8
-        ASLToBlockly.ts       ← SESSÃO 8
-        blockly.types.ts
-
-      simulator/
-        SimulatorInterpreter.ts
-```
-
----
-
-## 3. Full Round-trip: Code ↔ ASL ↔ Visual
-
-### 3.1. Direction: Code → ASL → Visual
-- [ ] ASL → Blockly: `ASLToBlockly.ts` (SESSÃO 8)
-- [ ] ASL → Flowchart: `ASLToFlow.ts` (SESSÃO 7)
-- [ ] ASL → Ladder/Industrial
-
-### 3.2. Direction: Visual → ASL → Code
-- [ ] Blockly → ASL: `BlocklyToASL.ts` (SESSÃO 8)
-- [ ] Flowchart → ASL: `FlowToASL.ts` (SESSÃO 7)
-- [ ] Ladder/Industrial → ASL
-- [ ] ASL → Code: generators (SESSÕES 2, 3, 4)
-
-### 3.3. Round-trip Policy
-- [ ] "Perfect" subset (lossless round-trip)
-- [ ] "With warning" subset
-- [ ] "Unsupported" subset (explicit error)
-
----
-
-## 4. ASL v1 — Complete Control Flow and Expressions
-
-### 4.1. Control Flow
-- [x] Cascading `else if`, nested `if`
-- [x] `while`, simple `for`
-- [x] `break` and `continue` inside loops
-- [x] `switch/case` (native)
-
-### 4.2. Expressions
-- [x] Relational, boolean, arithmetic operators
-- [x] Unary operators
-
-### 4.3. Arrays and Indexing
-- [x] 1D, 2D, 3D arrays — declaration, access, assignment
-- [x] Dictionary and Object support
-
-### 4.4. Error Messages
-- [ ] Indicate exact line and snippet of unsupported code.
-- [ ] Distinguish "subset does not support" from "invalid syntax".
-
----
-
-## 5. ASL v2 — Functions, Tasks, and Events
-
-- [ ] User functions: `ASLFunctionDef` and `ASLCall`
-- [ ] Multiple tasks beyond `mainLoop`
-- [ ] Simple events (high-level API)
-
----
-
-## 6. Multi-pass Pipeline and Plugin System
-
-### 6.1. Formal Passes
-- [ ] Pass 1 — Parsing
-- [ ] Pass 2 — Normalization
+### 6.2. Multi-pass Pipeline
+- [x] Pass 4 — Hardware pattern detection (`PatternDetector.ts`)
+- [x] Pass 5 — Light optimization (`Optimizer.ts`)
+- [ ] Pass 1 — Formal parsing pipeline
+- [ ] Pass 2 — Normalization pass
 - [ ] Pass 3 — Analysis and verification
-- [x] Pass 4 — Hardware pattern detection
-- [x] Pass 5 — Light optimization
-- [ ] Pass 6 — ASL emission
+- [ ] Pass 6 — ASL emission formalization
 
-### 6.2. Plugin System
-- [ ] Plugin API, loader, registry, lifecycle, shared context
+### 6.3. Parser Technology
+- [x] `web-tree-sitter` evaluated and used for Python
+- [x] Recursive descent used for C/C++/Rust
+- [x] Fallback strategy implemented in `TopToolbar`
+- [ ] Define where custom parsers are necessary: Assembly, Ada, Forth, Zig
 
----
+### 6.4. Executor and Runtime
+- [x] `ASLExecutor` is the primary runtime for JS simulation
+- [ ] Define the role of `SimulatorInterpreter.ts` (in `notyet/`)
+- [ ] Ensure `SimulationEngine.reset()` clears all state before each execution
 
-## 7. Input Languages → ASL
-
-### 7.1. C / Arduino C++
-- [x] Basic subset v0 (see section 0.3)
-- [x] Full control flow (v1)
-- [x] `switch/case`, arrays, general expressions
-- [~] Additional APIs (tone still without dedicated simulation)
-- [ ] Parser via Tree-sitter C/C++
-
-### 7.2. MicroPython / CircuitPython
-- [x] Execution via ASL
-- [x] Python support: `Pin`, `value()`, `on()`, `off()`, `time.sleep_ms()`
-- [x] Parser via Tree-sitter Python + Regex Fallback
-- [x] Advanced loops, collections, string methods
-- [x] MicroPython specific: `Pin.id/on/off/value`
-
-### 7.3. JavaScript / TypeScript
-- [ ] Subset with `setup()/loop()`, IO ops
-- [ ] Parser via Tree-sitter JS/TS
-
-### 7.4. Rust (embedded subset)
-- [x] `RustParser.ts`: Embassy `async/await`, GPIO, UART, SPI
-- [x] `RustGenerator.ts`: partial (DoWhile, Break/Continue/Return, IfStatement, Loop, ArrayInit, etc.)
-- [ ] `RustGenerator.ts`: complete (Serial, tone, hardware calls — SESSÃO 4)
-- [ ] Serialization of Embassy tasks to multiple `ASLTask`
-
-### 7.5–7.9. Zig, Ada, Forth, Assembly, Lua
-- [ ] All pending (see original sections below for full detail)
+### 6.5. Round-trip as Product Feature
+- [ ] Formalize ASL as the pivot for all conversions in both directions
+- [ ] Define the "information loss" policy (perfect / with-warning / unsupported subsets)
 
 ---
 
-## 8. Visual Inputs → ASL
+## 7. Future Language Support
 
-### 8.1. Flowchart — SESSÃO 7
-- [ ] Migrate `CfgBuilder`, `FlowValidator`, `FlowToASL`
-- [ ] `ASLToFlow.ts`
-- [ ] Industrial blocks as formal ASL nodes
-- [ ] `ASLToFlow.ts`: `If` → Decision node, `While` → Loop node
+### 7.1. Input Parsers (Source → ASL)
 
-### 8.2. Blockly — SESSÃO 8
-- [ ] Migrate `BlocklyParser` → `BlocklyToASL`
-- [ ] Migrate `CodeToBlockly` → `ASLToBlockly`
-- [ ] Custom block library (GPIO, timing, PWM, communication)
+| Language                    | Parser File       | Status | Notes                                 |
+| --------------------------- | ----------------- | ------ | ------------------------------------- |
+| C / Arduino C++             | `CParser.ts`      | ✅      | Full subset v1                        |
+| Full C++                    | `CppParser.ts`    | ✅      | Extended C++ features                 |
+| MicroPython / CircuitPython | `PythonParser.ts` | ✅      | tree-sitter + regex                   |
+| Rust (Embassy)              | `RustParser.ts`   | ✅      | async/await, GPIO, UART, SPI          |
+| JavaScript / TypeScript     | —                 | ⬜      | Subset with `setup()/loop()`          |
+| Zig (embedded)              | —                 | ⬜      | HAL abstraction via `@import("chip")` |
+| Ada (SPARK subset)          | —                 | ⬜      | Safety-critical subset                |
+| Forth                       | —                 | ⬜      | Stack-based → ASL mapping             |
+| AVR Assembly                | —                 | ⬜      | GPIO instructions, timers             |
+| ARM Thumb Assembly          | —                 | ⬜      | GPIO, timers, interrupts              |
+| Structured Text IEC 61131-3 | —                 | ⬜      | IF/FOR/WHILE/CASE, TON/TOF/CTU, FB    |
+| Lua                         | —                 | ⬜      | NodeMCU subset                        |
 
-### 8.3. Ladder Logic (LD) and IEC 61131-3
-- [ ] Contacts (NO/NC), coils, parallel branches → ASL
-- [ ] `STParser.ts`
-- [ ] `ASLToLadder.ts`
+### 7.2. Output Generators (ASL → Target)
 
----
-
-## 9. Code Generators: ASL → Target Language
-
-- [ ] ASL → C / Arduino C++ ← **SESSÃO 2 (P0)**
-- [ ] ASL → Python / MicroPython ← **SESSÃO 3 (P0)**
-- [ ] ASL → Rust ← **SESSÃO 4 (P1, completar)**
-- [ ] ASL → JavaScript / TypeScript
-- [ ] ASL → Zig, Ada, Forth, Assembly, Lua, ST IEC 61131-3
-
----
-
-## 10. Bidirectional Transpilation (ASL as Pivot)
-
-### 10.1. Priority Pairs
-- [ ] C ↔ Python, C ↔ C++, C ↔ Rust, Python ↔ C++
-
-### 10.2. Source Maps and Debugging
-- [ ] Source map generation, comment preservation, debug metadata
+| Language                    | Generator File       | Status |
+| --------------------------- | -------------------- | ------ |
+| C / Arduino C++             | `CGenerator.ts`      | ✅      |
+| MicroPython / Python        | `PythonGenerator.ts` | ✅      |
+| Rust (Embassy)              | `RustGenerator.ts`   | ✅      |
+| C++ (full, non-Arduino)     | —                    | ⬜      |
+| CircuitPython               | —                    | ⬜      |
+| JavaScript / TypeScript     | —                    | ⬜      |
+| Assembly (AVR/ARM)          | —                    | ⬜      |
+| Structured Text IEC 61131-3 | —                    | ⬜      |
 
 ---
 
-## 11. Optimizations and Analysis
+## 8. Bidirectional Transpilation (ASL as Pivot)
 
-### 11.1. Hardware Optimizations
-- [x] PWM Optimizer, UART Optimizer, GPIO Batcher, Delay Optimizer
+### 8.1. Priority Pairs
+- [x] C++ → Python (via ASL) — functional
+- [x] C++ → Rust (via ASL) — functional
+- [x] Python → C++ (via ASL) — functional
+- [x] Python → Rust (via ASL) — functional
+- [x] Rust → C++ (via ASL) — functional
+- [x] Rust → Python (via ASL) — functional
 
-### 11.2. Safety / Validation
-- [ ] GPIO Validator, Memory Checker, Timing Analyzer
+### 8.2. Source Maps and Debugging
+- [ ] Source map generation
+- [ ] Comment preservation across transpilation
+- [ ] Debug metadata (line mapping input → ASL → output)
 
 ---
 
-## 12. Foundation Tooling
+## 9. Hardware & Protocol Roadmap
 
-- [ ] `Lexer.ts` → `src/engine/tools/lexer/`
-- [ ] `SymbolTable.ts` → `src/engine/tools/symbols/`
-- [ ] `SimulatorInterpreter.ts` with formally defined role
-- [x] `LanguageRegistry.ts` integrated
+> See [ASL_SHIM_ARCHITECTURE_PLAN.md](../docs/ASL_SHIM_ARCHITECTURE_PLAN.md) for the full 5-phase plan.
+
+### 9.1. Phase 1 — Peripheral Expansion (Next)
+- [ ] `servo_shim` — Servo.attach/write/read + UI widget
+- [ ] `dht_shim` — DHT11/22 with simulated temp/humidity
+- [ ] `ultrasonic_shim` — HC-SR04 + `pulseIn` mapping
+- [ ] `neopixel_shim` — WS2812B LED strip with visual UI
+- [ ] `motor_driver_shim` — L298N / TB6612
+
+### 9.2. Phase 2 — Protocol Buses
+- [ ] I2C formal bus simulation with device registry
+- [ ] SPI bus simulation
+- [ ] Hardware UART (beyond debug Serial)
+- [ ] Modbus RTU/TCP
+
+### 9.3. Phase 3 — OS Services & Board Profiles
+- [ ] Board Profile system (Arduino Uno, ESP32, RPi Pico)
+- [ ] RTOS task simulation (cooperative scheduling)
+- [ ] Hardware timer shim
+- [ ] Virtual filesystem (LittleFS)
+
+### 9.4. Phase 4 — Connectivity
+- [ ] WiFi shim (simulated always-connected)
+- [ ] MQTT in-browser pub/sub
+- [ ] HTTP client/server mock
+- [ ] BLE simulation
+
+---
+
+## 10. Optimizations and Safety
+
+### 10.1. Hardware Optimizations (Implemented)
+- [x] PWM Bit-Bang replacement → `HardwarePwm` node
+- [x] Consecutive delay merging
+- [x] GPIO batch grouping → `GpioBatch` node
+
+### 10.2. Safety / Validation (Planned)
+- [ ] GPIO Validator — pin conflict detection
+- [ ] Memory Checker — array bounds, stack overflow estimation
+- [ ] Timing Analyzer — blocking delay warnings (partially done via `detectLongDelays`)
+
+---
+
+## 11. Foundation Tooling
+
+- [x] `LanguageRegistry.ts` — integrated and functional
+- [x] `Lexer.ts` — integrated into `CParser`
+- [x] `SymbolTable.ts` — integrated into `CParser`
+- [ ] `SimulatorInterpreter.ts` — role to be formally defined
 - [x] Verbose log cleanup in Serial Monitor
 
 ---
 
-## 13. UX, Documentation, and Teaching Mode
+## 12. UX, Documentation, and Teaching Mode
 
-### 13.1. Code Best Practices
+### 12.1. Code Best Practices
 - [ ] Language / input mode selection guide
+- [ ] Inline documentation for each visual editor mode
 
-### 13.2. Teaching Mode
+### 12.2. Teaching Mode
 - [ ] Visual highlight of code/block/node being executed
 - [ ] Inline pedagogical messages
+- [ ] Protocol analyzer view (I2C/SPI transaction logs)
 
 ---
 
-## 14. Merge Strategy for Main
+## 13. Merge Strategy for `main`
 
 - [ ] Feature flag "ASL experimental"
-- [ ] Migrate simple C++ to always go through ASL
-- [ ] Keep fallback for complex patterns
+- [x] Simple C++ goes through ASL first (fallback to `CodeParser` available)
+- [ ] Keep fallback for complex patterns that ASL doesn't cover yet
 
 **Criteria for final merge:**
-- [ ] ASL v1 stable for common C++ Arduino
-- [ ] At least one visual language with round-trip (Blockly or Flow)
-- [ ] `notyet/` zeroed
+- [ ] ASL v1 stable for common C++ Arduino patterns
+- [ ] At least one visual language with round-trip (Blockly or Flowchart)
+- [ ] `notyet/` zeroed (all code migrated to `src/`)
 - [ ] Basic documentation published
 - [ ] Test suite covering all integrated inputs
-- [ ] All 21 Integration Test Cases from Sec. 16 passing
+- [ ] All 21 Integration Test Cases (CI-1 to CI-21) passing
 
 ---
 
-## 15. Final Deliverables
+## 14. Final Deliverables
 
 - [ ] ASL with complete and validated schema (Core + Hardware + Language-specific)
-- [ ] 9+ input languages
+- [ ] 9+ input languages (text + visual)
 - [ ] Code generators for all supported languages
-- [ ] Full round-trip: Code ↔ ASL ↔ Visual (Blockly / Flow / Ladder)
+- [ ] Full round-trip: Code ↔ ASL ↔ Visual (Blockly / Flowchart / Ladder)
 - [ ] Blockly with 20+ blocks and ASL ↔ blocks round-trip
 - [ ] Flow/Ladder with formal industrial blocks (TON, TOF, CTU, CTD, SR, RS, R_TRIG, F_TRIG)
 - [ ] Multi-pass pipeline with plugin system
 - [ ] Source maps and debugging for all languages
 - [ ] Hardware optimizations (PWM, UART, GPIO, delay)
-- [ ] `notyet/` = zero
+- [ ] `notyet/` = zero files
 - [ ] 1000+ validated test cases
 - [ ] All 21 Integration Test Cases (CI-1 to CI-21) passing
 
 ---
 
-## 16. Integration Test Cases (CI-1 to CI-21)
+## 15. Integration Test Cases (CI-1 to CI-21)
 
 > **IMPORTANT:** These are system integration tests. Each CI validates that multiple sections
 > of the roadmap are complete **and communicate correctly with each other**.
 >
 > All 21 CIs are currently **blocked** primarily by:
-> 1. **Generators** (Sec. 9): affecting 16–19 CIs each
-> 2. **Visual round-trip** (Sec. 3+8): Ladder (19 CIs), Flowchart (18 CIs), Blockly (16 CIs)
-> 3. **ASL Features** (Sec. 1.1, 1.5, 3.3, 4.x, 5)
-> 4. **Input parsers** (Sec. 7.4, 7.8, 8.x)
+> 1. **Visual round-trip** (S7, S8): Flowchart (18 CIs), Blockly (16 CIs), Ladder (19 CIs)
+> 2. **Missing generators**: Assembly, ST, CircuitPython, JS (affects 16–19 CIs each)
+> 3. **ASL Features** (S5): formal I2C/SPI/UART/PWM/IEC nodes
+> 4. **Missing input parsers**: Assembly, ST, Ladder
 
 ### CI-1 — Tank Level (MicroPython → multi-output)
-**Dependencies:** Sec. 7.2, 4.3, 1.1, 9, 3.1+8.1, 3.1+8.2, 3.1+8.3
+**Dependencies:** Sec. 7.2, 9, S7, S8
 
 ### CI-2 — Home Lighting (Flowchart → multi-output)
-**Dependencies:** Sec. 8.1, 9, 3.1+8.2, 3.1+8.3, 3.3
+**Dependencies:** S7, 9 (all generators), S8
 
 ### CI-3 — Greenhouse Temperature PID (MicroPython → multi-output)
-**Dependencies:** Sec. 7.2, 4.2, 1.1, 9, 3.1+8.1, 3.1+8.2, 3.1+8.3
+**Dependencies:** Sec. 7.2, S5 (DHT shim), 9, S7, S8
 
 ### CI-4 — Industrial Conveyor Belt (Ladder → multi-output)
-**Dependencies:** Sec. 8.3, 8.1, 9, 3.2+8.1, 3.1+8.2, 3.3
+**Dependencies:** Ladder parser, S7, 9, S8
 
 ### CI-5 — Automatic Gate FSM (ST IEC 61131-3 → multi-output)
-**Dependencies:** Sec. 8.3, 4.1, 8.1 (FSM), 1.1, 9, 3.1+8.1, 3.1+8.2, 3.1+8.3
+**Dependencies:** ST parser, S5 (IEC nodes), S7, S8, 9
 
 ### CI-6 — Zone-based Automatic Irrigation (Blockly → multi-output)
-**Dependencies:** Sec. 8.2, 8.1, 9, 3.1+8.1, 3.1+8.3, 3.3
+**Dependencies:** S8, S7, 9
 
 ### CI-7 — Indoor Air Quality (C++ Arduino → multi-output)
-**Dependencies:** Sec. 7.1, 1.1, 9, 3.1+8.1, 3.1+8.2, 3.1+8.3, 3.3
+**Dependencies:** Sec. 7.1, S5 (OLED/SD shims), 9, S7, S8
 
 ### CI-8 — Solar Energy Management (Flowchart → multi-output)
-**Dependencies:** Sec. 8.1, 4.2, 9, 3.1+8.2, 3.1+8.3, 3.3
+**Dependencies:** S7, 9, S8
 
 ### CI-9 — RFID Access Control (Rust Embassy → multi-output)
-**Dependencies:** Sec. 7.4, 1.1, 9, 3.1+8.1, 3.1+8.2, 3.1+8.3
+**Dependencies:** Sec. 7.4, S5, 9, S7, S8
 
 ### CI-10 — Industrial 7-Segment Timer (Assembly AVR/ARM → multi-output)
-**Dependencies:** Sec. 7.8, 4.3, 8.1, 9, 3.1+8.1, 3.1+8.2, 3.1+8.3
+**Dependencies:** Assembly parser, S7, 9, S8
 
 ### CI-11 — HX711 Weighing with Modbus RTU (CircuitPython → multi-output)
-**Dependencies:** Sec. 7.2, 4.2, 1.1, 9, 3.1+8.1, 3.1+8.2, 3.1+8.3
+**Dependencies:** CircuitPython parser, S5 (Modbus), 9, S7, S8
 
-### CI-12 — Multi-tank SCADA ESP32 (MicroPython + Blockly + Flowchart → multi-output, 3 inputs)
-**Dependencies:** Sec. 7.2, 8.2, 8.1, 4.3, 1.1, 1.5, 3.3, 9
+### CI-12 — Multi-tank SCADA ESP32 (MicroPython + Blockly + Flowchart → 3 inputs)
+**Dependencies:** Sec. 7.2, S8, S7, S5, 9
 
-### CI-13 — Pressure Pump with Hysteresis (C++ + Ladder + Flowchart → multi-output, 3 inputs)
-**Dependencies:** Sec. 7.1, 8.3, 8.1, 4.2, 1.5, 3.3, 9
+### CI-13 — Pressure Pump with Hysteresis (C++ + Ladder + Flowchart → 3 inputs)
+**Dependencies:** Sec. 7.1, Ladder parser, S7, 9
 
-### CI-14 — Multi-zone HVAC (MicroPython + ST + Blockly → multi-output, 3 inputs)
-**Dependencies:** Sec. 7.2, 8.3, 8.2, 5, 8.1, 1.5, 3.3, 9
+### CI-14 — Multi-zone HVAC (MicroPython + ST + Blockly → 3 inputs)
+**Dependencies:** Sec. 7.2, ST parser, S8, S5, S7, 9
 
-### CI-15 — BLDC Motor with Encoder and PID (Rust + Flowchart + Assembly ARM → multi-output, 3 inputs)
-**Dependencies:** Sec. 7.4, 8.1, 7.8, 4.2, 5, 1.5, 3.3, 9
+### CI-15 — BLDC Motor with Encoder and PID (Rust + Flowchart + Assembly ARM → 3 inputs)
+**Dependencies:** Sec. 7.4, S7, Assembly parser, S5, 9
 
-### CI-16 — Smart Traffic Light FSM (CircuitPython + Blockly + Ladder → multi-output, 3 inputs)
-**Dependencies:** Sec. 7.2, 8.2, 8.3, 8.1 (FSM), 4.1, 1.5, 3.3, 9
+### CI-16 — Smart Traffic Light FSM (CircuitPython + Blockly + Ladder → 3 inputs)
+**Dependencies:** CircuitPython parser, S8, Ladder parser, S7, 9
 
-### CI-17 — Pasteurization with Chained Timers (MicroPython + Flowchart + Ladder → multi-output, 3 inputs)
-**Dependencies:** Sec. 7.2, 8.1, 8.3, 1.1, 1.5, 3.3, 9
+### CI-17 — Pasteurization with Chained Timers (MicroPython + Flowchart + Ladder → 3 inputs)
+**Dependencies:** Sec. 7.2, S7, Ladder parser, S5, 9
 
-### CI-18 — Pool Control with Modbus TCP (ST + Blockly + Assembly AVR → multi-output, 3 inputs)
-**Dependencies:** Sec. 8.3, 8.2, 7.8, 4.2, 1.1, 1.5, 3.3, 9
+### CI-18 — Pool Control with Modbus TCP (ST + Blockly + Assembly AVR → 3 inputs)
+**Dependencies:** ST parser, S8, Assembly parser, S5, 9
 
-### CI-19 — Fleet Monitoring with GPS and MQTT (C++ ESP32 + Flowchart + ST → multi-output, 3 inputs)
-**Dependencies:** Sec. 7.1, 8.1, 8.3, 5, 1.1, 1.5, 3.3, 9
+### CI-19 — Fleet Monitoring with GPS and MQTT (C++ ESP32 + Flowchart + ST → 3 inputs)
+**Dependencies:** Sec. 7.1, S7, ST parser, S5, 9
 
-### CI-20 — Warehouse AGV (MicroPython + Rust + Blockly + Ladder → multi-output, 4 inputs)
-**Dependencies:** Sec. 7.2, 7.4, 8.2, 8.3, 8.1 (FSM), 1.5, 3.3, 9
+### CI-20 — Warehouse AGV (MicroPython + Rust + Blockly + Ladder → 4 inputs)
+**Dependencies:** Sec. 7.2, 7.4, S8, Ladder parser, S7, 9
 
-### CI-21 — Maximum Perimeter Security (Flowchart + Blockly + Assembly ARM + ST → multi-output, 4 inputs)
-**Dependencies:** Sec. 8.1, 8.2, 7.8, 8.3, 5, 1.1, 1.5, 3.3, 9
-
----
-
-> **Coverage summary (02/03/2026):**
-> - Sessão 1 ✅ COMPLETA.
-> - All 21 CIs still blocked primarily by Generators (S2, S3, S4) and Visual round-trip (S7, S8).
-> - Next unblock: **S2 — CGenerator** removes the largest blocker (19 CIs affected).
+### CI-21 — Maximum Perimeter Security (Flowchart + Blockly + Assembly ARM + ST → 4 inputs)
+**Dependencies:** S7, S8, Assembly parser, ST parser, S5, 9
