@@ -1,1 +1,1 @@
-export * from '../../../notyet/app/system/Lexer';
+export * from '../../system/Lexer';

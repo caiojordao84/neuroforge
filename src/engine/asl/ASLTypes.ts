@@ -85,7 +85,7 @@ export interface ASLTask {
 }
 
 /**
- * Statements suportados na ASL v1.
+ * Statements supported in ASL v1.
  */
 export type ASLStatement =
   | ASLPinMode
@@ -109,7 +109,26 @@ export type ASLStatement =
   | ASLBreak
   | ASLContinue
   | ASLSwitch
-  | ASLComment;
+  | ASLComment
+  // --- S5 NEW NODES (Bus/PWM/IEC) ---
+  | ASLUartWrite
+  | ASLUartRead
+  | ASLI2CWrite
+  | ASLI2CRead
+  | ASLSpiTransfer
+  | ASLPwmInit
+  | ASLPwmSetDuty
+  | ASLPwmSetFreq
+  | ASLPwmStop
+  | ASLTimerTON
+  | ASLTimerTOF
+  | ASLTimerTP
+  | ASLCounterCTU
+  | ASLCounterCTD
+  | ASLLatchSR
+  | ASLLatchRS
+  | ASLTrigR
+  | ASLTrigF;
 
 /**
  * Statement de comentário (não afeta execução, mas preserva contexto).
@@ -462,11 +481,216 @@ export interface ASLCall {
 }
 
 /**
- * Expressão condicional (ternária): condition ? whenTrue : whenFalse.
+ * Conditional expression (ternary): condition ? whenTrue : whenFalse.
  */
 export interface ASLConditional {
   kind: 'conditional';
   condition: ASLExpr;
   whenTrue: ASLExpr;
   whenFalse: ASLExpr;
+}
+
+// ============================================================================
+// S5 NEW NODES: UART/I2C/SPI, PWM, IEC (Timers, Counters, Latches, Triggers)
+// ============================================================================
+
+// ---------------------------------------------------------------------------
+// UART/I2C/SPI Bus Statements
+// ---------------------------------------------------------------------------
+
+/**
+ * UART write operation.
+ */
+export interface ASLUartWrite {
+  kind: 'uartWrite';
+  port: ASLExpr;
+  data: ASLExpr;
+}
+
+/**
+ * UART read operation.
+ */
+export interface ASLUartRead {
+  kind: 'uartRead';
+  port: ASLExpr;
+  target: string;
+  length: ASLExpr;
+}
+
+/**
+ * I2C write operation.
+ */
+export interface ASLI2CWrite {
+  kind: 'i2cWrite';
+  bus: ASLExpr;
+  address: ASLExpr;
+  data: ASLExpr;
+}
+
+/**
+ * I2C read operation.
+ */
+export interface ASLI2CRead {
+  kind: 'i2cRead';
+  bus: ASLExpr;
+  address: ASLExpr;
+  length: ASLExpr;
+  target: string;
+}
+
+/**
+ * SPI transfer operation.
+ */
+export interface ASLSpiTransfer {
+  kind: 'spiTransfer';
+  bus: ASLExpr;
+  csPin: ASLExpr;
+  txData: ASLExpr;
+  target?: string;
+}
+
+// ---------------------------------------------------------------------------
+// PWM Statements
+// ---------------------------------------------------------------------------
+
+/**
+ * PWM initialization.
+ */
+export interface ASLPwmInit {
+  kind: 'pwmInit';
+  pin: ASLExpr;
+  freq: ASLExpr;
+  duty: ASLExpr;
+}
+
+/**
+ * PWM duty cycle set.
+ */
+export interface ASLPwmSetDuty {
+  kind: 'pwmSetDuty';
+  pin: ASLExpr;
+  duty: ASLExpr;
+}
+
+/**
+ * PWM frequency set.
+ */
+export interface ASLPwmSetFreq {
+  kind: 'pwmSetFreq';
+  pin: ASLExpr;
+  freq: ASLExpr;
+}
+
+/**
+ * PWM stop.
+ */
+export interface ASLPwmStop {
+  kind: 'pwmStop';
+  pin: ASLExpr;
+}
+
+// ---------------------------------------------------------------------------
+// IEC Timer Statements (TON, TOF, TP)
+// ---------------------------------------------------------------------------
+
+/**
+ * Timer TON (Turn-On Delay): output true after PT delay when input is true.
+ */
+export interface ASLTimerTON {
+  kind: 'timerTON';
+  instance: string;
+  in: ASLExpr;
+  pt: ASLExpr;
+}
+
+/**
+ * Timer TOF (Turn-Off Delay): output stays true for PT after input goes false.
+ */
+export interface ASLTimerTOF {
+  kind: 'timerTOF';
+  instance: string;
+  in: ASLExpr;
+  pt: ASLExpr;
+}
+
+/**
+ * Timer TP (Pulse): output true for PT duration when input triggers.
+ */
+export interface ASLTimerTP {
+  kind: 'timerTP';
+  instance: string;
+  in: ASLExpr;
+  pt: ASLExpr;
+}
+
+// ---------------------------------------------------------------------------
+// IEC Counter Statements (CTU, CTD)
+// ---------------------------------------------------------------------------
+
+/**
+ * Counter CTU (Count Up): increments on rising edge of CU input.
+ */
+export interface ASLCounterCTU {
+  kind: 'counterCTU';
+  instance: string;
+  cu: ASLExpr;
+  r: ASLExpr;
+  pv: ASLExpr;
+}
+
+/**
+ * Counter CTD (Count Down): decrements on rising edge of CD input.
+ */
+export interface ASLCounterCTD {
+  kind: 'counterCTD';
+  instance: string;
+  cd: ASLExpr;
+  ld: ASLExpr;
+  pv: ASLExpr;
+}
+
+// ---------------------------------------------------------------------------
+// IEC Latch Statements (SR, RS)
+// ---------------------------------------------------------------------------
+
+/**
+ * Latch SR (Set-Reset): set dominates, output true when S is true.
+ */
+export interface ASLLatchSR {
+  kind: 'latchSR';
+  instance: string;
+  s: ASLExpr;
+  r: ASLExpr;
+}
+
+/**
+ * Latch RS (Reset-Set): reset dominates, output false when R is true.
+ */
+export interface ASLLatchRS {
+  kind: 'latchRS';
+  instance: string;
+  r: ASLExpr;
+  s: ASLExpr;
+}
+
+// ---------------------------------------------------------------------------
+// IEC Trigger Statements (R_TRIG, F_TRIG)
+// ---------------------------------------------------------------------------
+
+/**
+ * Rising edge trigger: output true for one cycle on rising edge of input.
+ */
+export interface ASLTrigR {
+  kind: 'trigR';
+  instance: string;
+  in: ASLExpr;
+}
+
+/**
+ * Falling edge trigger: output true for one cycle on falling edge of input.
+ */
+export interface ASLTrigF {
+  kind: 'trigF';
+  instance: string;
+  in: ASLExpr;
 }

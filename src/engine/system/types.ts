@@ -1,1 +1,1 @@
-export * from '../../../notyet/app/system/types';
+export * from '../../system/types';

@@ -1,1 +1,1 @@
-export * from '../../../notyet/app/system/SymbolTable';
+export * from '../../system/SymbolTable';

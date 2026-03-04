@@ -9,7 +9,7 @@ export type NodeType =
     | 'SevSegPrint' | 'KeypadRead'
     | 'BinaryExpression' | 'UnaryExpression' | 'CallExpression' | 'MemberExpression' | 'SubscriptExpression' | 'ArrayInitializer'
     | 'Identifier' | 'Literal' | 'Empty'
-    | 'ExpressionStatement' | 'DesignatedInitializer' | 'ObjectInitializer'
+    | 'ExpressionStatement' | 'DesignatedInitializer' | 'ObjectInitializer' | 'Expression'
     // Optimization Nodes
     | 'HardwarePwm' | 'GpioBatch'
     | 'EnumDeclaration'
