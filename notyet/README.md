@@ -87,14 +87,20 @@ interface ASLProgram {
 
 }
 
-**Core Statement Kinds (ASL Core Level):** `pinMode`, `digitalWrite`, `analogWrite`, `read`, `if`, `while`, `for`, `doWhile`, `switch`, `delay`, `assign`, `setIndex`, `setIndex2D`, `setIndex3D`, `setMember`, `setPointer`, `expr`, `return`, `print`, `break`, `continue`, `comment`.
-
-**Expression Kinds (ASL Core Level):** `literal`, `var`, `index`, `index2D`, `index3D`, `member`, `unary`, `binary`, `call`, `array`, `object`, `conditional`.
+### 1.5. ASL Schema Levels
 
 > **Schema Levels:**
 > - **Core:** control flow, expressions, assignments, basic GPIO/delay/print (types defined in `ASLTypes.ts`).
 > - **Hardware:** higher-level hardware/protocol abstractions (UART/I2C/SPI, timers IEC, etc.) to be modeled as future extensions in alignment with Section 5.
 > - **Language-specific:** surface differences in parsers/generators that still converge to the same ASL Core + Hardware nodes.
+
+### 1.6. Core Statement Kinds (ASL Core Level)
+
+**Core Statements:** `pinMode`, `digitalWrite`, `analogWrite`, `read`, `if`, `while`, `for`, `doWhile`, `switch`, `delay`, `assign`, `setIndex`, `setIndex2D`, `setIndex3D`, `setMember`, `setPointer`, `expr`, `return`, `print`, `break`, `continue`, `comment`.
+
+### 1.7. Core Expression Kinds (ASL Core Level)
+
+**Core Expressions:** `literal`, `var`, `index`, `index2D`, `index3D`, `member`, `unary`, `binary`, `call`, `array`, `object`, `conditional`.
 
 ---
 
@@ -352,16 +358,21 @@ See also: [docs/ASL\_PARSER\_COMPARISON.md](http://../docs/ASL_PARSER_COMPARISON
 - [ ] `notyet/app/system/blockly/CodeToBlockly.ts`  
 - [ ] `notyet/app/system/simulator/SimulatorInterpreter.ts`
 
-### 4.5. Stubbed Executor Behaviours \[~]\
+### 4.5. Stubbed Executor Behaviours [~]
 
 The following behaviours are implemented in `ASLExecutor.ts` as safe fallbacks or temporary stubs and are scheduled for full integration in future phases:
 
-- \[~] **`pulseIn` stub** — `ASLExecutor.evalExpr` emits `engine.emit('hardwareCall', { callee: 'pulseIn', args })` and always returns `500` microseconds as a simulated value. Will be replaced by a proper timing model and integrated with `ultrasonic_shim` and protocol timing when Phase 2 (Protocol Buses) is implemented.
-- \[~] **`shiftOut` / `shiftIn` stubs** — both functions emit a `hardwareCall` and always return `0`. For `shiftIn` this is only a placeholder; in the future it should return a byte stream from a virtual SPI/I2C device over the corresponding bus shims from Phase 2.
-- \[~] **`servo` built-in hack** — the `servo` callee currently piggy-backs on the tone system via `ctx.engine.emit('tone', { pin, frequency: 1000, angle })`. This will be replaced by a dedicated `servo_shim` with its own UI widget and state model as part of Phase 1 in the Shim Architecture plan.
-- \[~] **`Serial.begin` no-op** — `Serial.begin` currently returns `0` and does not modify simulation state. This may remain a documented no-op, or gain a lightweight model of baudrate/connection state in a later phase.
-- \[~] **Unknown callee default** — when a `call` expression does not match any builtin, shim or user-defined function, the executor currently returns `0`. A future safety phase will turn this into a clear error or warning to avoid masking transformation issues.
-- \[~] **Out-of-shape index/member access** — invalid array or member accesses in `index/index2D/index3D/member` expressions return `0` instead of throwing. A future validation phase may introduce configurable warnings or errors for these cases.
+- [~] **`pulseIn` stub** — `ASLExecutor.evalExpr` emits `engine.emit('hardwareCall', { callee: 'pulseIn', args })` and always returns `500` microseconds as a simulated value. Will be replaced by a proper timing model and integrated with `ultrasonic_shim` and protocol timing when Phase 2 (Protocol Buses) is implemented.
+
+- [~] **`shiftOut` / `shiftIn` stubs** — both functions emit a `hardwareCall` and always return `0`. For `shiftIn` this is only a placeholder; in the future it should return a byte stream from a virtual SPI/I2C device over the corresponding bus shims from Phase 2.
+
+- [~] **`servo` built-in hack** — the `servo` callee currently piggy-backs on the tone system via `ctx.engine.emit('tone', { pin, frequency: 1000, angle })`. This will be replaced by a dedicated `servo_shim` with its own UI widget and state model as part of Phase 1 in the Shim Architecture plan.
+
+- [~] **`Serial.begin` no-op** — `Serial.begin` currently returns `0` and does not modify simulation state. This may remain a documented no-op, or gain a lightweight model of baudrate/connection state in a later phase.
+
+- [~] **Unknown callee default** — when a `call` expression does not match any builtin, shim or user-defined function, the executor currently returns `0`. A future safety phase will turn this into a clear error or warning to avoid masking transformation issues.
+
+- [~] **Out-of-shape index/member access** — invalid array or member accesses in `index/index2D/index3D/member` expressions return `0` instead of throwing. A future validation phase may introduce configurable warnings or errors for these cases.
 
 ---
 
