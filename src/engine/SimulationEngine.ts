@@ -492,6 +492,10 @@ export class SimulationEngine extends EventEmitter {
     this.serialPrintln(message);
   }
 
+  warn(message: string): void {
+    this.serialPrintln(`⚠️ ${message}`);
+  }
+
   serialAvailable(): number {
     return this.serialRxBuffer.length;
   }

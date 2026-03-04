@@ -365,6 +365,274 @@ async function executeStatements(
         }
         break;
       }
+
+      // --- S5: Bus shims (UART/I2C/SPI) ---
+      case 'uartWrite': {
+        const port = await evalExpr(s.port, localEnv, ctx);
+        const data = await evalExpr(s.data, localEnv, ctx);
+        ctx.engine.emit('hardwareCall', {
+          callee: 'uart.write',
+          args: [port, data],
+        });
+        break;
+      }
+
+      case 'uartRead': {
+        const port = await evalExpr(s.port, localEnv, ctx);
+        const len = await evalExpr(s.length, localEnv, ctx);
+        const result = ctx.engine.emit('hardwareCall', {
+          callee: 'uart.read',
+          args: [port, len],
+        }) as any;
+        setVar(s.target, result ?? [], localEnv, ctx.globals);
+        break;
+      }
+
+      case 'i2cWrite': {
+        const bus = await evalExpr(s.bus, localEnv, ctx);
+        const addr = await evalExpr(s.address, localEnv, ctx);
+        const data = await evalExpr(s.data, localEnv, ctx);
+        ctx.engine.emit('hardwareCall', {
+          callee: 'i2c.write',
+          args: [bus, addr, data],
+        });
+        break;
+      }
+
+      case 'i2cRead': {
+        const bus = await evalExpr(s.bus, localEnv, ctx);
+        const addr = await evalExpr(s.address, localEnv, ctx);
+        const len = await evalExpr(s.length, localEnv, ctx);
+        const result = ctx.engine.emit('hardwareCall', {
+          callee: 'i2c.read',
+          args: [bus, addr, len],
+        }) as any;
+        setVar(s.target, result ?? [], localEnv, ctx.globals);
+        break;
+      }
+
+      case 'spiTransfer': {
+        const bus = await evalExpr(s.bus, localEnv, ctx);
+        const cs = await evalExpr(s.csPin, localEnv, ctx);
+        const tx = await evalExpr(s.txData, localEnv, ctx);
+        const result = ctx.engine.emit('hardwareCall', {
+          callee: 'spi.transfer',
+          args: [bus, cs, tx],
+        }) as any;
+        if (s.target) {
+          setVar(s.target, result ?? [], localEnv, ctx.globals);
+        }
+        break;
+      }
+
+      // --- S5: PWM family ---
+      case 'pwmInit': {
+        const pin = await evalExpr(s.pin, localEnv, ctx);
+        const freq = await evalExpr(s.freq, localEnv, ctx);
+        const duty = await evalExpr(s.duty, localEnv, ctx);
+        ctx.engine.emit('hardwareCall', {
+          callee: 'pwm.init',
+          args: [pin, freq, duty],
+        });
+        break;
+      }
+
+      case 'pwmSetDuty': {
+        const pin = await evalExpr(s.pin, localEnv, ctx);
+        const duty = await evalExpr(s.duty, localEnv, ctx);
+        ctx.engine.emit('hardwareCall', {
+          callee: 'pwm.setDuty',
+          args: [pin, duty],
+        });
+        break;
+      }
+
+      case 'pwmSetFreq': {
+        const pin = await evalExpr(s.pin, localEnv, ctx);
+        const freq = await evalExpr(s.freq, localEnv, ctx);
+        ctx.engine.emit('hardwareCall', {
+          callee: 'pwm.setFreq',
+          args: [pin, freq],
+        });
+        break;
+      }
+
+      case 'pwmStop': {
+        const pin = await evalExpr(s.pin, localEnv, ctx);
+        ctx.engine.emit('hardwareCall', {
+          callee: 'pwm.stop',
+          args: [pin],
+        });
+        break;
+      }
+
+      // --- S5: IEC Timers ---
+      case 'timerTON': {
+        const inst = getInstance(s.instance, localEnv, ctx.globals, () => ({
+          IN: false, PT: 0, ET: 0, Q: false, startTime: 0,
+        }));
+        const now = ctx.engine.millis();
+        const IN = !!(await evalExpr(s.in, localEnv, ctx));
+        const PT = Number(await evalExpr(s.pt, localEnv, ctx)) || 0;
+
+        if (!inst.IN && IN) {
+          inst.startTime = now;
+        }
+        inst.IN = IN;
+        inst.PT = PT;
+
+        if (IN) {
+          const elapsed = now - inst.startTime;
+          inst.ET = elapsed;
+          inst.Q = elapsed >= PT;
+        } else {
+          inst.ET = 0;
+          inst.Q = false;
+        }
+        break;
+      }
+
+      case 'timerTOF': {
+        const inst = getInstance(s.instance, localEnv, ctx.globals, () => ({
+          IN: false, PT: 0, ET: 0, Q: false, startTime: 0,
+        }));
+        const now = ctx.engine.millis();
+        const IN = !!(await evalExpr(s.in, localEnv, ctx));
+        const PT = Number(await evalExpr(s.pt, localEnv, ctx)) || 0;
+
+        if (IN && !inst.IN) {
+          inst.Q = true;
+          inst.ET = 0;
+        } else if (!IN && inst.IN) {
+          inst.startTime = now;
+        }
+
+        if (!IN && inst.Q) {
+          const elapsed = now - inst.startTime;
+          inst.ET = elapsed;
+          if (elapsed >= PT) {
+            inst.Q = false;
+            inst.ET = 0;
+          }
+        }
+
+        inst.IN = IN;
+        inst.PT = PT;
+        break;
+      }
+
+      case 'timerTP': {
+        const inst = getInstance(s.instance, localEnv, ctx.globals, () => ({
+          IN: false, PT: 0, ET: 0, Q: false, startTime: 0,
+        }));
+        const now = ctx.engine.millis();
+        const IN = !!(await evalExpr(s.in, localEnv, ctx));
+        const PT = Number(await evalExpr(s.pt, localEnv, ctx)) || 0;
+
+        if (IN && !inst.IN && !inst.Q) {
+          inst.Q = true;
+          inst.startTime = now;
+          inst.ET = 0;
+        }
+
+        if (inst.Q) {
+          const elapsed = now - inst.startTime;
+          inst.ET = elapsed;
+          if (elapsed >= PT) {
+            inst.Q = false;
+            inst.ET = 0;
+          }
+        }
+
+        inst.IN = IN;
+        inst.PT = PT;
+        break;
+      }
+
+      // --- S5: IEC Counters ---
+      case 'counterCTU': {
+        const inst = getInstance(s.instance, localEnv, ctx.globals, () => ({
+          CU_prev: false, PV: 0, CV: 0, Q: false,
+        }));
+        const CU = !!(await evalExpr(s.cu, localEnv, ctx));
+        const R = !!(await evalExpr(s.r, localEnv, ctx));
+        const PV = Number(await evalExpr(s.pv, localEnv, ctx)) || 0;
+
+        if (R) {
+          inst.CV = 0;
+          inst.Q = false;
+        } else {
+          if (CU && !inst.CU_prev) {
+            inst.CV++;
+          }
+          inst.Q = inst.CV >= PV;
+        }
+
+        inst.CU_prev = CU;
+        inst.PV = PV;
+        break;
+      }
+
+      case 'counterCTD': {
+        const inst = getInstance(s.instance, localEnv, ctx.globals, () => ({
+          CD_prev: false, PV: 0, CV: 0, Q: false,
+        }));
+        const CD = !!(await evalExpr(s.cd, localEnv, ctx));
+        const LD = !!(await evalExpr(s.ld, localEnv, ctx));
+        const PV = Number(await evalExpr(s.pv, localEnv, ctx)) || 0;
+
+        if (LD) {
+          inst.CV = PV;
+        } else {
+          if (CD && !inst.CD_prev) {
+            inst.CV = Math.max(0, inst.CV - 1);
+          }
+        }
+        inst.Q = inst.CV <= 0;
+        inst.CD_prev = CD;
+        inst.PV = PV;
+        break;
+      }
+
+      // --- S5: Latches ---
+      case 'latchSR': {
+        const inst = getInstance(s.instance, localEnv, ctx.globals, () => ({ Q: false }));
+        const S = !!(await evalExpr(s.s, localEnv, ctx));
+        const R = !!(await evalExpr(s.r, localEnv, ctx));
+        if (S && !R) inst.Q = true;
+        if (R && !S) inst.Q = false;
+        break;
+      }
+
+      case 'latchRS': {
+        const inst = getInstance(s.instance, localEnv, ctx.globals, () => ({ Q: false }));
+        const R = !!(await evalExpr(s.r, localEnv, ctx));
+        const S = !!(await evalExpr(s.s, localEnv, ctx));
+        if (R) inst.Q = false;
+        else if (S) inst.Q = true;
+        break;
+      }
+
+      // --- S5: Triggers ---
+      case 'trigR': {
+        const inst = getInstance(s.instance, localEnv, ctx.globals, () => ({
+          prev: false, Q: false,
+        }));
+        const IN = !!(await evalExpr(s.in, localEnv, ctx));
+        inst.Q = IN && !inst.prev;
+        inst.prev = IN;
+        break;
+      }
+
+      case 'trigF': {
+        const inst = getInstance(s.instance, localEnv, ctx.globals, () => ({
+          prev: false, Q: false,
+        }));
+        const IN = !!(await evalExpr(s.in, localEnv, ctx));
+        inst.Q = !IN && inst.prev;
+        inst.prev = IN;
+        break;
+      }
     }
   }
 }
@@ -377,6 +645,21 @@ function setVar(name: string, val: any, local: Map<string, any>, global: Map<str
 function getVar(name: string, local: Map<string, any>, global: Map<string, any>) {
   if (local.has(name)) return local.get(name);
   return global.get(name);
+}
+
+function getInstance(
+  name: string,
+  local: Map<string, any>,
+  global: Map<string, any>,
+  initialFactory: () => any,
+) {
+  let inst = local.has(name) ? local.get(name) : global.get(name);
+  if (!inst) {
+    inst = initialFactory();
+    if (local.has(name)) local.set(name, inst);
+    else global.set(name, inst);
+  }
+  return inst;
 }
 
 async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): Promise<any> {
@@ -396,6 +679,7 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       if (arr && typeof arr === 'object') {
         return arr[idx];
       }
+      ctx.engine.log(`⚠️ Index access on non-indexable value; returning 0`);
       return 0;
     }
 
@@ -404,6 +688,7 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       const row = await evalExpr(expr.rowIndex, env, ctx);
       const col = await evalExpr(expr.colIndex, env, ctx);
       if (Array.isArray(arr) && Array.isArray(arr[row])) return arr[row][col];
+      ctx.engine.log(`⚠️ 2D index access on non-indexable value; returning 0`);
       return 0;
     }
 
@@ -415,12 +700,16 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       if (Array.isArray(arr) && Array.isArray(arr[d1]) && Array.isArray(arr[d1][d2])) {
         return arr[d1][d2][d3];
       }
+      ctx.engine.log(`⚠️ 3D index access on non-indexable value; returning 0`);
       return 0;
     }
 
     case 'member': {
       const obj = await evalExpr(expr.target, env, ctx);
-      if (obj && typeof obj === 'object') return (obj as any)[expr.property];
+      if (obj && typeof obj === 'object') {
+        return obj[expr.property];
+      }
+      ctx.engine.log(`⚠️ Member access '${expr.property}' on non-object; returning 0`);
       return 0;
     }
 
@@ -543,7 +832,7 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       }
       if (expr.callee === 'millis') return ctx.engine.millis();
       if (expr.callee === 'micros') return ctx.engine.micros();
-      if (expr.callee === 'sizeof') {
+      if (expr.callee === 'sizeof' || expr.callee === '__sizeof') {
         const val = await evalExpr(expr.args[0], env, ctx);
         if (Array.isArray(val)) return val.length;
         if (typeof val === 'string') return val.length;
@@ -560,18 +849,44 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         return 0;
       }
       if (expr.callee === 'pulseIn') {
-        const args = [];
+        const args: any[] = [];
         for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
-        ctx.engine.emit('hardwareCall', { callee: 'pulseIn', args });
-        return 500;
+        const [pin, state, timeout] = args;
+        const result = ctx.engine.emit('hardwareCall', {
+          callee: 'pulseIn',
+          args: [pin, state, timeout],
+        }) as any;
+
+        if (typeof result === 'number') {
+          return result;
+        }
+
+        ctx.engine.log(
+          `⚠️ pulseIn(${pin}, ${state}) returned no simulated value; defaulting to 0µs`
+        );
+        return 0;
       }
+
       if (expr.callee === 'shiftOut' || expr.callee === 'shiftIn') {
-        const args = [];
+        const args: any[] = [];
         for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
-        ctx.engine.emit('hardwareCall', { callee: expr.callee, args });
-        return expr.callee === 'shiftIn' ? 0 : 0;
+        const result = ctx.engine.emit('hardwareCall', {
+          callee: expr.callee,
+          args,
+        }) as any;
+
+        if (expr.callee === 'shiftIn') {
+          if (typeof result === 'number') return result;
+          ctx.engine.log(
+            `⚠️ shiftIn(...) returned no simulated value; defaulting to 0x00`
+          );
+          return 0;
+        }
+
+        // shiftOut is write-only
+        return 0;
       }
-      if (expr.callee === 'tone' || expr.callee === 'noTone' || expr.callee === 'servo') {
+      if (expr.callee === 'tone' || expr.callee === 'noTone') {
         const args = [];
         for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
         if (expr.callee === 'tone') {
@@ -582,7 +897,19 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
           }
         }
         if (expr.callee === 'noTone') ctx.engine.noTone(args[0]);
-        if (expr.callee === 'servo') ctx.engine.emit('tone', { pin: args[0], frequency: 1000, angle: args[1] });
+        return 0;
+      }
+
+      // Servo path for future servo_shim
+      if (expr.callee === 'servo') {
+        const args: any[] = [];
+        for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
+        const pin = args[0];
+        const angle = args[1] ?? 90;
+        ctx.engine.emit('hardwareCall', {
+          callee: 'servo.write',
+          args: [pin, angle],
+        });
         return 0;
       }
       if (expr.callee === 'map') {
@@ -681,10 +1008,20 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         return Number(val).toFixed(Math.max(0, Number(prec) || 0));
       }
 
-      // ── Type conversions ──────────────────────────────────────────────────
-      if (expr.callee === 'String') return String(await evalExpr(expr.args[0] || { kind: 'literal', value: '' }, env, ctx));
-      if (expr.callee === 'int') return Math.floor(Number(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx)) || 0);
-      if (expr.callee === 'float') return Number(await evalExpr(expr.args[0] || { kind: 'literal', value: 0 }, env, ctx)) || 0;
+      // ── Type conversions (generic numeric casts) ─────────────────────────────────
+      // Generic numeric casts - handles int, float, String plus byte/uint8_t/char aliases
+      if (expr.callee === 'int') {
+        const v = await evalExpr(expr.args[0] ?? { kind: 'literal', value: 0 }, env, ctx);
+        return Number(v) | 0;
+      }
+      if (expr.callee === 'float') {
+        const v = await evalExpr(expr.args[0] ?? { kind: 'literal', value: 0 }, env, ctx);
+        return Number(v) || 0;
+      }
+      if (expr.callee === 'String') {
+        const v = await evalExpr(expr.args[0] ?? { kind: 'literal', value: '' }, env, ctx);
+        return String(v);
+      }
       if (expr.callee === '__len' || expr.callee === 'len') {
         const arr = await evalExpr(expr.args[0], env, ctx);
         if (Array.isArray(arr)) return arr.length;
@@ -741,6 +1078,8 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         return 0;
       }
 
+      // Unknown function fallback with warning
+      ctx.engine.log(`⚠️ Unknown function '${expr.callee}' in ASLExecutor; returning 0`);
       return 0;
     }
 

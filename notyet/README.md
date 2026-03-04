@@ -401,17 +401,17 @@ The following behaviours are implemented in `ASLExecutor.ts` as safe fallbacks o
 
 New ASL nodes needed for advanced hardware CIs.
 
-> **Note:** Formal ASL node families for UART/I2C/SPI and IEC timers/counters will be introduced in a follow-up sub-phase (S5.b — Bus & IEC Nodes), tightly coupled with Phase 2 of the Shim Architecture plan (Protocol Buses). This document currently tracks the conceptual needs; concrete type definitions and executor/transform handlers will be added together with the corresponding shim layers.
+> **Note:** Types, executor handlers, and transform handlers added in March 2026. Parsers still need to emit these nodes.
 
 | \#   | Task                                                               | File                   | Status |
 | :--- | :----------------------------------------------------------------- | :--------------------- | :----- |
-| S5.1 | `UARTWrite/Read` formal ASL nodes                                  | `ASLTypes.ts`          | \[ \]  |
-| S5.2 | `I2CRead/Write` formal ASL nodes                                   | `ASLTypes.ts`          | \[ \]  |
-| S5.3 | `SPIRead/Write` formal ASL nodes                                   | `ASLTypes.ts`          | \[ \]  |
-| S5.4 | `PWMInit/SetDuty/SetFreq/Stop`                                     | `ASLTypes.ts`          | \[ \]  |
-| S5.5 | `TimerTON/TOF/TP`, `CounterCTU/CTD`, `LatchSR/RS`, `TrigR/F` (IEC) | `ASLTypes.ts`          | \[ \]  |
-| S5.6 | Executor handlers for new nodes                                    | `ASLExecutor.ts`       | \[ \]  |
-| S5.7 | Registry handlers for new nodes                                    | `statementRegistry.ts` | \[ \]  |
+| S5.1 | `UARTWrite/Read` formal ASL nodes                                  | `ASLTypes.ts`          | ✅      |
+| S5.2 | `I2CRead/Write` formal ASL nodes                                   | `ASLTypes.ts`          | ✅      |
+| S5.3 | `SPIRead/Write` formal ASL nodes                                   | `ASLTypes.ts`          | ✅      |
+| S5.4 | `PWMInit/SetDuty/SetFreq/Stop`                                     | `ASLTypes.ts`          | ✅      |
+| S5.5 | `TimerTON/TOF/TP`, `CounterCTU/CTD`, `LatchSR/RS`, `TrigR/F` (IEC) | `ASLTypes.ts`          | ✅      |
+| S5.6 | Executor handlers for new nodes                                    | `ASLExecutor.ts`       | ✅      |
+| S5.7 | Transform handlers for new nodes                                    | `callTransform.ts`     | ✅      |
 
 ---
 

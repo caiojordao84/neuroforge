@@ -62,6 +62,167 @@ export function transformCallToStmt(node: BaseNode): ASLStatement | null {
     } as ASLStatement;
   }
 
+  // --- S5: UART high-level helpers ---
+  if (callee === 'UARTWrite') {
+    return {
+      kind: 'uartWrite',
+      port: transformExpr(node.children[0]),
+      data: transformExpr(node.children[1]),
+    } as ASLStatement;
+  }
+
+  if (callee === 'UARTRead') {
+    return {
+      kind: 'uartRead',
+      port: transformExpr(node.children[0]),
+      length: transformExpr(node.children[1]),
+      target: node.attributes.target || '__uartBuf',
+    } as ASLStatement;
+  }
+
+  // --- S5: I2C helpers ---
+  if (callee === 'I2CWrite') {
+    return {
+      kind: 'i2cWrite',
+      bus: transformExpr(node.children[0]),
+      address: transformExpr(node.children[1]),
+      data: transformExpr(node.children[2]),
+    } as ASLStatement;
+  }
+
+  if (callee === 'I2CRead') {
+    return {
+      kind: 'i2cRead',
+      bus: transformExpr(node.children[0]),
+      address: transformExpr(node.children[1]),
+      length: transformExpr(node.children[2]),
+      target: node.attributes.target || '__i2cBuf',
+    } as ASLStatement;
+  }
+
+  // --- S5: SPI helper ---
+  if (callee === 'SPITransfer') {
+    return {
+      kind: 'spiTransfer',
+      bus: transformExpr(node.children[0]),
+      csPin: transformExpr(node.children[1]),
+      txData: transformExpr(node.children[2]),
+      target: node.attributes.target,
+    } as ASLStatement;
+  }
+
+  // --- S5: PWM ---
+  if (callee === 'PWMInit') {
+    return {
+      kind: 'pwmInit',
+      pin: transformExpr(node.children[0]),
+      freq: transformExpr(node.children[1]),
+      duty: transformExpr(node.children[2]),
+    } as ASLStatement;
+  }
+  if (callee === 'PWMSetDuty') {
+    return {
+      kind: 'pwmSetDuty',
+      pin: transformExpr(node.children[0]),
+      duty: transformExpr(node.children[1]),
+    } as ASLStatement;
+  }
+  if (callee === 'PWMSetFreq') {
+    return {
+      kind: 'pwmSetFreq',
+      pin: transformExpr(node.children[0]),
+      freq: transformExpr(node.children[1]),
+    } as ASLStatement;
+  }
+  if (callee === 'PWMStop') {
+    return {
+      kind: 'pwmStop',
+      pin: transformExpr(node.children[0]),
+    } as ASLStatement;
+  }
+
+  // --- S5: IEC blocks as function-like calls ---
+  if (callee === 'TON') {
+    return {
+      kind: 'timerTON',
+      instance: node.attributes.instance,
+      in: transformExpr(node.children[0]),
+      pt: transformExpr(node.children[1]),
+    } as ASLStatement;
+  }
+
+  if (callee === 'TOF') {
+    return {
+      kind: 'timerTOF',
+      instance: node.attributes.instance,
+      in: transformExpr(node.children[0]),
+      pt: transformExpr(node.children[1]),
+    } as ASLStatement;
+  }
+
+  if (callee === 'TP') {
+    return {
+      kind: 'timerTP',
+      instance: node.attributes.instance,
+      in: transformExpr(node.children[0]),
+      pt: transformExpr(node.children[1]),
+    } as ASLStatement;
+  }
+
+  if (callee === 'CTU') {
+    return {
+      kind: 'counterCTU',
+      instance: node.attributes.instance,
+      cu: transformExpr(node.children[0]),
+      r: transformExpr(node.children[1]),
+      pv: transformExpr(node.children[2]),
+    } as ASLStatement;
+  }
+
+  if (callee === 'CTD') {
+    return {
+      kind: 'counterCTD',
+      instance: node.attributes.instance,
+      cd: transformExpr(node.children[0]),
+      ld: transformExpr(node.children[1]),
+      pv: transformExpr(node.children[2]),
+    } as ASLStatement;
+  }
+
+  if (callee === 'SR') {
+    return {
+      kind: 'latchSR',
+      instance: node.attributes.instance,
+      s: transformExpr(node.children[0]),
+      r: transformExpr(node.children[1]),
+    } as ASLStatement;
+  }
+
+  if (callee === 'RS') {
+    return {
+      kind: 'latchRS',
+      instance: node.attributes.instance,
+      r: transformExpr(node.children[0]),
+      s: transformExpr(node.children[1]),
+    } as ASLStatement;
+  }
+
+  if (callee === 'R_TRIG') {
+    return {
+      kind: 'trigR',
+      instance: node.attributes.instance,
+      in: transformExpr(node.children[0]),
+    } as ASLStatement;
+  }
+
+  if (callee === 'F_TRIG') {
+    return {
+      kind: 'trigF',
+      instance: node.attributes.instance,
+      in: transformExpr(node.children[0]),
+    } as ASLStatement;
+  }
+
   return {
     kind: 'expr',
     expr: {

@@ -152,11 +152,26 @@ export function transformExpr(node: BaseNode | undefined): ASLExpr {
   }
 
   if (node.nodeType === 'CastExpression') {
-    const targetType = node.attributes.targetType as string;
+    const targetType = (node.attributes.targetType as string) || '';
+    const lower = targetType.toLowerCase();
     const operand = transformExpr(node.children[0]);
+
     let callee = 'int';
-    if (targetType === 'float' || targetType === 'double') callee = 'float';
-    if (targetType === 'String') callee = 'String';
+    if (lower.includes('float') || lower === 'double') callee = 'float';
+    else if (lower === 'string' || lower.includes('std::string')) callee = 'String';
+    // byte/char/uint8_t/int8_t → int
+    else if (
+      lower.includes('int') ||
+      lower.includes('long') ||
+      lower.includes('short') ||
+      lower.includes('byte') ||
+      lower.includes('char') ||
+      lower.includes('uint') ||
+      lower.includes('size_t')
+    ) {
+      callee = 'int';
+    }
+
     return { kind: 'call', callee, args: [operand] } as ASLExpr;
   }
 
