@@ -1,11 +1,14 @@
 import { simulationEngine } from './SimulationEngine';
 import type { Language } from '@/types';
 
+// Support for arrays: number, number[], number[][]
+type VariableValue = number | number[] | number[][];
+
 // Code Parser - Parses Arduino C++ and MicroPython
 export class CodeParser {
   private language: Language = 'cpp';
-  private globalVariables: Map<string, number> = new Map();
-  private localVariables: Map<string, number> = new Map();
+  private globalVariables: Map<string, VariableValue> = new Map();
+  private localVariables: Map<string, VariableValue> = new Map();
 
   // Execution state for control flow
   // Stack of scopes to handle nested if/else
@@ -66,24 +69,67 @@ export class CodeParser {
       // Ignoring function starts or control flow
       if (cleanLine.startsWith('//') || cleanLine.startsWith('void') || cleanLine.startsWith('if') || cleanLine.startsWith('}')) continue;
 
+      // First try: array declaration: const int leds[] = {11, 12, 13}
+      const arrayMatch = cleanLine.match(/(?:const\s+)?(?:int|byte|long|float|double|bool)\s+(\w+)\s*\[\s*\]\s*=\s*\{([^}]+)\}/);
+      if (arrayMatch) {
+        const varName = arrayMatch[1];
+        const values = arrayMatch[2].split(',').map(s => parseInt(s.trim(), 10));
+        this.globalVariables.set(varName, values);
+        continue;
+      }
+
+      // First try: 2D array declaration: const int matrix[][] = {{1,2},{3,4}}
+      const array2DMatch = cleanLine.match(/(?:const\s+)?(?:int|byte|long|float|double|bool)\s+(\w+)\s*\[\s*\]\s*\[\s*\]\s*=\s*\{([^}]+)\}/);
+      if (array2DMatch) {
+        const varName = array2DMatch[1];
+        // Parse 2D array - simplified: {{1,2},{3,4}}
+        const inner = array2DMatch[2];
+        const rows: number[][] = [];
+        let depth = 0;
+        let current = '';
+        for (const ch of inner) {
+          if (ch === '{') {
+            if (depth === 0) current = '';
+            depth++;
+          } else if (ch === '}') {
+            depth--;
+            if (depth === 1 && current.trim()) {
+              const row = current.split(',').map(s => parseInt(s.trim(), 10));
+              rows.push(row);
+            }
+          } else if (ch !== ',' || depth > 1) {
+            current += ch;
+          }
+        }
+        this.globalVariables.set(varName, rows);
+        continue;
+      }
+
+      // Regular variable: const int x = 10
       const varMatch = cleanLine.match(/(?:const\s+)?(?:int|byte|long|float|double|bool)\s+(\w+)\s*=\s*([^;]+);/);
       if (varMatch) {
         const varName = varMatch[1];
         const valueStr = varMatch[2].trim();
         const value = this.evaluateExpression(valueStr);
-        this.globalVariables.set(varName, value);
-        // console.log(`Extracted global variable: ${varName} = ${value}`);
+        if (value !== null) {
+          this.globalVariables.set(varName, value);
+        }
       }
     }
   }
 
   // Resolve variable name to value (Local > Global)
+  // Returns number or null - for arrays, use resolveArrayAccess
   private resolveVariable(name: string): number | null {
     if (this.localVariables.has(name)) {
-      return this.localVariables.get(name)!;
+      const val = this.localVariables.get(name)!;
+      if (typeof val === 'number') return val;
+      return null;
     }
     if (this.globalVariables.has(name)) {
-      return this.globalVariables.get(name)!;
+      const val = this.globalVariables.get(name)!;
+      if (typeof val === 'number') return val;
+      return null;
     }
 
     // Check for constants
@@ -97,22 +143,85 @@ export class CodeParser {
     return isNaN(num) ? null : num;
   }
 
+  // Resolve array access: arr[index] or arr[i][j]
+  private resolveArrayAccess(arrayName: string, indexExpr: string, index2Expr?: string): number | null {
+    let arr: VariableValue | undefined;
+    
+    if (this.localVariables.has(arrayName)) {
+      arr = this.localVariables.get(arrayName);
+    } else if (this.globalVariables.has(arrayName)) {
+      arr = this.globalVariables.get(arrayName);
+    }
+    
+    if (!arr || !Array.isArray(arr)) return null;
+    
+    // First dimension
+    const idx1 = this.evaluateExpression(indexExpr);
+    if (idx1 === null || idx1 < 0 || idx1 >= arr.length) return null;
+    
+    // Second dimension (for 2D arrays)
+    if (index2Expr !== undefined) {
+      const nested = arr[idx1];
+      if (!Array.isArray(nested)) return null;
+      const idx2 = this.evaluateExpression(index2Expr);
+      if (idx2 === null || idx2 < 0 || idx2 >= nested.length) return null;
+      return nested[idx2];
+    }
+    
+    const val = arr[idx1];
+    return typeof val === 'number' ? val : null;
+  }
+
+  // Get array length: sizeof(arr)
+  private getArrayLength(arrayName: string): number | null {
+    if (this.localVariables.has(arrayName)) {
+      const val = this.localVariables.get(arrayName)!;
+      if (Array.isArray(val)) return val.length;
+      return null;
+    }
+    if (this.globalVariables.has(arrayName)) {
+      const val = this.globalVariables.get(arrayName)!;
+      if (Array.isArray(val)) return val.length;
+      return null;
+    }
+    return null;
+  }
+
   // Evaluate simple expressions: 1, val, digitalRead(2), 1 + 2
   // Currently supports: Literal, Variable, digitalRead(v), analogRead(v), simple comparison (==, !=, <, >)
   // For assignments, we mostly care about values. For if, we care about truthy.
   private evaluateExpression(expr: string): number {
     expr = expr.trim();
 
+    // Handle sizeof(array): returns array length
+    const sizeofMatch = expr.match(/^sizeof\s*\(\s*(\w+)\s*\)$/);
+    if (sizeofMatch) {
+      const len = this.getArrayLength(sizeofMatch[1]);
+      return len !== null ? len : 0;
+    }
+
+    // Handle array access: arr[i] or arr[i][j]
+    const subscriptMatch = expr.match(/^(\w+)\s*\[\s*([^]]+)\s*\]\s*(\[\s*([^]]+)\s*\])?$/);
+    if (subscriptMatch) {
+      const arrayName = subscriptMatch[1];
+      const index1Expr = subscriptMatch[2];
+      const index2Expr = subscriptMatch[4]; // may be undefined for 1D
+      return this.resolveArrayAccess(arrayName, index1Expr, index2Expr) ?? 0;
+    }
+
     // Handle digitalRead(pin)
     const digitReadMatch = expr.match(/digitalRead\s*\(\s*(\w+)\s*\)/);
     if (digitReadMatch) {
       const pin = this.resolveVariable(digitReadMatch[1]);
       if (pin !== null) {
-        // We need to access the engine's read function synchronously? 
-        // SimulationEngine digitalRead returns 'HIGH' | 'LOW'
-        // const val = simulationEngine.digitalRead(pin);
-        // console.log(`[CodeParser] digitalRead(${pin}) = ${val}`);
-        // return val === 'HIGH' ? 1 : 0;
+        // Check if it's an array access
+        const pinSubscript = expr.match(/digitalRead\s*\(\s*(\w+)\s*\[\s*([^]]+)\s*\]\s*\)/);
+        if (pinSubscript) {
+          const resolvedPin = this.resolveArrayAccess(pinSubscript[1], pinSubscript[2]);
+          if (resolvedPin !== null) {
+            return simulationEngine.digitalRead(resolvedPin) === 'HIGH' ? 1 : 0;
+          }
+        }
         return simulationEngine.digitalRead(pin) === 'HIGH' ? 1 : 0;
       }
       return 0;
@@ -121,6 +230,14 @@ export class CodeParser {
     // Handle analogRead(pin)
     const analogReadMatch = expr.match(/analogRead\s*\(\s*(\w+)\s*\)/);
     if (analogReadMatch) {
+      // Check if it's an array access
+      const pinSubscript = expr.match(/analogRead\s*\(\s*(\w+)\s*\[\s*([^]]+)\s*\]\s*\)/);
+      if (pinSubscript) {
+        const pin = this.resolveArrayAccess(pinSubscript[1], pinSubscript[2]);
+        if (pin !== null) {
+          return simulationEngine.analogRead(pin);
+        }
+      }
       const pin = this.resolveVariable(analogReadMatch[1]);
       // TODO: Handle 'A0' parsing if passed as string literal, but resolveVariable handles A0 if we map it?
       // For now assume variable or number. A0 is usually 14 on Uno.
@@ -129,10 +246,6 @@ export class CodeParser {
       }
       return 0;
     }
-
-    // Handle pure variable or literal
-    // If it contains operators, we might want to do a simple eval (dangerous? no, we are in sandbox-ish)
-    // But safely:
 
     // Equality
     if (expr.includes('==')) {
@@ -357,10 +470,19 @@ export class CodeParser {
       return;
     }
 
-    // pinMode with variable or literal
+    // pinMode with variable or literal or array
     const pinModeMatch = cleanLine.match(/pinMode\s*\(\s*(\w+)\s*,\s*(\w+)\s*\)/);
     if (pinModeMatch) {
-      const pinValue = this.resolveVariable(pinModeMatch[1]);
+      let pinValue: number | null = this.resolveVariable(pinModeMatch[1]);
+      
+      // Try array access: arr[i]
+      if (pinValue === null) {
+        const arrayAccess = cleanLine.match(/pinMode\s*\(\s*(\w+)\s*\[\s*([^]]+)\s*\]\s*,\s*(\w+)\s*\)/);
+        if (arrayAccess) {
+          pinValue = this.resolveArrayAccess(arrayAccess[1], arrayAccess[2]);
+        }
+      }
+      
       if (pinValue !== null) {
         const mode = pinModeMatch[2] as 'INPUT' | 'OUTPUT' | 'INPUT_PULLUP';
         simulationEngine.pinMode(pinValue, mode);
@@ -370,10 +492,20 @@ export class CodeParser {
       return;
     }
 
-    // digitalWrite with variable or literal
+    // digitalWrite with variable or literal or array
+    // Supports: digitalWrite(pin, val) or digitalWrite(arr[i], val)
     const digitalWriteMatch = cleanLine.match(/digitalWrite\s*\(\s*(\w+)\s*,\s*(\w+)\s*\)/);
     if (digitalWriteMatch) {
-      const pinValue = this.resolveVariable(digitalWriteMatch[1]);
+      let pinValue: number | null = this.resolveVariable(digitalWriteMatch[1]);
+      
+      // Try array access: arr[i]
+      if (pinValue === null) {
+        const arrayAccess = cleanLine.match(/digitalWrite\s*\(\s*(\w+)\s*\[\s*([^]]+)\s*\]\s*,\s*(\w+)\s*\)/);
+        if (arrayAccess) {
+          pinValue = this.resolveArrayAccess(arrayAccess[1], arrayAccess[2]);
+        }
+      }
+      
       if (pinValue !== null) {
         // Resolve value from variable (e.g. HIGH, LOW, 0, 1) or literal
         let valStr = digitalWriteMatch[2];
@@ -399,7 +531,16 @@ export class CodeParser {
 
     const analogWriteMatch = cleanLine.match(/analogWrite\s*\(\s*(\w+)\s*,\s*(\d+)\s*\)/);
     if (analogWriteMatch) {
-      const pinValue = this.resolveVariable(analogWriteMatch[1]);
+      let pinValue: number | null = this.resolveVariable(analogWriteMatch[1]);
+      
+      // Try array access: arr[i]
+      if (pinValue === null) {
+        const arrayAccess = cleanLine.match(/analogWrite\s*\(\s*(\w+)\s*\[\s*([^]]+)\s*\]\s*,\s*(\d+)\s*\)/);
+        if (arrayAccess) {
+          pinValue = this.resolveArrayAccess(arrayAccess[1], arrayAccess[2]);
+        }
+      }
+      
       if (pinValue !== null) {
         const value = parseInt(analogWriteMatch[2], 10);
         simulationEngine.analogWrite(pinValue, value);

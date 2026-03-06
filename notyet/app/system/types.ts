@@ -1,28 +1,35 @@
 
-export type NodeType = 
-  | 'Program' | 'Function' | 'Block'
-  | 'VariableDeclaration' | 'Assignment' | 'IfStatement' | 'WhileLoop' | 'ForLoop'
-  | 'GpioConfig' | 'GpioSet' | 'GpioRead' | 'AnalogRead' | 'AnalogWrite'
-  | 'DelayMs' | 'Print'
-  | 'LcdPrint' | 'LcdCursor' | 'LcdClear'
-  | 'OledText' | 'OledShow' | 'OledClear'
-  | 'SevSegPrint' | 'KeypadRead'
-  | 'BinaryExpression' | 'UnaryExpression' | 'CallExpression' | 'MemberExpression'
-  | 'Identifier' | 'Literal' | 'Empty'
-  | 'ExpressionStatement'
-  // Optimization Nodes
-  | 'HardwarePwm' | 'GpioBatch';
+export type NodeType =
+    | 'Program' | 'Function' | 'Block'
+    | 'VariableDeclaration' | 'Assignment' | 'IfStatement' | 'WhileLoop' | 'ForLoop' | 'ForIn' | 'DoWhileLoop' | 'Loop'
+    | 'GpioConfig' | 'GpioSet' | 'GpioRead' | 'AnalogRead' | 'AnalogWrite'
+    | 'DelayMs' | 'Print' | 'ReturnStatement' | 'BreakStatement' | 'ContinueStatement'
+    | 'LcdPrint' | 'LcdCursor' | 'LcdClear'
+    | 'OledText' | 'OledShow' | 'OledClear'
+    | 'SevSegPrint' | 'KeypadRead'
+    | 'BinaryExpression' | 'UnaryExpression' | 'CallExpression' | 'MemberExpression' | 'SubscriptExpression' | 'ArrayInitializer'
+    | 'Identifier' | 'Literal' | 'Empty'
+    | 'ExpressionStatement' | 'DesignatedInitializer' | 'ObjectInitializer' | 'Expression'
+    // Optimization Nodes
+    | 'HardwarePwm' | 'GpioBatch'
+    | 'EnumDeclaration'
+    | 'StructDeclaration'
+    | 'SizeofExpression'
+    | 'CastExpression'
+    | 'ConditionalExpression'
+    | 'SwitchStatement'
+    | 'CaseClause';
 
 export interface BaseNode {
-  nodeType: NodeType;
-  id: string;
-  attributes: Record<string, any>;
-  children: BaseNode[];
-  leadingComments?: string[];
-  metadata?: {
-      line?: number;
-      [key: string]: any;
-  }; 
+    nodeType: NodeType;
+    id: string;
+    attributes: Record<string, any>;
+    children: BaseNode[];
+    leadingComments?: string[];
+    metadata?: {
+        line?: number;
+        [key: string]: any;
+    };
 }
 
 export interface ProgramNode extends BaseNode { nodeType: 'Program'; }
@@ -30,10 +37,11 @@ export interface ProgramNode extends BaseNode { nodeType: 'Program'; }
 export interface Symbol {
     name: string;
     type: string;
-    scopeLevel: number; 
+    scopeLevel: number;
     declaredLine: number;
     usageCount: number;
-    value?: any; 
+    value?: any;
+    isMacro?: boolean;
 }
 
 export interface AnalysisIssue {

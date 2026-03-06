@@ -129,13 +129,19 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
         });
       }
     } else {
-      if (node.nodeType === 'VariableDeclaration') {
+      if (node.nodeType !== 'VariableDeclaration') {
+        topLevelNodes.push(node);
+      } else {
         if (node.attributes.isExtern) return;
+        const valNode = node.children[0];
+        // If it's a global with a complex initializer (not literal),
+        // we must also emit it as a statement to ensures it's evaluated at runtime.
+        if (valNode && valNode.nodeType !== 'Literal') {
+          topLevelNodes.push(node);
+        }
       }
-      topLevelNodes.push(node);
 
       if (node.nodeType === 'VariableDeclaration') {
-
         const name = node.attributes.name;
         const type = mapToASLType(node.attributes.type || 'int');
         const isArray = node.attributes.isArray;

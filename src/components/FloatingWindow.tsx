@@ -216,10 +216,10 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
         transition={{ duration: 0.15 }}
         style={{
           position: 'fixed',
-          left: SIDEBAR_WIDTH,
-          top: HEADER_HEIGHT,
-          width: dockedWidth,
-          height: `calc(100% - ${HEADER_HEIGHT}px)`,
+          left: isNaN(SIDEBAR_WIDTH) ? 60 : SIDEBAR_WIDTH,
+          top: isNaN(HEADER_HEIGHT) ? 56 : HEADER_HEIGHT,
+          width: isNaN(dockedWidth) ? 300 : dockedWidth,
+          height: `calc(100% - ${(isNaN(HEADER_HEIGHT) ? 56 : HEADER_HEIGHT)}px)`,
           zIndex: zIndex,
         }}
         className={cn(
@@ -320,10 +320,10 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
       transition={{ duration: 0.15 }}
       style={{
         position: 'fixed',
-        left: position.x,
-        top: position.y,
-        width: size.width,
-        height: size.height,
+        left: isNaN(position.x) ? 100 : position.x,
+        top: isNaN(position.y) ? 100 : position.y,
+        width: isNaN(size.width) ? 600 : size.width,
+        height: isNaN(size.height) ? 400 : size.height,
         zIndex: zIndex,
         willChange: 'transform',
       }}

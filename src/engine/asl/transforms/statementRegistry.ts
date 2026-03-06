@@ -1,5 +1,5 @@
 import type { BaseNode } from '@/system/types';
-import type { ASLStatement, ASLExpr } from '../ASLTypes';
+import type { ASLStatement, ASLExpr, ASLType } from '../ASLTypes';
 import type { TransformContext } from './context';
 import { transformExpr } from './exprTransform';
 import { transformCallToStmt, tryTransformRead } from './callTransform';
@@ -14,18 +14,30 @@ const HARDWARE_CALLEE_MAP: Record<string, string> = {
   'OledShow': 'oled.show',
   'OledClear': 'oled.clear',
   'SevSegPrint': 'sevseg.print',
-  'KeypadRead': 'KeypadRead'
+  'KeypadRead': 'KeypadRead',
+  'DhtReadTemp': 'dht.readTemp',
+  'DhtReadHum': 'dht.readHum',
+  'UltrasonicRead': 'ultrasonic.read',
+  'LdrRead': 'ldr.read',
+  'IrRead': 'ir.read',
+  'MotorsMove': 'motors.move',
+  'MpuGet': 'mpu.get'
 };
 
-const HARDWARE_NODES = ['LcdPrint', 'LcdCursor', 'LcdClear', 'OledText', 'OledShow', 'OledClear', 'SevSegPrint', 'KeypadRead'];
+const HARDWARE_NODES = Object.keys(HARDWARE_CALLEE_MAP);
 
 export type StatementHandler = (node: BaseNode, ctx: TransformContext) => ASLStatement[];
 
 export const statementRegistry: Record<string, StatementHandler> = {
+  Block: handleBlock,
+  Empty: handleEmpty,
+  EnumDeclaration: handleEmpty,
+  Loop: handleLoop,
   IfStatement: handleIfStatement,
   WhileLoop: handleWhileLoop,
   DoWhileLoop: handleDoWhileLoop,
   ForLoop: handleForLoop,
+  ForIn: handleForIn,
   SwitchStatement: handleSwitchStatement,
   StructDeclaration: handleStructDeclaration,
   ReturnStatement: handleReturnStatement,
@@ -34,42 +46,68 @@ export const statementRegistry: Record<string, StatementHandler> = {
   GpioSet: handleGpioSet,
   AnalogWrite: handleAnalogWrite,
   DelayMs: handleDelayMs,
+  GpioRead: handleGpioRead,
+  AnalogRead: handleAnalogRead,
+  HardwarePwm: handleHardwarePwm,
+  GpioBatch: handleGpioBatch,
   VariableDeclaration: handleVariableDeclaration,
   ExpressionStatement: handleExpressionStatement,
   Print: handlePrint,
+  // --- Service Handlers (S5) ---
+  UartWrite: handleUartWrite,
+  UartRead: handleUartRead,
+  I2CWrite: handleI2CWrite,
+  I2CRead: handleI2CRead,
+  SpiTransfer: handleSpiTransfer,
+  TimerTON: handleTimerTON,
+  TimerTOF: handleTimerTOF,
+  TimerTP: handleTimerTP,
+  CounterCTU: handleCounterCTU,
+  CounterCTD: handleCounterCTD,
+  LatchSR: handleLatchSR,
+  LatchRS: handleLatchRS,
+  TrigR: handleTrigR,
+  TrigF: handleTrigF,
+
   ...HARDWARE_NODES.reduce((acc, nodeType) => {
     acc[nodeType] = handleHardware;
     return acc;
   }, {} as Record<string, StatementHandler>)
 };
 
+function handleBlock(node: BaseNode, ctx: TransformContext): ASLStatement[] {
+  if (!ctx.transformBlock) return [];
+  return ctx.transformBlock(node.children, ctx);
+}
+
+function handleEmpty(_node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [];
+}
+
+function handleLoop(node: BaseNode, ctx: TransformContext): ASLStatement[] {
+  const body = handleBlock(node, ctx);
+  return [{ kind: 'for', condition: { kind: 'literal', value: true }, body, update: [] } as ASLStatement];
+}
+
 /**
  * StructDeclaration — no-op handler.
- * Struct registration is handled upstream in codeToASL.ts (ASLProgram.structs[]).
- * This handler prevents spurious assign() statements when StructDeclaration
- * nodes appear inside function/loop blocks (e.g. from RustParser or CParser).
  */
 function handleStructDeclaration(_node: BaseNode, _ctx: TransformContext): ASLStatement[] {
   return [];
 }
 
 function handleSwitchStatement(node: BaseNode, ctx: TransformContext): ASLStatement[] {
-  // children[0] = discriminant expr
-  // children[1..] = CaseClause nodes
   const discriminant = transformExpr(node.children[0]);
   const caseNodes = node.children.slice(1);
 
   const cases = caseNodes.map((caseNode) => {
     const isDefault = !!caseNode.attributes.isDefault;
-
     let test: ASLExpr | null = null;
     let bodyChildren: BaseNode[] = [];
 
     if (isDefault) {
-      // Sem testExpr — todos os children são body
       bodyChildren = caseNode.children;
     } else {
-      // children[0] = testExpr, children[1..] = body
       test = transformExpr(caseNode.children[0]);
       bodyChildren = caseNode.children.slice(1);
     }
@@ -78,66 +116,48 @@ function handleSwitchStatement(node: BaseNode, ctx: TransformContext): ASLStatem
     return { test, body };
   });
 
-  return [
-    {
-      kind: 'switch',
-      discriminant,
-      cases,
-    } as ASLStatement,
-  ];
+  return [{ kind: 'switch', discriminant, cases } as ASLStatement];
 }
 
 function handleIfStatement(node: BaseNode, ctx: TransformContext): ASLStatement[] {
   const condition = transformExpr(node.children[0]);
-  const thenBlock = node.children[1];
-  const elseBranch = node.children[2];
+  const thenNode = node.children[1];
+  const elseNode = node.children[2];
 
-  const thenBranch = thenBlock && thenBlock.nodeType === 'Block' && ctx.transformBlock
-    ? ctx.transformBlock(thenBlock.children, ctx)
-    : [];
+  const thenBranch = thenNode ? (thenNode.nodeType === 'Block' ? handleBlock(thenNode, ctx) : statementRegistry[thenNode.nodeType]?.(thenNode, ctx) || []) : [];
 
-  const elseBranchResult = elseBranch && ctx.transformBlock
-    ? (elseBranch.nodeType === 'IfStatement'
-      ? ctx.transformBlock([elseBranch], ctx)
-      : (elseBranch.nodeType === 'Block' ? ctx.transformBlock(elseBranch.children, ctx) : []))
-    : undefined;
+  let elseBranch: ASLStatement[] | undefined;
+  if (elseNode) {
+    if (elseNode.nodeType === 'Block') {
+      elseBranch = handleBlock(elseNode, ctx);
+    } else if (elseNode.nodeType === 'IfStatement') {
+      elseBranch = handleIfStatement(elseNode, ctx);
+    } else {
+      elseBranch = statementRegistry[elseNode.nodeType]?.(elseNode, ctx);
+    }
+  }
 
-  return [{
-    kind: 'if',
-    condition,
-    thenBranch,
-    elseBranch: elseBranchResult,
-  } as ASLStatement];
+  return [{ kind: 'if', condition, thenBranch, elseBranch: elseBranch } as ASLStatement];
 }
 
 function handleWhileLoop(node: BaseNode, ctx: TransformContext): ASLStatement[] {
-  const bodyNodes = node.children.slice(1);
-  const body = ctx.transformBlock ? ctx.transformBlock(bodyNodes, ctx) : [];
-
-  return [{
-    kind: 'while',
-    condition: transformExpr(node.children[0]),
-    body,
-  } as ASLStatement];
+  const condition = transformExpr(node.children[0]);
+  const bodyNode = node.children[1];
+  const body = bodyNode ? (bodyNode.nodeType === 'Block' ? handleBlock(bodyNode, ctx) : statementRegistry[bodyNode.nodeType]?.(bodyNode, ctx) || []) : [];
+  return [{ kind: 'while', condition, body } as ASLStatement];
 }
 
 function handleDoWhileLoop(node: BaseNode, ctx: TransformContext): ASLStatement[] {
-  const bodyNodes = node.children.slice(1);
-  const body = ctx.transformBlock ? ctx.transformBlock(bodyNodes, ctx) : [];
-
-  return [{
-    kind: 'doWhile',
-    condition: transformExpr(node.children[0]),
-    body,
-  } as ASLStatement];
+  const bodyNode = node.children[1];
+  const body = bodyNode ? (bodyNode.nodeType === 'Block' ? handleBlock(bodyNode, ctx) : statementRegistry[bodyNode.nodeType]?.(bodyNode, ctx) || []) : [];
+  const condition = transformExpr(node.children[0]);
+  return [{ kind: 'doWhile', condition, body } as ASLStatement];
 }
 
 function handleForLoop(node: BaseNode, ctx: TransformContext): ASLStatement[] {
   const result: ASLStatement[] = [];
-
   if (node.attributes.hasInit && node.children.length > 0 && ctx.transformBlock) {
-    const initStmts = ctx.transformBlock([node.children[0]], ctx);
-    result.push(...initStmts);
+    result.push(...ctx.transformBlock([node.children[0]], ctx));
   }
 
   let idx = node.attributes.hasInit ? 1 : 0;
@@ -147,48 +167,45 @@ function handleForLoop(node: BaseNode, ctx: TransformContext): ASLStatement[] {
   if (node.attributes.hasUpdate) idx++;
 
   const bodyNodes = node.children.slice(idx);
-
-  // Desugar condition
   const condSideEffects: BaseNode[] = [];
   resetPostfixTempCounter();
   const desugaredCond = cond ? extractPostfix(cond, condSideEffects) : null;
 
-  // We need to transform the body, but also potentially inject condition side-effects
-  // IF those side effects should run every iteration. In C, for(init; cond; update),
-  // the cond is evaluated every iteration. If cond has side effects, they happen every time.
-  // The most reliable way is to prepend condSideEffects to the body.
   const bodyStmts = ctx.transformBlock ? ctx.transformBlock(bodyNodes, ctx) : [];
-
   if (condSideEffects.length > 0) {
-    const condSideStmts: ASLStatement[] = [];
-    condSideEffects.forEach(se => {
-      condSideStmts.push(...handleAssignment(se));
-    });
-    bodyStmts.unshift(...condSideStmts);
+    condSideEffects.forEach(se => { bodyStmts.unshift(...handleAssignment(se)); });
   }
 
   // Build update statements separately
   const updateStmts: ASLStatement[] = [];
   if (update && ctx.transformBlock) {
-    const updateSideEffects: BaseNode[] = [];
-    resetPostfixTempCounter();
-    const desugaredUpdate = extractPostfix(update, updateSideEffects);
+    // Optimization: If update is a simple i++, i--, ++i, or --i, we don't need the __tmp_ variable.
+    if (update.nodeType === 'UnaryExpression' && ['++', '--'].includes(update.attributes.operator)) {
+      const child = update.children[0];
+      if (child.nodeType === 'Identifier') {
+        const varName = child.attributes.name;
+        const op = update.attributes.operator === '++' ? '+' : '-';
+        updateStmts.push({
+          kind: 'assign', target: varName,
+          value: { kind: 'binary', op, left: { kind: 'var', name: varName }, right: { kind: 'literal', value: 1 } }
+        } as ASLStatement);
+      }
+    }
 
-    updateStmts.push(...ctx.transformBlock([
-      desugaredUpdate.nodeType === 'ExpressionStatement'
-        ? desugaredUpdate
-        : ({
-          nodeType: 'ExpressionStatement',
-          id: 'u',
-          attributes: {},
-          children: [desugaredUpdate],
-        } as BaseNode),
-    ], ctx));
+    if (updateStmts.length === 0) {
+      const updateSideEffects: BaseNode[] = [];
+      resetPostfixTempCounter();
+      const desugaredUpdate = extractPostfix(update, updateSideEffects);
 
-    if (updateSideEffects.length > 0) {
-      updateSideEffects.forEach(se => {
-        updateStmts.push(...handleAssignment(se));
-      });
+      updateStmts.push(...ctx.transformBlock([
+        desugaredUpdate.nodeType === 'ExpressionStatement' ? desugaredUpdate : {
+          nodeType: 'ExpressionStatement', id: 'u', attributes: {}, children: [desugaredUpdate],
+        } as BaseNode,
+      ], ctx));
+
+      if (updateSideEffects.length > 0) {
+        updateSideEffects.forEach(se => { updateStmts.push(...handleAssignment(se)); });
+      }
     }
   }
 
@@ -198,27 +215,37 @@ function handleForLoop(node: BaseNode, ctx: TransformContext): ASLStatement[] {
     body: bodyStmts,
     update: updateStmts,
   } as ASLStatement);
-
   return result;
+}
+
+function handleForIn(node: BaseNode, ctx: TransformContext): ASLStatement[] {
+  const varName = node.attributes.varName || 'item';
+  const iterable = transformExpr(node.children[0]);
+  const bodyNode = node.children[1];
+  const body = bodyNode ? (bodyNode.nodeType === 'Block' ? handleBlock(bodyNode, ctx) : statementRegistry[bodyNode.nodeType]?.(bodyNode, ctx) || []) : [];
+  return [{ kind: 'forIn', varName, iterable, body } as any];
+}
+
+function handleGpioSet(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [{ kind: 'digitalWrite', pin: transformExpr(node.children[0]), value: transformExpr(node.children[1]) } as ASLStatement];
+}
+
+function handleAnalogWrite(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [{ kind: 'analogWrite', pin: transformExpr(node.children[0]), value: transformExpr(node.children[1]) } as ASLStatement];
+}
+
+function handleDelayMs(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [{ kind: 'delay', milliseconds: transformExpr(node.children[0]) } as ASLStatement];
 }
 
 function handleReturnStatement(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
   const expr = node.children[0];
   if (!expr) return [{ kind: 'return' } as ASLStatement];
-
   const sideEffects: BaseNode[] = [];
   const desugaredExpr = extractPostfix(expr, sideEffects);
   const stmts: ASLStatement[] = [];
-
-  sideEffects.forEach(se => {
-    stmts.push(...handleAssignment(se));
-  });
-
-  stmts.push({
-    kind: 'return',
-    value: transformExpr(desugaredExpr),
-  } as ASLStatement);
-
+  sideEffects.forEach(se => { stmts.push(...handleAssignment(se)); });
+  stmts.push({ kind: 'return', value: transformExpr(desugaredExpr) } as ASLStatement);
   return stmts;
 }
 
@@ -230,36 +257,100 @@ function handleContinueStatement(_node: BaseNode, _ctx: TransformContext): ASLSt
   return [{ kind: 'continue' } as ASLStatement];
 }
 
-function handleGpioSet(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+function handleGpioRead(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  const target = node.attributes.target || '__tmp_read';
+  return [{ kind: 'read', pin: transformExpr(node.children[0]), target, mode: 'DIGITAL' } as ASLStatement];
+}
+
+function handleAnalogRead(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  const target = node.attributes.target || '__tmp_read';
+  return [{ kind: 'read', pin: transformExpr(node.children[0]), target, mode: 'ANALOG' } as ASLStatement];
+}
+
+function handleHardwarePwm(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
   return [{
+    kind: 'pwmInit',
+    pin: { kind: 'literal', value: node.attributes.pin },
+    freq: { kind: 'literal', value: node.attributes.freq || 1000 },
+    duty: { kind: 'literal', value: node.attributes.duty }
+  } as ASLStatement];
+}
+
+function handleGpioBatch(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  const ops = node.attributes.operations || [];
+  return ops.map((op: any) => ({
     kind: 'digitalWrite',
-    pin: transformExpr(node.children[0]),
-    value: transformExpr(node.children[1]),
-  } as ASLStatement];
+    pin: { kind: 'literal', value: op.pin },
+    value: { kind: 'literal', value: op.val }
+  } as ASLStatement));
 }
 
-function handleAnalogWrite(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
-  return [{
-    kind: 'analogWrite',
-    pin: transformExpr(node.children[0]),
-    value: transformExpr(node.children[1]),
-  } as ASLStatement];
+// --- Service Handlers Implementation ---
+
+function handleUartWrite(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [{ kind: 'uartWrite', port: transformExpr(node.children[0]), data: transformExpr(node.children[1]) } as ASLStatement];
 }
 
-function handleDelayMs(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
-  return [{
-    kind: 'delay',
-    milliseconds: transformExpr(node.children[0]),
-  } as ASLStatement];
+function handleUartRead(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [{ kind: 'uartRead', port: transformExpr(node.children[0]), target: node.attributes.target, length: transformExpr(node.children[1]) } as ASLStatement];
 }
 
-function handleVariableDeclaration(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+function handleI2CWrite(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [{ kind: 'i2cWrite', bus: transformExpr(node.children[0]), address: transformExpr(node.children[1]), data: transformExpr(node.children[2]) } as ASLStatement];
+}
+
+function handleI2CRead(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [{ kind: 'i2cRead', bus: transformExpr(node.children[0]), address: transformExpr(node.children[1]), length: transformExpr(node.children[2]), target: node.attributes.target } as ASLStatement];
+}
+
+function handleSpiTransfer(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [{ kind: 'spiTransfer', bus: transformExpr(node.children[0]), csPin: transformExpr(node.children[1]), txData: transformExpr(node.children[2]), target: node.attributes.target } as ASLStatement];
+}
+
+function handleTimerTON(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [{ kind: 'timerTON', instance: node.attributes.instance, in: transformExpr(node.children[0]), pt: transformExpr(node.children[1]) } as ASLStatement];
+}
+
+function handleTimerTOF(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [{ kind: 'timerTOF', instance: node.attributes.instance, in: transformExpr(node.children[0]), pt: transformExpr(node.children[1]) } as ASLStatement];
+}
+
+function handleTimerTP(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [{ kind: 'timerTP', instance: node.attributes.instance, in: transformExpr(node.children[0]), pt: transformExpr(node.children[1]) } as ASLStatement];
+}
+
+function handleCounterCTU(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [{ kind: 'counterCTU', instance: node.attributes.instance, cu: transformExpr(node.children[0]), r: transformExpr(node.children[1]), pv: transformExpr(node.children[2]) } as ASLStatement];
+}
+
+function handleCounterCTD(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [{ kind: 'counterCTD', instance: node.attributes.instance, cd: transformExpr(node.children[0]), ld: transformExpr(node.children[1]), pv: transformExpr(node.children[2]) } as ASLStatement];
+}
+
+function handleLatchSR(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [{ kind: 'latchSR', instance: node.attributes.instance, s: transformExpr(node.children[0]), r: transformExpr(node.children[1]) } as ASLStatement];
+}
+
+function handleLatchRS(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [{ kind: 'latchRS', instance: node.attributes.instance, r: transformExpr(node.children[0]), s: transformExpr(node.children[1]) } as ASLStatement];
+}
+
+function handleTrigR(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [{ kind: 'trigR', instance: node.attributes.instance, in: transformExpr(node.children[0]) } as ASLStatement];
+}
+
+function handleTrigF(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [{ kind: 'trigF', instance: node.attributes.instance, in: transformExpr(node.children[0]) } as ASLStatement];
+}
+
+function handleVariableDeclaration(node: BaseNode, ctx: TransformContext): ASLStatement[] {
   const name = node.attributes.name;
+  const type = (node.attributes.type || 'int') as ASLType;
   const valNode = node.children[0];
   const isArray = node.attributes.isArray;
   const isArray2D = node.attributes.isArray2D;
   const structType = node.attributes.structType;
-  const structDef = structType ? _ctx.structDefs?.[structType] : null;
+  const structDef = structType ? ctx.structDefs?.[structType] : null;
 
   if (valNode && valNode.nodeType === 'CallExpression' && valNode.attributes.callee === 'Pin') {
     const pinExpr = transformExpr(valNode.children[0]);
@@ -270,7 +361,6 @@ function handleVariableDeclaration(node: BaseNode, _ctx: TransformContext): ASLS
       if (v === 1) mode = 'OUTPUT';
       if (v === 2) mode = 'INPUT_PULLUP';
     }
-
     return [
       { kind: 'pinMode', pin: pinExpr, mode } as ASLStatement,
       { kind: 'assign', target: name, value: pinExpr } as ASLStatement
@@ -282,71 +372,47 @@ function handleVariableDeclaration(node: BaseNode, _ctx: TransformContext): ASLS
 
   const stmts: ASLStatement[] = [];
 
+  if (isArray && valNode?.nodeType === 'Literal' && Array.isArray(valNode.attributes.value) && valNode.attributes.value.length === 0) {
+    const emptyArr = buildEmptyArray(node.attributes.arraySizeExpr, node.attributes.arraySize2Expr, ctx.globalsMap);
+    return [{ kind: 'assign', target: name, value: { kind: 'literal', value: emptyArr } }];
+  }
+
+  if (isArray && !valNode) {
+    const emptyArr = buildEmptyArray(node.attributes.arraySizeExpr, node.attributes.arraySize2Expr, ctx.globalsMap);
+    return [{ kind: 'assign', target: name, value: { kind: 'literal', value: emptyArr } }];
+  }
+
   if (valNode && valNode.nodeType === 'ArrayInitializer') {
     if (structDef && !isArray) {
-      // Struct initialization
       const baseObj: Record<string, any> = {};
       structDef.fields.forEach(f => { baseObj[f.name] = 0; });
       stmts.push({ kind: 'assign', target: name, value: { kind: 'literal', value: baseObj } });
-
       valNode.children.forEach((c, i) => {
         if (i < structDef.fields.length) {
-          const field = structDef.fields[i];
-          const expr = transformExpr(c);
-          stmts.push({ kind: 'setMember', target: { kind: 'var', name }, property: field.name, value: expr });
+          stmts.push({ kind: 'setMember', target: { kind: 'var', name }, property: structDef.fields[i].name, value: transformExpr(c) });
         }
       });
       return stmts;
     }
 
     if (structDef && isArray) {
-      // Array of Structs Initialization
-      const size = resolveSize(node.attributes.arraySizeExpr, _ctx.globalsMap) || valNode.children.length;
+      const size = resolveSize(node.attributes.arraySizeExpr, ctx.globalsMap) || valNode.children.length;
       const emptyArr: any[] = [];
-
       for (let i = 0; i < size; i++) {
         const baseObj: Record<string, any> = {};
         structDef.fields.forEach(f => { baseObj[f.name] = 0; });
         emptyArr.push(baseObj);
       }
-
       stmts.push({ kind: 'assign', target: name, value: { kind: 'literal', value: emptyArr } });
 
       valNode.children.forEach((rowNode, i) => {
         if (i < size && rowNode.nodeType === 'ArrayInitializer') {
           rowNode.children.forEach((c, j) => {
             if (j < structDef.fields.length) {
-              const field = structDef.fields[j];
-              const expr = transformExpr(c);
               stmts.push({
                 kind: 'setMember',
                 target: { kind: 'index', target: { kind: 'var', name }, index: { kind: 'literal', value: i } },
-                property: field.name,
-                value: expr
-              });
-            }
-          });
-        }
-      });
-      return stmts;
-    }
-
-    if (isArray2D && valNode.attributes.isArray2D) {
-      const rows = resolveSize(node.attributes.arraySizeExpr, _ctx.globalsMap) || valNode.children.length;
-      const cols = resolveSize(node.attributes.arraySize2Expr, _ctx.globalsMap) || 0;
-
-      const emptyMatrix = Array(rows).fill(null).map(() => Array(cols).fill(0));
-      stmts.push({ kind: 'assign', target: name, value: { kind: 'literal', value: emptyMatrix } });
-
-      valNode.children.forEach((rowNode, i) => {
-        if (i < rows && rowNode.nodeType === 'ArrayInitializer' && rowNode.attributes.isRow) {
-          rowNode.children.forEach((c, j) => {
-            if (j < cols) {
-              stmts.push({
-                kind: 'setIndex2D',
-                target: name,
-                rowIndex: { kind: 'literal', value: i },
-                colIndex: { kind: 'literal', value: j },
+                property: structDef.fields[j].name,
                 value: transformExpr(c)
               });
             }
@@ -356,13 +422,30 @@ function handleVariableDeclaration(node: BaseNode, _ctx: TransformContext): ASLS
       return stmts;
     }
 
-    const size = resolveSize(node.attributes.arraySizeExpr, _ctx.globalsMap) || valNode.children.length;
+    if (isArray2D && valNode.attributes.isArray2D) {
+      const rows = resolveSize(node.attributes.arraySizeExpr, ctx.globalsMap) || valNode.children.length;
+      const cols = resolveSize(node.attributes.arraySize2Expr, ctx.globalsMap) || 0;
+      const emptyMatrix = Array(rows).fill(null).map(() => Array(cols).fill(0));
+      stmts.push({ kind: 'assign', target: name, value: { kind: 'literal', value: emptyMatrix } });
+      valNode.children.forEach((rowNode, i) => {
+        if (i < rows && rowNode.nodeType === 'ArrayInitializer' && rowNode.attributes.isRow) {
+          rowNode.children.forEach((c, j) => {
+            if (j < cols) {
+              stmts.push({ kind: 'setIndex2D', target: name, rowIndex: { kind: 'literal', value: i }, colIndex: { kind: 'literal', value: j }, value: transformExpr(c) });
+            }
+          });
+        }
+      });
+      return stmts;
+    }
+
+    const size = resolveSize(node.attributes.arraySizeExpr, ctx.globalsMap) || valNode.children.length;
     const hasDesignated = valNode.children.some(c => c.nodeType === 'DesignatedInitializer');
 
     if (hasDesignated) {
       const emptyArr = Array(size).fill(0);
       stmts.push({ kind: 'assign', target: name, value: { kind: 'literal', value: emptyArr } });
-      valNode.children.forEach(c => {
+      valNode.children.forEach((c) => {
         if (c.nodeType === 'DesignatedInitializer') {
           const idxExpr = transformExpr(c.attributes.index as BaseNode);
           const valExpr = transformExpr(c.children[0]);
@@ -381,36 +464,22 @@ function handleVariableDeclaration(node: BaseNode, _ctx: TransformContext): ASLS
     return stmts;
   }
 
-  if (isArray && valNode?.nodeType === 'Literal' && Array.isArray(valNode.attributes.value) && valNode.attributes.value.length === 0) {
-    const emptyArr = buildEmptyArray(node.attributes.arraySizeExpr, node.attributes.arraySize2Expr, _ctx.globalsMap);
-    return [{ kind: 'assign', target: name, value: { kind: 'literal', value: emptyArr } }];
-  }
-
-  if (isArray && !valNode) {
-    const emptyArr = buildEmptyArray(node.attributes.arraySizeExpr, node.attributes.arraySize2Expr, _ctx.globalsMap);
-    return [{ kind: 'assign', target: name, value: { kind: 'literal', value: emptyArr } }];
-  }
-
   if (valNode) {
     const sideEffects: BaseNode[] = [];
+    resetPostfixTempCounter();
     const desugaredVal = extractPostfix(valNode, sideEffects);
     const resultStmts: ASLStatement[] = [];
-
-    // Reset counter for each top-level statement to keep names predictable or at least isolated
-    resetPostfixTempCounter();
-
     sideEffects.forEach(se => {
       resultStmts.push(...handleAssignment(se));
     });
-
     resultStmts.push({ kind: 'assign', target: name, value: transformExpr(desugaredVal) });
     return resultStmts;
   }
 
-  return [];
+  return [{ kind: 'assign', target: name, value: { kind: 'literal', value: 0 } }];
 }
 
-function handleExpressionStatement(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+function handleExpressionStatement(node: BaseNode, ctx: TransformContext): ASLStatement[] {
   const expr = node.children[0];
   if (!expr) return [];
 
@@ -492,26 +561,12 @@ function handleExpressionStatement(node: BaseNode, _ctx: TransformContext): ASLS
     return handleHardware(expr);
   }
 
-  // Fallback for general expressions that might have postfix side-effects
   const sideEffects: BaseNode[] = [];
   resetPostfixTempCounter();
-  const desugared = extractPostfix(expr, sideEffects);
+  extractPostfix(expr, sideEffects);
   const resultStmts: ASLStatement[] = [];
-
-  sideEffects.forEach(se => {
-    resultStmts.push(...handleAssignment(se));
-  });
-
-  // If there's something left of the expression and it wasn't a call handled above
-  // we might need to emit it, but usually handled by specific cases.
-  // For now, if we had side effects, we return them.
-  if (resultStmts.length > 0) {
-    // If the expression was JUST i++, we already handled it in the UnaryExpression block above.
-    // If it was something like `i++ + j++`, then both are in sideEffects.
-    return resultStmts;
-  }
-
-  return [];
+  sideEffects.forEach(se => { resultStmts.push(...handleAssignment(se)); });
+  return resultStmts;
 }
 
 function handleAssignment(expr: BaseNode): ASLStatement[] {
@@ -526,11 +581,7 @@ function handleAssignment(expr: BaseNode): ASLStatement[] {
       resetPostfixTempCounter();
       const desugaredRight = extractPostfix(right, sideEffects);
       const resStmts: ASLStatement[] = [];
-
-      sideEffects.forEach(se => {
-        resStmts.push(...handleAssignment(se));
-      });
-
+      sideEffects.forEach(se => { resStmts.push(...handleAssignment(se)); });
       const readStmt = tryTransformRead(target, desugaredRight);
       if (readStmt) {
         resStmts.push(readStmt);
@@ -544,48 +595,23 @@ function handleAssignment(expr: BaseNode): ASLStatement[] {
       } as ASLStatement);
       return resStmts;
     } else {
-      const binOp = op.charAt(0) as '+' | '-' | '*' | '/';
-      return [{
-        kind: 'assign',
-        target,
-        value: {
-          kind: 'binary',
-          op: binOp,
-          left: { kind: 'var', name: target },
-          right: transformExpr(right),
-        },
-      } as ASLStatement];
+      const binOp = op.charAt(0) as any;
+      return [{ kind: 'assign', target, value: { kind: 'binary', op: binOp, left: { kind: 'var', name: target }, right: transformExpr(right) } } as ASLStatement];
     }
   }
 
   if (left.nodeType === 'UnaryExpression' && left.attributes.operator === '*') {
     const ptrExpr = transformExpr(left.children[0]);
-    if (op === '=') {
-      return [{
-        kind: 'setPointer',
-        target: ptrExpr,
-        value: transformExpr(right),
-      } as any];
-    } else {
-      const binOp = op.charAt(0) as '+' | '-' | '*' | '/';
-      return [{
-        kind: 'setPointer',
-        target: ptrExpr,
-        value: {
-          kind: 'binary',
-          op: binOp,
-          left: { kind: 'unary', op: '*', expr: ptrExpr },
-          right: transformExpr(right),
-        },
-      } as any];
-    }
+    if (op === '=') return [{ kind: 'setPointer', target: ptrExpr, value: transformExpr(right) } as any];
+    const binOp = op.charAt(0) as any;
+    return [{ kind: 'setPointer', target: ptrExpr, value: { kind: 'binary', op: binOp, left: { kind: 'unary', op: '*', expr: ptrExpr }, right: transformExpr(right) } } as any];
   }
 
   if (left.nodeType === 'SubscriptExpression') {
     const targetArr = left.children[0];
     const index = left.children[1];
 
-    if (targetArr.nodeType === 'SubscriptExpression' && targetArr.children[0].nodeType === 'SubscriptExpression' && targetArr.children[0].children[0].nodeType === 'Identifier') {
+    if (targetArr.nodeType === 'SubscriptExpression' && targetArr.children[0].nodeType === 'SubscriptExpression') {
       const arrName = targetArr.children[0].children[0].attributes.name;
       const d1Index = transformExpr(targetArr.children[0].children[1]);
       const d2Index = transformExpr(targetArr.children[1]);
@@ -599,9 +625,8 @@ function handleAssignment(expr: BaseNode): ASLStatement[] {
         value: transformExpr(right),
       } as ASLStatement];
     }
-
     if (targetArr.nodeType === 'SubscriptExpression' && targetArr.children[0].nodeType === 'Identifier') {
-      const arrName = targetArr.children[0].attributes.name;
+      const arrName = (targetArr.children[0] as any).attributes.name;
       const rowIndex = transformExpr(targetArr.children[1]);
       const colIndex = transformExpr(index);
       return [{
@@ -612,56 +637,35 @@ function handleAssignment(expr: BaseNode): ASLStatement[] {
         value: transformExpr(right),
       } as ASLStatement];
     }
-
     if (targetArr.nodeType === 'Identifier') {
-      if (op === '=') {
-        return [{
-          kind: 'setIndex',
-          target: targetArr.attributes.name,
-          index: transformExpr(index),
-          value: transformExpr(right),
-        } as ASLStatement];
-      } else {
-        const binOp = op.charAt(0) as '+' | '-' | '*' | '/';
-        const currentVal: ASLExpr = {
-          kind: 'index',
-          target: transformExpr(targetArr),
-          index: transformExpr(index),
-        };
-        return [{
-          kind: 'setIndex',
-          target: targetArr.attributes.name,
-          index: transformExpr(index),
-          value: {
-            kind: 'binary',
-            op: binOp,
-            left: currentVal,
-            right: transformExpr(right),
-          },
-        } as ASLStatement];
-      }
+      const targetName = targetArr.attributes.name;
+      if (op === '=') return [{ kind: 'setIndex', target: targetName, index: transformExpr(index), value: transformExpr(right) } as ASLStatement];
+      const binOp = op.charAt(0) as any;
+      return [{ kind: 'setIndex', target: targetName, index: transformExpr(index), value: { kind: 'binary', op: binOp, left: { kind: 'index', target: transformExpr(targetArr), index: transformExpr(index) }, right: transformExpr(right) } } as ASLStatement];
     }
   }
 
   if (left.nodeType === 'MemberExpression') {
+    const target = transformExpr(left.children[0]);
+    const property = left.attributes.property;
     if (op === '=') {
       return [{
         kind: 'setMember',
-        target: transformExpr(left.children[0]),
-        property: left.attributes.property,
+        target,
+        property,
         value: transformExpr(right),
       } as ASLStatement];
     } else {
-      const binOp = op.charAt(0) as '+' | '-' | '*' | '/';
+      const binOp = op.charAt(0) as any;
       const currentVal: ASLExpr = {
         kind: 'member',
-        target: transformExpr(left.children[0]),
-        property: left.attributes.property,
+        target,
+        property,
       };
       return [{
         kind: 'setMember',
-        target: transformExpr(left.children[0]),
-        property: left.attributes.property,
+        target,
+        property,
         value: {
           kind: 'binary',
           op: binOp,
@@ -676,23 +680,11 @@ function handleAssignment(expr: BaseNode): ASLStatement[] {
 }
 
 function handlePrint(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
-  return [{
-    kind: 'print',
-    args: node.children.map(transformExpr),
-    newline: !!node.attributes.newline,
-  } as ASLStatement];
+  return [{ kind: 'print', args: node.children.map(transformExpr), newline: !!node.attributes.newline } as ASLStatement];
 }
 
 function handleHardware(node: BaseNode): ASLStatement[] {
   const callee = HARDWARE_CALLEE_MAP[node.nodeType];
   if (!callee) return [];
-
-  return [{
-    kind: 'expr',
-    expr: {
-      kind: 'call',
-      callee,
-      args: node.children.map(transformExpr)
-    }
-  } as ASLStatement];
+  return [{ kind: 'expr', expr: { kind: 'call', callee, args: node.children.map(transformExpr) } } as ASLStatement];
 }

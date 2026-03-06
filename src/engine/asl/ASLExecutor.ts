@@ -275,6 +275,12 @@ async function executeStatements(
         break;
       }
 
+      case 'declare': {
+        const val = s.value ? await evalExpr(s.value, localEnv, ctx) : defaultValueForType(s.type);
+        localEnv.set(s.name, val);
+        break;
+      }
+
       case 'assign': {
         const val = await evalExpr(s.value, localEnv, ctx);
         const safeVal = (val && typeof val === 'object')
@@ -836,7 +842,7 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         const val = await evalExpr(expr.args[0], env, ctx);
         if (Array.isArray(val)) return val.length;
         if (typeof val === 'string') return val.length;
-        return 4;
+        return 1;
       }
       if (expr.callee === 'delayMicroseconds') {
         ctx.engine.delayMicroseconds();

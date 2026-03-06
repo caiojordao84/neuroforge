@@ -12,6 +12,8 @@ import { TopToolbar } from '@/components/TopToolbar';
 import { PropertiesPanel } from '@/components/PropertiesPanel';
 import { LibrariesPanel } from '@/components/LibrariesPanel';
 import { ASLViewer } from '@/components/ASLViewer';
+import { FlowEditor } from '@/components/FlowEditor';
+import { BlocklyEditor } from '@/components/BlocklyEditor';
 
 // Stores
 import { useSerialStore } from '@/stores/useSerialStore';
@@ -71,6 +73,14 @@ const AppContent: React.FC = () => {
 
       <FloatingWindow windowId="aslViewer" minWidth={400} minHeight={350}>
         <ASLViewer />
+      </FloatingWindow>
+
+      <FloatingWindow windowId="flowEditor" minWidth={600} minHeight={400}>
+        <FlowEditor />
+      </FloatingWindow>
+
+      <FloatingWindow windowId="blocklyEditor" minWidth={600} minHeight={400}>
+        <BlocklyEditor />
       </FloatingWindow>
 
       {/* App Initializer */}

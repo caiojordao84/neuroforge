@@ -14,6 +14,10 @@ export function normalizeAST(node: ProgramNode): ProgramNode {
 function normalizeRecursive(node: BaseNode): BaseNode {
   if (!node) return node;
 
+  if (node.nodeType === 'ForLoop') {
+    return node;
+  }
+
   if (node.children && node.children.length > 0) {
     node.children = normalizeFileList(node.children);
   }
@@ -136,16 +140,8 @@ function processPostfixInExpr(node: BaseNode, stmts: BaseNode[]): BaseNode {
       if (node.children[0]) newNode.children[0] = processPostfixInExpr(node.children[0], stmts);
       if (node.children[1]) newNode.children[1] = processPostfixInExpr(node.children[1], stmts);
     } else if (node.nodeType === 'ForLoop') {
-      let idx = 0;
-      if (node.attributes.hasInit) {
-        newNode.children[idx] = processPostfixInExpr(node.children[idx], stmts);
-        idx++;
-      }
-      if (newNode.children[idx]) newNode.children[idx] = processPostfixInExpr(newNode.children[idx], stmts);
-      idx++;
-      if (node.attributes.hasUpdate && newNode.children[idx]) {
-        newNode.children[idx] = processPostfixInExpr(newNode.children[idx], stmts);
-      }
+      // Skip processing ForLoop children entirely - let statementRegistry handle it
+      return node;
     }
     return newNode;
   }

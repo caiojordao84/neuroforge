@@ -24,22 +24,22 @@ export class RecursiveDescentCParser {
 
     private isFunctionDecl(): boolean {
         const current = this.peek();
-        
+
         if (!this.isType(current)) {
-            
+
             return false;
         }
         let offset = 1;
         while (this.isType(this.peek(offset))) offset++;
         const isFunc = this.peek(offset).type === 'IDENTIFIER' && this.peek(offset + 1).value === '(';
-        
+
         return isFunc;
     }
 
     parse(code: string): { ast: ProgramNode, symbols: Symbol[], errors: AnalysisIssue[] } {
         const lexer = new Lexer(code);
         const allTokens = lexer.tokenize();
-        
+
         this.pendingComments = [];
         const filteredTokens: Token[] = [];
         for (const token of allTokens) {
@@ -49,13 +49,13 @@ export class RecursiveDescentCParser {
                 filteredTokens.push(token);
             }
         }
-        
+
         this.tokens = filteredTokens; this.pos = 0;
         this.symbols = new SymbolTable(); this.semanticErrors = [];
         const program: ProgramNode = { nodeType: 'Program', id: 'root', attributes: {}, children: [] };
         while (this.peek().type !== 'EOF') {
             const t = this.peek();
-            
+
             if (t.value === 'const') this.consume(); // ignore const
             if (t.value === 'enum') {
                 program.children.push(this.parseEnum());
@@ -64,7 +64,7 @@ export class RecursiveDescentCParser {
                 const decl = this.parseStruct();
                 if (decl) program.children.push(decl);
             } else if (this.peek().value === 'void' || this.isFunctionDecl()) {
-                
+
                 program.children.push(this.parseFunction());
             } else if (this.isType(this.peek()) || this.peek().value === 'struct' || this.peek().value === 'extern' || this.peek().value === 'std') {
                 const decl = this.parseVarDecl(); if (decl) program.children.push(decl);
@@ -133,14 +133,14 @@ export class RecursiveDescentCParser {
     }
 
     private parseFunction(): BaseNode {
-        
+
         let returnType = this.consume().value;
         while (this.isType(this.peek())) returnType += ' ' + this.consume().value;
 
         const name = this.consume().value;
         const line = this.peek(-1).line;
 
-        
+
         this.consume('(');
         const params: { type: string, name: string }[] = [];
         this.symbols.pushScope();
@@ -178,7 +178,7 @@ export class RecursiveDescentCParser {
     private parseStatement(): BaseNode | null {
         const t = this.peek();
         const line = t.line;
-        
+
 
         if (t.value === 'const') this.consume();
 
@@ -205,11 +205,11 @@ export class RecursiveDescentCParser {
 
         if (t.value === 'return') {
             this.consume('return');
-            if (this.peek().value === ';') { 
-                this.consume(';'); 
+            if (this.peek().value === ';') {
+                this.consume(';');
                 const node: BaseNode = { nodeType: 'ReturnStatement', id: this.genId(), attributes: {}, children: [], metadata: { line } };
                 this.attachComments(node);
-                return node; 
+                return node;
             }
             const val = this.parseExpression(0);
             this.consume(';');
@@ -370,7 +370,8 @@ export class RecursiveDescentCParser {
             const stmt = this.parseStatement();
             body = stmt ? [stmt] : [];
         }
-        const node: BaseNode = { nodeType: 'WhileLoop', id: this.genId(), attributes: {}, children: [condition, ...body], metadata: { line } };
+        const bodyBlock: BaseNode = { nodeType: 'Block', id: this.genId(), attributes: {}, children: body, metadata: { line } };
+        const node: BaseNode = { nodeType: 'WhileLoop', id: this.genId(), attributes: {}, children: [condition, bodyBlock], metadata: { line } };
         this.attachComments(node);
         return node;
     }
@@ -390,7 +391,8 @@ export class RecursiveDescentCParser {
         const condition = this.parseExpression(0);
         this.consume(')');
         this.consume(';');
-        const node: BaseNode = { nodeType: 'DoWhileLoop', id: this.genId(), attributes: {}, children: [condition, ...body], metadata: { line } };
+        const bodyBlock: BaseNode = { nodeType: 'Block', id: this.genId(), attributes: {}, children: body, metadata: { line } };
+        const node: BaseNode = { nodeType: 'DoWhileLoop', id: this.genId(), attributes: {}, children: [condition, bodyBlock], metadata: { line } };
         this.attachComments(node);
         return node;
     }
@@ -415,7 +417,8 @@ export class RecursiveDescentCParser {
             body = stmt ? [stmt] : [];
         }
         this.symbols.popScope();
-        const node: BaseNode = { nodeType: 'ForLoop', id: this.genId(), attributes: { hasInit: !!init, hasUpdate: !!update }, children: [...(init ? [init] : []), condition as BaseNode, ...(update ? [update as BaseNode] : []), ...body], metadata: { line } };
+        const bodyBlock: BaseNode = { nodeType: 'Block', id: this.genId(), attributes: {}, children: body, metadata: { line } };
+        const node: BaseNode = { nodeType: 'ForLoop', id: this.genId(), attributes: { hasInit: !!init, hasUpdate: !!update }, children: [...(init ? [init] : []), condition as BaseNode, ...(update ? [update as BaseNode] : []), bodyBlock], metadata: { line } };
         this.attachComments(node);
         return node;
     }
@@ -848,7 +851,7 @@ export class RecursiveDescentCParser {
         this.pos++; return t;
     }
     private peek(o: number = 0): Token { return this.tokens[this.pos + o] || { type: 'EOF', value: 'EOF', line: 0 }; }
-    
+
     private attachComments(node: BaseNode): void {
         const nodeLine = node.metadata?.line;
         if (!nodeLine) {
@@ -858,7 +861,7 @@ export class RecursiveDescentCParser {
             }
             return;
         }
-        
+
         const commentsToAttach: string[] = [];
         this.pendingComments = this.pendingComments.filter(c => {
             if (c.line < nodeLine) {
@@ -867,11 +870,11 @@ export class RecursiveDescentCParser {
             }
             return true;
         });
-        
+
         if (commentsToAttach.length > 0) {
             node.leadingComments = commentsToAttach;
         }
     }
-    
+
     private genId() { return Math.random().toString(36).substring(7); }
 }

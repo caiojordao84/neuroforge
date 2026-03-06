@@ -16,7 +16,7 @@ export interface WindowState {
   dockWidth: number;
 }
 
-export type WindowId = 'codeEditor' | 'componentsLibrary' | 'serialMonitor' | 'terminal' | 'properties' | 'libraries' | 'aslViewer' | 'serialTerminal';
+export type WindowId = 'codeEditor' | 'componentsLibrary' | 'serialMonitor' | 'terminal' | 'properties' | 'libraries' | 'aslViewer' | 'serialTerminal' | 'flowEditor';
 
 // ============================================
 // Pin State Machine Types
@@ -62,6 +62,9 @@ export interface MCUConfig {
   firmwarePath?: string;         // Path do firmware compilado (QEMU)
   isRunning: boolean;            // Status de execução
   label: string;                 // Nome customizado (e.g., "Main Controller")
+  flowNodes?: any[];            // Visual flow logic (nodes)
+  flowEdges?: any[];            // Visual flow logic (edges)
+  blocklyXml?: string;           // Visual block logic (xml state)
 }
 
 // ============================================

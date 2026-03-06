@@ -1,5 +1,5 @@
 
-import { Node, Edge } from 'reactflow';
+import type { Node, Edge } from '@xyflow/react';
 
 export interface CfgOutbound {
     target: CfgBlock;
@@ -12,7 +12,7 @@ export class CfgBlock {
     data: any;
     outbound: CfgOutbound[] = [];
     predecessors: CfgBlock[] = [];
-    
+
     // Analysis flags
     reachable: boolean = false;
     visited: boolean = false;       // For DFS
@@ -49,7 +49,7 @@ export class CfgBuilder {
     constructor(nodes: Node[], edges: Edge[]) {
         // 1. Create Blocks
         nodes.forEach(n => this.blocks.set(n.id, new CfgBlock(n)));
-        
+
         // 2. Link Blocks
         edges.forEach(e => {
             const src = this.blocks.get(e.source);
@@ -67,7 +67,7 @@ export class CfgBuilder {
 
     validate(): CfgAnalysisResult {
         this.resetAnalysis();
-        
+
         const result: CfgAnalysisResult = {
             deadNodes: [],
             loops: [],
@@ -75,7 +75,7 @@ export class CfgBuilder {
             branchIssues: [],
             missingStart: !this.startBlock,
             missingEnd: this.endBlocks.length === 0,
-            terminates: true 
+            terminates: true
         };
 
         if (!this.startBlock) return result;
@@ -83,9 +83,9 @@ export class CfgBuilder {
         // --- 1. Dead Code Detection (Reachability BFS) ---
         const queue = [this.startBlock];
         this.startBlock.reachable = true;
-        while(queue.length) {
+        while (queue.length) {
             const curr = queue.shift()!;
-            for(const out of curr.outbound) {
+            for (const out of curr.outbound) {
                 if (!out.target.reachable) {
                     out.target.reachable = true;
                     queue.push(out.target);
@@ -101,12 +101,12 @@ export class CfgBuilder {
 
             for (const out of b.outbound) {
                 if (out.target.recursionStack) {
-                     // Back-edge detected
-                     result.loops.push({ 
-                         source: b, // Latch
-                         target: out.target, // Header
-                         type: out.target.id === b.id ? 'SELF' : 'COMPLEX' 
-                     });
+                    // Back-edge detected
+                    result.loops.push({
+                        source: b, // Latch
+                        target: out.target, // Header
+                        type: out.target.id === b.id ? 'SELF' : 'COMPLEX'
+                    });
                 } else if (!out.target.visited) {
                     dfs(out.target);
                 }
@@ -116,38 +116,38 @@ export class CfgBuilder {
         if (this.startBlock) dfs(this.startBlock);
 
         // --- 3. Pattern Recognition ---
-        
+
         // A. Loop Classification
         result.loops.forEach(loop => {
             const header = loop.target;
             const latch = loop.source;
-            
+
             // Avoid duplicate patterns for the same header
             if (result.patterns.some(p => p.headerId === header.id)) return;
 
             if (header.type === 'loop') {
-                result.patterns.push({ 
-                    type: 'FOR_LOOP', 
-                    headerId: header.id, 
-                    description: `For-Loop Pattern (Counter controlled)` 
+                result.patterns.push({
+                    type: 'FOR_LOOP',
+                    headerId: header.id,
+                    description: `For-Loop Pattern (Counter controlled)`
                 });
             } else if (header.type === 'decision') {
-                result.patterns.push({ 
-                    type: 'WHILE_LOOP', 
-                    headerId: header.id, 
-                    description: `While-Loop Pattern (Pre-check condition)` 
+                result.patterns.push({
+                    type: 'WHILE_LOOP',
+                    headerId: header.id,
+                    description: `While-Loop Pattern (Pre-check condition)`
                 });
             } else if (latch.type === 'decision') {
-                result.patterns.push({ 
-                    type: 'DO_WHILE', 
-                    headerId: header.id, 
-                    description: `Do-While Pattern (Post-check condition)` 
+                result.patterns.push({
+                    type: 'DO_WHILE',
+                    headerId: header.id,
+                    description: `Do-While Pattern (Post-check condition)`
                 });
             } else {
-                 result.patterns.push({ 
-                    type: 'INFINITE_LOOP', 
-                    headerId: header.id, 
-                    description: `Infinite Loop (No exit condition detected)` 
+                result.patterns.push({
+                    type: 'INFINITE_LOOP',
+                    headerId: header.id,
+                    description: `Infinite Loop (No exit condition detected)`
                 });
             }
         });
@@ -157,28 +157,28 @@ export class CfgBuilder {
             if (!b.reachable) return;
             // Native switch logic: > 2 outputs
             if (b.outbound.length > 2) {
-                 result.patterns.push({
-                     type: 'SWITCH',
-                     headerId: b.id,
-                     description: `Switch-Case Pattern (${b.outbound.length} branches)`
-                 });
+                result.patterns.push({
+                    type: 'SWITCH',
+                    headerId: b.id,
+                    description: `Switch-Case Pattern (${b.outbound.length} branches)`
+                });
             }
         });
 
         // --- 4. Branch Analysis (Issues) ---
         this.blocks.forEach(b => {
-            if (!b.reachable) return; 
+            if (!b.reachable) return;
 
             if (b.type === 'decision') {
                 if (b.outbound.length === 0) {
                     result.branchIssues.push({ node: b, issue: 'Decision node is a dead end.', severity: 'CRITICAL' });
                     result.terminates = false;
                 } else if (b.outbound.length === 1) {
-                     result.branchIssues.push({ node: b, issue: 'Decision should typically have 2 branches.', severity: 'WARNING' });
+                    result.branchIssues.push({ node: b, issue: 'Decision should typically have 2 branches.', severity: 'WARNING' });
                 }
             } else if (b.type !== 'end' && b.type !== 'output' && b.outbound.length === 0) {
-                 result.branchIssues.push({ node: b, issue: 'Flow stops without End node.', severity: 'CRITICAL' });
-                 result.terminates = false;
+                result.branchIssues.push({ node: b, issue: 'Flow stops without End node.', severity: 'CRITICAL' });
+                result.terminates = false;
             }
         });
 

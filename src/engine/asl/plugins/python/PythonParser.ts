@@ -29,21 +29,25 @@ export class PythonParser {
 
     private _parseWithTreeSitter(code: string): { ast: ProgramNode; errors: AnalysisIssue[] } {
         const tree = this.parser.parse(code);
-        const converter = new PythonCstToAst();
-        const ast = converter.convert(tree.rootNode);
+        try {
+            const converter = new PythonCstToAst();
+            const ast = converter.convert(tree.rootNode);
 
-        const errors: AnalysisIssue[] = [];
-        const findErrors = (n: any) => {
-            if (!n) return;
-            const isMissing = typeof n.isMissing === 'function' ? n.isMissing() : !!n.isMissing;
-            if (n.type === 'ERROR' || isMissing) {
-                const row = n.startPosition ? n.startPosition.row + 1 : '?';
-                errors.push({ severity: 'CRITICAL', message: `Syntax error at line ${row}: ${n.text || ''}` });
-            }
-            if (n.children && Array.isArray(n.children)) n.children.forEach(findErrors);
-        };
-        findErrors(tree.rootNode);
-        return { ast, errors };
+            const errors: AnalysisIssue[] = [];
+            const findErrors = (n: any) => {
+                if (!n) return;
+                const isMissing = typeof n.isMissing === 'function' ? n.isMissing() : !!n.isMissing;
+                if (n.type === 'ERROR' || isMissing) {
+                    const row = n.startPosition ? n.startPosition.row + 1 : '?';
+                    errors.push({ severity: 'CRITICAL', message: `Syntax error at line ${row}: ${n.text || ''}` });
+                }
+                if (n.children && Array.isArray(n.children)) n.children.forEach(findErrors);
+            };
+            findErrors(tree.rootNode);
+            return { ast, errors };
+        } finally {
+            tree.delete();
+        }
     }
 
     private _parseWithRegex(code: string): { ast: ProgramNode; errors: AnalysisIssue[] } {
@@ -177,9 +181,9 @@ class RegexPythonParser {
             if (forM) {
                 const varName = forM[1];
                 let iterableStr = forM[2].trim();
-                const forNode: BaseNode = { nodeType: 'ForLoop', id: `for-${this.pos}`, attributes: { hasInit: true, hasUpdate: true }, children: [] };
 
                 if (iterableStr.startsWith('range(')) {
+                    const forNode: BaseNode = { nodeType: 'ForLoop', id: `for-${this.pos}`, attributes: { hasInit: true, hasUpdate: true }, children: [] };
                     const argStr = iterableStr.substring(6, iterableStr.length - 1);
                     const args = argStr.split(',').map(s => s.trim());
                     let start = 0, stop = 10;
@@ -190,7 +194,10 @@ class RegexPythonParser {
                         { nodeType: 'BinaryExpression', id: `cond-${this.pos}`, attributes: { operator: '<' }, children: [{ nodeType: 'Identifier', id: `id-${this.pos}`, attributes: { name: varName }, children: [] }, { nodeType: 'Literal', id: `l1-${this.pos}`, attributes: { value: stop }, children: [] }] },
                         { nodeType: 'UnaryExpression', id: `upd-${this.pos}`, attributes: { operator: '++', prefix: false }, children: [{ nodeType: 'Identifier', id: `id-u-${this.pos}`, attributes: { name: varName }, children: [] }] }
                     );
+                    getActiveChildren().push(forNode);
+                    stack.push({ node: forNode, indent, type: 'for' });
                 } else {
+                    const forNode: BaseNode = { nodeType: 'ForLoop', id: `for-${this.pos}`, attributes: { hasInit: true, hasUpdate: true }, children: [] };
                     let target = iterableStr;
                     let isReversed = false;
                     if (iterableStr.startsWith('reversed(')) { target = iterableStr.substring(9, iterableStr.length - 1); isReversed = true; }
@@ -217,9 +224,9 @@ class RegexPythonParser {
                     } else {
                         forNode.children.push({ nodeType: 'ExpressionStatement', id: `map-${this.pos}`, attributes: {}, children: [{ nodeType: 'BinaryExpression', id: `map-ass-${this.pos}`, attributes: { operator: '=' }, children: [{ nodeType: 'Identifier', id: `id-v-${this.pos}`, attributes: { name: varName }, children: [] }, { nodeType: 'SubscriptExpression', id: `sub-${this.pos}`, attributes: {}, children: [{ nodeType: 'Identifier', id: `id-t-${this.pos}`, attributes: { name: target }, children: [] }, { nodeType: 'Identifier', id: `id-ix-${this.pos}`, attributes: { name: indexVar }, children: [] }] } as BaseNode] } as BaseNode] } as BaseNode);
                     }
+                    getActiveChildren().push(forNode);
+                    stack.push({ node: forNode, indent, type: 'for' });
                 }
-                getActiveChildren().push(forNode);
-                stack.push({ node: forNode, indent, type: 'for' });
                 this.pos++;
                 continue;
             }
@@ -342,10 +349,10 @@ class RegexPythonParser {
         }
 
         const pinOnM = trimmed.match(/^(\w+)\.on\(\)\s*$/);
-        if (pinOnM) return { nodeType: 'GpioSet', id: `on-${lineNum}`, attributes: { value: 1 }, children: [{ nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: pinOnM[1] }, children: [] } as BaseNode], metadata: meta } as BaseNode;
+        if (pinOnM) return { nodeType: 'GpioSet', id: `on-${lineNum}`, attributes: {}, children: [{ nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: pinOnM[1] }, children: [] } as BaseNode, { nodeType: 'Literal', id: `l1-${lineNum}`, attributes: { value: 1 }, children: [] } as BaseNode], metadata: meta } as BaseNode;
 
         const pinOffM = trimmed.match(/^(\w+)\.off\(\)\s*$/);
-        if (pinOffM) return { nodeType: 'GpioSet', id: `off-${lineNum}`, attributes: { value: 0 }, children: [{ nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: pinOffM[1] }, children: [] } as BaseNode], metadata: meta } as BaseNode;
+        if (pinOffM) return { nodeType: 'GpioSet', id: `off-${lineNum}`, attributes: {}, children: [{ nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: pinOffM[1] }, children: [] } as BaseNode, { nodeType: 'Literal', id: `l0-${lineNum}`, attributes: { value: 0 }, children: [] } as BaseNode], metadata: meta } as BaseNode;
 
         const pinValSetM = trimmed.match(/^(\w+)\.value\(([^)]+)\)\s*$/);
         if (pinValSetM) return { nodeType: 'GpioSet', id: `pinval-${lineNum}`, attributes: {}, children: [{ nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: pinValSetM[1] }, children: [] } as BaseNode, this._parseExpr(pinValSetM[2].trim(), lineNum)], metadata: meta } as BaseNode;
@@ -664,7 +671,12 @@ class RegexPythonParser {
                     return { nodeType: 'ArrayInitializer', id: `lc-${lineNum}`, attributes: { isArray: true }, children: elements, metadata: meta };
                 }
             }
-            return { nodeType: 'ArrayInitializer', id: `lc-${lineNum}`, attributes: { isArray: true }, children: [], metadata: meta };
+            return {
+                nodeType: 'CallExpression', id: `lc-${lineNum}`,
+                attributes: { callee: 'LIST_COMPREHENSION', varName, iterable },
+                children: [this._parseExpr(expr, lineNum), this._parseExpr(iterable, lineNum)],
+                metadata: meta
+            };
         }
 
         // ── Dictionary Literal ────────────────────────────────────────────────
@@ -917,7 +929,7 @@ class PythonCstToAst {
                         .filter(Boolean) as BaseNode[];
                     return {
                         nodeType: 'DoWhileLoop', id: `dw-${node.id}`, attributes: {},
-                        children: [innerCond, ...realBodyNodes],
+                        children: [innerCond, { nodeType: 'Block', id: `blk-dw-${node.id}`, attributes: {}, children: realBodyNodes, metadata: meta }],
                         metadata: meta
                     };
                 }
@@ -927,7 +939,7 @@ class PythonCstToAst {
         return {
             nodeType: 'WhileLoop', id: `while-${node.id}`,
             attributes: { isInfinite },
-            children: [cond, ...(body ? this.visitBlockChildren(body) : [])],
+            children: [cond, { nodeType: 'Block', id: `blk-while-${node.id}`, attributes: {}, children: body ? this.visitBlockChildren(body) : [], metadata: meta }],
             metadata: meta
         };
     }
@@ -938,9 +950,6 @@ class PythonCstToAst {
         const body = node.childForFieldName('body');
         const meta = { line: node.startPosition.row + 1 };
         const leftText = leftExpr?.text || 'i';
-        const indexVar = `__i_${node.id % 1000000}`;
-        let init: BaseNode, condition: BaseNode, update: BaseNode;
-        let extraBody: BaseNode[] = [];
 
         if (rightExpr?.type === 'call' && rightExpr.childForFieldName('function')?.text === 'range') {
             const argsNode = rightExpr.childForFieldName('arguments');
@@ -948,24 +957,41 @@ class PythonCstToAst {
             let start = 0, stop = 10, step = 1;
             if (vArgs.length === 1) { if (vArgs[0].nodeType === 'Literal') stop = vArgs[0].attributes.value; }
             else if (vArgs.length >= 2) { if (vArgs[0].nodeType === 'Literal') start = vArgs[0].attributes.value; if (vArgs[1].nodeType === 'Literal') stop = vArgs[1].attributes.value; if (vArgs.length >= 3 && vArgs[2].nodeType === 'Literal') step = vArgs[2].attributes.value; }
-            init = { nodeType: 'VariableDeclaration', id: `init-${node.id}`, attributes: { name: leftText, type: 'int' }, children: [{ nodeType: 'Literal', id: `lit-0-${node.id}`, attributes: { value: start }, children: [] }] };
-            condition = { nodeType: 'BinaryExpression', id: `cond-${node.id}`, attributes: { operator: step > 0 ? '<' : '>' }, children: [{ nodeType: 'Identifier', id: `id-${node.id}`, attributes: { name: leftText }, children: [] }, vArgs.length >= 2 ? vArgs[1] : (vArgs.length === 1 ? vArgs[0] : { nodeType: 'Literal', id: 'l', attributes: { value: 10 }, children: [] })] };
-            update = { nodeType: 'ExpressionStatement', id: `upd-${node.id}`, attributes: {}, children: [{ nodeType: 'BinaryExpression', id: `u-${node.id}`, attributes: { operator: '=' }, children: [{ nodeType: 'Identifier', id: `id-u-${node.id}`, attributes: { name: leftText }, children: [] }, { nodeType: 'BinaryExpression', id: `add-${node.id}`, attributes: { operator: '+' }, children: [{ nodeType: 'Identifier', id: `id-u2-${node.id}`, attributes: { name: leftText }, children: [] }, { nodeType: 'Literal', id: `step-${node.id}`, attributes: { value: step }, children: [] }] } as BaseNode] } as BaseNode] };
+            const init = { nodeType: 'VariableDeclaration', id: `init-${node.id}`, attributes: { name: leftText, type: 'int' }, children: [{ nodeType: 'Literal', id: `lit-0-${node.id}`, attributes: { value: start }, children: [] }] };
+            const condition = { nodeType: 'BinaryExpression', id: `cond-${node.id}`, attributes: { operator: step > 0 ? '<' : '>' }, children: [{ nodeType: 'Identifier', id: `id-${node.id}`, attributes: { name: leftText }, children: [] }, vArgs.length >= 2 ? vArgs[1] : (vArgs.length === 1 ? vArgs[0] : { nodeType: 'Literal', id: 'l', attributes: { value: 10 }, children: [] })] };
+            const update = { nodeType: 'ExpressionStatement', id: `upd-${node.id}`, attributes: {}, children: [{ nodeType: 'BinaryExpression', id: `u-${node.id}`, attributes: { operator: '=' }, children: [{ nodeType: 'Identifier', id: `id-u-${node.id}`, attributes: { name: leftText }, children: [] }, { nodeType: 'BinaryExpression', id: `add-${node.id}`, attributes: { operator: '+' }, children: [{ nodeType: 'Identifier', id: `id-u2-${node.id}`, attributes: { name: leftText }, children: [] }, { nodeType: 'Literal', id: `step-${node.id}`, attributes: { value: step }, children: [] }] } as BaseNode] } as BaseNode] };
+            return { nodeType: 'ForLoop', id: `for-${node.id}`, attributes: { hasInit: true, hasUpdate: true }, children: [init, condition, update, { nodeType: 'Block', id: `blk-for-${node.id}`, attributes: {}, children: body ? this.visitBlockChildren(body) : [], metadata: meta }], metadata: meta } as BaseNode;
         } else {
             const iterable = this.visitExpr(rightExpr!);
-            init = { nodeType: 'VariableDeclaration', id: `init-${node.id}`, attributes: { name: indexVar, type: 'int' }, children: [{ nodeType: 'Literal', id: `lit-0-${node.id}`, attributes: { value: 0 }, children: [] }] };
-            condition = { nodeType: 'BinaryExpression', id: `cond-${node.id}`, attributes: { operator: '<' }, children: [{ nodeType: 'Identifier', id: `idx-${node.id}`, attributes: { name: indexVar }, children: [] }, { nodeType: 'CallExpression', id: `len-${node.id}`, attributes: { callee: 'len' }, children: [iterable] }] };
-            update = { nodeType: 'ExpressionStatement', id: `upd-${node.id}`, attributes: {}, children: [{ nodeType: 'BinaryExpression', id: `u-${node.id}`, attributes: { operator: '=' }, children: [{ nodeType: 'Identifier', id: `id-idx-${node.id}`, attributes: { name: indexVar }, children: [] }, { nodeType: 'BinaryExpression', id: `add-${node.id}`, attributes: { operator: '+' }, children: [{ nodeType: 'Identifier', id: `id-idx2-${node.id}`, attributes: { name: indexVar }, children: [] }, { nodeType: 'Literal', id: `step-${node.id}`, attributes: { value: 1 }, children: [] }] } as BaseNode] } as BaseNode] };
+            let targetExpr = iterable;
+            let isReversed = false;
+            if (iterable.nodeType === 'CallExpression' && iterable.attributes.callee === 'reversed' && iterable.children.length > 0) {
+                targetExpr = iterable.children[0];
+                isReversed = true;
+            }
+            const indexVar = `__i_${node.id % 1000000}`;
+            const lenExpr: BaseNode = { nodeType: 'CallExpression', id: `len-${node.id}`, attributes: { callee: 'len' }, children: [targetExpr] };
+            let init: BaseNode, condition: BaseNode, update: BaseNode;
+            if (!isReversed) {
+                init = { nodeType: 'VariableDeclaration', id: `init-${node.id}`, attributes: { name: indexVar, type: 'int' }, children: [{ nodeType: 'Literal', id: `lit-0-${node.id}`, attributes: { value: 0 }, children: [] }] };
+                condition = { nodeType: 'BinaryExpression', id: `cond-${node.id}`, attributes: { operator: '<' }, children: [{ nodeType: 'Identifier', id: `idx-${node.id}`, attributes: { name: indexVar }, children: [] }, lenExpr] };
+                update = { nodeType: 'ExpressionStatement', id: `upd-${node.id}`, attributes: {}, children: [{ nodeType: 'BinaryExpression', id: `u-${node.id}`, attributes: { operator: '=' }, children: [{ nodeType: 'Identifier', id: `id-idx-${node.id}`, attributes: { name: indexVar }, children: [] }, { nodeType: 'BinaryExpression', id: `add-${node.id}`, attributes: { operator: '+' }, children: [{ nodeType: 'Identifier', id: `id-idx2-${node.id}`, attributes: { name: indexVar }, children: [] }, { nodeType: 'Literal', id: `step-${node.id}`, attributes: { value: 1 }, children: [] }] } as BaseNode] } as BaseNode] };
+            } else {
+                init = { nodeType: 'VariableDeclaration', id: `init-${node.id}`, attributes: { name: indexVar, type: 'int' }, children: [{ nodeType: 'BinaryExpression', id: `s-${node.id}`, attributes: { operator: '-' }, children: [lenExpr, { nodeType: 'Literal', id: `lit1-${node.id}`, attributes: { value: 1 }, children: [] }] } as BaseNode] };
+                condition = { nodeType: 'BinaryExpression', id: `cond-${node.id}`, attributes: { operator: '>=' }, children: [{ nodeType: 'Identifier', id: `idx-${node.id}`, attributes: { name: indexVar }, children: [] }, { nodeType: 'Literal', id: `l0-${node.id}`, attributes: { value: 0 }, children: [] }] };
+                update = { nodeType: 'ExpressionStatement', id: `upd-${node.id}`, attributes: {}, children: [{ nodeType: 'BinaryExpression', id: `u-${node.id}`, attributes: { operator: '=' }, children: [{ nodeType: 'Identifier', id: `id-idx-${node.id}`, attributes: { name: indexVar }, children: [] }, { nodeType: 'BinaryExpression', id: `add-${node.id}`, attributes: { operator: '+' }, children: [{ nodeType: 'Identifier', id: `id-idx2-${node.id}`, attributes: { name: indexVar }, children: [] }, { nodeType: 'Literal', id: `step-${node.id}`, attributes: { value: -1 }, children: [] }] } as BaseNode] } as BaseNode] };
+            }
+            let extraBody: BaseNode[] = [];
             if (leftText.includes(',')) {
                 const vars = leftText.split(',').map(v => v.trim());
                 const tmpVar = `__val_${node.id}`;
-                extraBody.push({ nodeType: 'VariableDeclaration', id: `map-${node.id}`, attributes: { name: tmpVar, type: 'auto' }, children: [{ nodeType: 'SubscriptExpression', id: `sub-${node.id}`, attributes: {}, children: [iterable, { nodeType: 'Identifier', id: `idx-a-${node.id}`, attributes: { name: indexVar }, children: [] }] } as BaseNode] });
+                extraBody.push({ nodeType: 'VariableDeclaration', id: `map-${node.id}`, attributes: { name: tmpVar, type: 'auto' }, children: [{ nodeType: 'SubscriptExpression', id: `sub-${node.id}`, attributes: {}, children: [targetExpr, { nodeType: 'Identifier', id: `idx-a-${node.id}`, attributes: { name: indexVar }, children: [] }] } as BaseNode] });
                 vars.forEach((v, idx) => { extraBody.push({ nodeType: 'ExpressionStatement', id: `map-${node.id}-${idx}`, attributes: {}, children: [{ nodeType: 'BinaryExpression', id: `map-ass-${node.id}-${idx}`, attributes: { operator: '=' }, children: [{ nodeType: 'Identifier', id: `id-v-${node.id}-${idx}`, attributes: { name: v }, children: [] }, { nodeType: 'SubscriptExpression', id: `sub-v-${node.id}-${idx}`, attributes: {}, children: [{ nodeType: 'Identifier', id: `id-tmp-${node.id}-${idx}`, attributes: { name: tmpVar }, children: [] }, { nodeType: 'Literal', id: `lit-ix-${node.id}-${idx}`, attributes: { value: idx }, children: [] }] } as BaseNode] } as BaseNode] }); });
             } else {
-                extraBody.push({ nodeType: 'ExpressionStatement', id: `map-${node.id}`, attributes: {}, children: [{ nodeType: 'BinaryExpression', id: `map-ass-${node.id}`, attributes: { operator: '=' }, children: [{ nodeType: 'Identifier', id: `id-v-${node.id}`, attributes: { name: leftText }, children: [] }, { nodeType: 'SubscriptExpression', id: `sub-${node.id}`, attributes: {}, children: [iterable, { nodeType: 'Identifier', id: `idx-a-${node.id}`, attributes: { name: indexVar }, children: [] }] } as BaseNode] } as BaseNode] });
+                extraBody.push({ nodeType: 'ExpressionStatement', id: `map-${node.id}`, attributes: {}, children: [{ nodeType: 'BinaryExpression', id: `map-ass-${node.id}`, attributes: { operator: '=' }, children: [{ nodeType: 'Identifier', id: `id-v-${node.id}`, attributes: { name: leftText }, children: [] }, { nodeType: 'SubscriptExpression', id: `sub-${node.id}`, attributes: {}, children: [targetExpr, { nodeType: 'Identifier', id: `idx-a-${node.id}`, attributes: { name: indexVar }, children: [] }] } as BaseNode] } as BaseNode] });
             }
+            return { nodeType: 'ForLoop', id: `for-${node.id}`, attributes: { hasInit: true, hasUpdate: true }, children: [init, condition, update, { nodeType: 'Block', id: `blk-forin-${node.id}`, attributes: {}, children: [...extraBody, ...(body ? this.visitBlockChildren(body) : [])], metadata: meta }], metadata: meta } as BaseNode;
         }
-        return { nodeType: 'ForLoop', id: `for-${node.id}`, attributes: { hasInit: true, hasUpdate: true }, children: [init, condition, update, ...extraBody, ...(body ? this.visitBlockChildren(body) : [])], metadata: meta } as BaseNode;
     }
 
     visitMatch(node: any): BaseNode {
@@ -1111,8 +1137,8 @@ class PythonCstToAst {
                 callee = `${objText}.${attr}`;
 
                 if (attr === 'format' && objNode?.type === 'string') return { nodeType: 'CallExpression', id: `fmt-${node.id}`, attributes: { callee: 'format' }, children: [this.visitExpr(objNode, env), ...args], metadata: meta };
-                if (attr === 'on' && args.length === 0) return { nodeType: 'GpioSet', id: `on-${node.id}`, attributes: { value: 1 }, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
-                if (attr === 'off' && args.length === 0) return { nodeType: 'GpioSet', id: `off-${node.id}`, attributes: { value: 0 }, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
+                if (attr === 'on' && args.length === 0) return { nodeType: 'GpioSet', id: `on-${node.id}`, attributes: {}, children: [this.visitExpr(func.childForFieldName('object'), env), { nodeType: 'Literal', id: `l1-${node.id}`, attributes: { value: 1 }, children: [] }], metadata: meta };
+                if (attr === 'off' && args.length === 0) return { nodeType: 'GpioSet', id: `off-${node.id}`, attributes: {}, children: [this.visitExpr(func.childForFieldName('object'), env), { nodeType: 'Literal', id: `l0-${node.id}`, attributes: { value: 0 }, children: [] }], metadata: meta };
                 if (attr === 'value') {
                     if (args.length === 1) return { nodeType: 'GpioSet', id: `set-${node.id}`, attributes: {}, children: [this.visitExpr(func.childForFieldName('object'), env), args[0]], metadata: meta };
                     if (args.length === 0) return { nodeType: 'GpioRead', id: `gr-${node.id}`, attributes: {}, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
@@ -1170,8 +1196,23 @@ class PythonCstToAst {
             if (callee === 'len') return { nodeType: 'CallExpression', id: `len-${node.id}`, attributes: { callee: 'len' }, children: args, metadata: meta };
             if (callee === 'time.sleep_ms' || callee === 'sleep_ms' || callee === 'utime.sleep_ms') return { nodeType: 'DelayMs', id: `d-${node.id}`, attributes: {}, children: args, metadata: meta };
             if (callee === 'time.sleep' || callee === 'sleep' || callee === 'utime.sleep') {
-                if (args.length > 0 && args[0].nodeType === 'Literal') return { nodeType: 'DelayMs', id: `d-${node.id}`, attributes: {}, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: (args[0].attributes.value as number) * 1000 }, children: [] }], metadata: meta };
-                return { nodeType: 'DelayMs', id: `d-${node.id}`, attributes: {}, children: args, metadata: meta };
+                const arg = args[0];
+                if (arg && arg.nodeType === 'Literal') {
+                    return { nodeType: 'DelayMs', id: `d-${node.id}`, attributes: {}, children: [{ nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: (arg.attributes.value as number) * 1000 }, children: [] }], metadata: meta };
+                }
+                // For non-literals, we wrap in a binary expression * 1000 to ensure ASL simulation gets ms
+                return {
+                    nodeType: 'DelayMs',
+                    id: `d-${node.id}`,
+                    attributes: {},
+                    children: [{
+                        nodeType: 'BinaryExpression',
+                        id: `mul-${node.id}`,
+                        attributes: { operator: '*' },
+                        children: [arg, { nodeType: 'Literal', id: `ms-${node.id}`, attributes: { value: 1000 }, children: [] }]
+                    }],
+                    metadata: meta
+                };
             }
             if (callee === 'Pin' || callee === 'machine.Pin') return { nodeType: 'CallExpression', id: `pin-${node.id}`, attributes: { callee: 'Pin' }, children: args, metadata: meta };
             if (callee === 'digitalio.DigitalInOut') return { nodeType: 'CallExpression', id: `pin-${node.id}`, attributes: { callee: 'Pin' }, children: [...args, { nodeType: 'Literal', id: `m-${node.id}`, attributes: { value: 1 }, children: [] } as BaseNode], metadata: meta };

@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { WindowState } from '@/types';
 
 // Export WindowId type - includes properties window for FEATURE 2.4
-export type WindowId = 'codeEditor' | 'componentsLibrary' | 'serialMonitor' | 'terminal' | 'properties' | 'libraries' | 'aslViewer' | 'serialTerminal';
+export type WindowId = 'codeEditor' | 'componentsLibrary' | 'serialMonitor' | 'terminal' | 'properties' | 'libraries' | 'aslViewer' | 'serialTerminal' | 'flowEditor' | 'blocklyEditor';
 
 interface UIStore {
   windows: Record<WindowId, WindowState>;
@@ -114,6 +114,28 @@ const defaultWindows: Record<WindowId, WindowState> = {
     isDocked: true,
     dockWidth: 20,
   },
+  flowEditor: {
+    id: 'flowEditor',
+    isOpen: false,
+    isMinimized: false,
+    position: { x: 100, y: 100 },
+    size: { width: 800, height: 600 },
+    zIndex: 10,
+    title: 'Flow Programming',
+    isDocked: false,
+    dockWidth: 20,
+  },
+  blocklyEditor: {
+    id: 'blocklyEditor',
+    isOpen: false,
+    isMinimized: false,
+    position: { x: 120, y: 120 },
+    size: { width: 800, height: 600 },
+    zIndex: 10,
+    title: 'Blockly Logic',
+    isDocked: false,
+    dockWidth: 20,
+  },
 };
 
 export const useUIStore = create<UIStore>()(
@@ -141,7 +163,7 @@ export const useUIStore = create<UIStore>()(
           // If opening a docked window and there's another docked window open, close it
           // But keep floating windows open
           const updatedWindows = { ...state.windows };
-          
+
           if (isDocked) {
             Object.keys(updatedWindows).forEach((key) => {
               const win = updatedWindows[key as WindowId];
@@ -253,6 +275,7 @@ export const useUIStore = create<UIStore>()(
       },
 
       updateWindowSize: (id, size) => {
+        if (isNaN(size.width) || isNaN(size.height)) return;
         set((state) => ({
           windows: {
             ...state.windows,
@@ -290,6 +313,7 @@ export const useUIStore = create<UIStore>()(
       },
 
       updateDockWidth: (id, width) => {
+        if (isNaN(width)) return;
         set((state) => ({
           windows: {
             ...state.windows,

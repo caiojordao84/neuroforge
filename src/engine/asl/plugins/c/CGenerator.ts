@@ -33,28 +33,119 @@ export class CGenerator {
         }
         this.addLn(lines, '', null);
 
-        // Top-level nodes (Variables, Functions, etc.)
-        let finalNodes: BaseNode[] = ast.children;
+        const finalNodes: BaseNode[] = ast.children;
 
-        finalNodes.forEach(node => {
-            if (node.nodeType === 'VariableDeclaration') {
-                this.genStmt(node, lines, "");
-            } else if (node.nodeType === 'Function') {
+        // Check if the AST already has explicit setup/loop functions
+        const hasSetupFn = finalNodes.some(n => n.nodeType === 'Function' && n.attributes.name === 'setup');
+        const hasLoopFn = finalNodes.some(n => n.nodeType === 'Function' && n.attributes.name === 'loop');
+
+        if (hasSetupFn || hasLoopFn) {
+            // Already structured as Arduino — emit as-is
+            finalNodes.forEach(node => {
+                if (node.nodeType === 'VariableDeclaration') {
+                    this.genStmt(node, lines, "");
+                } else if (node.nodeType === 'Function') {
+                    const name = node.attributes.name;
+                    const comments = this.printComments(node);
+                    if (comments) this.addLn(lines, comments, null);
+                    this.addLn(lines, `void ${name}() {`, node);
+                    node.children.forEach(c => this.genStmt(c, lines, "  "));
+                    this.addLn(lines, "}", node);
+                    this.addLn(lines, "", null);
+                } else {
+                    this.genStmt(node, lines, "");
+                }
+            });
+        } else {
+            // Auto-wrap: partition top-level nodes into globals, setup, loop
+            const globals: BaseNode[] = [];
+            const setupBody: BaseNode[] = [];
+            const loopBody: BaseNode[] = [];
+            const functions: BaseNode[] = [];
+
+            for (const node of finalNodes) {
+                if (node.nodeType === 'Function') {
+                    functions.push(node);
+                } else if (node.nodeType === 'VariableDeclaration') {
+                    globals.push(node);
+                } else if (node.nodeType === 'WhileLoop' && node.attributes.isInfinite) {
+                    // Infinite while True → becomes loop() body
+                    loopBody.push(...node.children.slice(1)); // skip condition
+                } else {
+                    // Everything else → setup() body
+                    setupBody.push(node);
+                }
+            }
+
+            // Emit global variables
+            globals.forEach(node => this.genGlobalVar(node, lines));
+
+            // Emit any helper functions
+            functions.forEach(node => {
                 const name = node.attributes.name;
-                const type = (name === 'setup' || name === 'loop') ? 'void' : 'void';
                 const comments = this.printComments(node);
                 if (comments) this.addLn(lines, comments, null);
-                this.addLn(lines, `${type} ${name}() {`, node);
+                this.addLn(lines, `void ${name}() {`, node);
                 node.children.forEach(c => this.genStmt(c, lines, "  "));
                 this.addLn(lines, "}", node);
                 this.addLn(lines, "", null);
-            } else {
-                // Other top-level nodes (should be rare after wrapping)
-                this.genStmt(node, lines, "");
+            });
+
+            // Emit setup()
+            this.addLn(lines, "void setup() {", null);
+            // Auto-generate pinMode calls for pin-array globals
+            for (const g of globals) {
+                if (this.isPinArrayDecl(g)) {
+                    const arrName = g.attributes.name;
+                    const numVar = `num_${arrName}`;
+                    this.addLn(lines, `  for (int i = 0; i < ${numVar}; i++) {`, null);
+                    this.addLn(lines, `    pinMode(${arrName}[i], OUTPUT);`, null);
+                    this.addLn(lines, `  }`, null);
+                }
             }
-        });
+            setupBody.forEach(node => this.genStmt(node, lines, "  "));
+            this.addLn(lines, "}", null);
+            this.addLn(lines, "", null);
+
+            // Emit loop()
+            if (loopBody.length > 0) {
+                this.addLn(lines, "void loop() {", null);
+                loopBody.forEach(node => this.genStmt(node, lines, "  "));
+                this.addLn(lines, "}", null);
+                this.addLn(lines, "", null);
+            }
+        }
 
         return { code: lines.join('\n'), map: this.sourceMap };
+    }
+
+    /** Check if a VariableDeclaration's initializer is an ArrayInitializer of Pin(...) calls */
+    private isPinArrayDecl(node: BaseNode): boolean {
+        if (node.nodeType !== 'VariableDeclaration') return false;
+        const init = node.children[0];
+        if (!init || init.nodeType !== 'ArrayInitializer') return false;
+        return init.children.length > 0 && init.children.every(
+            c => c.nodeType === 'CallExpression' && c.attributes.callee === 'Pin'
+        );
+    }
+
+    /** Emit a global variable with special handling for Pin arrays */
+    private genGlobalVar(node: BaseNode, lines: string[]) {
+        const comments = this.printComments(node);
+        if (comments) this.addLn(lines, comments, null);
+
+        const init = node.children[0];
+        if (init && this.isPinArrayDecl(node)) {
+            // Pin array: extract pin numbers → const int name[] = {pin1, pin2, ...};
+            const pinNums = init.children.map(c => {
+                if (c.children.length > 0) return this.genExpr(c.children[0]);
+                return '0';
+            });
+            this.addLn(lines, `const int ${node.attributes.name}[] = { ${pinNums.join(', ')} };`, node);
+            this.addLn(lines, `const int num_${node.attributes.name} = ${pinNums.length};`, null);
+        } else {
+            this.genStmt(node, lines, "");
+        }
     }
 
     private scanForShims(node: BaseNode) {
@@ -82,11 +173,9 @@ export class CGenerator {
         return node.leadingComments
             .map(c => {
                 let text = c.trim();
-                // Convert Python-style comments to C++ style
                 if (text.startsWith('#')) {
                     text = '//' + text.substring(1);
                 }
-                // Ensure C++ style comments have //
                 if (!text.startsWith('//') && !text.startsWith('/*')) {
                     text = '// ' + text;
                 }
@@ -95,7 +184,6 @@ export class CGenerator {
             .join('\n');
     }
 
-
     private genStmt(node: BaseNode, lines: string[], indent: string) {
         if (node.nodeType === 'Empty') return;
 
@@ -103,9 +191,12 @@ export class CGenerator {
         if (comments) this.addLn(lines, `${indent}${comments}`, null);
 
         if (node.nodeType === 'VariableDeclaration') {
-            const val = node.children.length > 0 ? this.genExpr(node.children[0]) : '0';
+            const initializer = node.children[0];
+            const isArray = initializer?.nodeType === 'ArrayInitializer';
+            const val = node.children.length > 0 ? this.genExpr(initializer) : '0';
             const type = node.attributes.type || 'int';
-            this.addLn(lines, `${indent}${type} ${node.attributes.name} = ${val};`, node);
+            const arraySuffix = isArray ? '[]' : '';
+            this.addLn(lines, `${indent}${type} ${node.attributes.name}${arraySuffix} = ${val};`, node);
         }
         else if (node.nodeType === 'ExpressionStatement') {
             const expr = this.genExpr(node.children[0]);
@@ -123,7 +214,6 @@ export class CGenerator {
         else if (node.nodeType === 'DelayMs') {
             this.addLn(lines, `${indent}delay(${this.genExpr(node.children[0])});`, node);
         }
-        // ... rest of the method
         else if (node.nodeType === 'IfStatement') {
             this.addLn(lines, `${indent}if (${this.genExpr(node.children[0])}) {`, node);
             if (node.children[1]) {
@@ -198,7 +288,12 @@ export class CGenerator {
 
             let update = "";
             if (node.attributes.hasUpdate && node.children[childIdx]) {
-                update = this.genExpr(node.children[childIdx]);
+                const updateNode = node.children[childIdx];
+                if (updateNode.nodeType === 'ExpressionStatement' && updateNode.children.length > 0) {
+                    update = this.genExpr(updateNode.children[0]);
+                } else {
+                    update = this.genExpr(updateNode);
+                }
                 childIdx++;
             }
 
@@ -233,6 +328,26 @@ export class CGenerator {
             }
             this.addLn(lines, `${indent}}`, node);
         }
+        else if (node.nodeType === 'ForIn') {
+            const varName = node.attributes.varName;
+            const iterableNode = node.children[0];
+
+            if (iterableNode.nodeType === 'CallExpression' && iterableNode.attributes.callee === 'reversed') {
+                const target = this.genExpr(iterableNode.children[0]);
+                this.addLn(lines, `${indent}for (int i = (sizeof(${target})/sizeof(${target}[0])) - 1; i >= 0; i--) {`, node);
+                this.addLn(lines, `${indent}  auto ${varName} = ${target}[i];`, node);
+                node.children.slice(1).forEach(c => this.genStmt(c, lines, indent + "  "));
+                this.addLn(lines, `${indent}}`, node);
+            } else {
+                const iterable = this.genExpr(iterableNode);
+                this.addLn(lines, `${indent}for (auto ${varName} : ${iterable}) {`, node);
+                node.children.slice(1).forEach(c => this.genStmt(c, lines, indent + "  "));
+                this.addLn(lines, `${indent}}`, node);
+            }
+        }
+        else if (node.nodeType === 'Block') {
+            node.children.forEach(c => this.genStmt(c, lines, indent));
+        }
         else {
             this.addLn(lines, `${indent}// Unhandled Node: ${node.nodeType}`, node);
         }
@@ -246,7 +361,11 @@ export class CGenerator {
         }
         if (node.nodeType === 'Identifier') return node.attributes.name;
         if (node.nodeType === 'BinaryExpression') {
-            return `(${this.genExpr(node.children[0])} ${node.attributes.operator} ${this.genExpr(node.children[1])})`;
+            const op = node.attributes.operator;
+            if (op === '=') {
+                return `${this.genExpr(node.children[0])} = ${this.genExpr(node.children[1])}`;
+            }
+            return `(${this.genExpr(node.children[0])} ${op} ${this.genExpr(node.children[1])})`;
         }
         if (node.nodeType === 'UnaryExpression') {
             if (node.attributes.prefix) return `${node.attributes.operator}${this.genExpr(node.children[0])}`;
@@ -257,7 +376,6 @@ export class CGenerator {
             let args = node.children.map(c => this.genExpr(c)).join(', ');
 
             if (callee === 'pinMode') {
-                // Map mode constants
                 args = node.children.map((c, idx) => {
                     const val = this.genExpr(c);
                     if (idx === 1) {
@@ -269,6 +387,7 @@ export class CGenerator {
             }
 
             if (callee === 'servo') return `servo.write(${args})`;
+            if (callee === 'len') return `(sizeof(${args}) / sizeof(${args}[0]))`;
             return `${callee}(${args})`;
         }
         if (node.nodeType === 'AnalogRead') return `analogRead(${this.genExpr(node.children[0])})`;
@@ -281,10 +400,21 @@ export class CGenerator {
         if (node.nodeType === 'ConditionalExpression') {
             return `(${this.genExpr(node.children[0])} ? ${this.genExpr(node.children[1])} : ${this.genExpr(node.children[2])})`;
         }
+        if (node.nodeType === 'SizeofExpression') {
+            const target = node.children[0];
+            if (!target) return '1';
+            // Simple optimization for common Arduino pattern
+            if (target.nodeType === 'Identifier') return `sizeof(${this.genExpr(target)})`;
+            return `sizeof(${this.genExpr(target)})`;
+        }
         if (node.nodeType === 'MemberExpression') {
             const op = node.attributes.operator || '.';
             return `${this.genExpr(node.children[0])}${op}${node.attributes.property}`;
         }
+        if (node.nodeType === 'GpioSet') return `digitalWrite(${this.genExpr(node.children[0])}, ${this.genExpr(node.children[1])})`;
+        if (node.nodeType === 'DelayMs') return `delay(${this.genExpr(node.children[0])})`;
+        if (node.nodeType === 'AnalogWrite') return `analogWrite(${this.genExpr(node.children[0])}, ${this.genExpr(node.children[1])})`;
+        if (node.nodeType === 'Print') return `Serial.println(${this.genExpr(node.children[0])})`;
 
         return "";
     }

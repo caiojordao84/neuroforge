@@ -1,4 +1,5 @@
 import type { Language } from '@/types';
+import type { ProgramNode } from '../../system/types';
 import { codeToAST } from './codeToASL';
 import { CGenerator } from './plugins/c/CGenerator';
 import { PythonGenerator, type PythonFlavor } from './plugins/python/PythonGenerator';
@@ -78,6 +79,66 @@ export async function transpileCode(
         return {
             success: false,
             code: warningComment + sourceCode,
+            warnings
+        };
+    }
+}
+
+export async function transpileAST(
+    programAst: ProgramNode,
+    targetLanguage: Language
+): Promise<TranspileResult> {
+    const warnings: string[] = [];
+
+    try {
+        // Step 1.5: Normalize AST for generation
+        const ast = normalizeAST(programAst);
+
+        // Step 2: Generate code in target language
+        let generatedCode = '';
+
+        switch (targetLanguage) {
+            case 'c':
+            case 'cpp': {
+                const generator = new CGenerator();
+                generatedCode = generator.generate(ast).code;
+                break;
+            }
+
+            case 'micropython':
+            case 'circuitpython':
+            case 'python': {
+                const generator = new PythonGenerator();
+                const flavor: PythonFlavor = targetLanguage === 'circuitpython'
+                    ? 'CIRCUITPYTHON'
+                    : 'MICROPYTHON';
+                generatedCode = generator.generate(ast, flavor).code;
+                break;
+            }
+
+            case 'rust': {
+                const generator = new RustGenerator();
+                generatedCode = generator.generate(ast).code;
+                break;
+            }
+
+            default:
+                return {
+                    success: false,
+                    code: '',
+                    warnings: [`Target language ${targetLanguage} not supported for transpilation`]
+                };
+        }
+
+        return { success: true, code: generatedCode, warnings };
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        warnings.push(`Transpilation from AST failed: ${errorMessage}`);
+
+        return {
+            success: false,
+            code: '',
             warnings
         };
     }

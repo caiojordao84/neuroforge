@@ -302,6 +302,22 @@ export class RustGenerator {
             }
             this.addLn(lines, `${indent}}`, node);
         }
+        else if (node.nodeType === 'ForIn') {
+            const varName = node.attributes.varName;
+            const iterableNode = node.children[0];
+
+            if (iterableNode.nodeType === 'CallExpression' && iterableNode.attributes.callee === 'reversed') {
+                const target = this.genExpr(iterableNode.children[0]);
+                this.addLn(lines, `${indent}for ${varName} in ${target}.iter().rev() {`, node);
+                node.children.slice(1).forEach(c => this.genStmt(c, lines, indent + "    "));
+                this.addLn(lines, `${indent}}`, node);
+            } else {
+                const iterable = this.genExpr(iterableNode);
+                this.addLn(lines, `${indent}for ${varName} in ${iterable} {`, node);
+                node.children.slice(1).forEach(c => this.genStmt(c, lines, indent + "    "));
+                this.addLn(lines, `${indent}}`, node);
+            }
+        }
         else {
             this.addLn(lines, `${indent}// Unhandled Node: ${node.nodeType}`, node);
         }
@@ -342,6 +358,7 @@ export class RustGenerator {
             if (callee === 'shiftIn') return `shift_in(${args})`;
             if (callee === 'shiftOut') return `shift_out(${args})`;
             if (callee === 'attachInterrupt') return `attach_interrupt(${args})`;
+            if (callee === 'len') return `${args}.len()`;
             return `${callee}(${args})`;
         }
         if (node.nodeType === 'CastExpression') {

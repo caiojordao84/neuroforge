@@ -26,24 +26,28 @@ export class RustParser {
         }
 
         const tree = this.parser.parse(code);
-        const converter = new RustCstToAst();
-        const ast = converter.convert(tree.rootNode);
+        try {
+            const converter = new RustCstToAst();
+            const ast = converter.convert(tree.rootNode);
 
-        const errors: AnalysisIssue[] = [];
-        const findErrors = (n: any) => {
-            if (!n) return;
-            const isMissing = typeof n.isMissing === 'function' ? n.isMissing() : !!n.isMissing;
-            if (n.type === 'ERROR' || isMissing) {
-                const row = n.startPosition ? n.startPosition.row + 1 : '?';
-                errors.push({ severity: 'CRITICAL', message: `Syntax error at line ${row}: ${n.text || ''}` });
-            }
-            if (n.children && Array.isArray(n.children)) {
-                n.children.forEach(findErrors);
-            }
-        };
-        findErrors(tree.rootNode);
+            const errors: AnalysisIssue[] = [];
+            const findErrors = (n: any) => {
+                if (!n) return;
+                const isMissing = typeof n.isMissing === 'function' ? n.isMissing() : !!n.isMissing;
+                if (n.type === 'ERROR' || isMissing) {
+                    const row = n.startPosition ? n.startPosition.row + 1 : '?';
+                    errors.push({ severity: 'CRITICAL', message: `Syntax error at line ${row}: ${n.text || ''}` });
+                }
+                if (n.children && Array.isArray(n.children)) {
+                    n.children.forEach(findErrors);
+                }
+            };
+            findErrors(tree.rootNode);
 
-        return { ast, errors };
+            return { ast, errors };
+        } finally {
+            tree.delete();
+        }
     }
 }
 
@@ -160,16 +164,38 @@ class RustCstToAst {
         const alternativeNode = node.childForFieldName('alternative');
 
         const condition = conditionNode ? this.visitExpr(conditionNode) : { nodeType: 'Literal', id: 'l', attributes: { value: 1 }, children: [] };
-        const consequence = consequenceNode ? this.visitBlockChildren(consequenceNode) : [];
-        const alternative = alternativeNode ?
-            (alternativeNode.type === 'if_expression' ? [this.visitIf(alternativeNode)] : this.visitBlockChildren(alternativeNode))
-            : [];
+        const consequenceChildren = consequenceNode ? this.visitBlockChildren(consequenceNode) : [];
+        const consequenceBlock: BaseNode = {
+            nodeType: 'Block',
+            id: `blk-${node.id}-then`,
+            attributes: {},
+            children: consequenceChildren,
+            metadata: { line: node.startPosition.row + 1 }
+        };
+
+        const children = [condition as BaseNode, consequenceBlock];
+
+        if (alternativeNode) {
+            if (alternativeNode.type === 'if_expression') {
+                children.push(this.visitIf(alternativeNode));
+            } else {
+                const altChildren = this.visitBlockChildren(alternativeNode);
+                const altBlock: BaseNode = {
+                    nodeType: 'Block',
+                    id: `blk-${node.id}-else`,
+                    attributes: {},
+                    children: altChildren,
+                    metadata: { line: alternativeNode.startPosition.row + 1 }
+                };
+                children.push(altBlock);
+            }
+        }
 
         return {
             nodeType: 'IfStatement',
             id: `if-${node.id}`,
             attributes: {},
-            children: [condition as BaseNode, ...consequence, ...alternative as BaseNode[]],
+            children,
             metadata: { line: node.startPosition.row + 1 }
         };
     }
@@ -179,11 +205,19 @@ class RustCstToAst {
         const children = bodyNode ? this.visitBlockChildren(bodyNode) : [];
         const trueCond: BaseNode = { nodeType: 'Literal', id: 'true', attributes: { value: 1 }, children: [] };
 
+        const bodyBlock: BaseNode = {
+            nodeType: 'Block',
+            id: `blk-${node.id}`,
+            attributes: {},
+            children,
+            metadata: { line: node.startPosition.row + 1 }
+        };
+
         return {
             nodeType: 'WhileLoop',
             id: `loop-${node.id}`,
             attributes: {},
-            children: [trueCond, ...children],
+            children: [trueCond, bodyBlock],
             metadata: { line: node.startPosition.row + 1 }
         };
     }
@@ -194,11 +228,19 @@ class RustCstToAst {
         const condition = conditionNode ? this.visitExpr(conditionNode) : { nodeType: 'Literal', id: 'l', attributes: { value: 1 }, children: [] };
         const children = bodyNode ? this.visitBlockChildren(bodyNode) : [];
 
+        const bodyBlock: BaseNode = {
+            nodeType: 'Block',
+            id: `blk-${node.id}`,
+            attributes: {},
+            children,
+            metadata: { line: node.startPosition.row + 1 }
+        };
+
         return {
             nodeType: 'WhileLoop',
             id: `while-${node.id}`,
             attributes: {},
-            children: [condition as BaseNode, ...children],
+            children: [condition as BaseNode, bodyBlock],
             metadata: { line: node.startPosition.row + 1 }
         };
     }
@@ -248,12 +290,19 @@ class RustCstToAst {
         };
 
         const body = bodyNode ? this.visitBlockChildren(bodyNode) : [];
+        const bodyBlock: BaseNode = {
+            nodeType: 'Block',
+            id: `blk-${node.id}`,
+            attributes: {},
+            children: body,
+            metadata: { line: node.startPosition.row + 1 }
+        };
 
         return {
             nodeType: 'ForLoop',
             id: `for-${node.id}`,
             attributes: { hasInit: true, hasUpdate: true },
-            children: [init, condition, update, ...body],
+            children: [init, condition, update, bodyBlock],
             metadata: { line: node.startPosition.row + 1 }
         };
     }
@@ -420,7 +469,7 @@ class RustCstToAst {
 
         if (node.type === 'index_expression') {
             const target = this.visitExpr(node.child(0)!);
-            const index  = this.visitExpr(node.child(2)!);
+            const index = this.visitExpr(node.child(2)!);
             return { nodeType: 'SubscriptExpression', id: `sub-${node.id}`, attributes: {}, children: [target, index], metadata: meta };
         }
 

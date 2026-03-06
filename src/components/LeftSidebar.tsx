@@ -8,6 +8,8 @@ import {
   Book,
   BrainCircuit,
   Columns,
+  Workflow,
+  Puzzle,
 } from 'lucide-react';
 import { useUIStore, type WindowId } from '@/stores/useUIStore';
 import { cn } from '@/lib/utils';
@@ -24,6 +26,8 @@ const tabs: SidebarTab[] = [
   { id: 'libraries', icon: Book, label: 'Libraries' },
   { id: 'properties', icon: PanelTopOpen, label: 'Properties' },
   { id: 'aslViewer', icon: BrainCircuit, label: 'ASL Viewer' },
+  { id: 'flowEditor', icon: Workflow, label: 'Logic Flow' },
+  { id: 'blocklyEditor', icon: Puzzle, label: 'Blockly Editor' },
   { id: 'serialTerminal', icon: Columns, label: 'Serial & Terminal' },
 ];
 

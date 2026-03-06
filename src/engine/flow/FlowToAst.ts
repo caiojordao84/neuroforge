@@ -1,6 +1,8 @@
 
-import { ProgramNode, BaseNode } from '@/system/types';
-import { CfgBuilder, CfgBlock, CfgAnalysisResult } from './CfgBuilder';
+import type { ProgramNode, BaseNode } from '@/system/types';
+import type { Node, Edge } from '@xyflow/react';
+import { CfgBuilder, CfgBlock } from './CfgBuilder';
+import type { CfgAnalysisResult } from './CfgBuilder';
 
 export class FlowToAst {
     private blockIdMap = new Map<string, number>();

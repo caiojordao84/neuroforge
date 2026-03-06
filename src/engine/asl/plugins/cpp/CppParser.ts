@@ -299,6 +299,11 @@ class CppCstToAst {
             return { nodeType: 'CallExpression', id: `call-${node.id}`, attributes: { callee: calleeName }, children: args, metadata: meta };
         }
 
+        if (node.type === 'sizeof_expression') {
+            const value = node.child(1);
+            return { nodeType: 'CallExpression', id: `so-${node.id}`, attributes: { callee: 'sizeof' }, children: [this.visitExpr(value)], metadata: meta };
+        }
+
         if (node.type === 'parenthesized_expression') return this.visitExpr(node.firstNamedChild!);
 
         // Array Handling

@@ -1,5 +1,5 @@
 
-import { Node, Edge } from 'reactflow';
+import type { Node, Edge } from '@xyflow/react';
 import { CfgBuilder } from './CfgBuilder';
 
 export interface FlowIssue {
@@ -11,7 +11,7 @@ export interface FlowIssue {
 export class FlowValidator {
     static validate(nodes: Node[], edges: Edge[]): FlowIssue[] {
         const issues: FlowIssue[] = [];
-        
+
         // 1. Build Control Flow Graph
         const builder = new CfgBuilder(nodes, edges);
         const analysis = builder.validate();
@@ -20,7 +20,7 @@ export class FlowValidator {
 
         // Patterns (INFO)
         analysis.patterns.forEach(p => {
-             issues.push({ severity: 'INFO', message: p.description, nodeId: p.headerId });
+            issues.push({ severity: 'INFO', message: p.description, nodeId: p.headerId });
         });
 
         // Missing Start/End
@@ -43,7 +43,7 @@ export class FlowValidator {
 
         // Start Node specific check 
         if (builder.startBlock && builder.startBlock.predecessors.length > 0) {
-             issues.push({ severity: 'WARNING', message: 'Start node has incoming edges.', nodeId: builder.startBlock.id });
+            issues.push({ severity: 'WARNING', message: 'Start node has incoming edges.', nodeId: builder.startBlock.id });
         }
 
         // 3. Industrial Logic Validation
@@ -51,14 +51,14 @@ export class FlowValidator {
         const idMap = new Map<string, string[]>();
         nodes.forEach(n => {
             if (['ladder_timer', 'ladder_counter', 'ladder_latch'].includes(n.type || '')) {
-                const id = n.data.id;
+                const id = n.data.id as string | undefined;
                 if (id) {
                     if (!idMap.has(id)) idMap.set(id, []);
                     idMap.get(id)?.push(n.id);
                 }
             }
         });
-        
+
         idMap.forEach((nodeIds, id) => {
             if (nodeIds.length > 1) {
                 nodeIds.forEach(nid => {

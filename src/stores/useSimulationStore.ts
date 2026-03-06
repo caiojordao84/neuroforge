@@ -40,6 +40,8 @@ interface SimulationStore {
   getAllMCUs: () => MCUConfig[];
   setActiveMCU: (id: string | null) => void;
   syncMCUsWithCanvas: (canvasNodeIds: string[]) => void;
+  updateMCUFlow: (id: string, nodes: any[], edges: any[]) => void;
+  updateMCUBlockly: (id: string, xml: string) => void;
   clearAllMCUs: () => void;
 
   // Pin operations
@@ -330,6 +332,28 @@ export const useSimulationStore = create<SimulationStore>()(
             mcus: newMCUs,
             activeMCUId: newActiveMCUId
           };
+        });
+      },
+
+      updateMCUFlow: (id, nodes, edges) => {
+        set((state) => {
+          const mcu = state.mcus.get(id);
+          if (!mcu) return state;
+
+          const newMCUs = new Map(state.mcus);
+          newMCUs.set(id, { ...mcu, flowNodes: nodes, flowEdges: edges });
+          return { mcus: newMCUs };
+        });
+      },
+
+      updateMCUBlockly: (id, xml) => {
+        set((state) => {
+          const mcu = state.mcus.get(id);
+          if (!mcu) return state;
+
+          const newMCUs = new Map(state.mcus);
+          newMCUs.set(id, { ...mcu, blocklyXml: xml });
+          return { mcus: newMCUs };
         });
       },
 

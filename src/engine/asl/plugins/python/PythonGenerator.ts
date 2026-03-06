@@ -34,7 +34,8 @@ export class PythonGenerator {
         if (this.flavor === 'MICROPYTHON') {
             this.addLn(output, 'import machine', null);
             this.addLn(output, 'import time', null);
-            this.addLn(output, 'from machine import Pin, PWM', null);
+            this.addLn(output, 'import utime', null);
+            this.addLn(output, 'from machine import Pin, PWM, ADC', null);
         } else {
             this.addLn(output, 'import board', null);
             this.addLn(output, 'import digitalio', null);
@@ -65,30 +66,44 @@ export class PythonGenerator {
 
         this.addLn(output, '# Main Program', null);
 
-        // Globals / Setup
-        const setup = ast.children.find(c => c.attributes.name === 'setup');
-        const loops = ast.children.find(c => c.attributes.name === 'loop');
-        const globals = ast.children.filter(c => c.nodeType === 'VariableDeclaration');
+        const finalNodes = ast.children;
+        const setup = finalNodes.find(c => c.attributes.name === 'setup');
+        const loops = finalNodes.find(c => c.attributes.name === 'loop');
+        const globals = finalNodes.filter(c => c.nodeType === 'VariableDeclaration');
+
+        // Globals and non-loop code
+        const topLevelNodes = finalNodes.filter(c => c.nodeType !== 'Function' && c.nodeType !== 'VariableDeclaration');
+        const setupBody: BaseNode[] = [];
+        const loopBodies: BaseNode[] = [];
+
+        topLevelNodes.forEach(n => {
+            if (n.nodeType === 'WhileLoop' && n.attributes.isInfinite) {
+                loopBodies.push(...n.children.slice(1));
+            } else {
+                setupBody.push(n);
+            }
+        });
 
         globals.forEach(g => this.genStmt(g, '', output));
+
         if (setup) {
-            this.printComments(setup, output, "");
             setup.children.forEach(s => this.genStmt(s, '', output));
         }
+        setupBody.forEach(s => this.genStmt(s, '', output));
 
         this.addLn(output, '', null);
         this.addLn(output, 'while True:', null);
 
         if (loops && loops.children.length > 0) {
             loops.children.forEach(s => this.genStmt(s, '    ', output));
-        } else {
-            // Fallback for empty loop or top-level script
-            const topLevel = ast.children.filter(c => c.nodeType !== 'Function' && c.nodeType !== 'VariableDeclaration');
-            if (topLevel.length > 0) {
-                topLevel.forEach(s => this.genStmt(s, '    ', output));
-            } else {
-                this.addLn(output, this.flavor === 'MICROPYTHON' ? '    time.sleep_ms(100)' : '    time.sleep(0.1)', null);
-            }
+        }
+
+        if (loopBodies.length > 0) {
+            loopBodies.forEach(s => this.genStmt(s, '    ', output));
+        }
+
+        if (!(loops && loops.children.length > 0) && loopBodies.length === 0) {
+            this.addLn(output, this.flavor === 'MICROPYTHON' ? '    time.sleep_ms(100)' : '    time.sleep(0.1)', null);
         }
 
         return { code: output.join('\n'), map: this.sourceMap };
@@ -170,13 +185,19 @@ export class PythonGenerator {
         }
 
         if (n.nodeType === 'GpioSet') {
-            const pin = this.evalLit(n.children[0]);
+            const pinNode = n.children[0];
             const val = this.genExpr(n.children[1]);
+            const pinExpr = this.genExpr(pinNode);
+
             if (this.flavor === 'MICROPYTHON') {
-                return this.addLn(out, `${i}machine.Pin(${pin}, machine.Pin.OUT).value(${val})`, n);
+                if (pinNode.nodeType === 'Identifier') {
+                    return this.addLn(out, `${i}${pinExpr}.value(${val})`, n);
+                }
+                return this.addLn(out, `${i}machine.Pin(${pinExpr}, machine.Pin.OUT).value(${val})`, n);
             } else {
                 const boolVal = val === '1' || val === 'HIGH' ? 'True' : val === '0' || val === 'LOW' ? 'False' : `(${val} != 0)`;
-                return this.addLn(out, `${i}pin_${pin}.value = ${boolVal}`, n);
+                const target = pinNode.nodeType === 'Identifier' ? pinExpr : `pin_${pinExpr}`;
+                return this.addLn(out, `${i}${target}.value = ${boolVal}`, n);
             }
         }
 
@@ -308,6 +329,18 @@ export class PythonGenerator {
             return;
         }
 
+        if (n.nodeType === 'ForIn') {
+            const iterable = this.genExpr(n.children[0]);
+            this.addLn(out, `${i}for ${n.attributes.varName} in ${iterable}:`, n);
+            const body = n.children.slice(1);
+            if (body.length === 0) {
+                this.addLn(out, `${i}    pass`, null);
+            } else {
+                body.forEach(c => this.genStmt(c, i + '    ', out));
+            }
+            return;
+        }
+
         if (n.nodeType === 'Print') {
             return this.addLn(out, `${i}print(${this.genExpr(n.children[0])})`, n);
         }
@@ -392,6 +425,11 @@ export class PythonGenerator {
             return `${this.genExpr(n.children[0])}${op}${n.attributes.property}`;
         }
         if (n.nodeType === 'CallExpression') {
+            if (n.attributes.callee === 'LIST_COMPREHENSION') {
+                const expr = this.genExpr(n.children[0]);
+                const iterable = this.genExpr(n.children[1]);
+                return `[${expr} for ${n.attributes.varName} in ${iterable}]`;
+            }
             const args = n.children.map(c => this.genExpr(c)).join(', ');
             return `${n.attributes.callee}(${args})`;
         }
@@ -401,6 +439,9 @@ export class PythonGenerator {
         }
         if (n.nodeType === 'SubscriptExpression') {
             return `${this.genExpr(n.children[0])}[${this.genExpr(n.children[1])}]`;
+        }
+        if (n.nodeType === 'SizeofExpression') {
+            return `len(${this.genExpr(n.children[0])})`;
         }
         if (n.nodeType === 'GpioRead') {
             const pin = this.evalLit(n.children[0]);

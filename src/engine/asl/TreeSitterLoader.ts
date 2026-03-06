@@ -3,6 +3,7 @@ import { Parser, Language } from 'web-tree-sitter';
 export class TreeSitterLoader {
     private static initialized = false;
     private static initPromise: Promise<void> | null = null;
+    private static parsers = new Map<string, Parser>();
     private static languages = new Map<string, Language>();
 
     static async init() {
@@ -45,9 +46,12 @@ export class TreeSitterLoader {
     }
 
     static async createParser(lang: string): Promise<Parser> {
+        if (this.parsers.has(lang)) return this.parsers.get(lang)!;
+
         const language = await this.loadLanguage(lang);
         const parser = new Parser();
         parser.setLanguage(language);
+        this.parsers.set(lang, parser);
         return parser;
     }
 }

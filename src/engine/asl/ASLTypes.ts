@@ -108,6 +108,8 @@ export type ASLStatement =
   | ASLPrint
   | ASLBreak
   | ASLContinue
+  | ASLDeclare
+  | ASLForIn
   | ASLSwitch
   | ASLComment
   // --- S5 NEW NODES (Bus/PWM/IEC) ---
@@ -211,6 +213,16 @@ export interface ASLFor {
 }
 
 /**
+ * For-in loop over an iterable.
+ */
+export interface ASLForIn {
+  kind: 'forIn';
+  varName: string;
+  iterable: ASLExpr;
+  body: ASLStatement[];
+}
+
+/**
  * Do-while loop: executes body at least once, then checks condition.
  */
 export interface ASLDoWhile {
@@ -234,6 +246,16 @@ export interface ASLAssign {
   kind: 'assign';
   target: string;
   value: ASLExpr;
+}
+
+/**
+ * Declaração de variável (local ou global no body): type name [= value];
+ */
+export interface ASLDeclare {
+  kind: 'declare';
+  name: string;
+  type: ASLType;
+  value?: ASLExpr;
 }
 
 /**

@@ -1,6 +1,6 @@
 // src/engine/asl/flowToASL.ts
 
-import type { Node, Edge } from 'reactflow';
+import type { Node, Edge } from '@xyflow/react';
 import type { ASLProgram } from './ASLTypes';
 import { FlowToAst } from '@/engine/flow/FlowToAst';
 import { normalizeAST } from './transforms/astNormalizer';

@@ -35,6 +35,9 @@ export class SimulatorInterpreter {
 
     reset() {
         this.vars.clear(); this.pins.clear(); this.tones.clear(); this.genStack = []; this.logs = [];
+        this.vars.set("HIGH", 1); this.vars.set("LOW", 0);
+        this.vars.set("OUTPUT", 1); this.vars.set("INPUT", 0);
+        this.vars.set("INPUT_PULLUP", 2);
         this.lcd = { lines: ["                ", "                "], cx: 0, cy: 0 };
         this.rgb = { r: 0, g: 0, b: 0 };
         this.neopixels = Array(8).fill({ r: 0, g: 0, b: 0 });
@@ -53,10 +56,31 @@ export class SimulatorInterpreter {
         // Default Joystick center
         this.pins.set(34, 2048); // X
         this.pins.set(35, 2048); // Y
-        const setup = this.ast.children.find(c => c.attributes.name === 'setup');
-        if (setup) this.runBlockSync(setup.children);
-        const loop = this.ast.children.find(c => c.attributes.name === 'loop');
-        if (loop) this.genStack.push(this.runBlock(loop.children));
+
+        // Check for explicit setup/loop functions
+        const setupFn = this.ast.children.find(c => c.nodeType === 'Function' && c.attributes.name === 'setup');
+        const loopFn = this.ast.children.find(c => c.nodeType === 'Function' && c.attributes.name === 'loop');
+
+        if (setupFn || loopFn) {
+            if (setupFn) this.runBlockSync(setupFn.children);
+            if (loopFn) this.genStack.push(this.runBlock(loopFn.children));
+        } else {
+            // No explicit functions — partition top-level nodes
+            const setupNodes: BaseNode[] = [];
+            let loopChildren: BaseNode[] | null = null;
+
+            for (const node of this.ast.children) {
+                if (node.nodeType === 'Function') continue; // skip helper functions
+                if (node.nodeType === 'WhileLoop' && node.attributes.isInfinite) {
+                    loopChildren = node.children.slice(1); // skip condition
+                } else {
+                    setupNodes.push(node);
+                }
+            }
+
+            if (setupNodes.length > 0) this.runBlockSync(setupNodes);
+            if (loopChildren) this.genStack.push(this.runBlock(loopChildren));
+        }
     }
 
     step() {
@@ -73,8 +97,15 @@ export class SimulatorInterpreter {
         if (res.done) {
             this.genStack.pop();
             if (this.genStack.length === 0) {
-                const loop = this.ast.children.find(c => c.attributes.name === 'loop');
-                if (loop) this.genStack.push(this.runBlock(loop.children));
+                // Re-enter the loop
+                const loopFn = this.ast.children.find(c => c.nodeType === 'Function' && c.attributes.name === 'loop');
+                if (loopFn) {
+                    this.genStack.push(this.runBlock(loopFn.children));
+                } else {
+                    // No explicit loop function — find infinite WhileLoop
+                    const whileLoop = this.ast.children.find(c => c.nodeType === 'WhileLoop' && c.attributes.isInfinite);
+                    if (whileLoop) this.genStack.push(this.runBlock(whileLoop.children.slice(1)));
+                }
             }
         }
         this.onUpdate(Object.fromEntries(this.vars), Object.fromEntries(this.pins), [...this.logs], Object.fromEntries(this.tones), { ...this.lcd }, this.dht, this.ultrasonicDist, this.ldrValue, this.irCode, { ...this.rgb }, this.sevSegValue, [...this.neopixels], { ...this.motors }, { ...this.mpu }, this.oledPending, { ...this.wifi }, { ...this.files });
@@ -90,9 +121,35 @@ export class SimulatorInterpreter {
 
     private runBlockSync(nodes: BaseNode[]) {
         for (const s of nodes) {
-            if (s.nodeType === 'Print') this.logs.push(this.evalExpr(s.children[0]));
-            if (s.nodeType === 'GpioSet') this.pins.set(this.evalExpr(s.children[0]), this.evalExpr(s.children[1]));
-            if (s.nodeType === 'ExpressionStatement') this.evalExpr(s.children[0]);
+            if (s.nodeType === 'VariableDeclaration') {
+                const val = s.children.length > 0 ? this.evalExpr(s.children[0]) : 0;
+                this.vars.set(s.attributes.name, val);
+            }
+            else if (s.nodeType === 'Print') this.logs.push(this.evalExpr(s.children[0]));
+            else if (s.nodeType === 'GpioSet') this.pins.set(this.evalExpr(s.children[0]), this.evalExpr(s.children[1]));
+            else if (s.nodeType === 'ExpressionStatement') this.evalExpr(s.children[0]);
+            else if (s.nodeType === 'ForLoop') {
+                // Run ForLoop synchronously (for setup)
+                let childIdx = 0;
+                if (s.attributes.hasInit && s.children[childIdx]) {
+                    const initNode = s.children[childIdx];
+                    if (initNode.nodeType === 'VariableDeclaration') {
+                        this.vars.set(initNode.attributes.name, initNode.children.length > 0 ? this.evalExpr(initNode.children[0]) : 0);
+                    } else { this.evalExpr(initNode); }
+                    childIdx++;
+                }
+                const condIdx = childIdx; childIdx++;
+                const updateIdx = s.attributes.hasUpdate ? childIdx++ : -1;
+                const bodyNodes = s.children.slice(childIdx);
+                let limit = 0;
+                while (this.evalExpr(s.children[condIdx]) && limit++ < 2000) {
+                    this.runBlockSync(bodyNodes);
+                    if (updateIdx >= 0) this.evalExpr(s.children[updateIdx].children?.[0] || s.children[updateIdx]);
+                }
+            }
+            else if (s.nodeType === 'Block') {
+                this.runBlockSync(s.children);
+            }
         }
     }
 
@@ -105,16 +162,21 @@ export class SimulatorInterpreter {
             this.vars.set(node.attributes.name, val);
         }
         else if (node.nodeType === 'ExpressionStatement') {
-            if (node.children[0].nodeType === 'DelayMs') {
-                const steps = Math.ceil(this.evalExpr(node.children[0].children[0]) / 20);
+            const child = node.children[0];
+            if (child.nodeType === 'DelayMs') {
+                const steps = Math.ceil(this.evalExpr(child.children[0]) / 20);
                 for (let i = 0; i < steps; i++) yield;
-            } else this.evalExpr(node.children[0]);
+            } else {
+                this.evalExpr(child);
+            }
         }
-        else if (node.nodeType === 'GpioSet') this.pins.set(this.evalExpr(node.children[0]), this.evalExpr(node.children[1]));
+        else if (node.nodeType === 'DelayMs') {
+            // Top-level DelayMs (not wrapped in ExpressionStatement)
+            const steps = Math.ceil(this.evalExpr(node.children[0]) / 20);
+            for (let i = 0; i < steps; i++) yield;
+        }
+        else if (node.nodeType === 'GpioSet') this.evalExpr(node);
         else if (node.nodeType === 'HardwarePwm') {
-            // Emulate PWM by setting pin to ~50% logic or mapping duty
-            // For sim visual purposes, let's treat duty > 512 as HIGH (1), else LOW (0), or store analog?
-            // The simulator board uses 'pins' for digital/analog.
             const duty = node.attributes.duty;
             const val = duty > 512 ? 1 : 0;
             this.pins.set(node.attributes.pin, val);
@@ -152,9 +214,25 @@ export class SimulatorInterpreter {
             const val = this.evalExpr(node.children[0]);
             this.sevSegValue = String(val).substring(0, 4).padStart(4, ' ');
         }
-        else if (node.nodeType === 'Print') this.logs.push(this.evalExpr(node.children[0]).toString());
+        else if (node.nodeType === 'Print') this.evalExpr(node);
         else if (node.nodeType === 'IfStatement') {
-            if (this.evalExpr(node.children[0])) yield* this.runBlock(node.children.slice(1));
+            if (this.evalExpr(node.children[0])) {
+                // children[1] is the Block for then-branch
+                if (node.children[1]?.nodeType === 'Block') {
+                    yield* this.runBlock(node.children[1].children);
+                } else {
+                    yield* this.runBlock(node.children.slice(1));
+                }
+            } else if (node.children[2]) {
+                // else / else-if branch
+                if (node.children[2].nodeType === 'IfStatement') {
+                    yield* this.runStmt(node.children[2]);
+                } else if (node.children[2].nodeType === 'Block') {
+                    yield* this.runBlock(node.children[2].children);
+                } else {
+                    yield* this.runBlock([node.children[2]]);
+                }
+            }
         }
         else if (node.nodeType === 'WhileLoop') {
             let limit = 0;
@@ -162,6 +240,56 @@ export class SimulatorInterpreter {
                 yield* this.runBlock(node.children.slice(1));
                 yield;
             }
+        }
+        else if (node.nodeType === 'DoWhileLoop') {
+            let limit = 0;
+            do {
+                yield* this.runBlock(node.children.slice(1));
+                yield;
+            } while (this.evalExpr(node.children[0]) && limit++ < 2000);
+        }
+        else if (node.nodeType === 'ForLoop') {
+            // ForLoop children: [init, condition, update, ...body]
+            let childIdx = 0;
+            if (node.attributes.hasInit && node.children[childIdx]) {
+                const initNode = node.children[childIdx];
+                if (initNode.nodeType === 'VariableDeclaration') {
+                    this.vars.set(initNode.attributes.name, initNode.children.length > 0 ? this.evalExpr(initNode.children[0]) : 0);
+                } else {
+                    this.evalExpr(initNode);
+                }
+                childIdx++;
+            }
+            const condIdx = childIdx; childIdx++;
+            const updateIdx = node.attributes.hasUpdate ? childIdx++ : -1;
+            const bodyNodes = node.children.slice(childIdx);
+
+            let limit = 0;
+            while (this.evalExpr(node.children[condIdx]) && limit++ < 2000) {
+                yield* this.runBlock(bodyNodes);
+                if (updateIdx >= 0) {
+                    const upd = node.children[updateIdx];
+                    if (upd.nodeType === 'ExpressionStatement' && upd.children?.length > 0) {
+                        this.evalExpr(upd.children[0]);
+                    } else {
+                        this.evalExpr(upd);
+                    }
+                }
+                yield;
+            }
+        }
+        else if (node.nodeType === 'ForIn') {
+            const iterable = this.evalExpr(node.children[0]);
+            if (Array.isArray(iterable)) {
+                for (const item of iterable) {
+                    this.vars.set(node.attributes.varName, item);
+                    yield* this.runBlock(node.children.slice(1));
+                    yield;
+                }
+            }
+        }
+        else if (node.nodeType === 'Block') {
+            yield* this.runBlock(node.children);
         }
     }
 
@@ -198,12 +326,30 @@ export class SimulatorInterpreter {
                 return rhs;
             }
             const l = this.evalExpr(node.children[0]), r = this.evalExpr(node.children[1]);
-            if (op === '+') return l + r; if (op === '-') return l - r; if (op === '*') return l * r; if (op === '>') return l > r ? 1 : 0; if (op === '<') return l < r ? 1 : 0; if (op === '==') return l == r ? 1 : 0;
+            if (op === '+') return l + r; if (op === '-') return l - r; if (op === '*') return l * r; if (op === '/') return r !== 0 ? Math.floor(l / r) : 0; if (op === '%') return r !== 0 ? l % r : 0;
+            if (op === '>') return l > r ? 1 : 0; if (op === '<') return l < r ? 1 : 0; if (op === '>=') return l >= r ? 1 : 0; if (op === '<=') return l <= r ? 1 : 0;
+            if (op === '==') return l == r ? 1 : 0; if (op === '!=') return l != r ? 1 : 0;
+            if (op === '&&') return (l && r) ? 1 : 0; if (op === '||') return (l || r) ? 1 : 0;
+            return 0;
+        }
+
+        if (node.nodeType === 'ArrayInitializer') {
+            return node.children.map((c: any) => this.evalExpr(c));
+        }
+
+        if (node.nodeType === 'SubscriptExpression') {
+            const arr = this.evalExpr(node.children[0]);
+            const idx = this.evalExpr(node.children[1]);
+            if (Array.isArray(arr)) return arr[idx] ?? 0;
             return 0;
         }
 
         if (node.nodeType === 'CallExpression') {
-            if (node.attributes.callee === 'servo') {
+            const callee = node.attributes.callee;
+            if (callee === 'Pin' || callee === 'machine.Pin') {
+                return this.evalExpr(node.children[0]);
+            }
+            if (callee === 'servo') {
                 const pin = this.evalExpr(node.children[0]);
                 const angle = this.evalExpr(node.children[1]);
                 this.pins.set(pin, angle);
@@ -219,6 +365,20 @@ export class SimulatorInterpreter {
                 const pin = this.evalExpr(node.children[0]);
                 this.tones.delete(pin);
                 return 0;
+            }
+            if (node.attributes.callee === 'reversed') {
+                const arr = this.evalExpr(node.children[0]);
+                if (Array.isArray(arr)) return [...arr].reverse();
+                return [];
+            }
+            if (node.attributes.callee === 'sizeof') {
+                const val = this.evalExpr(node.children[0]);
+                if (Array.isArray(val)) return val.length * 4;
+                return 4; // Assume 4 bytes for others (int/float)
+            }
+            if (node.attributes.callee === 'len') {
+                const arr = this.evalExpr(node.children[0]);
+                return Array.isArray(arr) ? arr.length : 0;
             }
             if (node.attributes.callee === 'dht.readTemp') return this.dht.temp;
             if (node.attributes.callee === 'dht.readHum') return this.dht.hum;
@@ -323,6 +483,40 @@ export class SimulatorInterpreter {
 
         if (node.nodeType === 'AnalogRead') return this.pins.get(this.evalExpr(node.children[0])) || 0;
         if (node.nodeType === 'GpioRead') return this.pins.get(this.evalExpr(node.children[0])) || 0;
+        if (node.nodeType === 'GpioSet') { this.pins.set(this.evalExpr(node.children[0]), this.evalExpr(node.children[1])); return 0; }
+        if (node.nodeType === 'DelayMs') { return 0; } // Delay handled by generator/yield in runStmt
+        if (node.nodeType === 'Print') { this.logs.push(String(this.evalExpr(node.children[0]))); return 0; }
+        if (node.nodeType === 'LcdPrint') {
+            const str = String(this.evalExpr(node.children[0]));
+            const line = this.lcd.lines[this.lcd.cy].split('');
+            for (let i = 0; i < str.length; i++) {
+                if (this.lcd.cx < 16) line[this.lcd.cx++] = str[i];
+            }
+            this.lcd.lines[this.lcd.cy] = line.join('');
+            return 0;
+        }
+        if (node.nodeType === 'LcdClear') { this.lcd = { lines: ["                ", "                "], cx: 0, cy: 0 }; return 0; }
+        if (node.nodeType === 'LcdCursor') { this.lcd.cx = Math.min(15, this.evalExpr(node.children[0])); this.lcd.cy = Math.min(1, this.evalExpr(node.children[1])); return 0; }
+        if (node.nodeType === 'OledClear') { this.oledBuffer.fill(0); return 0; }
+        if (node.nodeType === 'OledText') {
+            (this.oledBuffer as any).lastText = {
+                text: this.evalExpr(node.children[0]),
+                x: this.evalExpr(node.children[1]),
+                y: this.evalExpr(node.children[2]),
+                c: this.evalExpr(node.children[3])
+            };
+            return 0;
+        }
+        if (node.nodeType === 'OledShow') {
+            this.oledPending = new Uint8Array(this.oledBuffer);
+            (this.oledPending as any).lastText = (this.oledBuffer as any).lastText;
+            return 0;
+        }
+        if (node.nodeType === 'SevSegPrint') {
+            const val = this.evalExpr(node.children[0]);
+            this.sevSegValue = String(val).substring(0, 4).padStart(4, ' ');
+            return 0;
+        }
         return 0;
     }
     setPinInput(pin: number, val: number) { this.pins.set(pin, val); }
