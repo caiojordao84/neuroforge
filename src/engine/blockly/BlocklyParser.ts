@@ -72,6 +72,22 @@ export class BlocklyParser {
             };
         }
 
+        // nf_main: bloco contentor para targets não-Arduino (plain C, plain Rust, Python standalone).
+        // Gera Function(name:'main') — os generators detectam este nome e emitem a assinatura correta:
+        //   C        → int main() { ... return 0; }
+        //   Python   → def main(): ... if __name__ == '__main__': main()
+        //   Rust     → fn main() { ... }  (sem no_std/no_main)
+        if (type === 'nf_main') {
+            const children: BaseNode[] = [];
+            const doStmt = block.querySelector('statement[name="DO"] > block');
+            if (doStmt) this.processBlockChain(doStmt, children, setupList);
+            return {
+                nodeType: 'Function', id: 'b',
+                attributes: { name: 'main' },
+                children
+            };
+        }
+
         // Variables
         if (type === 'variables_set') {
             const name = this.getF(block, 'VAR') || 'i';
