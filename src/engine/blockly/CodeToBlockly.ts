@@ -3,23 +3,35 @@ export class CodeToBlockly {
     generate(ast: ProgramNode): string {
         let xml = '<xml xmlns="https://developers.google.com/blockly/xml">';
 
-        // Process all children. If it's a function named 'setup' or 'loop', process its body.
-        // Otherwise, process the node itself.
+        // Separa os nós em três categorias:
+        //   setupBody  → Function(name:'setup') → emitido como <block type="nf_setup">
+        //   loopBody   → Function(name:'loop')  → emitido como <block type="nf_loop">
+        //   nodesToProcess → globals e outros nós top-level inline
+        // Ordem de emissão: nf_setup → globals → nf_loop
         const nodesToProcess: BaseNode[] = [];
+        let setupBody: BaseNode[] | null = null;
         let loopBody: BaseNode[] | null = null;
 
         ast.children.forEach(child => {
             if (child.nodeType === 'Function') {
                 if (child.attributes.name === 'setup') {
-                    nodesToProcess.push(...child.children);
+                    setupBody = child.children;
                 } else if (child.attributes.name === 'loop') {
                     loopBody = child.children;
                 }
+                // outras funções auxiliares: ignoradas no round-trip por agora
             } else {
                 nodesToProcess.push(child);
             }
         });
 
+        // Emit nf_setup wrapping all setup children
+        if (setupBody && (setupBody as BaseNode[]).length > 0) {
+            const setupStatements = this.processStatementList(setupBody as BaseNode[]);
+            xml += `<block type="nf_setup"><statement name="DO">${setupStatements}</statement></block>`;
+        }
+
+        // Emit inline nodes (globals, etc. que não são setup/loop)
         if (nodesToProcess.length > 0) {
             xml += this.processStatementList(nodesToProcess);
         }
@@ -28,10 +40,8 @@ export class CodeToBlockly {
             const loopStatements = this.processStatementList(loopBody);
             const loopXml = `<block type="nf_loop"><statement name="DO">${loopStatements}</statement></block>`;
 
-            // Append the loop block. If there were other blocks, find insertion point or just append.
-            // Usually we want it chained or as a top level. Chaining it to the last block of nodesToProcess:
-            if (nodesToProcess.length > 0) {
-                // Find the insertion point in the existing XML
+            // Append the loop block after setup/globals, chaining if needed
+            if (setupBody !== null || nodesToProcess.length > 0) {
                 const lastIdx = xml.lastIndexOf('</block>');
                 if (lastIdx !== -1) {
                     xml = xml.substring(0, lastIdx) + `<next>${loopXml}</next>` + xml.substring(lastIdx);
@@ -159,13 +169,15 @@ export class CodeToBlockly {
             return block;
         }
 
-        // WhileLoop -> controls_whileUntil (or nf_loop if infinite)
+        // WhileLoop -> controls_whileUntil (nf_loop é agora sempre Function no AST,
+        // este case cobre apenas while normais vindos do código textual)
         if (node.nodeType === 'WhileLoop') {
             const cond = node.children[0];
             const body = node.children.slice(1);
             const isInfinite = node.attributes.isInfinite || (cond.nodeType === 'Literal' && (cond.attributes.value === 1 || cond.attributes.value === true));
 
             if (isInfinite) {
+                // while(1) vindo de código textual (não de nf_loop) → nf_loop block
                 const statementsXml = this.chainNodes(body);
                 let block = `<block type="nf_loop">`;
                 if (statementsXml) block += `<statement name="DO">${statementsXml}</statement>`;
