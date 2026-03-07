@@ -38,8 +38,9 @@ export class CGenerator {
         // Check if the AST already has explicit setup/loop functions
         const hasSetupFn = finalNodes.some(n => n.nodeType === 'Function' && n.attributes.name === 'setup');
         const hasLoopFn = finalNodes.some(n => n.nodeType === 'Function' && n.attributes.name === 'loop');
+        const hasMainFn = finalNodes.some(n => n.nodeType === 'Function' && n.attributes.name === 'main');
 
-        if (hasSetupFn || hasLoopFn) {
+        if (hasSetupFn || hasLoopFn || hasMainFn) {
             // Already structured as Arduino — emit as-is
             finalNodes.forEach(node => {
                 if (node.nodeType === 'VariableDeclaration') {
@@ -48,9 +49,18 @@ export class CGenerator {
                     const name = node.attributes.name;
                     const comments = this.printComments(node);
                     if (comments) this.addLn(lines, comments, null);
-                    this.addLn(lines, `void ${name}() {`, node);
-                    node.children.forEach(c => this.genStmt(c, lines, "  "));
-                    this.addLn(lines, "}", node);
+
+                    if (name === 'main') {
+                        // C standalone — não Arduino
+                        this.addLn(lines, `int main() {`, node);
+                        node.children.forEach(c => this.genStmt(c, lines, '  '));
+                        this.addLn(lines, '  return 0;', null);
+                        this.addLn(lines, `}`, node);
+                    } else {
+                        this.addLn(lines, `void ${name}() {`, node);
+                        node.children.forEach(c => this.genStmt(c, lines, "  "));
+                        this.addLn(lines, "}", node);
+                    }
                     this.addLn(lines, "", null);
                 } else {
                     this.genStmt(node, lines, "");

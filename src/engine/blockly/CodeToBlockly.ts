@@ -6,11 +6,13 @@ export class CodeToBlockly {
         // Separa os nós em três categorias:
         //   setupBody  → Function(name:'setup') → emitido como <block type="nf_setup">
         //   loopBody   → Function(name:'loop')  → emitido como <block type="nf_loop">
+        //   mainBody   → Function(name:'main')  → emitido como <block type="nf_main">
         //   nodesToProcess → globals e outros nós top-level inline
         // Ordem de emissão: nf_setup → globals → nf_loop
         const nodesToProcess: BaseNode[] = [];
         let setupBody: BaseNode[] | null = null;
         let loopBody: BaseNode[] | null = null;
+        let mainBody: BaseNode[] | null = null;
 
         ast.children.forEach(child => {
             if (child.nodeType === 'Function') {
@@ -18,6 +20,8 @@ export class CodeToBlockly {
                     setupBody = child.children;
                 } else if (child.attributes.name === 'loop') {
                     loopBody = child.children;
+                } else if (child.attributes.name === 'main') {
+                    mainBody = child.children;
                 }
                 // outras funções auxiliares: ignoradas no round-trip por agora
             } else {
@@ -50,6 +54,23 @@ export class CodeToBlockly {
                 }
             } else {
                 xml += loopXml;
+            }
+        }
+
+        // Emit nf_main wrapping main function body
+        if (mainBody && (mainBody as BaseNode[]).length > 0) {
+            const mainStatements = this.processStatementList(mainBody as BaseNode[]);
+            const mainXml = `<block type="nf_main"><statement name="DO">${mainStatements}</statement></block>`;
+
+            if (setupBody !== null || loopBody !== null || nodesToProcess.length > 0) {
+                const lastIdx = xml.lastIndexOf('</block>');
+                if (lastIdx !== -1) {
+                    xml = xml.substring(0, lastIdx) + `<next>${mainXml}</next>` + xml.substring(lastIdx);
+                } else {
+                    xml += mainXml;
+                }
+            } else {
+                xml += mainXml;
             }
         }
 

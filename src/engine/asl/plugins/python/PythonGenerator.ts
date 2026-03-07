@@ -69,6 +69,7 @@ export class PythonGenerator {
         const finalNodes = ast.children;
         const setup = finalNodes.find(c => c.attributes.name === 'setup');
         const loops = finalNodes.find(c => c.attributes.name === 'loop');
+        const mainFn = finalNodes.find(c => c.nodeType === 'Function' && c.attributes.name === 'main');
         const globals = finalNodes.filter(c => c.nodeType === 'VariableDeclaration');
 
         // Globals and non-loop code
@@ -84,26 +85,43 @@ export class PythonGenerator {
             }
         });
 
-        globals.forEach(g => this.genStmt(g, '', output));
+        // Handle main function (standalone Python)
+        if (mainFn) {
+            // Standalone main — não Arduino/MicroPython
+            globals.forEach(g => this.genStmt(g, '', output));
+            this.addLn(output, '', null);
+            this.addLn(output, 'def main():', null);
+            if (mainFn.children.length === 0) {
+                this.addLn(output, '    pass', null);
+            } else {
+                mainFn.children.forEach(s => this.genStmt(s, '    ', output));
+            }
+            this.addLn(output, '', null);
+            this.addLn(output, "if __name__ == '__main__':", null);
+            this.addLn(output, '    main()', null);
+        } else {
+            // Arduino/MicroPython path: setup + loop
+            globals.forEach(g => this.genStmt(g, '', output));
 
-        if (setup) {
-            setup.children.forEach(s => this.genStmt(s, '', output));
-        }
-        setupBody.forEach(s => this.genStmt(s, '', output));
+            if (setup) {
+                setup.children.forEach(s => this.genStmt(s, '', output));
+            }
+            setupBody.forEach(s => this.genStmt(s, '', output));
 
-        this.addLn(output, '', null);
-        this.addLn(output, 'while True:', null);
+            this.addLn(output, '', null);
+            this.addLn(output, 'while True:', null);
 
-        if (loops && loops.children.length > 0) {
-            loops.children.forEach(s => this.genStmt(s, '    ', output));
-        }
+            if (loops && loops.children.length > 0) {
+                loops.children.forEach(s => this.genStmt(s, '    ', output));
+            }
 
-        if (loopBodies.length > 0) {
-            loopBodies.forEach(s => this.genStmt(s, '    ', output));
-        }
+            if (loopBodies.length > 0) {
+                loopBodies.forEach(s => this.genStmt(s, '    ', output));
+            }
 
-        if (!(loops && loops.children.length > 0) && loopBodies.length === 0) {
-            this.addLn(output, this.flavor === 'MICROPYTHON' ? '    time.sleep_ms(100)' : '    time.sleep(0.1)', null);
+            if (!(loops && loops.children.length > 0) && loopBodies.length === 0) {
+                this.addLn(output, this.flavor === 'MICROPYTHON' ? '    time.sleep_ms(100)' : '    time.sleep(0.1)', null);
+            }
         }
 
         return { code: output.join('\n'), map: this.sourceMap };

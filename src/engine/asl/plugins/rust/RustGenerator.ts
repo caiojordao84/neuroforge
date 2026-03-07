@@ -21,12 +21,24 @@ export class RustGenerator {
         // First pass to detect shims
         this.scanForShims(ast);
 
-        this.addLn(lines, "// Generated Rust Code", null);
-        this.addLn(lines, "#![no_std]", null);
-        this.addLn(lines, "#![no_main]", null);
-        this.addLn(lines, "", null);
-        this.addLn(lines, "use esp_hal::prelude::*;", null);
-        this.addLn(lines, "", null);
+        const funcs = ast.children.filter(c => c.nodeType === 'Function');
+        const topLevel = ast.children.filter(c => c.nodeType !== 'Function');
+        const setup = funcs.find(f => f.attributes.name === 'setup');
+        const loop_ = funcs.find(f => f.attributes.name === 'loop');
+        const mainFn = funcs.find(f => f.attributes.name === 'main');
+        const isEmbassy = !!(setup || loop_);
+
+        // Headers - only for Embassy boards
+        if (isEmbassy) {
+            this.addLn(lines, "// Generated Rust Code", null);
+            this.addLn(lines, "#![no_std]", null);
+            this.addLn(lines, "#![no_main]", null);
+            this.addLn(lines, "", null);
+            this.addLn(lines, "use esp_hal::prelude::*;", null);
+            this.addLn(lines, "", null);
+        } else {
+            this.addLn(lines, "// Generated Rust Code", null);
+        }
 
         // --- INJECT SHIMS ---
         const shimCode = this.shims.getRequiredShimsCode();
@@ -35,16 +47,12 @@ export class RustGenerator {
             this.addLn(lines, "", null);
         }
 
-        const funcs = ast.children.filter(c => c.nodeType === 'Function');
-        const topLevel = ast.children.filter(c => c.nodeType !== 'Function');
-        const setup = funcs.find(f => f.attributes.name === 'setup');
-        const loop_ = funcs.find(f => f.attributes.name === 'loop');
-
         // Emit top-level declarations (structs, enums) before functions
         topLevel.forEach(c => this.genStmt(c, lines, ""));
         if (topLevel.length > 0) this.addLn(lines, "", null);
 
         if (setup || loop_) {
+            // Embassy path
             this.addLn(lines, "#[entry]", null);
             this.addLn(lines, "fn main() -> ! {", null);
             this.addLn(lines, "    let peripherals = Peripherals::take();", null);
@@ -67,7 +75,14 @@ export class RustGenerator {
             }
             this.addLn(lines, "    }", null);
             this.addLn(lines, "}", null);
+        } else if (mainFn) {
+            // Standalone fn main()
+            this.printComments(mainFn, lines, '');
+            this.addLn(lines, 'fn main() {', mainFn);
+            mainFn.children.forEach(c => this.genStmt(c, lines, '    '));
+            this.addLn(lines, '}', mainFn);
         } else {
+            // helper functions without main/setup/loop
             funcs.forEach(f => {
                 this.printComments(f, lines, "");
                 this.addLn(lines, `fn ${f.attributes.name}() {`, f);
