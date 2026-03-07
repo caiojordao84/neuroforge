@@ -1,4 +1,3 @@
-
 import type { ProgramNode, BaseNode } from '@/system/types';
 import type { Node, Edge } from '@xyflow/react';
 import { CfgBuilder, CfgBlock } from './CfgBuilder';
@@ -35,11 +34,29 @@ export class FlowToAst {
         const program: ProgramNode = { nodeType: 'Program', id: 'root', attributes: {}, children: [] };
 
         // Setup Function
+        // Recolhe APENAS os nós 'setup' explícitos do grafo de Flow.
+        // SEM injeção automática de Serial.begin, WiFi.begin ou qualquer outro
+        // init de plataforma — o utilizador controla 100% o conteúdo do setup.
+        //
+        // TODO (Fase 3 — BoardProfile): antes de setupNodes, injetar:
+        //   BoardProfile.getSetupNodes(boardId)
+        //   Ex: Arduino   → Serial.begin(9600)
+        //       ESP32     → WiFi.begin(ssid, pass)
+        //       S7-1200   → OB100 startup block (sem serial)
+        //       PLC RS485 → ModbusTCP.begin(ip, port)
+        const setupNodes: BaseNode[] = [];
+        builder.blocks.forEach(b => {
+            if (b.type === 'setup') {
+                const content = b.data.code
+                    ? this.parseExplicitCode(b.data.code)
+                    : this.parseSimpleCommand(b.data.label || '');
+                if (content) setupNodes.push(content);
+            }
+        });
+
         const setup: BaseNode = {
             nodeType: 'Function', id: 'setup', attributes: { name: 'setup' },
-            children: [
-                { nodeType: 'CallExpression', id: 's1', attributes: { callee: 'Serial.begin' }, children: [{ nodeType: 'Literal', id: 'l1', attributes: { value: 115200 }, children: [] }] }
-            ]
+            children: setupNodes
         };
 
         // Loop Function
@@ -355,6 +372,11 @@ export class FlowToAst {
     private parseBlockContent(block: CfgBlock): BaseNode | null {
         const { type, data } = block;
 
+        // Nós 'setup' são recolhidos em generate() e não devem aparecer no loop.
+        if (type === 'setup') {
+            return null;
+        }
+
         // --- Ladder Logic Mapping (Function Blocks) ---
 
         // Coils
@@ -648,7 +670,7 @@ export class FlowToAst {
                 attributes: { operator: map[op] || '==' },
                 children: [
                     { nodeType: 'Identifier', id: 'a', attributes: { name: a }, children: [] },
-                    { nodeType: 'Identifier', id: 'b', attributes: { name: b }, children: [] } // Assuming identifiers/literals
+                    { nodeType: 'Identifier', id: 'b', attributes: { name: b }, children: [] }
                 ]
             };
         }
@@ -678,6 +700,174 @@ export class FlowToAst {
                 return { nodeType: 'DelayMs', id: 'gen', attributes: {}, children: [{ nodeType: 'Literal', id: 'l', attributes: { value: parseInt(args[1]) }, children: [] }] };
             }
         }
+
+        // --- S5: analogWrite(pin, val) ---
+        if (code.startsWith('analogWrite')) {
+            const m = code.match(/\(([^,]+),([^)]+)\)/);
+            if (m) {
+                const pinV = m[1].trim();
+                const valV = m[2].trim();
+                return {
+                    nodeType: 'AnalogWrite', id: 'gen', attributes: {},
+                    children: [
+                        isNaN(Number(pinV))
+                            ? { nodeType: 'Identifier', id: 'p', attributes: { name: pinV }, children: [] }
+                            : { nodeType: 'Literal', id: 'p', attributes: { value: parseInt(pinV) }, children: [] },
+                        isNaN(Number(valV))
+                            ? { nodeType: 'Identifier', id: 'v', attributes: { name: valV }, children: [] }
+                            : { nodeType: 'Literal', id: 'v', attributes: { value: parseInt(valV) }, children: [] }
+                    ]
+                };
+            }
+        }
+
+        // --- S5: pinMode(pin, MODE) ---
+        if (code.startsWith('pinMode')) {
+            const m = code.match(/\(([^,]+),([^)]+)\)/);
+            if (m) {
+                const pinV = m[1].trim();
+                const modeV = m[2].trim().replace(/['"]/g, '');
+                return {
+                    nodeType: 'CallExpression', id: 'gen', attributes: { callee: 'pinMode' },
+                    children: [
+                        isNaN(Number(pinV))
+                            ? { nodeType: 'Identifier', id: 'p', attributes: { name: pinV }, children: [] }
+                            : { nodeType: 'Literal', id: 'p', attributes: { value: parseInt(pinV) }, children: [] },
+                        { nodeType: 'Literal', id: 'm', attributes: { value: modeV, isString: true }, children: [] }
+                    ]
+                };
+            }
+        }
+
+        // --- S5: Serial.begin(baud) ---
+        if (code.startsWith('Serial.begin')) {
+            const m = code.match(/\(([^)]+)\)/);
+            if (m) {
+                return {
+                    nodeType: 'CallExpression', id: 'gen', attributes: { callee: 'Serial.begin' },
+                    children: [{ nodeType: 'Literal', id: 'l', attributes: { value: parseInt(m[1]) || 9600 }, children: [] }]
+                };
+            }
+        }
+
+        // --- S5: Serial.print(x) ---
+        if (code.startsWith('Serial.print')) {
+            const m = code.match(/\((.*)\)/);
+            if (m) {
+                const raw = m[1].trim().replace(/^["']|["']$/g, '');
+                return {
+                    nodeType: 'Print', id: 'gen', attributes: {},
+                    children: [{ nodeType: 'Literal', id: 'l', attributes: { value: raw, isString: true }, children: [] }]
+                };
+            }
+        }
+
+        // --- S5: delayMicroseconds(us) ---
+        if (code.startsWith('delayMicroseconds')) {
+            const m = code.match(/\(([^)]+)\)/);
+            if (m) {
+                return {
+                    nodeType: 'CallExpression', id: 'gen', attributes: { callee: 'delayMicroseconds' },
+                    children: [{ nodeType: 'Literal', id: 'l', attributes: { value: parseInt(m[1]) || 0 }, children: [] }]
+                };
+            }
+        }
+
+        // --- S5: servo.write(pin, angle) ---
+        if (/^servo\.write|^Servo\.write/i.test(code)) {
+            const m = code.match(/\(([^)]+)\)/);
+            if (m) {
+                const parts = m[1].split(',').map(s => s.trim());
+                const pin = parts.length > 1 ? (parseInt(parts[0]) || 0) : 0;
+                const angle = parts.length > 1 ? (parseInt(parts[1]) || 90) : (parseInt(parts[0]) || 90);
+                return {
+                    nodeType: 'CallExpression', id: 'gen', attributes: { callee: 'servo' },
+                    children: [
+                        { nodeType: 'Literal', id: 'p', attributes: { value: pin }, children: [] },
+                        { nodeType: 'Literal', id: 'a', attributes: { value: angle }, children: [] }
+                    ]
+                };
+            }
+        }
+
+        // --- S5: tone(pin, freq, dur) ---
+        if (code.startsWith('tone(')) {
+            const m = code.match(/\(([^)]+)\)/);
+            if (m) {
+                const parts = m[1].split(',').map(s => s.trim());
+                return {
+                    nodeType: 'CallExpression', id: 'gen', attributes: { callee: 'tone' },
+                    children: [
+                        { nodeType: 'Literal', id: 'p', attributes: { value: parseInt(parts[0]) || 0 }, children: [] },
+                        { nodeType: 'Literal', id: 'f', attributes: { value: parseInt(parts[1]) || 440 }, children: [] },
+                        { nodeType: 'Literal', id: 'd', attributes: { value: parseInt(parts[2]) || 500 }, children: [] }
+                    ]
+                };
+            }
+        }
+
+        // --- S5: noTone(pin) ---
+        if (code.startsWith('noTone(')) {
+            const m = code.match(/\(([^)]*)\)/);
+            if (m) {
+                return {
+                    nodeType: 'CallExpression', id: 'gen', attributes: { callee: 'noTone' },
+                    children: [{ nodeType: 'Literal', id: 'p', attributes: { value: parseInt(m[1]) || 0 }, children: [] }]
+                };
+            }
+        }
+
+        // --- S5: lcd.print(text) ---
+        if (/^lcd\.print/i.test(code)) {
+            const m = code.match(/\((.*)\)/);
+            if (m) {
+                return {
+                    nodeType: 'LcdPrint', id: 'gen', attributes: {},
+                    children: [{ nodeType: 'Literal', id: 'l', attributes: { value: m[1].replace(/^["']|["']$/g, ''), isString: true }, children: [] }]
+                };
+            }
+        }
+
+        // --- S5: lcd.clear() ---
+        if (/^lcd\.clear\(\)/i.test(code)) {
+            return { nodeType: 'LcdClear', id: 'gen', attributes: {}, children: [] };
+        }
+
+        // --- S5: lcd.setCursor(col, row) ---
+        if (/^lcd\.setCursor/i.test(code)) {
+            const m = code.match(/\(([^,]+),([^)]+)\)/);
+            if (m) {
+                return {
+                    nodeType: 'LcdCursor', id: 'gen', attributes: {},
+                    children: [
+                        { nodeType: 'Literal', id: 'c', attributes: { value: parseInt(m[1]) || 0 }, children: [] },
+                        { nodeType: 'Literal', id: 'r', attributes: { value: parseInt(m[2]) || 0 }, children: [] }
+                    ]
+                };
+            }
+        }
+
+        // --- S5: oled.print(text, x, y, size?) ---
+        if (/^oled\.print/i.test(code)) {
+            const m = code.match(/\(([^)]+)\)/);
+            if (m) {
+                const parts = m[1].split(',').map(s => s.trim());
+                return {
+                    nodeType: 'OledText', id: 'gen', attributes: {},
+                    children: [
+                        { nodeType: 'Literal', id: 'l', attributes: { value: parts[0]?.replace(/^["']|["']$/g, '') || '', isString: true }, children: [] },
+                        { nodeType: 'Literal', id: 'x', attributes: { value: parseInt(parts[1]) || 0 }, children: [] },
+                        { nodeType: 'Literal', id: 'y', attributes: { value: parseInt(parts[2]) || 0 }, children: [] },
+                        { nodeType: 'Literal', id: 's', attributes: { value: parseInt(parts[3]) || 1 }, children: [] }
+                    ]
+                };
+            }
+        }
+
+        // --- S5: oled.show() / oled.clear() ---
+        if (/^oled\.show\(\)/i.test(code)) return { nodeType: 'OledShow', id: 'gen', attributes: {}, children: [] };
+        if (/^oled\.clear\(\)/i.test(code)) return { nodeType: 'OledClear', id: 'gen', attributes: {}, children: [] };
+
         // Fallback: Raw Code Expression (e.g., "x = x + 1")
         return this.raw(code);
     }

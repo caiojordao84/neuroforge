@@ -8,10 +8,24 @@ export class BlocklyParser {
         const xmlDoc = parser.parseFromString(xmlText, "text/xml");
         const program: ProgramNode = { nodeType: 'Program', id: 'root', attributes: {}, children: [] };
 
-        const topBlocks = Array.from(xmlDoc.documentElement.children).filter(el => el.tagName.toLowerCase() === 'block');
-        if (topBlocks.length > 0) {
-            this.processBlockChain(topBlocks[0], program.children, []);
+        // Processa TODOS os top-level blocks de forma independente.
+        // Antes: só topBlocks[0] era processado (chain); agora cada bloco de topo
+        // (nf_setup, nf_loop, variáveis globais, etc.) é tratado separadamente,
+        // permitindo nf_setup e nf_loop coexistirem como blocos raiz distintos.
+        // TODO (Fase 3): BoardProfile.getSetupNodes(boardId) será injetado em
+        //   Function(name:'setup') antes dos nodes do utilizador. Ex.:
+        //   Arduino  → Serial.begin(9600)
+        //   ESP32    → WiFi.begin(ssid, pass)
+        //   S7-1200  → OB100 startup block (sem serial)
+        //   PLC RS485→ ModbusTCP.begin(ip, port)
+        const topBlocks = Array.from(xmlDoc.documentElement.children)
+            .filter(el => el.tagName.toLowerCase() === 'block');
+
+        for (const topBlock of topBlocks) {
+            const node = this.createNode(topBlock, []);
+            if (node) program.children.push(node);
         }
+
         return program;
     }
 
@@ -27,6 +41,20 @@ export class BlocklyParser {
 
     private createNode(block: Element, setupList: BaseNode[]): BaseNode | null {
         const type = block.getAttribute('type');
+
+        // nf_setup: bloco contentor de setup. Gera Function(name:'setup') com os blocos
+        // filhos dentro do slot DO. Sem injeção automática de Serial.begin ou
+        // qualquer outro init — o utilizador controla 100% o conteúdo.
+        if (type === 'nf_setup') {
+            const children: BaseNode[] = [];
+            const doStmt = block.querySelector('statement[name="DO"] > block');
+            if (doStmt) this.processBlockChain(doStmt, children, setupList);
+            return {
+                nodeType: 'Function', id: 'b',
+                attributes: { name: 'setup' },
+                children
+            };
+        }
 
         // Variables
         if (type === 'variables_set') {
@@ -54,7 +82,8 @@ export class BlocklyParser {
             const doStmt = block.querySelector('statement[name="DO0"] > block');
             const children: BaseNode[] = [];
             if (doStmt) this.processBlockChain(doStmt, children, setupList);
-            return { nodeType: 'IfStatement', id: 'b', attributes: {}, children: [cond, ...children] };
+            const thenBlock: BaseNode = { nodeType: 'Block', id: 'b', attributes: {}, children };
+            return { nodeType: 'IfStatement', id: 'b', attributes: {}, children: [cond, thenBlock] };
         }
         if (type === 'controls_whileUntil' || type === 'nf_loop') {
             const children: BaseNode[] = [];
@@ -68,7 +97,8 @@ export class BlocklyParser {
                 const doStmt = block.querySelector('statement[name="DO"] > block');
                 if (doStmt) this.processBlockChain(doStmt, children, setupList);
             }
-            return { nodeType: 'WhileLoop', id: 'b', attributes: { isInfinite: type === 'nf_loop' }, children: [cond, ...children] };
+            const bodyBlock: BaseNode = { nodeType: 'Block', id: 'b', attributes: {}, children };
+            return { nodeType: 'WhileLoop', id: 'b', attributes: { isInfinite: type === 'nf_loop' }, children: [cond, bodyBlock] };
         }
         if (type === 'controls_for') {
             const varName = this.getF(block, 'VAR') || 'i';
@@ -88,7 +118,8 @@ export class BlocklyParser {
             // Update: i++
             const update: BaseNode = { nodeType: 'UnaryExpression', id: 'upd', attributes: { operator: '++', prefix: false }, children: [{ nodeType: 'Identifier', id: 'i', attributes: { name: varName }, children: [] }] };
 
-            return { nodeType: 'ForLoop', id: 'b', attributes: { hasInit: true, hasUpdate: true }, children: [init, cond, update, ...body] };
+            const bodyBlock: BaseNode = { nodeType: 'Block', id: 'b', attributes: {}, children: body };
+            return { nodeType: 'ForLoop', id: 'b', attributes: { hasInit: true, hasUpdate: true }, children: [init, cond, update, bodyBlock] };
         }
         if (type === 'controls_forEach') {
             const varName = this.getF(block, 'VAR') || 'i';
@@ -96,9 +127,10 @@ export class BlocklyParser {
             const doStmt = block.querySelector('statement[name="DO"] > block');
             const body: BaseNode[] = [];
             if (doStmt) this.processBlockChain(doStmt, body, setupList);
+            const bodyBlock: BaseNode = { nodeType: 'Block', id: 'b', attributes: {}, children: body };
             return {
                 nodeType: 'ForIn', id: 'b', attributes: { varName },
-                children: [iterable, ...body]
+                children: [iterable, bodyBlock]
             };
         }
 
@@ -203,6 +235,77 @@ export class BlocklyParser {
             const content = this.getF(block, 'CONTENT');
             return { nodeType: 'CallExpression', id: 'b', attributes: { callee: 'INTERNAL_WRITE_FILE' }, children: [this.lit(path, true), this.lit(mode, true), this.lit(content, true)] };
         }
+
+        // --- S5: Break / Continue ---
+        if (type === 'controls_flow_statements') {
+            const flow = this.getF(block, 'FLOW');
+            if (flow === 'BREAK') return { nodeType: 'BreakStatement', id: 'b', attributes: {}, children: [] };
+            if (flow === 'CONTINUE') return { nodeType: 'ContinueStatement', id: 'b', attributes: {}, children: [] };
+            return null;
+        }
+
+        // --- S5: AnalogWrite / PWM ---
+        if (type === 'nf_analog_write') {
+            const pinVal = this.getF(block, 'PIN') || '0';
+            const pwmVal = this.parseVal(block, 'VALUE');
+            const isNum = /^\d+$/.test(pinVal);
+            const pinNode = (isNum
+                ? this.lit(pinVal)
+                : { nodeType: 'Identifier', id: 'i', attributes: { name: pinVal }, children: [] }
+            ) as BaseNode;
+            return { nodeType: 'AnalogWrite', id: 'b', attributes: {}, children: [pinNode, pwmVal] };
+        }
+
+        // --- S5: pinMode ---
+        if (type === 'nf_pinmode') {
+            const pinVal = this.getF(block, 'PIN') || '0';
+            const mode = this.getF(block, 'MODE') || 'OUTPUT';
+            const isNum = /^\d+$/.test(pinVal);
+            const pinNode = (isNum
+                ? this.lit(pinVal)
+                : { nodeType: 'Identifier', id: 'i', attributes: { name: pinVal }, children: [] }
+            ) as BaseNode;
+            return { nodeType: 'CallExpression', id: 'b', attributes: { callee: 'pinMode' }, children: [pinNode, this.lit(mode, true)] };
+        }
+
+        // --- S5: Serial ---
+        if (type === 'nf_serial_begin') {
+            const baud = this.getF(block, 'BAUD') || '9600';
+            return { nodeType: 'CallExpression', id: 'b', attributes: { callee: 'Serial.begin' }, children: [this.lit(parseInt(baud) || 9600)] };
+        }
+        if (type === 'nf_serial_print') {
+            const printVal = this.parseVal(block, 'VALUE');
+            return { nodeType: 'Print', id: 'b', attributes: {}, children: [printVal] };
+        }
+        if (type === 'nf_serial_read') {
+            const varName = this.getF(block, 'VAR') || 'serialData';
+            return {
+                nodeType: 'ExpressionStatement', id: 'b', attributes: {},
+                children: [{
+                    nodeType: 'BinaryExpression', id: 'b2', attributes: { operator: '=' },
+                    children: [
+                        { nodeType: 'Identifier', id: 'i', attributes: { name: varName }, children: [] },
+                        { nodeType: 'CallExpression', id: 'c', attributes: { callee: 'Serial.readString' }, children: [] }
+                    ]
+                }]
+            };
+        }
+
+        // --- S5: Timing extras ---
+        if (type === 'nf_delay_us') {
+            const usVal = this.parseVal(block, 'US');
+            return { nodeType: 'CallExpression', id: 'b', attributes: { callee: 'delayMicroseconds' }, children: [usVal] };
+        }
+
+        // --- S5: Arrays ---
+        if (type === 'lists_create_with') {
+            const count = parseInt(block.querySelector('mutation')?.getAttribute('items') || '0');
+            const elements: BaseNode[] = [];
+            for (let i = 0; i < count; i++) {
+                elements.push(this.parseVal(block, `ADD${i}`));
+            }
+            return { nodeType: 'ArrayInitializer', id: 'b', attributes: { length: count }, children: elements };
+        }
         return null;
     }
 
@@ -257,6 +360,49 @@ export class BlocklyParser {
         }
         if (type === 'nf_analog_read') return { nodeType: 'AnalogRead', id: 'b', attributes: {}, children: [this.lit(this.getF(val, 'PIN') || 26)] };
         if (type === 'nf_digital_read') return { nodeType: 'GpioRead', id: 'b', attributes: {}, children: [this.lit(this.getF(val, 'PIN') || 13)] };
+
+        // --- S5: Booleans ---
+        if (type === 'logic_boolean') {
+            const boolStr = this.getF(val, 'BOOL');
+            return this.lit(boolStr === 'TRUE' ? 1 : 0);
+        }
+
+        // --- S5: Logic AND / OR ---
+        if (type === 'logic_operation') {
+            const logicOp = this.getF(val, 'OP') === 'OR' ? '||' : '&&';
+            return {
+                nodeType: 'BinaryExpression', id: 'b', attributes: { operator: logicOp },
+                children: [this.parseVal(val, 'A'), this.parseVal(val, 'B')]
+            };
+        }
+
+        // --- S5: Timing values ---
+        if (type === 'nf_millis') return { nodeType: 'CallExpression', id: 'b', attributes: { callee: 'millis' }, children: [] };
+        if (type === 'nf_micros') return { nodeType: 'CallExpression', id: 'b', attributes: { callee: 'micros' }, children: [] };
+
+        // --- S5: Random ---
+        if (type === 'nf_random') {
+            const rMin = this.parseVal(val, 'MIN');
+            const rMax = this.parseVal(val, 'MAX');
+            return { nodeType: 'CallExpression', id: 'b', attributes: { callee: 'random' }, children: [rMin, rMax] };
+        }
+
+        // --- S5: Serial available (value) ---
+        if (type === 'nf_serial_available') {
+            return { nodeType: 'CallExpression', id: 'b', attributes: { callee: 'Serial.available' }, children: [] };
+        }
+
+        // --- S5: Array index ---
+        if (type === 'lists_getIndex') {
+            const listVal = this.parseVal(val, 'VALUE');
+            const idxVal = this.parseVal(val, 'AT');
+            // Blockly é 1-based; converter para 0-based
+            const zeroIdx: BaseNode = {
+                nodeType: 'BinaryExpression', id: 'bi', attributes: { operator: '-' },
+                children: [idxVal, this.lit(1)]
+            };
+            return { nodeType: 'SubscriptExpression', id: 'b', attributes: {}, children: [listVal, zeroIdx] };
+        }
         return this.lit(0);
     }
     private lit(v: any, isStr = false) { return { nodeType: 'Literal', id: 'l', attributes: { value: v, isString: isStr || typeof v === 'string' }, children: [] } as BaseNode; }
