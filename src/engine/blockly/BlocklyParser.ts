@@ -56,6 +56,22 @@ export class BlocklyParser {
             };
         }
 
+        // nf_loop: bloco contentor de loop. Gera Function(name:'loop') tal como nf_setup
+        // gera Function(name:'setup') — o CGenerator trata ambos no ramo "already structured".
+        // Antes gerava WhileLoop(isInfinite:true), o que causava while(1){} fora de função
+        // quando nf_setup coexistia como top-level block (CGenerator entrava no ramo structured
+        // mas só tratava nós Function, deixando o WhileLoop cair para genStmt no top-level).
+        if (type === 'nf_loop') {
+            const children: BaseNode[] = [];
+            const doStmt = block.querySelector('statement[name="DO"] > block');
+            if (doStmt) this.processBlockChain(doStmt, children, setupList);
+            return {
+                nodeType: 'Function', id: 'b',
+                attributes: { name: 'loop' },
+                children
+            };
+        }
+
         // Variables
         if (type === 'variables_set') {
             const name = this.getF(block, 'VAR') || 'i';
@@ -85,20 +101,13 @@ export class BlocklyParser {
             const thenBlock: BaseNode = { nodeType: 'Block', id: 'b', attributes: {}, children };
             return { nodeType: 'IfStatement', id: 'b', attributes: {}, children: [cond, thenBlock] };
         }
-        if (type === 'controls_whileUntil' || type === 'nf_loop') {
+        if (type === 'controls_whileUntil') {
+            const cond = this.parseVal(block, 'BOOL');
             const children: BaseNode[] = [];
-            let cond: any;
-            if (type === 'nf_loop') {
-                cond = { nodeType: 'Literal', id: 'l', attributes: { value: 1 }, children: [] };
-                const doStmt = block.querySelector('statement[name="DO"] > block');
-                if (doStmt) this.processBlockChain(doStmt, children, setupList);
-            } else {
-                cond = this.parseVal(block, 'BOOL');
-                const doStmt = block.querySelector('statement[name="DO"] > block');
-                if (doStmt) this.processBlockChain(doStmt, children, setupList);
-            }
+            const doStmt = block.querySelector('statement[name="DO"] > block');
+            if (doStmt) this.processBlockChain(doStmt, children, setupList);
             const bodyBlock: BaseNode = { nodeType: 'Block', id: 'b', attributes: {}, children };
-            return { nodeType: 'WhileLoop', id: 'b', attributes: { isInfinite: type === 'nf_loop' }, children: [cond, bodyBlock] };
+            return { nodeType: 'WhileLoop', id: 'b', attributes: { isInfinite: false }, children: [cond, bodyBlock] };
         }
         if (type === 'controls_for') {
             const varName = this.getF(block, 'VAR') || 'i';
