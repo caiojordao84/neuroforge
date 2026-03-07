@@ -54,7 +54,8 @@ export class BlocklyParser {
             const doStmt = block.querySelector('statement[name="DO0"] > block');
             const children: BaseNode[] = [];
             if (doStmt) this.processBlockChain(doStmt, children, setupList);
-            return { nodeType: 'IfStatement', id: 'b', attributes: {}, children: [cond, ...children] };
+            const thenBlock: BaseNode = { nodeType: 'Block', id: 'b', attributes: {}, children };
+            return { nodeType: 'IfStatement', id: 'b', attributes: {}, children: [cond, thenBlock] };
         }
         if (type === 'controls_whileUntil' || type === 'nf_loop') {
             const children: BaseNode[] = [];
@@ -68,7 +69,8 @@ export class BlocklyParser {
                 const doStmt = block.querySelector('statement[name="DO"] > block');
                 if (doStmt) this.processBlockChain(doStmt, children, setupList);
             }
-            return { nodeType: 'WhileLoop', id: 'b', attributes: { isInfinite: type === 'nf_loop' }, children: [cond, ...children] };
+            const bodyBlock: BaseNode = { nodeType: 'Block', id: 'b', attributes: {}, children };
+            return { nodeType: 'WhileLoop', id: 'b', attributes: { isInfinite: type === 'nf_loop' }, children: [cond, bodyBlock] };
         }
         if (type === 'controls_for') {
             const varName = this.getF(block, 'VAR') || 'i';
@@ -88,7 +90,8 @@ export class BlocklyParser {
             // Update: i++
             const update: BaseNode = { nodeType: 'UnaryExpression', id: 'upd', attributes: { operator: '++', prefix: false }, children: [{ nodeType: 'Identifier', id: 'i', attributes: { name: varName }, children: [] }] };
 
-            return { nodeType: 'ForLoop', id: 'b', attributes: { hasInit: true, hasUpdate: true }, children: [init, cond, update, ...body] };
+            const bodyBlock: BaseNode = { nodeType: 'Block', id: 'b', attributes: {}, children: body };
+            return { nodeType: 'ForLoop', id: 'b', attributes: { hasInit: true, hasUpdate: true }, children: [init, cond, update, bodyBlock] };
         }
         if (type === 'controls_forEach') {
             const varName = this.getF(block, 'VAR') || 'i';
@@ -96,9 +99,10 @@ export class BlocklyParser {
             const doStmt = block.querySelector('statement[name="DO"] > block');
             const body: BaseNode[] = [];
             if (doStmt) this.processBlockChain(doStmt, body, setupList);
+            const bodyBlock: BaseNode = { nodeType: 'Block', id: 'b', attributes: {}, children: body };
             return {
                 nodeType: 'ForIn', id: 'b', attributes: { varName },
-                children: [iterable, ...body]
+                children: [iterable, bodyBlock]
             };
         }
 

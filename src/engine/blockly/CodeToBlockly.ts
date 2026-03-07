@@ -138,20 +138,24 @@ export class CodeToBlockly {
         // IfStatement -> controls_if
         if (node.nodeType === 'IfStatement') {
             const cond = node.children[0];
-            const thenNodes = node.children.slice(1);
-            // Handling else is tricky with simple structure, ignoring else for simple mapping
-            // But logic supports else if passed properly in AST. Current parsers just put all children flat?
-            // Actually parsers flatten if/else children into list? No, children structure is [cond, ...then, ...else]
-            // We need to know where then ends. Current parsers implementation is imperfect for full restoration.
-            // Simplified: Assume all children after 0 are THEN.
+            const thenNode = node.children[1];
+            const elseNode = node.children[2];
 
             const valueXml = this.exprToValue(cond);
-            const statementsXml = this.chainNodes(thenNodes);
+            const statementsXml = thenNode ? (thenNode.nodeType === 'Block' ? this.chainNodes(thenNode.children) : this.nodeToBlock(thenNode)) : '';
 
             let block = `<block type="controls_if">`;
             if (valueXml) block += `<value name="IF0">${valueXml}</value>`;
             if (statementsXml) block += `<statement name="DO0">${statementsXml}</statement>`;
-            block += `</block>`;
+
+            if (elseNode) {
+                // Simplified else: Doesn't handle else-if mutation fully yet, but prevents merging
+                block = block.substring(0, block.length - 8); // remove </block>
+                block += `<mutation else="1"></mutation>`;
+                const elseXml = elseNode.nodeType === 'Block' ? this.chainNodes(elseNode.children) : this.nodeToBlock(elseNode);
+                if (elseXml) block += `<statement name="ELSE">${elseXml}</statement>`;
+                block += `</block>`;
+            }
             return block;
         }
 
@@ -308,6 +312,10 @@ export class CodeToBlockly {
             }
             if (callee === 'oled.show') return `<block type="nf_oled_show"></block>`;
             if (callee === 'oled.clear') return `<block type="nf_oled_clear"></block>`;
+        }
+
+        if (node.nodeType === 'Block') {
+            return this.chainNodes(node.children);
         }
 
         return null;
