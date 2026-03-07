@@ -8,10 +8,24 @@ export class BlocklyParser {
         const xmlDoc = parser.parseFromString(xmlText, "text/xml");
         const program: ProgramNode = { nodeType: 'Program', id: 'root', attributes: {}, children: [] };
 
-        const topBlocks = Array.from(xmlDoc.documentElement.children).filter(el => el.tagName.toLowerCase() === 'block');
-        if (topBlocks.length > 0) {
-            this.processBlockChain(topBlocks[0], program.children, []);
+        // Processa TODOS os top-level blocks de forma independente.
+        // Antes: só topBlocks[0] era processado (chain); agora cada bloco de topo
+        // (nf_setup, nf_loop, variáveis globais, etc.) é tratado separadamente,
+        // permitindo nf_setup e nf_loop coexistirem como blocos raiz distintos.
+        // TODO (Fase 3): BoardProfile.getSetupNodes(boardId) será injetado em
+        //   Function(name:'setup') antes dos nodes do utilizador. Ex.:
+        //   Arduino  → Serial.begin(9600)
+        //   ESP32    → WiFi.begin(ssid, pass)
+        //   S7-1200  → OB100 startup block (sem serial)
+        //   PLC RS485→ ModbusTCP.begin(ip, port)
+        const topBlocks = Array.from(xmlDoc.documentElement.children)
+            .filter(el => el.tagName.toLowerCase() === 'block');
+
+        for (const topBlock of topBlocks) {
+            const node = this.createNode(topBlock, []);
+            if (node) program.children.push(node);
         }
+
         return program;
     }
 
@@ -27,6 +41,20 @@ export class BlocklyParser {
 
     private createNode(block: Element, setupList: BaseNode[]): BaseNode | null {
         const type = block.getAttribute('type');
+
+        // nf_setup: bloco contentor de setup. Gera Function(name:'setup') com os blocos
+        // filhos dentro do slot DO. Sem injeção automática de Serial.begin ou
+        // qualquer outro init — o utilizador controla 100% o conteúdo.
+        if (type === 'nf_setup') {
+            const children: BaseNode[] = [];
+            const doStmt = block.querySelector('statement[name="DO"] > block');
+            if (doStmt) this.processBlockChain(doStmt, children, setupList);
+            return {
+                nodeType: 'Function', id: 'b',
+                attributes: { name: 'setup' },
+                children
+            };
+        }
 
         // Variables
         if (type === 'variables_set') {

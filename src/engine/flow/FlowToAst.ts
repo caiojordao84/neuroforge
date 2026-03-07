@@ -1,4 +1,3 @@
-
 import type { ProgramNode, BaseNode } from '@/system/types';
 import type { Node, Edge } from '@xyflow/react';
 import { CfgBuilder, CfgBlock } from './CfgBuilder';
@@ -35,11 +34,29 @@ export class FlowToAst {
         const program: ProgramNode = { nodeType: 'Program', id: 'root', attributes: {}, children: [] };
 
         // Setup Function
+        // Recolhe APENAS os nós 'setup' explícitos do grafo de Flow.
+        // SEM injeção automática de Serial.begin, WiFi.begin ou qualquer outro
+        // init de plataforma — o utilizador controla 100% o conteúdo do setup.
+        //
+        // TODO (Fase 3 — BoardProfile): antes de setupNodes, injetar:
+        //   BoardProfile.getSetupNodes(boardId)
+        //   Ex: Arduino   → Serial.begin(9600)
+        //       ESP32     → WiFi.begin(ssid, pass)
+        //       S7-1200   → OB100 startup block (sem serial)
+        //       PLC RS485 → ModbusTCP.begin(ip, port)
+        const setupNodes: BaseNode[] = [];
+        builder.blocks.forEach(b => {
+            if (b.type === 'setup') {
+                const content = b.data.code
+                    ? this.parseExplicitCode(b.data.code)
+                    : this.parseSimpleCommand(b.data.label || '');
+                if (content) setupNodes.push(content);
+            }
+        });
+
         const setup: BaseNode = {
             nodeType: 'Function', id: 'setup', attributes: { name: 'setup' },
-            children: [
-                { nodeType: 'CallExpression', id: 's1', attributes: { callee: 'Serial.begin' }, children: [{ nodeType: 'Literal', id: 'l1', attributes: { value: 115200 }, children: [] }] }
-            ]
+            children: setupNodes
         };
 
         // Loop Function
@@ -355,6 +372,11 @@ export class FlowToAst {
     private parseBlockContent(block: CfgBlock): BaseNode | null {
         const { type, data } = block;
 
+        // Nós 'setup' são recolhidos em generate() e não devem aparecer no loop.
+        if (type === 'setup') {
+            return null;
+        }
+
         // --- Ladder Logic Mapping (Function Blocks) ---
 
         // Coils
@@ -648,7 +670,7 @@ export class FlowToAst {
                 attributes: { operator: map[op] || '==' },
                 children: [
                     { nodeType: 'Identifier', id: 'a', attributes: { name: a }, children: [] },
-                    { nodeType: 'Identifier', id: 'b', attributes: { name: b }, children: [] } // Assuming identifiers/literals
+                    { nodeType: 'Identifier', id: 'b', attributes: { name: b }, children: [] }
                 ]
             };
         }
