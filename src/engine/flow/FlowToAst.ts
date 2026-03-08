@@ -71,7 +71,23 @@ export class FlowToAst {
             loop.children = this.generateStructured(builder.startBlock!, new Set(), analysis);
         }
 
-        program.children.push(...this.injectedGlobals, setup, loop);
+        // Helper Functions — function_def blocks are separate subgraphs
+        // (not reachable from startBlock, so they don't affect loop/state machine)
+        const helperFunctions: BaseNode[] = [];
+        builder.blocks.forEach(b => {
+            if (b.type === 'function_def') {
+                const funcName = (b.data.name || b.data.label || 'myFunc') as string;
+                const body = this.generateStructured(b, new Set(), analysis);
+                helperFunctions.push({
+                    nodeType: 'Function',
+                    id: `func-${b.id}`,
+                    attributes: { name: funcName },
+                    children: body
+                });
+            }
+        });
+
+        program.children.push(...this.injectedGlobals, ...helperFunctions, setup, loop);
         return program;
     }
 
@@ -625,6 +641,29 @@ export class FlowToAst {
             if (data.code) return this.parseExplicitCode(data.code);
             return this.parseSimpleCommand(data.label);
         }
+
+        // Function definition header: body comes from outbound edges via generateStructured.
+        // This block itself emits nothing; it's just the entry point for the function subgraph.
+        if (type === 'function_def') {
+            return null;
+        }
+
+        // Call to a user-defined helper function
+        if (type === 'call_function') {
+            const funcName = (data.name || data.label || 'myFunc') as string;
+            return {
+                nodeType: 'ExpressionStatement',
+                id: `call-${block.id}`,
+                attributes: {},
+                children: [{
+                    nodeType: 'CallExpression',
+                    id: `callee-${block.id}`,
+                    attributes: { callee: funcName },
+                    children: []
+                }]
+            };
+        }
+
         return null;
     }
 
@@ -867,6 +906,23 @@ export class FlowToAst {
         // --- S5: oled.show() / oled.clear() ---
         if (/^oled\.show\(\)/i.test(code)) return { nodeType: 'OledShow', id: 'gen', attributes: {}, children: [] };
         if (/^oled\.clear\(\)/i.test(code)) return { nodeType: 'OledClear', id: 'gen', attributes: {}, children: [] };
+
+        // --- User-defined function call: identifier() sem args ---
+        // Apanhado antes do raw() para que "myFunc()" gere CallExpression
+        // em vez de Literal raw. Apenas identificadores simples sem argumentos.
+        {
+            const m = code.trim().match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*\)\s*;?$/);
+            if (m) {
+                return {
+                    nodeType: 'ExpressionStatement', id: 'gen', attributes: {},
+                    children: [{
+                        nodeType: 'CallExpression', id: 'gen',
+                        attributes: { callee: m[1] },
+                        children: []
+                    }]
+                };
+            }
+        }
 
         // Fallback: Raw Code Expression (e.g., "x = x + 1")
         return this.raw(code);
