@@ -72,6 +72,14 @@ export class PythonGenerator {
         const mainFn = finalNodes.find(c => c.nodeType === 'Function' && c.attributes.name === 'main');
         const globals = finalNodes.filter(c => c.nodeType === 'VariableDeclaration');
 
+        // Helper functions (não são setup/loop/main)
+        const helperFuncs = finalNodes.filter(c =>
+            c.nodeType === 'Function' &&
+            c.attributes.name !== 'setup' &&
+            c.attributes.name !== 'loop' &&
+            c.attributes.name !== 'main'
+        );
+
         // Globals and non-loop code
         const topLevelNodes = finalNodes.filter(c => c.nodeType !== 'Function' && c.nodeType !== 'VariableDeclaration');
         const setupBody: BaseNode[] = [];
@@ -88,6 +96,17 @@ export class PythonGenerator {
         // Handle main function (standalone Python)
         if (mainFn) {
             // Standalone main — não Arduino/MicroPython
+            // Emit helper functions before main
+            helperFuncs.forEach(fn => {
+                this.addLn(output, `def ${fn.attributes.name}():`, null);
+                if (fn.children.length === 0) {
+                    this.addLn(output, '    pass', null);
+                } else {
+                    fn.children.forEach(s => this.genStmt(s, '    ', output));
+                }
+                this.addLn(output, '', null);
+            });
+
             globals.forEach(g => this.genStmt(g, '', output));
             this.addLn(output, '', null);
             this.addLn(output, 'def main():', null);
@@ -101,6 +120,17 @@ export class PythonGenerator {
             this.addLn(output, '    main()', null);
         } else {
             // Arduino/MicroPython path: setup + loop
+            // Emit helper functions before setup/loop
+            helperFuncs.forEach(fn => {
+                this.addLn(output, `def ${fn.attributes.name}():`, null);
+                if (fn.children.length === 0) {
+                    this.addLn(output, '    pass', null);
+                } else {
+                    fn.children.forEach(s => this.genStmt(s, '    ', output));
+                }
+                this.addLn(output, '', null);
+            });
+
             globals.forEach(g => this.genStmt(g, '', output));
 
             if (setup) {

@@ -51,6 +51,20 @@ export class RustGenerator {
         topLevel.forEach(c => this.genStmt(c, lines, ""));
         if (topLevel.length > 0) this.addLn(lines, "", null);
 
+        // Helper functions (não são setup/loop/main) — emitidas antes do entry point
+        const helpers = funcs.filter(f =>
+            f.attributes.name !== 'setup' &&
+            f.attributes.name !== 'loop' &&
+            f.attributes.name !== 'main'
+        );
+        helpers.forEach(f => {
+            this.printComments(f, lines, '');
+            this.addLn(lines, `fn ${f.attributes.name}() {`, f);
+            f.children.forEach(c => this.genStmt(c, lines, "    "));
+            this.addLn(lines, '}', f);
+            this.addLn(lines, '', null);
+        });
+
         if (setup || loop_) {
             // Embassy path
             this.addLn(lines, "#[entry]", null);

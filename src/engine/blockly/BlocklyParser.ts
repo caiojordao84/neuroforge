@@ -88,6 +88,33 @@ export class BlocklyParser {
             };
         }
 
+        // nf_function: bloco de definição de função auxiliar.
+        // Gera Function(name: X) — CGenerator emite void X(){}, Python emite def X():, Rust emite fn X(){}.
+        if (type === 'nf_function') {
+            const name = this.getF(block, 'NAME') || 'myFunc';
+            const children: BaseNode[] = [];
+            const doStmt = block.querySelector('statement[name="DO"] > block');
+            if (doStmt) this.processBlockChain(doStmt, children, setupList);
+            return {
+                nodeType: 'Function', id: 'b',
+                attributes: { name },
+                children
+            };
+        }
+
+        // nf_call_function: bloco de chamada a uma função auxiliar definida com nf_function.
+        if (type === 'nf_call_function') {
+            const name = this.getF(block, 'NAME') || 'myFunc';
+            return {
+                nodeType: 'ExpressionStatement', id: 'b', attributes: {},
+                children: [{
+                    nodeType: 'CallExpression', id: 'c',
+                    attributes: { callee: name },
+                    children: []
+                }]
+            };
+        }
+
         // Variables
         if (type === 'variables_set') {
             const name = this.getF(block, 'VAR') || 'i';

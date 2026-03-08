@@ -13,6 +13,7 @@ export class CodeToBlockly {
         let setupBody: BaseNode[] | null = null;
         let loopBody: BaseNode[] | null = null;
         let mainBody: BaseNode[] | null = null;
+        const otherFunctions: BaseNode[] = [];
 
         ast.children.forEach(child => {
             if (child.nodeType === 'Function') {
@@ -22,8 +23,9 @@ export class CodeToBlockly {
                     loopBody = child.children;
                 } else if (child.attributes.name === 'main') {
                     mainBody = child.children;
+                } else {
+                    otherFunctions.push(child);  // funções auxiliares → nf_function
                 }
-                // outras funções auxiliares: ignoradas no round-trip por agora
             } else {
                 nodesToProcess.push(child);
             }
@@ -71,6 +73,22 @@ export class CodeToBlockly {
                 }
             } else {
                 xml += mainXml;
+            }
+        }
+
+        // Emit nf_function blocks for each helper function
+        for (const fn of otherFunctions) {
+            const fnName = fn.attributes.name;
+            const fnBody = fn.children;
+            const fnStatements = fnBody.length > 0 ? this.processStatementList(fnBody) : '';
+            const fnXml = `<block type="nf_function"><field name="NAME">${fnName}</field>${fnStatements ? `<statement name="DO">${fnStatements}</statement>` : ''}</block>`;
+
+            // Encadear após o último bloco existente
+            const lastIdx = xml.lastIndexOf('</block>');
+            if (lastIdx !== -1) {
+                xml = xml.substring(0, lastIdx) + `<next>${fnXml}</next>` + xml.substring(lastIdx);
+            } else {
+                xml += fnXml;
             }
         }
 
@@ -345,6 +363,10 @@ export class CodeToBlockly {
             }
             if (callee === 'oled.show') return `<block type="nf_oled_show"></block>`;
             if (callee === 'oled.clear') return `<block type="nf_oled_clear"></block>`;
+
+            // Fallback: chamada a função auxiliar definida pelo utilizador
+            // (callee não começa com callee conhecido → nf_call_function)
+            return `<block type="nf_call_function"><field name="NAME">${callee}</field></block>`;
         }
 
         if (node.nodeType === 'Block') {
