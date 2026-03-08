@@ -3,10 +3,10 @@
 | C Function | Python Function | Rust Function | ASL Node | Flow Node | Blockly Block | Description |
 | :---- | :---- | :---- | :---- | :---- | :---- | :---- |
 | **Program Structure** |  |  |  |  |  |  |
-| void setup() {} | def setup(): | fn setup() | Function (name: setup) | ❌ | ❌ |  |
+| void setup() {} | def setup(): | fn setup() | Function (name: setup) | setup | nf\_setup |  |
 | void loop() {} | while True: | \#\[entry\] | Function (name: loop) | loop | nf\_loop ✅ |  |
-| void main() {} | def main(): | fn main() | Function (name: main) | ❌ | ❌ |  |
-| void myFunc() {} | def myFunc(): | fn myFunc() | Function | ❌ | ❌ |  |
+| void main() {} | def main(): | fn main() | Function (name: main) | nf\_main | nf\_main |  |
+| void myFunc() {} | def myFunc(): | fn myFunc() | Function | function\_def / call\_function | nf\_function \+ nf\_call\_function |  |
 | ❌ | class MyClass: | struct MyStruct | StructDeclaration | ❌ | ❌ |  |
 | ❌ | ❌ | enum MyEnum | EnumDeclaration | ❌ | ❌ |  |
 | **Control Flow** |  |  |  |  |  |  |
@@ -136,24 +136,13 @@
 
 ---
 
-## S5 Changes (New implementations from this update):
-
-| Feature | File | Status |
-| :---- | :---- | :---- |
-| break/continue | BlocklyParser.ts | ✅ |
-| analogWrite (PWM) | BlocklyParser.ts \+ FlowToAst.ts | ✅ |
-| pinMode | BlocklyParser.ts \+ FlowToAst.ts | ✅ |
-| Serial.begin | BlocklyParser.ts \+ FlowToAst.ts | ✅ |
-| Serial.print | BlocklyParser.ts \+ FlowToAst.ts | ✅ |
-| Serial.read | BlocklyParser.ts | ✅ |
-| delayMicroseconds | BlocklyParser.ts \+ FlowToAst.ts | ✅ |
-| Arrays (lists\_create\_with) | BlocklyParser.ts | ✅ |
-| logic\_boolean | BlocklyParser.ts | ✅ |
-| logic\_operation (AND/OR) | BlocklyParser.ts | ✅ |
-| millis | BlocklyParser.ts | ✅ |
-| micros | BlocklyParser.ts | ✅ |
-| random | BlocklyParser.ts | ✅ |
-| Serial.available | BlocklyParser.ts | ✅ |
-| lists\_getIndex | BlocklyParser.ts | ✅ |
-| Multiple Flow explicit codes | FlowToAst.ts | ✅ |
+| What | Ficheiro |
+| :---- | :---- |
+| 1\. Tipo IR | `ASLTypes.ts` |
+| 2\. Executor | `ASLExecutor.ts` |
+| 3\. Transform | `callTransform.ts` |
+| 4\. Generators | `CGenerator` \+ `PythonGenerator` \+ `RustGenerator` |
+| 5\. Parsers | `CParser + PythonParser + RustParser` |
+| 6\. Blockly | `BlocklyParser` \+ `CodeToBlockly` \+ block definitions |
+| 7\. Flow | `CfgBuilder.ts + FlowToAst.ts + FlowValidator.ts` |
 
