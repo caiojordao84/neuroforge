@@ -67,6 +67,7 @@ class RustCstToAst {
             case 'loop_expression': return this.visitLoop(node);
             case 'while_expression': return this.visitWhile(node);
             case 'for_expression': return this.visitFor(node);
+            case 'for_in_expression': return this.visitForIn(node);
             case 'match_expression': return this.visitMatch(node);
             case 'struct_item': return this.visitStruct(node);
             case 'enum_item': return this.visitEnum(node);
@@ -308,6 +309,26 @@ class RustCstToAst {
             attributes: { hasInit: true, hasUpdate: true },
             children: [init, condition, update, bodyBlock],
             metadata: { line: node.startPosition.row + 1 }
+        };
+    }
+
+    visitForIn(node: any): BaseNode {
+        const pattern = node.childForFieldName('pattern');
+        const iterator = node.childForFieldName('iter');
+        const bodyNode = node.childForFieldName('body');
+        const meta = { line: node.startPosition.row + 1 };
+
+        const varName = pattern?.text || 'x';
+        const iterable: BaseNode = iterator ? this.visitExpr(iterator) : { nodeType: 'Literal' as const, id: 'l', attributes: { value: 0 }, children: [] as BaseNode[] };
+        const body = bodyNode ? this.visitBlockChildren(bodyNode) : [];
+        const bodyBlock: BaseNode = { nodeType: 'Block', id: `blk-forin-${node.id}`, attributes: {}, children: body, metadata: meta };
+
+        return {
+            nodeType: 'ForIn',
+            id: `forin-${node.id}`,
+            attributes: { varName },
+            children: [iterable, bodyBlock],
+            metadata: meta
         };
     }
 

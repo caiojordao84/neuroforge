@@ -226,6 +226,31 @@ async function executeStatements(
         break;
       }
 
+      case 'forIn': {
+        const iterable = await evalExpr(s.iterable, localEnv, ctx);
+        if (!Array.isArray(iterable)) {
+          ctx.engine.log(`⚠️ ForIn: iterable is not an array, got ${typeof iterable}`);
+          break;
+        }
+        let cycles = 0;
+        for (const item of iterable) {
+          if (ctx.abortSignal?.aborted) return;
+          localEnv.set(s.varName, item);
+          try {
+            await executeStatements(s.body, localEnv, ctx);
+          } catch (e) {
+            if (e instanceof BreakSignal) break;
+            if (e instanceof ContinueSignal) continue;
+            throw e;
+          }
+          cycles++;
+          if (cycles % 10 === 0) {
+            await new Promise((r) => setTimeout(r, 0));
+          }
+        }
+        break;
+      }
+
       case 'switch': {
         const discVal = await evalExpr(s.discriminant, localEnv, ctx);
         let matched = false;

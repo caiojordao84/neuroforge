@@ -400,6 +400,36 @@ export class RecursiveDescentCParser {
     private parseFor(): BaseNode {
         const line = this.peek().line;
         this.consume('for'); this.consume('('); this.symbols.pushScope();
+        
+        // Check for range-based for loop: for (auto/Type var : iterable)
+        const firstToken = this.peek();
+        const secondToken = this.peek(1);
+        
+        if (secondToken?.value === ':') {
+            // Range-based for: for (var : iterable) or for (auto var : iterable)
+            const isAuto = firstToken.value === 'auto';
+            const varName = isAuto ? (this.peek(2)?.value || 'i') : firstToken.value;
+            this.consume(':'); // consume ':'
+            const iterable = this.parseExpression(0);
+            this.consume(')');
+            
+            let body: BaseNode[];
+            if (this.peek().value === '{') {
+                body = this.parseBlock();
+            } else {
+                const stmt = this.parseStatement();
+                body = stmt ? [stmt] : [];
+            }
+            this.symbols.popScope();
+            
+            // For range-based for, create a ForIn node
+            const bodyBlock: BaseNode = { nodeType: 'Block', id: this.genId(), attributes: {}, children: body, metadata: { line } };
+            const node: BaseNode = { nodeType: 'ForIn', id: this.genId(), attributes: { varName, isAuto }, children: [iterable, bodyBlock], metadata: { line } };
+            this.attachComments(node);
+            return node;
+        }
+        
+        // Traditional for loop: for (init; condition; update)
         let init: BaseNode | null = null;
         if (this.peek().type === 'KEYWORD') init = this.parseVarDecl();
         else if (this.peek().type === 'IDENTIFIER') init = this.parseStatement();
