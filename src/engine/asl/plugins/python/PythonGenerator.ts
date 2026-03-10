@@ -232,6 +232,13 @@ export class PythonGenerator {
             return this.addLn(out, `${i}${n.attributes.name} = ${val}`, n);
         }
 
+        if (n.nodeType === 'PinMode') {
+            const pin = this.genExpr(n.children[0]);
+            const mode = this.genExpr(n.children[1]);
+            const pyMode = mode === '1' || mode === 'OUTPUT' ? 'machine.Pin.OUT' : 'machine.Pin.IN';
+            return this.addLn(out, `${i}machine.Pin(${pin}, ${pyMode})`, n);
+        }
+
         if (n.nodeType === 'GpioSet') {
             const pinNode = n.children[0];
             const val = this.genExpr(n.children[1]);

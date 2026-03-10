@@ -355,6 +355,9 @@ export class CGenerator {
                 this.addLn(lines, `${indent}}`, node);
             }
         }
+        else if (node.nodeType === 'PinMode') {
+            this.addLn(lines, `${indent}pinMode(${this.genExpr(node.children[0])}, ${this.genExpr(node.children[1])});`, node);
+        }
         else if (node.nodeType === 'Block') {
             node.children.forEach(c => this.genStmt(c, lines, indent));
         }

@@ -69,9 +69,9 @@ Based on my thorough analysis of the codebase, I can now provide a comprehensive
 | **unary (ref)**     | ✅ ASLUnary                     | ✅ (& handling) | ❌         | ✅    | ✅     | ✅     | ✅       | ✅        | ✅        | ✅ nf_unary          | ✅ unary       | N/A   | N/A        | ✅ FULL    |
 
 **Notes:**
-- DesignatedInitializer exists in parsers/generators but NOT as native ASLType
-- CastExpression exists in generators but NOT as native ASLType statement
-- Executor handles `&` operator for refs but no dedicated CastExpression handler
+- DesignatedInitializer e CastExpression são **expression nodes**, não ASL statement types. Isso é **CORRETO** - são usados em contextos de valor (initialization, assignment values).
+- Transform layer (exprTransform.ts) converte CastExpression → `kind: 'call'` e DesignatedInitializer → `kind: 'object'` ou sequence de setIndex statements
+- Executor handles CastExpression via CallExpression genCallExpression (1042-1051); DesignatedInitializer via assign+setIndex sequence (statementRegistry.ts 443-454)
 
 ---
 
@@ -100,7 +100,7 @@ Based on my thorough analysis of the codebase, I can now provide a comprehensive
 | ---------------- | ------------------------ | -------- | ------------------ | ---------------- | ---------------- | ---------------- | ---------------- | -------- | -------- | ----------------- | ------------------- | ----- | ---------- | --------- |
 | **digitalWrite** | ✅ ASLDigitalWrite        | ✅        | ✅                  | ✅                | ✅                | ✅                | ✅                | ✅        | ✅        | ✅ nf_gpio_set     | ✅ gpio/ladder_coil  | N/A   | N/A        | ✅ FULL    |
 | **analogWrite**  | ✅ ASLAnalogWrite         | ✅        | ✅                  | ✅                | ✅                | ✅                | ✅                | ✅        | ✅        | ✅ nf_analog_write | ✅ analogWrite       | N/A   | N/A        | ✅ FULL    |
-| **pinMode**      | ✅ ASLPinMode             | ✅        | ✅                  | ⚠️ CallExpression | ⚠️ CallExpression | ⚠️ CallExpression | ✅ CallExpression | ✅        | ✅        | ✅ nf_pinmode      | ✅ process           | N/A   | N/A        | ⚠️ PARTIAL |
+| **pinMode**      | ✅ ASLPinMode             | ✅        | ✅                  | ✅                | ✅                | ✅                | ✅                | ✅        | ✅        | ✅ nf_pinmode      | ✅ process           | N/A   | N/A        | ✅ FULL    |
 | **digitalRead**  | ✅ ASLRead (DIGITAL mode) | ✅        | ✅ tryTransformRead | ✅ GpioRead       | ✅                | ✅ GpioRead       | ✅ GpioRead       | ✅        | ✅        | ✅ nf_digital_read | ✅ ladder_contact    | N/A   | N/A        | ✅ FULL    |
 | **analogRead**   | ✅ ASLRead (ANALOG mode)  | ✅        | ✅ tryTransformRead | ✅ AnalogRead     | ✅                | ✅ AnalogRead     | ✅ AnalogRead     | ✅        | ✅        | ❌ MISSING         | ❌ FlowToAst missing | N/A   | N/A        | ⚠️ PARTIAL |
 

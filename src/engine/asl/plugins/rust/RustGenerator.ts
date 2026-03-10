@@ -161,13 +161,13 @@ export class RustGenerator {
             const val = node.children.length > 0 ? this.genExpr(node.children[0]) : '0';
             this.addLn(lines, `${indent}let mut ${node.attributes.name} = ${val};`, node);
         }
+        else if (node.nodeType === 'PinMode') {
+            this.addLn(lines, `${indent}gpio_mode(${this.genExpr(node.children[0])}, ${this.genExpr(node.children[1])});`, node);
+        }
         else if (node.nodeType === 'ExpressionStatement') {
             const child = node.children[0];
             if (child.nodeType === 'CallExpression') {
                 const callee = child.attributes.callee;
-                if (callee === 'pinMode') {
-                    return this.addLn(lines, `${indent}gpio_mode(${this.genExpr(child.children[0])}, ${this.genExpr(child.children[1])});`, node);
-                }
                 if (callee === 'Serial.begin') {
                     return this.addLn(lines, `${indent}// Serial.begin(${this.genExpr(child.children[0])});`, node);
                 }
