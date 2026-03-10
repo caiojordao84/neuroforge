@@ -165,6 +165,36 @@ export class CodeToBlockly {
             return block;
         }
 
+        // StructDeclaration -> nf_struct
+        if (node.nodeType === 'StructDeclaration') {
+            const name = node.attributes.name || 'MyStruct';
+            const fields = node.attributes.fields || [];
+            let block = `<block type="nf_struct"><field name="NAME">${name}</field>`;
+            block += `<field name="usearrfields">${fields.length}</field>`;
+            fields.forEach((f: any, i: number) => {
+                block += `<field name="FIELD_NAME_${i}">${f.name}</field>`;
+                block += `<field name="FIELD_TYPE_${i}">${f.type || 'int'}</field>`;
+            });
+            block += `</block>`;
+            return block;
+        }
+
+        // EnumDeclaration -> nf_enum
+        if (node.nodeType === 'EnumDeclaration') {
+            const name = node.attributes.name || 'MyEnum';
+            const members = node.attributes.members || [];
+            let block = `<block type="nf_enum"><field name="NAME">${name}</field>`;
+            block += `<field name="usemembers">${members.length}</field>`;
+            members.forEach((m: any, i: number) => {
+                block += `<field name="MEMBER_NAME_${i}">${m.name}</field>`;
+                if (m.value !== undefined) {
+                    block += `<field name="MEMBER_VALUE_${i}">${m.value}</field>`;
+                }
+            });
+            block += `</block>`;
+            return block;
+        }
+
         // ExpressionStatement containing Assignment or Binary
         if (node.nodeType === 'ExpressionStatement') {
             return this.nodeToBlock(node.children[0]);
@@ -230,6 +260,20 @@ export class CodeToBlockly {
 
             let block = `<block type="controls_whileUntil"><field name="MODE">WHILE</field>`;
             if (valueXml) block += `<value name="BOOL">${valueXml}</value>`;
+            if (statementsXml) block += `<statement name="DO">${statementsXml}</statement>`;
+            block += `</block>`;
+            return block;
+        }
+
+        // DoWhileLoop -> nf_dowhile
+        if (node.nodeType === 'DoWhileLoop') {
+            const cond = node.children[0];
+            const body = node.children.slice(1);
+            const valueXml = this.conditionToValue(cond);
+            const statementsXml = this.chainNodes(body);
+
+            let block = `<block type="nf_dowhile">`;
+            if (valueXml) block += `<value name="COND">${valueXml}</value>`;
             if (statementsXml) block += `<statement name="DO">${statementsXml}</statement>`;
             block += `</block>`;
             return block;
@@ -495,6 +539,8 @@ export class CodeToBlockly {
             if (callee === 'ultrasonic.read') return `<block type="nf_ultrasonic_read"></block>`;
             if (callee === 'ldr.read') return `<block type="nf_ldr_read"></block>`;
             if (callee === 'keypad.read') return `<block type="nf_keypad_read"></block>`;
+            if (callee === 'millis') return `<block type="nf_millis"></block>`;
+            if (callee === 'micros') return `<block type="nf_micros"></block>`;
         }
 
         return null;

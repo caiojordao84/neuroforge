@@ -358,6 +358,25 @@ export class CGenerator {
         else if (node.nodeType === 'Block') {
             node.children.forEach(c => this.genStmt(c, lines, indent));
         }
+        else if (node.nodeType === 'StructDeclaration') {
+            const name = node.attributes.name;
+            const fields = node.attributes.fields || [];
+            this.addLn(lines, `${indent}struct ${name} {`, node);
+            fields.forEach((f: any) => {
+                this.addLn(lines, `${indent}  ${f.type} ${f.name};`, null);
+            });
+            this.addLn(lines, `${indent}};`, null);
+        }
+        else if (node.nodeType === 'EnumDeclaration') {
+            const name = node.attributes.name;
+            const members = node.attributes.members || [];
+            this.addLn(lines, `${indent}enum ${name} {`, node);
+            members.forEach((m: any, idx: number) => {
+                const suffix = m.value !== undefined ? ` = ${m.value}` : '';
+                this.addLn(lines, `${indent}  ${m.name}${suffix}${idx < members.length - 1 ? ',' : ''}`, null);
+            });
+            this.addLn(lines, `${indent}};`, null);
+        }
         else {
             this.addLn(lines, `${indent}// Unhandled Node: ${node.nodeType}`, node);
         }
@@ -398,6 +417,7 @@ export class CGenerator {
 
             if (callee === 'servo') return `servo.write(${args})`;
             if (callee === 'len') return `(sizeof(${args}) / sizeof(${args}[0]))`;
+            if (callee === 'delayMicroseconds') return `delayMicroseconds(${args})`;
             return `${callee}(${args})`;
         }
         if (node.nodeType === 'AnalogRead') return `analogRead(${this.genExpr(node.children[0])})`;
@@ -407,8 +427,20 @@ export class CGenerator {
             const elements = node.children.map(c => this.genExpr(c)).join(', ');
             return `{ ${elements} }`;
         }
+        if (node.nodeType === 'DesignatedInitializer') {
+            const fields = node.children.map(c => {
+                const name = c.attributes?.name || 'field';
+                const val = this.genExpr(c);
+                return `.${name} = ${val}`;
+            }).join(', ');
+            return `{ ${fields} }`;
+        }
         if (node.nodeType === 'ConditionalExpression') {
             return `(${this.genExpr(node.children[0])} ? ${this.genExpr(node.children[1])} : ${this.genExpr(node.children[2])})`;
+        }
+        if (node.nodeType === 'CastExpression') {
+            const targetType = node.attributes.targetType || 'int';
+            return `(${targetType})(${this.genExpr(node.children[0])})`;
         }
         if (node.nodeType === 'SizeofExpression') {
             const target = node.children[0];

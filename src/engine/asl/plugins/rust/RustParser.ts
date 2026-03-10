@@ -141,6 +141,22 @@ class RustCstToAst {
 
         node.children.forEach((c: any) => {
             if (c.type === 'line_comment' || c.type === 'block_comment') {
+                // Check for do-while hint: // do-while: <condition>
+                const commentText = c.text.trim();
+                if (commentText.startsWith('// do-while:')) {
+                    const condStr = commentText.replace(/^\/\/\s*do-while:\s*/, '').trim();
+                    const nextSibling = node.children[node.children.indexOf(c) + 1];
+                    if (nextSibling && nextSibling.type === 'loop_expression') {
+                        // Parse as DoWhileLoop
+                        const condNode = { type: 'identifier', text: condStr };
+                        const innerCond = this.visitExpr(condNode);
+                        const bodyNode = nextSibling.childForFieldName('body');
+                        const body = bodyNode ? this.visitBlockChildren(bodyNode) : [];
+                        const bodyBlock: BaseNode = { nodeType: 'Block', id: `blk-dw-${nextSibling.id}`, attributes: {}, children: body, metadata: { line: nextSibling.startPosition.row + 1 } };
+                        result.push({ nodeType: 'DoWhileLoop', id: `dw-${nextSibling.id}`, attributes: {}, children: [innerCond, bodyBlock], metadata: { line: nextSibling.startPosition.row + 1 } });
+                        return; // Skip the loop_expression that follows
+                    }
+                }
                 pendingComments.push(c.text);
                 return;
             }
@@ -155,6 +171,7 @@ class RustCstToAst {
                 result.push(visited);
             }
         });
+
         return result;
     }
 
@@ -223,26 +240,13 @@ class RustCstToAst {
     }
 
     visitWhile(node: any): BaseNode {
-        const conditionNode = node.childForFieldName('condition');
+        const condNode = node.childForFieldName('condition');
         const bodyNode = node.childForFieldName('body');
-        const condition = conditionNode ? this.visitExpr(conditionNode) : { nodeType: 'Literal', id: 'l', attributes: { value: 1 }, children: [] };
-        const children = bodyNode ? this.visitBlockChildren(bodyNode) : [];
-
-        const bodyBlock: BaseNode = {
-            nodeType: 'Block',
-            id: `blk-${node.id}`,
-            attributes: {},
-            children,
-            metadata: { line: node.startPosition.row + 1 }
-        };
-
-        return {
-            nodeType: 'WhileLoop',
-            id: `while-${node.id}`,
-            attributes: {},
-            children: [condition as BaseNode, bodyBlock],
-            metadata: { line: node.startPosition.row + 1 }
-        };
+        const meta = { line: node.startPosition.row + 1 };
+        const cond = condNode ? this.visitExpr(condNode) : { nodeType: 'Literal' as const, id: 'true', attributes: { value: 1 }, children: [] };
+        const body = bodyNode ? this.visitBlockChildren(bodyNode) : [];
+        const bodyBlock: BaseNode = { nodeType: 'Block', id: `blk-while-${node.id}`, attributes: {}, children: body, metadata: meta };
+        return { nodeType: 'WhileLoop', id: `while-${node.id}`, attributes: { isInfinite: false }, children: [cond, bodyBlock], metadata: meta };
     }
 
     visitFor(node: any): BaseNode {

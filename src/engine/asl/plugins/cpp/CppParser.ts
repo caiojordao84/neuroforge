@@ -293,6 +293,9 @@ class CppCstToAst {
             }
 
             if (calleeName === 'digitalWrite' || calleeName === 'gpio_set') return { nodeType: 'GpioSet', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+            if (calleeName === 'digitalRead' || calleeName === 'gpio_get') return { nodeType: 'GpioRead', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+            if (calleeName === 'analogRead') return { nodeType: 'AnalogRead', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
+            if (calleeName === 'analogWrite') return { nodeType: 'AnalogWrite', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
             if (calleeName === 'delay') return { nodeType: 'DelayMs', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
             if (calleeName.startsWith('Serial.print')) return { nodeType: 'Print', id: `c-${node.id}`, attributes: {}, children: args, metadata: meta };
 

@@ -138,7 +138,25 @@ export const BlocklyEditor: React.FC = () => {
         Blockly.Blocks['nf_keypad_read'] = { init: function () { this.appendDummyInput().appendField("Read Keypad"); this.setOutput(true, "Number"); this.setColour(230); } };
         Blockly.Blocks['nf_ldr_read'] = { init: function () { this.appendDummyInput().appendField("Read Light Level"); this.setOutput(true, "Number"); this.setColour(230); } };
         Blockly.Blocks['nf_delay'] = { init: function () { this.appendValueInput("MS").setCheck("Number").appendField("Wait (ms)"); this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(120); } };
+        Blockly.Blocks['nf_delay_us'] = { init: function () { this.appendValueInput("US").setCheck("Number").appendField("Wait (µs)"); this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(120); } };
+        Blockly.Blocks['nf_millis'] = { init: function () { this.appendDummyInput().appendField("Millis"); this.setOutput(true); this.setColour(120); this.setTooltip("Get elapsed milliseconds since start"); } };
+        Blockly.Blocks['nf_micros'] = { init: function () { this.appendDummyInput().appendField("Micros"); this.setOutput(true); this.setColour(120); this.setTooltip("Get elapsed microseconds since start"); } };
         Blockly.Blocks['nf_loop'] = { init: function () { this.appendDummyInput().appendField("Loop"); this.appendStatementInput("DO").setCheck(null); this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(120); this.setTooltip("Main execution loop"); } };
+        Blockly.Blocks['nf_setup'] = { init: function () { this.appendDummyInput().appendField("Setup"); this.appendStatementInput("DO").setCheck(null); this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(120); this.setTooltip("Setup function - runs once at start"); } };
+        Blockly.Blocks['nf_main'] = { init: function () { this.appendDummyInput().appendField("Main"); this.appendStatementInput("DO").setCheck(null); this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(120); this.setTooltip("Main function - entry point for standalone programs"); } };
+        Blockly.Blocks['nf_function'] = { init: function () { this.appendDummyInput().appendField("Function").appendField(new Blockly.FieldTextInput("myFunc"), "NAME"); this.appendStatementInput("DO").setCheck(null); this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(290); this.setTooltip("Custom function definition"); } };
+        Blockly.Blocks['nf_call_function'] = { init: function () { this.appendDummyInput().appendField("Call Function").appendField(new Blockly.FieldTextInput("myFunc"), "NAME"); this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(290); this.setTooltip("Call a custom function"); } };
+        Blockly.Blocks['nf_struct'] = { init: function () { this.appendDummyInput().appendField("Struct/Class").appendField(new Blockly.FieldTextInput("MyStruct"), "NAME"); this.appendValueInput("FIELD_COUNT").setCheck("Number").appendField("Fields"); this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(160); this.setTooltip("Define a struct or class with fields"); } };
+        Blockly.Blocks['nf_enum'] = { init: function () { this.appendDummyInput().appendField("Enum").appendField(new Blockly.FieldTextInput("MyEnum"), "NAME"); this.appendValueInput("MEMBER_COUNT").setCheck("Number").appendField("Members"); this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(160); this.setTooltip("Define an enum with members"); } };
+        Blockly.Blocks['nf_dowhile'] = { init: function () { this.appendDummyInput().appendField("Do-While Loop"); this.appendStatementInput("DO").setCheck(null); this.appendValueInput("COND").setCheck("Boolean").appendField("while"); this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(120); this.setTooltip("Do-while loop: executes body at least once"); } };
+        Blockly.Blocks['nf_switch'] = { init: function () { this.appendValueInput("EXPR").setCheck(null).appendField("Switch"); this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(210); this.setTooltip("Switch statement"); } };
+        Blockly.Blocks['nf_case'] = { init: function () { this.appendValueInput("VALUE").setCheck(null).appendField("Case"); this.appendStatementInput("DO").setCheck(null); this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(210); this.setTooltip("Case clause"); } };
+        Blockly.Blocks['nf_return'] = { init: function () { this.appendValueInput("VALUE").setCheck(null).appendField("Return"); this.setPreviousStatement(true); this.setNextStatement(false); this.setColour(290); this.setTooltip("Return a value from function"); } };
+        Blockly.Blocks['nf_member'] = { init: function () { this.appendDummyInput().appendField("Member").appendField(new Blockly.FieldTextInput("obj"), "OBJECT").appendField(".").appendField(new Blockly.FieldTextInput("property"), "PROPERTY"); this.setOutput(true); this.setColour(230); this.setTooltip("Access object property (obj.prop)"); } };
+        Blockly.Blocks['nf_conditional'] = { init: function () { this.appendValueInput("CONDITION").setCheck(null).appendField("If"); this.appendValueInput("TRUE_VALUE").setCheck(null).appendField("?").setAlign(Blockly.ALIGN_RIGHT); this.appendValueInput("FALSE_VALUE").setCheck(null).appendField(":").setAlign(Blockly.ALIGN_RIGHT); this.setOutput(true); this.setColour(210); this.setTooltip("Ternary conditional: condition ? trueValue : falseValue"); } };
+        Blockly.Blocks['nf_struct_init'] = { init: function () { this.appendDummyInput().appendField("Struct Init").appendField(new Blockly.FieldTextInput("MyStruct"), "NAME"); this.setOutput(true); this.setColour(120); this.setTooltip("Struct initializer { .field = value }"); } };
+        Blockly.Blocks['nf_cast'] = { init: function () { this.appendDummyInput().appendField("(").appendField(new Blockly.FieldDropdown([["int","int"], ["float","float"], ["double","double"], ["char","char"]]), "TYPE").appendField(")"); this.appendValueInput("VALUE").setCheck(null); this.setOutput(true); this.setColour(230); this.setTooltip("Type cast: (type)value"); } };
+        Blockly.Blocks['nf_unary'] = { init: function () { this.appendDummyInput().appendField(new Blockly.FieldDropdown([["!","NOT"], ["-","NEGATE"], ["&","ADDRESS_OF"], ["*","DEREFERENCE"], ["++","INCREMENT"], ["--","DECREMENT"]]), "OP"); this.appendValueInput("VALUE").setCheck(null); this.setOutput(true); this.setColour(230); this.setTooltip("Unary operator: !, -, &, *, ++, --"); } };
 
         if (!workspace.current) {
             workspace.current = Blockly.inject(blocklyDiv.current, {
@@ -149,24 +167,44 @@ export const BlocklyEditor: React.FC = () => {
                     <block type="logic_operation"></block>
                     <block type="logic_negate"></block>
                     <block type="logic_boolean"></block>
+                    <block type="nf_conditional"></block>
                 </category>
                 <category name="Loops" colour="120">
+                    <block type="nf_setup"></block>
                     <block type="nf_loop"></block>
+                    <block type="nf_main"></block>
+                    <block type="nf_dowhile"></block>
                     <block type="controls_whileUntil"></block>
                     <block type="controls_for"></block>
                     <block type="controls_repeat_ext"></block>
                     <block type="controls_forEach"></block>
                 </category>
+                <category name="Functions" colour="290">
+                    <block type="nf_function"></block>
+                    <block type="nf_call_function"></block>
+                    <block type="nf_return"></block>
+                    <block type="nf_struct"></block>
+                    <block type="nf_enum"></block>
+                </category>
+                <category name="Logic" colour="210">
+                    <block type="controls_if"></block>
+                    <block type="nf_switch"></block>
+                    <block type="nf_case"></block>
+                </category>
                 <category name="Math" colour="230">
                     <block type="math_number"></block>
                     <block type="math_arithmetic"></block>
+                    <block type="nf_member"></block>
+                    <block type="nf_struct_init"></block>
+                    <block type="nf_cast"></block>
+                    <block type="nf_unary"></block>
                 </category>
                 <category name="Text" colour="160">
                     <block type="text"></block>
                     <block type="text_print"></block>
                 </category>
                 <category name="Variables" colour="330" custom="VARIABLE"></category>
-                <category name="IO" colour="160"><block type="nf_gpio_set"></block><block type="nf_digital_read"></block><block type="nf_servo"></block><block type="nf_motors_move"></block><block type="nf_tone"></block><block type="nf_notone"></block><block type="nf_rgb_set"></block><block type="nf_analog_read"></block><block type="nf_delay"></block></category>
+                <category name="IO" colour="160"><block type="nf_gpio_set"></block><block type="nf_digital_read"></block><block type="nf_servo"></block><block type="nf_motors_move"></block><block type="nf_tone"></block><block type="nf_notone"></block><block type="nf_rgb_set"></block><block type="nf_analog_read"></block><block type="nf_delay"></block><block type="nf_delay_us"></block><block type="nf_millis"></block><block type="nf_micros"></block></category>
                 <category name="Displays" colour="180"><block type="nf_lcd_print"></block><block type="nf_lcd_clear"></block><block type="nf_lcd_cursor"></block><block type="nf_sevseg_print"></block></category>
                 <category name="Sensors" colour="230"><block type="nf_ldr_read"></block><block type="nf_keypad_read"></block></category>
                 </xml>`,

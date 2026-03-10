@@ -166,13 +166,254 @@ const LadderCoilNode = ({ id, data }: any) => {
     );
 };
 
+const TimeNode = ({ id, data }: any) => {
+    const style = useValidationStyle(id);
+    const mode = data.mode || 'millis';
+    return (
+        <div className={cn("px-3 py-2 rounded-md bg-amber-900/30 border-2 border-amber-500 shadow-lg flex items-center justify-center min-w-[100px] text-[#e6e6e6]", style)}>
+            <Handle type="target" position={Position.Top} className="w-3 h-3 bg-amber-500 border-none" />
+            <div className="absolute -top-3 left-2 bg-amber-500 text-white text-[8px] px-1 rounded font-bold">TIME</div>
+            <div className="text-xs font-bold">{mode === 'millis' ? 'millis()' : 'micros()'}</div>
+            <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-amber-500 border-none" />
+        </div>
+    );
+};
+
+const SleepNode = ({ id, data }: any) => {
+    const style = useValidationStyle(id);
+    const ms = data.ms || data.label || '1000';
+    return (
+        <div className={cn("px-3 py-2 rounded-md bg-orange-900/30 border-2 border-orange-500 shadow-lg flex items-center justify-center min-w-[100px] text-[#e6e6e6]", style)}>
+            <Handle type="target" position={Position.Top} className="w-3 h-3 bg-orange-500 border-none" />
+            <div className="absolute -top-3 left-2 bg-orange-500 text-white text-[8px] px-1 rounded font-bold">SLEEP</div>
+            <div className="text-xs font-bold">delay({ms}ms)</div>
+            <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-orange-500 border-none" />
+        </div>
+    );
+};
+
+const SetupNode = ({ id, data }: any) => {
+    const style = useValidationStyle(id);
+    return (
+        <div className={cn("px-4 py-2 rounded-md bg-blue-900/30 border-2 border-blue-500 shadow-lg flex items-center justify-center min-w-[100px] text-[#e6e6e6]", style)}>
+            <Handle type="target" position={Position.Top} className="w-3 h-3 bg-blue-500 border-none" />
+            <div className="absolute -top-3 left-2 bg-blue-500 text-white text-[8px] px-1 rounded font-bold">SETUP</div>
+            <LucideSettings size={14} className="mr-2 text-blue-400" />
+            <div className="text-xs font-bold">{data.label}</div>
+            <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-blue-500 border-none" />
+        </div>
+    );
+};
+
+const MainNode = ({ id, data }: any) => {
+    const style = useValidationStyle(id);
+    return (
+        <div className={cn("px-4 py-2 rounded-md bg-purple-900/30 border-2 border-purple-500 shadow-lg flex items-center justify-center min-w-[100px] text-[#e6e6e6]", style)}>
+            <Handle type="target" position={Position.Top} className="w-3 h-3 bg-purple-500 border-none" />
+            <div className="absolute -top-3 left-2 bg-purple-500 text-white text-[8px] px-1 rounded font-bold">MAIN</div>
+            <div className="text-xs font-bold">{data.label}</div>
+            <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-purple-500 border-none" />
+        </div>
+    );
+};
+
+const FunctionDefNode = ({ id, data }: any) => {
+    const style = useValidationStyle(id);
+    return (
+        <div className={cn("px-4 py-2 rounded-md bg-indigo-900/30 border-2 border-indigo-500 shadow-lg flex items-center justify-center min-w-[140px] text-[#e6e6e6]", style)}>
+            <Handle type="target" position={Position.Top} className="w-3 h-3 bg-indigo-500 border-none" />
+            <div className="absolute -top-3 left-2 bg-indigo-500 text-white text-[8px] px-1 rounded font-bold">FUNCTION</div>
+            <div className="text-xs font-bold">{data.label}</div>
+            <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-indigo-500 border-none" />
+        </div>
+    );
+};
+
+const StructNode = ({ id, data }: any) => {
+    const style = useValidationStyle(id);
+    return (
+        <div className={cn("px-4 py-2 rounded-md bg-teal-900/30 border-2 border-teal-500 shadow-lg flex items-center justify-center min-w-[140px] text-[#e6e6e6]", style)}>
+            <Handle type="target" position={Position.Top} className="w-3 h-3 bg-teal-500 border-none" />
+            <div className="absolute -top-3 left-2 bg-teal-500 text-white text-[8px] px-1 rounded font-bold">STRUCT</div>
+            <div className="text-xs font-bold">{data.label}</div>
+            <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-teal-500 border-none" />
+        </div>
+    );
+};
+
+const EnumNode = ({ id, data }: any) => {
+    const style = useValidationStyle(id);
+    return (
+        <div className={cn("px-4 py-2 rounded-md bg-amber-900/30 border-2 border-amber-500 shadow-lg flex items-center justify-center min-w-[140px] text-[#e6e6e6]", style)}>
+            <Handle type="target" position={Position.Top} className="w-3 h-3 bg-amber-500 border-none" />
+            <div className="absolute -top-3 left-2 bg-amber-500 text-white text-[8px] px-1 rounded font-bold">ENUM</div>
+            <div className="text-xs font-bold">{data.label}</div>
+            <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-amber-500 border-none" />
+        </div>
+    );
+};
+
+const DoWhileNode = ({ id, data }: any) => {
+    const style = useValidationStyle(id);
+    return (
+        <div className={cn("px-4 py-2 rounded-md bg-orange-900/30 border-2 border-orange-400 shadow-lg flex items-center justify-center min-w-[140px] text-[#e6e6e6]", style)}>
+            <Handle type="target" position={Position.Top} className="w-3 h-3 bg-orange-400 border-none" />
+            <div className="absolute -top-3 left-2 bg-orange-400 text-white text-[8px] px-1 rounded font-bold">DO-WHILE</div>
+            <LucideRepeat size={14} className="mr-2 text-orange-400" />
+            <div className="text-xs font-bold">{data.label || 'do-while'}</div>
+            <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-orange-400 border-none" />
+        </div>
+    );
+};
+
+const SwitchNode = ({ id, data }: any) => {
+    const style = useValidationStyle(id);
+    return (
+        <div className={cn("px-4 py-2 rounded-md bg-purple-900/30 border-2 border-purple-400 shadow-lg flex items-center justify-center min-w-[140px] text-[#e6e6e6]", style)}>
+            <Handle type="target" position={Position.Top} className="w-3 h-3 bg-purple-400 border-none" />
+            <div className="absolute -top-3 left-2 bg-purple-400 text-white text-[8px] px-1 rounded font-bold">SWITCH</div>
+            <div className="text-xs font-bold">{data.label || 'switch'}</div>
+            <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-purple-400 border-none" />
+        </div>
+    );
+};
+
+const ReturnNode = ({ id, data }: any) => {
+    const style = useValidationStyle(id);
+    return (
+        <div className={cn("px-4 py-2 rounded-md bg-red-900/30 border-2 border-red-500 shadow-lg flex items-center justify-center min-w-[100px] text-[#e6e6e6]", style)}>
+            <Handle type="target" position={Position.Top} className="w-3 h-3 bg-red-500 border-none" />
+            <div className="absolute -top-3 left-2 bg-red-500 text-white text-[8px] px-1 rounded font-bold">RETURN</div>
+            <div className="text-xs font-bold">{data.label || 'return'}</div>
+        </div>
+    );
+};
+
+const ForInNode = ({ id, data }: any) => {
+    const style = useValidationStyle(id);
+    return (
+        <div className={cn("px-4 py-2 rounded-md bg-cyan-900/30 border-2 border-cyan-500 shadow-lg flex items-center justify-center min-w-[140px] text-[#e6e6e6]", style)}>
+            <Handle type="target" position={Position.Top} className="w-3 h-3 bg-cyan-500 border-none" />
+            <div className="absolute -top-3 left-2 bg-cyan-500 text-white text-[8px] px-1 rounded font-bold">FOR-IN</div>
+            <LucideRepeat size={14} className="mr-2 text-cyan-400" />
+            <div className="text-xs font-bold">{data.label || 'for x in list'}</div>
+            <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-cyan-500 border-none" />
+        </div>
+    );
+};
+
+const ListNode = ({ id, data }: any) => {
+    const style = useValidationStyle(id);
+    const items = data.items || [];
+    return (
+        <div className={cn("px-4 py-2 rounded-md bg-rose-900/30 border-2 border-rose-500 shadow-lg flex flex-col items-center min-w-[160px] text-[#e6e6e6]", style)}>
+            <Handle type="target" position={Position.Top} className="w-3 h-3 bg-rose-500 border-none" />
+            <div className="absolute -top-3 left-2 bg-rose-500 text-white text-[8px] px-1 rounded font-bold">LIST</div>
+            <div className="text-xs font-bold">{data.label || 'Create List'}</div>
+            <div className="text-[10px] text-rose-300 mt-1">
+                {items.length > 0 ? items.join(', ') : '(empty)'}
+            </div>
+            <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-rose-500 border-none" />
+        </div>
+    );
+};
+
+const MemberNode = ({ id, data }: any) => {
+    const style = useValidationStyle(id);
+    const obj = data.obj || data.label || 'obj';
+    const prop = data.property || 'prop';
+    return (
+        <div className={cn("px-4 py-2 rounded-md bg-emerald-900/30 border-2 border-emerald-500 shadow-lg flex items-center justify-center min-w-[140px] text-[#e6e6e6]", style)}>
+            <Handle type="target" position={Position.Top} className="w-3 h-3 bg-emerald-500 border-none" />
+            <div className="absolute -top-3 left-2 bg-emerald-500 text-white text-[8px] px-1 rounded font-bold">MEMBER</div>
+            <div className="text-xs font-bold">{obj}.{prop}</div>
+            <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-emerald-500 border-none" />
+        </div>
+    );
+};
+
+const TernaryNode = ({ id, data }: any) => {
+    const style = useValidationStyle(id);
+    const condition = data.condition || data.label || 'x < 10';
+    const trueVal = data.trueValue || 'a';
+    const falseVal = data.falseValue || 'b';
+    return (
+        <div className={cn("px-3 py-2 rounded-md bg-purple-900/30 border-2 border-purple-500 shadow-lg flex items-center justify-center min-w-[160px] text-[#e6e6e6]", style)}>
+            <Handle type="target" position={Position.Top} className="w-3 h-3 bg-purple-500 border-none" />
+            <div className="absolute -top-3 left-2 bg-purple-500 text-white text-[8px] px-1 rounded font-bold">TERNARY</div>
+            <div className="text-xs font-bold">{condition} ? {trueVal} : {falseVal}</div>
+            <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-purple-500 border-none" />
+        </div>
+    );
+};
+
+const StructInitNode = ({ id, data }: any) => {
+    const style = useValidationStyle(id);
+    const name = data.name || 'MyStruct';
+    const fields = data.fields || [];
+    return (
+        <div className={cn("px-3 py-2 rounded-md bg-teal-900/30 border-2 border-teal-500 shadow-lg flex items-center justify-center min-w-[160px] text-[#e6e6e6]", style)}>
+            <Handle type="target" position={Position.Top} className="w-3 h-3 bg-teal-500 border-none" />
+            <div className="absolute -top-3 left-2 bg-teal-500 text-white text-[8px] px-1 rounded font-bold">STRUCT INIT</div>
+            <div className="text-xs font-bold">{name} {'{'} {fields.length} fields {'}'}</div>
+            <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-teal-500 border-none" />
+        </div>
+    );
+};
+
+const CastNode = ({ id, data }: any) => {
+    const style = useValidationStyle(id);
+    const targetType = data.targetType || 'int';
+    const value = data.value || data.label || 'x';
+    return (
+        <div className={cn("px-3 py-2 rounded-md bg-orange-900/30 border-2 border-orange-500 shadow-lg flex items-center justify-center min-w-[120px] text-[#e6e6e6]", style)}>
+            <Handle type="target" position={Position.Top} className="w-3 h-3 bg-orange-500 border-none" />
+            <div className="absolute -top-3 left-2 bg-orange-500 text-white text-[8px] px-1 rounded font-bold">CAST</div>
+            <div className="text-xs font-bold">({targetType}){value}</div>
+            <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-orange-500 border-none" />
+        </div>
+    );
+};
+
+const UnaryNode = ({ id, data }: any) => {
+    const style = useValidationStyle(id);
+    const op = data.operator || '!';
+    const value = data.value || data.label || 'x';
+    return (
+        <div className={cn("px-3 py-2 rounded-md bg-cyan-900/30 border-2 border-cyan-500 shadow-lg flex items-center justify-center min-w-[100px] text-[#e6e6e6]", style)}>
+            <Handle type="target" position={Position.Top} className="w-3 h-3 bg-cyan-500 border-none" />
+            <div className="absolute -top-3 left-2 bg-cyan-500 text-white text-[8px] px-1 rounded font-bold">UNARY</div>
+            <div className="text-xs font-bold">{op}{value}</div>
+            <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-cyan-500 border-none" />
+        </div>
+    );
+};
+
 const nodeTypes = {
     start: StartNode,
     end: EndNode,
+    setup: SetupNode,
     loop: LoopNode,
+    main: MainNode,
+    function_def: FunctionDefNode,
+    struct: StructNode,
+    enum: EnumNode,
+    dowhile: DoWhileNode,
+    forin: ForInNode,
+    list: ListNode,
+    switch: SwitchNode,
+    return: ReturnNode,
     decision: DecisionNode,
     process: ProcessNode,
     state: StateNode,
+    member: MemberNode,
+    ternary: TernaryNode,
+    struct_init: StructInitNode,
+    cast: CastNode,
+    unary: UnaryNode,
+    gpio: LadderCoilNode,
+    time: TimeNode,
+    sleep: SleepNode,
     ladder_contact: LadderContactNode,
     ladder_coil: LadderCoilNode,
 };
@@ -317,9 +558,27 @@ const FlowEditorInner: React.FC = () => {
                         <div className="flex gap-2 items-center border-r border-[rgba(0,217,255,0.1)] pr-4">
                             <span className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-tighter">Flow:</span>
                             <DragItem type="start" label="Start" color="bg-green-500" />
-                            <DragItem type="process" label="Process" color="bg-[#00d9ff]" meta={{ code: 'digitalWrite(13, HIGH)', label: 'Set LED HIGH' }} />
-                            <DragItem type="decision" label="Decision" color="bg-purple-500" meta={{ code: 'val < 100', label: 'Check Value' }} />
+                            <DragItem type="setup" label="Setup" color="bg-blue-500" meta={{ code: '', label: 'Setup' }} />
                             <DragItem type="loop" label="Loop" color="bg-orange-500" meta={{ code: 'for(int i=0;i<10;i++)', label: 'Repetir' }} />
+                            <DragItem type="main" label="Main" color="bg-purple-500" meta={{ code: '', label: 'Main' }} />
+                            <DragItem type="function_def" label="Function" color="bg-indigo-500" meta={{ code: '', label: 'myFunc' }} />
+                            <DragItem type="struct" label="Struct" color="bg-teal-500" meta={{ name: 'MyStruct', fields: [] }} />
+                            <DragItem type="enum" label="Enum" color="bg-amber-500" meta={{ name: 'MyEnum', members: [] }} />
+                            <DragItem type="dowhile" label="Do-While" color="bg-orange-400" meta={{ code: '', label: 'do-while' }} />
+                            <DragItem type="forin" label="For-In" color="bg-cyan-500" meta={{ code: '', label: 'for x in list' }} />
+                            <DragItem type="list" label="List" color="bg-rose-500" meta={{ code: '', label: 'Create List', items: [] }} />
+                            <DragItem type="switch" label="Switch" color="bg-purple-400" meta={{ code: '', label: 'switch' }} />
+                            <DragItem type="return" label="Return" color="bg-red-500" meta={{ code: '', label: 'return' }} />
+                            <DragItem type="member" label="Member" color="bg-emerald-500" meta={{ obj: 'myStruct', property: 'field' }} />
+                            <DragItem type="ternary" label="Ternary" color="bg-purple-500" meta={{ condition: 'x < 10', trueValue: 'a', falseValue: 'b' }} />
+                            <DragItem type="struct_init" label="Struct Init" color="bg-teal-500" meta={{ name: 'MyStruct', fields: [] }} />
+                            <DragItem type="cast" label="Cast" color="bg-orange-500" meta={{ targetType: 'int', value: 'x' }} />
+                            <DragItem type="unary" label="Unary" color="bg-cyan-500" meta={{ operator: '!', value: 'x' }} />
+                            <DragItem type="time" label="Time" color="bg-amber-500" meta={{ mode: 'millis' }} />
+                            <DragItem type="sleep" label="Sleep" color="bg-orange-500" meta={{ ms: '1000' }} />
+                            <DragItem type="process" label="Process" color="bg-[#00d9ff]" meta={{ code: 'digitalWrite(13, HIGH)', label: 'Set LED HIGH' }} />
+                            <DragItem type="gpio" label="GPIO" color="bg-green-600" meta={{ label: 'LED', pin: 13, value: 1 }} />
+                            <DragItem type="decision" label="Decision" color="bg-purple-500" meta={{ code: 'val < 100', label: 'Check Value' }} />
                             <DragItem type="end" label="End" color="bg-red-500" />
                         </div>
                         <div className="flex gap-2 items-center border-r border-[rgba(0,217,255,0.1)] pr-4">

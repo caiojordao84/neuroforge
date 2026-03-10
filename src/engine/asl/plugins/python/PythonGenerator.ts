@@ -449,6 +449,32 @@ export class PythonGenerator {
             return;
         }
 
+        if (n.nodeType === 'StructDeclaration') {
+            const name = n.attributes.name;
+            const fields = n.attributes.fields || [];
+            this.addLn(out, `${i}class ${name}:`, n);
+            if (fields.length === 0) {
+                this.addLn(out, `${i}    pass`, null);
+            } else {
+                fields.forEach((f: any) => {
+                    this.addLn(out, `${i}    def __init__(self, ${f.name}=None):`, null);
+                    this.addLn(out, `${i}        self.${f.name} = ${f.name}`, null);
+                });
+            }
+            return;
+        }
+
+        if (n.nodeType === 'EnumDeclaration') {
+            const name = n.attributes.name;
+            const members = n.attributes.members || [];
+            this.addLn(out, `${i}class ${name}:`, n);
+            members.forEach((m: any) => {
+                const val = m.value !== undefined ? ` = ${m.value}` : '';
+                this.addLn(out, `${i}    ${m.name}${val}`, null);
+            });
+            return;
+        }
+
         this.addLn(out, `${i}pass # ${n.nodeType}`, n);
     }
 
@@ -459,7 +485,13 @@ export class PythonGenerator {
             return n.attributes.value.toString();
         }
         if (n.nodeType === 'Identifier') return n.attributes.name;
-        if (n.nodeType === 'BinaryExpression') return `${this.genExpr(n.children[0])} ${n.attributes.operator} ${this.genExpr(n.children[1])}`;
+        if (n.nodeType === 'BinaryExpression') {
+            let op = n.attributes.operator;
+            if (op === '&&') op = 'and';
+            else if (op === '||') op = 'or';
+            else if (op === '!=') op = '!=';
+            return `${this.genExpr(n.children[0])} ${op} ${this.genExpr(n.children[1])}`;
+        }
         if (n.nodeType === 'UnaryExpression') {
             return n.attributes.prefix
                 ? `${n.attributes.operator}${this.genExpr(n.children[0])}`
@@ -478,6 +510,19 @@ export class PythonGenerator {
                 const iterable = this.genExpr(n.children[1]);
                 return `[${expr} for ${n.attributes.varName} in ${iterable}]`;
             }
+            if (n.attributes.callee === 'millis') {
+                if (this.flavor === 'MICROPYTHON') return 'utime.ticks_ms()';
+                return 'int(time.time() * 1000)';
+            }
+            if (n.attributes.callee === 'micros') {
+                if (this.flavor === 'MICROPYTHON') return 'utime.ticks_us()';
+                return 'int(time.time() * 1000000)';
+            }
+            if (n.attributes.callee === 'delayMicroseconds') {
+                const us = n.children.map(c => this.genExpr(c)).join(', ');
+                if (this.flavor === 'MICROPYTHON') return `utime.sleep_us(${us})`;
+                return `time.sleep(${us} / 1000000)`;
+            }
             const args = n.children.map(c => this.genExpr(c)).join(', ');
             return `${n.attributes.callee}(${args})`;
         }
@@ -485,8 +530,24 @@ export class PythonGenerator {
             const elements = n.children.map(c => this.genExpr(c)).join(', ');
             return `[${elements}]`;
         }
+        if (n.nodeType === 'ObjectInitializer') {
+            const fields = n.children.map(c => {
+                const name = c.attributes?.name || 'field';
+                const val = this.genExpr(c);
+                return `"${name}": ${val}`;
+            }).join(', ');
+            return `{ ${fields} }`;
+        }
         if (n.nodeType === 'SubscriptExpression') {
             return `${this.genExpr(n.children[0])}[${this.genExpr(n.children[1])}]`;
+        }
+        if (n.nodeType === 'CastExpression') {
+            const targetType = n.attributes.targetType || 'int';
+            const expr = this.genExpr(n.children[0]);
+            if (targetType === 'float' || targetType === 'double') return `float(${expr})`;
+            if (targetType === 'int') return `int(${expr})`;
+            if (targetType === 'str') return `str(${expr})`;
+            return `int(${expr})`;
         }
         if (n.nodeType === 'SizeofExpression') {
             return `len(${this.genExpr(n.children[0])})`;

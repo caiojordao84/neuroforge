@@ -280,8 +280,8 @@ class RegexPythonParser {
             nodeType: 'Program', id: 'root', attributes: {},
             children: [
                 ...rootNodes,
-                { nodeType: 'Function', id: 'setup', attributes: { name: 'setup' }, children: setupNodes },
-                { nodeType: 'Function', id: 'loop', attributes: { name: 'loop' }, children: loopNodes },
+                { nodeType: 'Function', id: 'setup', attributes: { name: 'setup', returnType: 'void' }, children: setupNodes },
+                { nodeType: 'Function', id: 'loop', attributes: { name: 'loop', returnType: 'void' }, children: loopNodes },
             ],
         };
     }
@@ -308,6 +308,18 @@ class RegexPythonParser {
 
         const utimeSleepM = trimmed.match(/^utime\.sleep(?:_ms)?\s*\((.+)\)\s*$/);
         if (utimeSleepM) return { nodeType: 'DelayMs', id: `delay-${lineNum}`, attributes: {}, children: [this._parseExpr(utimeSleepM[1].trim(), lineNum)], metadata: meta } as BaseNode;
+
+        // ── time.sleep_us / utime.sleep_us ─────────────────────────────────────
+        const sleepUsM = trimmed.match(/^(?:time\.)?sleep_us\s*\((.+)\)\s*$/);
+        if (sleepUsM) {
+            const usVal = this._parseExpr(sleepUsM[1].trim(), lineNum);
+            return { nodeType: 'CallExpression', id: `delayus-${lineNum}`, attributes: { callee: 'delayMicroseconds' }, children: [usVal], metadata: meta } as BaseNode;
+        }
+        const utimeSleepUsM = trimmed.match(/^utime\.sleep_us\s*\((.+)\)\s*$/);
+        if (utimeSleepUsM) {
+            const usVal = this._parseExpr(utimeSleepUsM[1].trim(), lineNum);
+            return { nodeType: 'CallExpression', id: `delayus-${lineNum}`, attributes: { callee: 'delayMicroseconds' }, children: [usVal], metadata: meta } as BaseNode;
+        }
 
         // ── millis() / micros() ──────────────────────────────────────────────
         if (/^(?:time|utime)\.ticks_ms\(\)/.test(trimmed)) return { nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {}, children: [{ nodeType: 'CallExpression', id: `ms-${lineNum}`, attributes: { callee: 'millis' }, children: [] }], metadata: meta } as BaseNode;

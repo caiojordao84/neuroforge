@@ -115,6 +115,47 @@ export class BlocklyParser {
             };
         }
 
+        // nf_struct: bloco de definição de struct/class.
+        // Gera StructDeclaration — CGenerator emite struct {}, PythonGenerator emite class.
+        if (type === 'nf_struct') {
+            const name = this.getF(block, 'NAME') || 'MyStruct';
+            const fields: { name: string; type: string }[] = [];
+            const fieldCount = parseInt(block.getAttribute('usearrfields') || '0');
+            for (let i = 0; i < fieldCount; i++) {
+                const fieldName = this.getF(block, `FIELD_NAME_${i}`);
+                const fieldType = this.getF(block, `FIELD_TYPE_${i}`) || 'int';
+                if (fieldName) fields.push({ name: fieldName, type: fieldType });
+            }
+            return {
+                nodeType: 'StructDeclaration', id: 'b',
+                attributes: { name, fields },
+                children: []
+            };
+        }
+
+        // nf_enum: bloco de definição de enum.
+        // Gera EnumDeclaration — CGenerator emite enum {}, PythonGenerator emite class.
+        if (type === 'nf_enum') {
+            const name = this.getF(block, 'NAME') || 'MyEnum';
+            const members: { name: string; value?: number }[] = [];
+            const memberCount = parseInt(block.getAttribute('usemembers') || '0');
+            for (let i = 0; i < memberCount; i++) {
+                const memberName = this.getF(block, `MEMBER_NAME_${i}`);
+                const memberValue = this.getF(block, `MEMBER_VALUE_${i}`);
+                if (memberName) {
+                    members.push({ 
+                        name: memberName, 
+                        value: memberValue !== undefined ? parseInt(memberValue) : undefined 
+                    });
+                }
+            }
+            return {
+                nodeType: 'EnumDeclaration', id: 'b',
+                attributes: { name, members },
+                children: []
+            };
+        }
+
         // Variables
         if (type === 'variables_set') {
             const name = this.getF(block, 'VAR') || 'i';
@@ -183,6 +224,113 @@ export class BlocklyParser {
             return {
                 nodeType: 'ForIn', id: 'b', attributes: { varName },
                 children: [iterable, bodyBlock]
+            };
+        }
+
+        // nf_dowhile: Do-While loop
+        if (type === 'nf_dowhile') {
+            const cond = this.parseVal(block, 'COND');
+            const children: BaseNode[] = [];
+            const doStmt = block.querySelector('statement[name="DO"] > block');
+            if (doStmt) this.processBlockChain(doStmt, children, setupList);
+            const bodyBlock: BaseNode = { nodeType: 'Block', id: 'b', attributes: {}, children };
+            return { nodeType: 'DoWhileLoop', id: 'b', attributes: {}, children: [cond, bodyBlock] };
+        }
+
+        // nf_switch: Switch statement
+        if (type === 'nf_switch') {
+            const expr = this.parseVal(block, 'EXPR');
+            return { nodeType: 'SwitchStatement', id: 'b', attributes: {}, children: [expr] };
+        }
+
+        // nf_case: Case clause
+        if (type === 'nf_case') {
+            const val = this.parseVal(block, 'VALUE');
+            const children: BaseNode[] = [];
+            const doStmt = block.querySelector('statement[name="DO"] > block');
+            if (doStmt) this.processBlockChain(doStmt, children, setupList);
+            children.push({ nodeType: 'BreakStatement', id: 'b', attributes: {}, children: [] });
+            return { nodeType: 'CaseClause', id: 'b', attributes: {}, children: [val, ...children] };
+        }
+
+        // nf_return: Return statement
+        if (type === 'nf_return') {
+            const val = this.parseVal(block, 'VALUE');
+            return { nodeType: 'ReturnStatement', id: 'b', attributes: {}, children: val ? [val] : [] };
+        }
+
+        // nf_member: Member expression (obj.prop)
+        if (type === 'nf_member') {
+            const obj = this.getF(block, 'OBJECT') || 'obj';
+            const prop = this.getF(block, 'PROPERTY') || 'prop';
+            return {
+                nodeType: 'MemberExpression',
+                id: 'b',
+                attributes: { object: obj, property: prop, operator: '.' },
+                children: [{ nodeType: 'Identifier', id: 'i', attributes: { name: obj }, children: [] }]
+            };
+        }
+
+        // nf_conditional: Ternary conditional (condition ? trueVal : falseVal)
+        if (type === 'nf_conditional') {
+            const cond = this.parseVal(block, 'CONDITION');
+            const trueVal = this.parseVal(block, 'TRUE_VALUE');
+            const falseVal = this.parseVal(block, 'FALSE_VALUE');
+            return {
+                nodeType: 'ConditionalExpression',
+                id: 'b',
+                attributes: {},
+                children: [cond, trueVal, falseVal]
+            };
+        }
+
+        // nf_struct_init: Struct initializer { .field = value, ... }
+        if (type === 'nf_struct_init') {
+            const name = this.getF(block, 'NAME') || 'MyStruct';
+            const fieldCount = parseInt(block.getAttribute('usefields') || '0');
+            const children: any[] = [];
+            for (let i = 0; i < fieldCount; i++) {
+                const fieldName = this.getF(block, `FIELD_NAME_${i}`);
+                const fieldValue = this.parseVal(block, `FIELD_VALUE_${i}`);
+                if (fieldName) {
+                    children.push({
+                        nodeType: 'Identifier',
+                        id: `f-${i}`,
+                        attributes: { name: fieldName },
+                        children: fieldValue ? [fieldValue] : []
+                    });
+                }
+            }
+            return {
+                nodeType: 'DesignatedInitializer',
+                id: 'b',
+                attributes: { name },
+                children
+            };
+        }
+
+        // nf_cast: Type cast (int)x, (float)x
+        if (type === 'nf_cast') {
+            const targetType = this.getF(block, 'TYPE') || 'int';
+            const value = this.parseVal(block, 'VALUE');
+            return {
+                nodeType: 'CastExpression',
+                id: 'b',
+                attributes: { targetType },
+                children: value ? [value] : []
+            };
+        }
+
+        // nf_unary: Unary operators (&, *, !, -, ++, --)
+        if (type === 'nf_unary') {
+            const op = this.getF(block, 'OP') || '!';
+            const value = this.parseVal(block, 'VALUE');
+            const prefix = op !== '++' && op !== '--';
+            return {
+                nodeType: 'UnaryExpression',
+                id: 'b',
+                attributes: { operator: op, prefix },
+                children: value ? [value] : []
             };
         }
 

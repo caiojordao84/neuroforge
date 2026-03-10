@@ -87,7 +87,25 @@ export class FlowToAst {
             }
         });
 
+        // Main Function — main nodes are separate entry point for standalone programs
+        const mainNodes: BaseNode[] = [];
+        builder.blocks.forEach(b => {
+            if (b.type === 'main') {
+                const content = b.data.code
+                    ? this.parseExplicitCode(b.data.code)
+                    : this.parseSimpleCommand(b.data.label || '');
+                if (content) mainNodes.push(content);
+            }
+        });
+
+        const mainFunction: BaseNode | null = mainNodes.length > 0
+            ? { nodeType: 'Function', id: 'main', attributes: { name: 'main' }, children: mainNodes }
+            : null;
+
         program.children.push(...this.injectedGlobals, ...helperFunctions, setup, loop);
+        if (mainFunction) {
+            program.children.push(mainFunction);
+        }
         return program;
     }
 
@@ -395,6 +413,36 @@ export class FlowToAst {
 
         // --- Ladder Logic Mapping (Function Blocks) ---
 
+        // GPIO output (generic, not ladder-specific)
+        if (type === 'gpio') {
+            const pin = parseInt(data.pin || data.label?.replace(/\D/g, '') || '13');
+            const value = parseInt(data.value || '1');
+            return {
+                nodeType: 'GpioSet', id: `gpio-${block.id}`, attributes: {},
+                children: [
+                    { nodeType: 'Literal', id: 'p', attributes: { value: pin }, children: [] },
+                    { nodeType: 'Literal', id: 'v', attributes: { value }, children: [] }
+                ]
+            };
+        }
+
+        // Time: millis() or micros()
+        if (type === 'time') {
+            const mode = data.mode || 'millis';
+            return {
+                nodeType: 'CallExpression', id: `time-${block.id}`, attributes: { callee: mode }, children: []
+            };
+        }
+
+        // Sleep: delay(ms)
+        if (type === 'sleep') {
+            const ms = parseInt(data.ms || data.label?.replace(/\D/g, '') || '1000');
+            return {
+                nodeType: 'DelayMs', id: `sleep-${block.id}`, attributes: {},
+                children: [{ nodeType: 'Literal', id: 'ms', attributes: { value: ms }, children: [] }]
+            };
+        }
+
         // Coils
         if (type === 'ladder_coil') {
             const pin = data.pin || 13;
@@ -646,6 +694,181 @@ export class FlowToAst {
         // This block itself emits nothing; it's just the entry point for the function subgraph.
         if (type === 'function_def') {
             return null;
+        }
+
+        // Struct/Class definition block
+        if (type === 'struct') {
+            const name = (data.name || data.label || 'MyStruct') as string;
+            const fields: { name: string; type: string }[] = [];
+            if (data.fields && Array.isArray(data.fields)) {
+                data.fields.forEach((f: any) => {
+                    fields.push({ name: f.name || 'field', type: f.type || 'int' });
+                });
+            }
+            return {
+                nodeType: 'StructDeclaration',
+                id: `struct-${block.id}`,
+                attributes: { name, fields },
+                children: []
+            };
+        }
+
+        // Enum definition block
+        if (type === 'enum') {
+            const name = (data.name || data.label || 'MyEnum') as string;
+            const members: { name: string; value?: number }[] = [];
+            if (data.members && Array.isArray(data.members)) {
+                data.members.forEach((m: any) => {
+                    members.push({ name: m.name || 'member', value: m.value });
+                });
+            }
+            return {
+                nodeType: 'EnumDeclaration',
+                id: `enum-${block.id}`,
+                attributes: { name, members },
+                children: []
+            };
+        }
+
+        // Do-While loop block
+        if (type === 'dowhile') {
+            const cond = data.code ? this.parseExplicitCode(data.code) : this.parseSimpleCommand(data.label || '1');
+            return {
+                nodeType: 'DoWhileLoop',
+                id: `dowhile-${block.id}`,
+                attributes: {},
+                children: [cond]
+            };
+        }
+
+        // Switch statement block
+        if (type === 'switch') {
+            const expr = data.code ? this.parseExplicitCode(data.code) : this.parseSimpleCommand(data.label || '0');
+            return {
+                nodeType: 'SwitchStatement',
+                id: `switch-${block.id}`,
+                attributes: {},
+                children: [expr]
+            };
+        }
+
+        // Return statement block
+        if (type === 'return') {
+            const val = data.code ? this.parseExplicitCode(data.code) : null;
+            return {
+                nodeType: 'ReturnStatement',
+                id: `return-${block.id}`,
+                attributes: {},
+                children: val ? [val] : []
+            };
+        }
+
+        // For-In loop block
+        if (type === 'forin') {
+            const varName = (data.varName || data.label || 'x') as string;
+            const iterable = data.code ? this.parseExplicitCode(data.code) : this.parseSimpleCommand(data.label || 'list');
+            return {
+                nodeType: 'ForIn',
+                id: `forin-${block.id}`,
+                attributes: { varName },
+                children: [iterable]
+            };
+        }
+
+        // List creation block - creates ArrayInitializer
+        if (type === 'list') {
+            const items = data.items || [];
+            const children = items.map((item: any, idx: number) => {
+                return {
+                    nodeType: 'Literal',
+                    id: `list-item-${block.id}-${idx}`,
+                    attributes: { value: item },
+                    children: []
+                };
+            });
+            return {
+                nodeType: 'VariableDeclaration',
+                id: `list-${block.id}`,
+                attributes: { name: data.label || 'myList', type: 'int[]' },
+                children: [{
+                    nodeType: 'ArrayInitializer',
+                    id: `arr-init-${block.id}`,
+                    attributes: {},
+                    children
+                }]
+            };
+        }
+
+        // Member expression block (obj.prop)
+        if (type === 'member') {
+            const obj = (data.obj || data.label || 'obj') as string;
+            const prop = (data.property || 'prop') as string;
+            return {
+                nodeType: 'MemberExpression',
+                id: `member-${block.id}`,
+                attributes: { object: obj, property: prop, operator: '.' },
+                children: [{ nodeType: 'Identifier', id: `id-${block.id}`, attributes: { name: obj }, children: [] }]
+            };
+        }
+
+        // Ternary conditional expression (condition ? trueVal : falseVal)
+        if (type === 'ternary') {
+            const condition = (data.condition || data.label || 'x < 10') as string;
+            const trueVal = (data.trueValue || 'a') as string;
+            const falseVal = (data.falseValue || 'b') as string;
+            return {
+                nodeType: 'ConditionalExpression',
+                id: `ternary-${block.id}`,
+                attributes: {},
+                children: [
+                    { nodeType: 'Identifier', id: `cond-${block.id}`, attributes: { name: condition }, children: [] },
+                    { nodeType: 'Identifier', id: `true-${block.id}`, attributes: { name: trueVal }, children: [] },
+                    { nodeType: 'Identifier', id: `false-${block.id}`, attributes: { name: falseVal }, children: [] }
+                ]
+            };
+        }
+
+        // Struct initializer { .field = value, ... }
+        if (type === 'struct_init') {
+            const name = (data.name || 'MyStruct') as string;
+            const fields = (data.fields || []) as { name: string; value: string }[];
+            const children = fields.map((f, i): BaseNode => ({
+                nodeType: 'Identifier',
+                id: `field-${block.id}-${i}`,
+                attributes: { name: f.name },
+                children: f.value ? [{ nodeType: 'Identifier' as const, id: `val-${block.id}-${i}`, attributes: { name: f.value }, children: [] }] : []
+            }));
+            return {
+                nodeType: 'DesignatedInitializer',
+                id: `structinit-${block.id}`,
+                attributes: { name },
+                children
+            };
+        }
+
+        // Type cast (int)x, (float)x
+        if (type === 'cast') {
+            const targetType = (data.targetType || 'int') as string;
+            const value = (data.value || data.label || 'x') as string;
+            return {
+                nodeType: 'CastExpression',
+                id: `cast-${block.id}`,
+                attributes: { targetType },
+                children: [{ nodeType: 'Identifier', id: `val-${block.id}`, attributes: { name: value }, children: [] }]
+            };
+        }
+
+        // Unary operator (&, *, !, -, ++, --)
+        if (type === 'unary') {
+            const op = (data.operator || '!') as string;
+            const value = (data.value || data.label || 'x') as string;
+            const prefix = op !== '++' && op !== '--';
+            return {
+                nodeType: 'UnaryExpression',
+                id: `unary-${block.id}`,
+                attributes: { operator: op, prefix },
+                children: [{ nodeType: 'Identifier', id: `val-${block.id}`, attributes: { name: value }, children: [] }]
+            };
         }
 
         // Call to a user-defined helper function
