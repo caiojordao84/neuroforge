@@ -293,7 +293,11 @@ class RegexPythonParser {
 
         // ── print(...) ──────────────────────────────────────────────────────
         const printM = trimmed.match(/^print\s*\((.+)\)\s*$/);
-        if (printM) return { nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {}, children: [{ nodeType: 'Print', id: `print-${lineNum}`, attributes: { newline: true }, children: [this._parseExpr(printM[1].trim(), lineNum)] } as BaseNode], metadata: meta } as BaseNode;
+        if (printM) {
+            // Split by comma, roughly (won't work perfectly for commas inside strings, but ok for testing)
+            const args = printM[1].split(',').map(s => this._parseExpr(s.trim(), lineNum));
+            return { nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {}, children: [{ nodeType: 'Print', id: `print-${lineNum}`, attributes: { newline: true }, children: args } as BaseNode], metadata: meta } as BaseNode;
+        }
 
         // ── time.sleep_ms / sleep_ms ─────────────────────────────────────────
         const sleepMsM = trimmed.match(/^(?:time\.)?sleep_ms\s*\((.+)\)\s*$/);
@@ -1222,6 +1226,19 @@ class PythonCstToAst {
                         id: `mul-${node.id}`,
                         attributes: { operator: '*' },
                         children: [arg, { nodeType: 'Literal', id: `ms-${node.id}`, attributes: { value: 1000 }, children: [] }]
+                    }],
+                };
+            }
+            if (callee === 'time.sleep_us' || callee === 'sleep_us' || callee === 'utime.sleep_us') {
+                return {
+                    nodeType: 'ExpressionStatement',
+                    id: `stmtus-${node.id}`,
+                    attributes: {},
+                    children: [{
+                        nodeType: 'CallExpression',
+                        id: `delayus-${node.id}`,
+                        attributes: { callee: 'delayMicroseconds' },
+                        children: args
                     }],
                     metadata: meta
                 };

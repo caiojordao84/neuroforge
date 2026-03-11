@@ -96,13 +96,13 @@ Based on my thorough analysis of the codebase, I can now provide a comprehensive
 
 ### 6. GPIO
 
-| NodeType         | ASL Types                | Executor | Transform          | CGen             | PyGen            | RsGen            | CParser          | PyParser | RsParser | Blockly           | Flow                | Shims | Components | Status    |
-| ---------------- | ------------------------ | -------- | ------------------ | ---------------- | ---------------- | ---------------- | ---------------- | -------- | -------- | ----------------- | ------------------- | ----- | ---------- | --------- |
-| **digitalWrite** | ✅ ASLDigitalWrite        | ✅        | ✅                  | ✅                | ✅                | ✅                | ✅                | ✅        | ✅        | ✅ nf_gpio_set     | ✅ gpio/ladder_coil  | N/A   | N/A        | ✅ FULL    |
-| **analogWrite**  | ✅ ASLAnalogWrite         | ✅        | ✅                  | ✅                | ✅                | ✅                | ✅                | ✅        | ✅        | ✅ nf_analog_write | ✅ analogWrite       | N/A   | N/A        | ✅ FULL    |
-| **pinMode**      | ✅ ASLPinMode             | ✅        | ✅                  | ✅                | ✅                | ✅                | ✅                | ✅        | ✅        | ✅ nf_pinmode      | ✅ process           | N/A   | N/A        | ✅ FULL    |
-| **digitalRead**  | ✅ ASLRead (DIGITAL mode) | ✅        | ✅ tryTransformRead | ✅ GpioRead       | ✅                | ✅ GpioRead       | ✅ GpioRead       | ✅        | ✅        | ✅ nf_digital_read | ✅ ladder_contact    | N/A   | N/A        | ✅ FULL    |
-| **analogRead**   | ✅ ASLRead (ANALOG mode)  | ✅        | ✅ tryTransformRead | ✅ AnalogRead     | ✅                | ✅ AnalogRead     | ✅ AnalogRead     | ✅        | ✅        | ❌ MISSING         | ❌ FlowToAst missing | N/A   | N/A        | ⚠️ PARTIAL |
+| NodeType         | ASL Types                | Executor | Transform          | CGen         | PyGen | RsGen        | CParser      | PyParser | RsParser | Blockly           | Flow               | Shims | Components | Status |
+| ---------------- | ------------------------ | -------- | ------------------ | ------------ | ----- | ------------ | ------------ | -------- | -------- | ----------------- | ------------------ | ----- | ---------- | ------ |
+| **digitalWrite** | ✅ ASLDigitalWrite        | ✅        | ✅                  | ✅            | ✅     | ✅            | ✅            | ✅        | ✅        | ✅ nf_gpio_set     | ✅ gpio/ladder_coil | N/A   | N/A        | ✅ FULL |
+| **analogWrite**  | ✅ ASLAnalogWrite         | ✅        | ✅                  | ✅            | ✅     | ✅            | ✅            | ✅        | ✅        | ✅ nf_analog_write | ✅ analogWrite      | N/A   | N/A        | ✅ FULL |
+| **pinMode**      | ✅ ASLPinMode             | ✅        | ✅                  | ✅            | ✅     | ✅            | ✅            | ✅        | ✅        | ✅ nf_pinmode      | ✅ process          | N/A   | N/A        | ✅ FULL |
+| **digitalRead**  | ✅ ASLRead (DIGITAL mode) | ✅        | ✅ tryTransformRead | ✅ GpioRead   | ✅     | ✅ GpioRead   | ✅ GpioRead   | ✅        | ✅        | ✅ nf_digital_read | ✅ ladder_contact   | N/A   | N/A        | ✅ FULL |
+| **analogRead**   | ✅ ASLRead (ANALOG mode)  | ✅        | ✅ tryTransformRead | ✅ AnalogRead | ✅     | ✅ AnalogRead | ✅ AnalogRead | ✅        | ✅        | ✅ nf_analog_read  | ✅ analog_read      | N/A   | N/A        | ✅ FULL |
 
 **Notes:**
 - pinMode: Generated as CallExpression in C/Py/Rs generators, not native statement type
@@ -112,12 +112,12 @@ Based on my thorough analysis of the codebase, I can now provide a comprehensive
 
 ### 7. TIMING
 
-| NodeType              | ASL Types  | Executor                      | Transform | CGen             | PyGen            | RsGen            | CParser   | PyParser         | RsParser         | Blockly       | Flow    | Shims | Components | Status    |
-| --------------------- | ---------- | ----------------------------- | --------- | ---------------- | ---------------- | ---------------- | --------- | ---------------- | ---------------- | ------------- | ------- | ----- | ---------- | --------- |
-| **delay**             | ✅ ASLDelay | ✅                             | ❌         | ✅ DelayMs        | ✅ DelayMs        | ✅ DelayMs        | ✅ DelayMs | ✅                | ✅                | ✅ nf_delay    | ✅ sleep | N/A   | N/A        | ✅ FULL    |
-| **delayMicroseconds** | ❌ MISSING  | ⚠️ delayMicroseconds() stub    | ❌         | ✅ CallExpression | ✅ CallExpression | ❌                | ❌         | ✅ CallExpression | ❌                | ✅ nf_delay_us | ❌       | N/A   | N/A        | ⚠️ PARTIAL |
-| **millis**            | ❌ MISSING  | ⚠️ millis() via CallExpression | ❌         | ❌                | ✅ CallExpression | ✅ CallExpression | ❌         | ✅ CallExpression | ✅ CallExpression | ✅ nf_millis   | ✅ time  | N/A   | N/A        | ⚠️ PARTIAL |
-| **micros**            | ❌ MISSING  | ⚠️ micros() via CallExpression | ❌         | ❌                | ✅ CallExpression | ✅ CallExpression | ❌         | ✅ CallExpression | ✅ CallExpression | ✅ nf_micros   | ✅ time  | N/A   | N/A        | ⚠️ PARTIAL |
+| NodeType              | ASL Types  | Executor                            | Transform        | CGen                  | PyGen               | RsGen                 | CParser   | PyParser         | RsParser         | Blockly       | Flow    | Shims | Components | Status |
+| --------------------- | ---------- | ----------------------------------- | ---------------- | --------------------- | ------------------- | --------------------- | --------- | ---------------- | ---------------- | ------------- | ------- | ----- | ---------- | ------ |
+| **delay**             | ✅ ASLDelay | ✅                                   | ❌                | ✅ DelayMs             | ✅ DelayMs           | ✅ DelayMs             | ✅ DelayMs | ✅                | ✅                | ✅ nf_delay    | ✅ sleep | N/A   | N/A        | ✅ FULL |
+| **delayMicroseconds** | ✅ FULL     | ✅ CallExpression(delayMicroseconds) | ✅ CallExpression | ✅ `delayMicroseconds` | ✅ `time.sleep_us`   | ✅ `delayMicroseconds` | ✅         | ✅ CallExpression | ✅ CallExpression | ✅ nf_delay_us | ✅       | N/A   | N/A        | ✅ FULL |
+| **millis**            | ✅ FULL     | ✅ CallExpression(millis)            | ✅ CallExpression | ✅ `millis()`          | ✅ `time.ticks_ms()` | ✅ `get_ms()`          | ✅         | ✅ CallExpression | ✅ CallExpression | ✅ nf_millis   | ✅ time  | N/A   | N/A        | ✅ FULL |
+| **micros**            | ✅ FULL     | ✅ CallExpression(micros)            | ✅ CallExpression | ✅ `micros()`          | ✅ `time.ticks_us()` | ✅ `get_us()`          | ✅         | ✅ CallExpression | ✅ CallExpression | ✅ nf_micros   | ✅ time  | N/A   | N/A        | ✅ FULL |
 
 **Notes:**
 - delayMicroseconds/millis/micros: No dedicated ASLType, handled via CallExpression eval in executor

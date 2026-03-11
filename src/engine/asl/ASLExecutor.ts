@@ -300,6 +300,26 @@ async function executeStatements(
         break;
       }
 
+      case 'expr': {
+        await evalExpr(s.expr, localEnv, ctx);
+        break;
+      }
+
+      case 'print': {
+        const textParts = [];
+        for (const arg of s.args) {
+          const val = await evalExpr(arg, localEnv, ctx);
+          textParts.push(val !== undefined ? String(val) : '');
+        }
+        const str = textParts.join(' ');
+        if (s.newline) {
+          ctx.engine.serialPrintln(str);
+        } else {
+          ctx.engine.serialPrint(str);
+        }
+        break;
+      }
+
       case 'declare': {
         const val = s.value ? await evalExpr(s.value, localEnv, ctx) : defaultValueForType(s.type);
         localEnv.set(s.name, val);
@@ -870,7 +890,12 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         return 1;
       }
       if (expr.callee === 'delayMicroseconds') {
-        ctx.engine.delayMicroseconds();
+        const us = expr.args[0] ? await evalExpr(expr.args[0], env, ctx) : 0;
+        ctx.engine.delayMicroseconds(us);
+        if (us >= 1000) {
+          // Await blocks execution for larger delays based on milliseconds
+          await new Promise(resolve => setTimeout(resolve, Math.floor(us / 1000)));
+        }
         return 0;
       }
       if (expr.callee === 'attachInterrupt' || expr.callee === 'detachInterrupt') {

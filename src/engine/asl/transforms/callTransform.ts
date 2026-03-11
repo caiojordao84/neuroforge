@@ -38,6 +38,17 @@ export function transformCallToStmt(node: BaseNode): ASLStatement | null {
     } as ASLStatement;
   }
 
+  if (callee === 'delayMicroseconds') {
+    return {
+      kind: 'expr',
+      expr: {
+        kind: 'call',
+        callee: 'delayMicroseconds',
+        args: node.children.map(transformExpr),
+      },
+    } as ASLStatement;
+  }
+
   if (callee === 'Pin.value' && node.children.length === 2) {
     return {
       kind: 'digitalWrite',

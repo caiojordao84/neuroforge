@@ -1,0 +1,49 @@
+{
+  "nodeType": "Program",
+  "id": "root",
+  "attributes": {},
+  "children": [
+    {
+      "nodeType": "Function",
+      "id": "setup",
+      "attributes": {
+        "name": "setup",
+        "returnType": "void"
+      },
+      "children": [
+        {
+          "nodeType": "CallExpression",
+          "id": "delayus-3",
+          "attributes": {
+            "callee": "delayMicroseconds"
+          },
+          "children": [
+            {
+              "nodeType": "Literal",
+              "id": "l-3",
+              "attributes": {
+                "value": 1500
+              },
+              "children": [],
+              "metadata": {
+                "line": 3
+              }
+            }
+          ],
+          "metadata": {
+            "line": 3
+          }
+        }
+      ]
+    },
+    {
+      "nodeType": "Function",
+      "id": "loop",
+      "attributes": {
+        "name": "loop",
+        "returnType": "void"
+      },
+      "children": []
+    }
+  ]
+}

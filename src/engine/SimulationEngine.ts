@@ -452,7 +452,7 @@ export class SimulationEngine extends EventEmitter {
     });
   }
 
-  delayMicroseconds(): void {
+  delayMicroseconds(us: number): void {
     // Microsecond delays are essentially instant in simulation
   }
 

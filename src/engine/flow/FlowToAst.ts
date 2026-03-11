@@ -443,6 +443,25 @@ export class FlowToAst {
             };
         }
 
+        // Analog Read
+        if (type === 'analog_read') {
+            const pin = parseInt(data.pin || 'A0');
+            const target = data.target || 'val';
+            return {
+                nodeType: 'ExpressionStatement', id: `analog-read-${block.id}`, attributes: {},
+                children: [{
+                    nodeType: 'BinaryExpression', id: `assign-${block.id}`, attributes: { operator: '=' },
+                    children: [
+                        { nodeType: 'Identifier', id: `target-${block.id}`, attributes: { name: target }, children: [] },
+                        {
+                            nodeType: 'AnalogRead', id: `areader-${block.id}`, attributes: { mode: 'ANALOG' },
+                            children: [{ nodeType: 'Literal', id: `p-${block.id}`, attributes: { value: pin }, children: [] }]
+                        }
+                    ]
+                }]
+            };
+        }
+
         // Coils
         if (type === 'ladder_coil') {
             const pin = data.pin || 13;

@@ -166,6 +166,20 @@ const LadderCoilNode = ({ id, data }: any) => {
     );
 };
 
+const AnalogReadNode = ({ id, data }: any) => {
+    const style = useValidationStyle(id);
+    const pin = data.pin || 'A0';
+    const target = data.target || 'val';
+    return (
+        <div className={cn("px-3 py-2 rounded-md bg-cyan-900/30 border-2 border-cyan-500 shadow-lg flex flex-col items-center min-w-[120px] text-[#e6e6e6]", style)}>
+            <Handle type="target" position={Position.Top} className="w-3 h-3 bg-cyan-500 border-none" />
+            <div className="absolute -top-3 left-2 bg-cyan-500 text-white text-[8px] px-1 rounded font-bold">ANALOG READ</div>
+            <div className="text-xs font-bold">{target} = analogRead({pin})</div>
+            <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-cyan-500 border-none" />
+        </div>
+    );
+};
+
 const TimeNode = ({ id, data }: any) => {
     const style = useValidationStyle(id);
     const mode = data.mode || 'millis';
@@ -416,6 +430,7 @@ const nodeTypes = {
     sleep: SleepNode,
     ladder_contact: LadderContactNode,
     ladder_coil: LadderCoilNode,
+    analog_read: AnalogReadNode,
 };
 
 // --- Main Editor Component ---
@@ -578,6 +593,7 @@ const FlowEditorInner: React.FC = () => {
                             <DragItem type="sleep" label="Sleep" color="bg-orange-500" meta={{ ms: '1000' }} />
                             <DragItem type="process" label="Process" color="bg-[#00d9ff]" meta={{ code: 'digitalWrite(13, HIGH)', label: 'Set LED HIGH' }} />
                             <DragItem type="gpio" label="GPIO" color="bg-green-600" meta={{ label: 'LED', pin: 13, value: 1 }} />
+                            <DragItem type="analog_read" label="Analog Read" color="bg-cyan-500" meta={{ label: 'Analog Read', pin: 34, target: 'val' }} />
                             <DragItem type="decision" label="Decision" color="bg-purple-500" meta={{ code: 'val < 100', label: 'Check Value' }} />
                             <DragItem type="end" label="End" color="bg-red-500" />
                         </div>
@@ -675,7 +691,7 @@ const FlowEditorInner: React.FC = () => {
                                     </div>
                                 )}
 
-                                {(selectedNode.type === 'ladder_contact' || selectedNode.type === 'ladder_coil') && (
+                                {(selectedNode.type === 'ladder_contact' || selectedNode.type === 'ladder_coil' || selectedNode.type === 'analog_read') && (
                                     <div>
                                         <label className="block text-[#9ca3af] font-bold mb-1 uppercase tracking-tighter">Pin Target</label>
                                         <select
@@ -692,6 +708,17 @@ const FlowEditorInner: React.FC = () => {
                                                 <option key={p} value={p}>GPIO {p}</option>
                                             ))}
                                         </select>
+                                    </div>
+                                )}
+                                {selectedNode.type === 'analog_read' && (
+                                    <div>
+                                        <label className="block text-[#9ca3af] font-bold mb-1 uppercase tracking-tighter">Target Variable</label>
+                                        <input
+                                            type="text"
+                                            value={selectedNode.data.target as string || 'val'}
+                                            onChange={e => updateNodeData(selectedNode.id, { target: e.target.value })}
+                                            className="w-full bg-[#0a0e14] border border-[rgba(0,217,255,0.3)] rounded px-2 py-1 focus:border-[#00d9ff] outline-none"
+                                        />
                                     </div>
                                 )}
                             </div>

@@ -52,6 +52,7 @@ export const statementRegistry: Record<string, StatementHandler> = {
   GpioBatch: handleGpioBatch,
   VariableDeclaration: handleVariableDeclaration,
   ExpressionStatement: handleExpressionStatement,
+  CallExpression: handleExpressionStatement,
   Print: handlePrint,
   // --- Service Handlers (S5) ---
   UartWrite: handleUartWrite,
@@ -480,7 +481,7 @@ function handleVariableDeclaration(node: BaseNode, ctx: TransformContext): ASLSt
 }
 
 function handleExpressionStatement(node: BaseNode, ctx: TransformContext): ASLStatement[] {
-  const expr = node.children[0];
+  const expr = node.nodeType === 'ExpressionStatement' ? node.children[0] : node;
   if (!expr) return [];
 
   if (expr.nodeType === 'GpioSet') {

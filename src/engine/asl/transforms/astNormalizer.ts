@@ -53,6 +53,7 @@ function normalizeFileList(nodes: BaseNode[]): BaseNode[] {
           'GpioSet', 'GpioRead', 'AnalogRead', 'AnalogWrite',
           'DelayMs', 'Print', 'HardwarePwm', 'LcdClear',
           'LcdCursor', 'LcdPrint', 'OledText', 'OledShow', 'OledClear',
+          'CallExpression'
         ];
         if (hardwareNodes.includes(child.nodeType as string)) {
           finalNode = {
