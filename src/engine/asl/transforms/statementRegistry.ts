@@ -69,6 +69,7 @@ export const statementRegistry: Record<string, StatementHandler> = {
   LatchRS: handleLatchRS,
   TrigR: handleTrigR,
   TrigF: handleTrigF,
+  SerialBegin: handleSerialBegin,
 
   ...HARDWARE_NODES.reduce((acc, nodeType) => {
     acc[nodeType] = handleHardware;
@@ -342,6 +343,10 @@ function handleTrigR(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
 
 function handleTrigF(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
   return [{ kind: 'trigF', instance: node.attributes.instance, in: transformExpr(node.children[0]) } as ASLStatement];
+}
+
+function handleSerialBegin(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [{ kind: 'serialBegin', baud: transformExpr(node.children[0]) } as ASLStatement];
 }
 
 function handleVariableDeclaration(node: BaseNode, ctx: TransformContext): ASLStatement[] {

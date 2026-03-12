@@ -12,6 +12,14 @@ export function transformExpr(node: BaseNode | undefined): ASLExpr {
     return { kind: 'var', name: node.attributes.name };
   }
 
+  if (node.nodeType === 'SerialAvailable') {
+    return { kind: 'serialAvailable' } as ASLExpr;
+  }
+
+  if (node.nodeType === 'SerialReadString') {
+    return { kind: 'serialReadString' } as ASLExpr;
+  }
+
   if (node.nodeType === 'BinaryExpression') {
     return {
       kind: 'binary',

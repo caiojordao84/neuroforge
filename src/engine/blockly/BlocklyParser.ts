@@ -471,11 +471,11 @@ export class BlocklyParser {
         // --- S5: Serial ---
         if (type === 'nf_serial_begin') {
             const baud = this.getF(block, 'BAUD') || '9600';
-            return { nodeType: 'CallExpression', id: 'b', attributes: { callee: 'Serial.begin' }, children: [this.lit(parseInt(baud) || 9600)] };
+            return { nodeType: 'SerialBegin', id: 'b', attributes: {}, children: [this.lit(parseInt(baud) || 9600)] };
         }
         if (type === 'nf_serial_print') {
             const printVal = this.parseVal(block, 'VALUE');
-            return { nodeType: 'Print', id: 'b', attributes: {}, children: [printVal] };
+            return { nodeType: 'Print', id: 'b', attributes: { newline: true }, children: [printVal] };
         }
         if (type === 'nf_serial_read') {
             const varName = this.getF(block, 'VAR') || 'serialData';
@@ -485,7 +485,7 @@ export class BlocklyParser {
                     nodeType: 'BinaryExpression', id: 'b2', attributes: { operator: '=' },
                     children: [
                         { nodeType: 'Identifier', id: 'i', attributes: { name: varName }, children: [] },
-                        { nodeType: 'CallExpression', id: 'c', attributes: { callee: 'Serial.readString' }, children: [] }
+                        { nodeType: 'SerialReadString', id: 'c', attributes: {}, children: [] }
                     ]
                 }]
             };
@@ -589,7 +589,7 @@ export class BlocklyParser {
 
         // --- S5: Serial available (value) ---
         if (type === 'nf_serial_available') {
-            return { nodeType: 'CallExpression', id: 'b', attributes: { callee: 'Serial.available' }, children: [] };
+            return { nodeType: 'SerialAvailable', id: 'b', attributes: {}, children: [] };
         }
 
         // --- S5: Array index ---

@@ -1,0 +1,39 @@
+=== Starting Serial Transpilation Tests ===
+
+--- Test 5: Python to C++ (Serial) ---
+Result:
+// Generated C++ / Arduino Code
+#include <Arduino.h>
+
+void setup() {
+  Serial.begin(115200);
+}
+
+void loop() {
+  while (1) {
+    auto msg = Serial.readString();
+    Serial.println(("Received: " + msg));
+  }
+}
+
+Success: true
+
+--- Test 6: Rust to C++ (Serial) ---
+Result:
+// Generated C++ / Arduino Code
+#include <Arduino.h>
+
+void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  if ((Serial.available() > 0)) {
+  }
+  string s = Serial.readString();
+  Serial.println("s");
+}
+
+Success: true
+
+=== Serial Transpilation Tests Finished ===

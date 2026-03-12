@@ -127,12 +127,12 @@ Based on my thorough analysis of the codebase, I can now provide a comprehensive
 
 ### 8. SERIAL
 
-| NodeType              | ASL Types  | Executor                               | Transform | CGen             | PyGen            | RsGen            | CParser          | PyParser         | RsParser | Blockly                      | Flow      | Shims | Components | Status    |
-| --------------------- | ---------- | -------------------------------------- | --------- | ---------------- | ---------------- | ---------------- | ---------------- | ---------------- | -------- | ---------------------------- | --------- | ----- | ---------- | --------- |
-| **Serial.begin**      | ❌ MISSING  | ⚠️ CallExpression eval                  | ❌         | ⚠️ CallExpression | ⚠️ CallExpression | ⚠️ CallExpression | ✅ CallExpression | ✅ CallExpression | ❌        | ✅ nf_serial_begin            | ✅ process | N/A   | N/A        | ⚠️ PARTIAL |
-| **Serial.print**      | ✅ ASLPrint | ✅                                      | ✅         | ✅ Print          | ✅ Print          | ✅ Print          | ✅ Print          | ✅ Print          | ✅ Print  | ✅ text_print/nf_serial_print | ✅ process | N/A   | N/A        | ✅ FULL    |
-| **Serial.available**  | ❌ MISSING  | ⚠️ serialAvailable() via CallExpression | ❌         | ❌                | ⚠️ uart.any()     | ❌                | ✅ CallExpression | ✅ CallExpression | ❌        | ✅ nf_serial_available        | ❌         | N/A   | N/A        | ⚠️ PARTIAL |
-| **Serial.readString** | ❌ MISSING  | ⚠️ serialRead() via CallExpression      | ❌         | ❌                | ⚠️ uart.read()    | ❌                | ✅ CallExpression | ✅ CallExpression | ❌        | ✅ nf_serial_read             | ❌         | N/A   | N/A        | ⚠️ PARTIAL |
+| NodeType              | ASL Types              | Executor | Transform | CGen | PyGen | RsGen | CParser | PyParser | RsParser | Blockly                      | Flow      | Shims | Components | Status  |
+| --------------------- | ---------------------- | -------- | --------- | ---- | ----- | ----- | ------- | -------- | -------- | ---------------------------- | --------- | ----- | ---------- | ------- |
+| **Serial.begin**      | ✅ ASLSerialBegin      | ✅        | ✅         | ✅    | ✅     | ✅     | ✅       | ✅        | ✅        | ✅ nf_serial_begin            | ✅ process | N/A   | N/A        | ✅ FULL |
+| **Serial.print**      | ✅ ASLPrint            | ✅        | ✅         | ✅    | ✅     | ✅     | ✅       | ✅        | ✅        | ✅ text_print/nf_serial_print | ✅ process | N/A   | N/A        | ✅ FULL |
+| **Serial.available**  | ✅ ASLSerialAvailable  | ✅        | ✅         | ✅    | ✅     | ✅     | ✅       | ✅        | ✅        | ✅ nf_serial_available        | ✅         | N/A   | N/A        | ✅ FULL |
+| **Serial.readString** | ✅ ASLSerialReadString | ✅        | ✅         | ✅    | ✅     | ✅     | ✅       | ✅        | ✅        | ✅ nf_serial_read             | ✅         | N/A   | N/A        | ✅ FULL |
 
 ---
 
@@ -272,7 +272,7 @@ Based on my thorough analysis of the codebase, I can now provide a comprehensive
 | Expressions           | 2               | 2      | 0         | 0         |
 | GPIO                  | 5               | 3      | 2         | 0         |
 | Timing                | 4               | 1      | 3         | 0         |
-| Serial                | 4               | 1      | 3         | 0         |
+| Serial                | 4               | 4      | 0         | 0         |
 | Sensors               | 11              | 0      | 11        | 0         |
 | Displays              | 7               | 0      | 7         | 0         |
 | LEDs/Neopixel         | 4               | 0      | 4         | 0         |
@@ -285,32 +285,30 @@ Based on my thorough analysis of the codebase, I can now provide a comprehensive
 | Flow Components       | 6               | 0      | 3         | 3         |
 
 **TOTALS: 94 nodeTypes**
-- ✅ **Fully Implemented: 29 (31%)**
-- ⚠️ **Partially Implemented: 62 (66%)**
+- ✅ **Fully Implemented: 32 (34%)**
+- ⚠️ **Partially Implemented: 59 (63%)**
 - ❌ **Not Implemented (Flow/Comp only): 3 (3%)**
 
 ---
 
 ## Files to check:
 
-| What           | Ficheiro                                                                                                                                              |
-| :------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1\. Tipo IR    | `ASLTypes.ts`                                                                                                                                         |
-| 2\. Executor   | `ASLExecutor.ts`                                                                                                                                      |
-| 3\. Transform  | `callTransform.ts`                                                                                                                                    |
-| 4\. Generators | `CGenerator.ts` \+ `PythonGenerator.ts` \+ `RustGenerator.ts`                                                                                         |
-| 5\. Parsers    | `CParser.ts` \+ `PythonParser.ts` \+ `RustParser.ts`                                                                                                  |
-| 6\. Blockly    | `BlocklyParser.ts` \+ `CodeToBlockly.ts` \+ `BlocklyToASL.ts` \+ `BlocklyEditor.tsx` \+ `block definitions.ts`                                        |
-| 7\. Flow       | `CfgBuilder.ts` \+ `FlowToAst.ts` \+ `FlowValidator.ts` \+ `FlowEditor.tsx`                                                                           |
-| 8\. Shims      | `src\engine\asl\plugins\c\shims` \+ `src\engine\asl\plugins\python\shims` \+ `src\engine\asl\plugins\rust\shims                                       |
-| 9\. Components | `src\components\ComponentsLibrary.tsx` \+ `src\components` \+ `src\components\nodes` \+ Guide at `docs\ASL_SHIM_ARCHITECTURE_PLAN.md` Line 143 to 230 |
+| What           | Ficheiro                                                                                                                                                                                                                                                |
+| :------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1\. Tipo IR    | [ASLTypes.ts](src\engine\asl\ASLTypes.ts)                                                                                                                                                                                                               |
+| 2\. Executor   | [ASLExecutor.ts](src\engine\asl\ASLExecutor.ts)                                                                                                                                                                                                         |
+| 3\. Transform  | [callTransform.ts](src\engine\asl\transforms\callTransform.ts)                                                                                                                                                                                          |
+| 4\. Generators | [CGenerator.ts](src\engine\asl\plugins\c\CGenerator.ts) \+ [PythonGenerator.ts](src\engine\asl\plugins\python\PythonGenerator.ts) \+ [RustGenerator.ts](src\engine\asl\plugins\rust\RustGenerator.ts)                                                   |
+| 5\. Parsers    | [CParser.ts](src\engine\asl\plugins\c\CParser.ts) \+ [PythonParser.ts](src\engine\asl\plugins\python\PythonParser.ts) \+ [RustParser.ts](src\engine\asl\plugins\rust\RustParser.ts)                                                                     |
+| 6\. Blockly    | [BlocklyParser.ts](src\engine\blockly\BlocklyParser.ts) \+ [CodeToBlockly.ts](src\engine\blockly\CodeToBlockly.ts) \+ [BlocklyToASL.ts](src\engine\asl\blocklyToASL.ts) \+ [BlocklyEditor.tsx](src\components\BlocklyEditor.tsx) \+ [block definitions] |
+| 7\. Flow       | [CfgBuilder.ts](src\engine\flow\CfgBuilder.ts) \+ [FlowToAst.ts](src\engine\flow\FlowToAst.ts) \+ [FlowValidator.ts](src\engine\flow\FlowValidator.ts) \+ [FlowEditor.tsx](src\components\FlowEditor.tsx)                                               |
+| 8\. Shims      | `src\engine\asl\plugins\c\shims` \+ `src\engine\asl\plugins\python\shims` \+ `src\engine\asl\plugins\rust\shims                                                                                                                                         |
+| 9\. Components | `src\components\ComponentsLibrary.tsx` \+ `src\components` \+ `src\components\nodes` \+ Guide at `docs\ASL_SHIM_ARCHITECTURE_PLAN.md` Line 143 to 230                                                                                                   |
 
 ## CRITICAL GAPS IDENTIFIED
 
-1. **MISSING ASLType Definitions** (~30 nodeTypes lack native ASLType):
    - DesignatedInitializer, CastExpression (in generators but not ASLTypes)
    - All sensor/display/LED/motor/wifi nodeTypes (rely on CallExpression fallback)
-   - Timing functions (millis, micros, delayMicroseconds)
    - IEC ladder blocks not in generators
 
 2. **MISSING Executor Handlers**:

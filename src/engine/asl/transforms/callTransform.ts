@@ -38,6 +38,13 @@ export function transformCallToStmt(node: BaseNode): ASLStatement | null {
     } as ASLStatement;
   }
 
+  if (callee === 'Serial.begin') {
+    return {
+      kind: 'serialBegin',
+      baud: transformExpr(node.children[0] || { nodeType: 'Literal', attributes: { value: 9600 }, children: [] } as any)
+    } as ASLStatement;
+  }
+
   if (callee === 'delayMicroseconds') {
     return {
       kind: 'expr',

@@ -51,8 +51,8 @@ function normalizeFileList(nodes: BaseNode[]): BaseNode[] {
         const child = finalNode.children[0];
         const hardwareNodes = [
           'GpioSet', 'GpioRead', 'AnalogRead', 'AnalogWrite',
-          'DelayMs', 'Print', 'HardwarePwm', 'LcdClear',
-          'LcdCursor', 'LcdPrint', 'OledText', 'OledShow', 'OledClear',
+          'HardwarePwm', 'LcdClear', 'LcdCursor', 'LcdPrint', 'OledText', 'OledShow', 'OledClear',
+          'SerialBegin', 'SerialAvailable', 'SerialReadString',
           'CallExpression'
         ];
         if (hardwareNodes.includes(child.nodeType as string)) {

@@ -206,6 +206,12 @@ export class CodeToBlockly {
             const right = node.children[1];
             if (left.nodeType === 'Identifier') {
                 const name = left.attributes.name;
+
+                // Special case: serial read assignment
+                if (right.nodeType === 'SerialReadString') {
+                    return `<block type="nf_serial_read"><field name="VAR">${name}</field></block>`;
+                }
+
                 const val = this.exprToValue(right);
                 let block = `<block type="variables_set"><field name="VAR">${name}</field>`;
                 if (val) block += `<value name="VALUE">${val}</value>`;
@@ -413,6 +419,11 @@ export class CodeToBlockly {
             return `<block type="nf_call_function"><field name="NAME">${callee}</field></block>`;
         }
 
+        if (node.nodeType === 'SerialBegin') {
+            const baud = this.getLit(node.children[0]) || '9600';
+            return `<block type="nf_serial_begin"><field name="BAUD">${baud}</field></block>`;
+        }
+
         if (node.nodeType === 'Block') {
             return this.chainNodes(node.children);
         }
@@ -542,6 +553,9 @@ export class CodeToBlockly {
             if (callee === 'millis') return `<block type="nf_millis"></block>`;
             if (callee === 'micros') return `<block type="nf_micros"></block>`;
         }
+
+        if (node.nodeType === 'SerialAvailable') return `<block type="nf_serial_available"></block>`;
+        if (node.nodeType === 'SerialReadString') return `<block type="nf_serial_read"></block>`;
 
         return null;
     }

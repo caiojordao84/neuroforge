@@ -417,6 +417,14 @@ async function executeStatements(
         break;
       }
 
+      // --- S5: Serial Native Statements ---
+      case 'serialBegin': {
+        const baud = await evalExpr(s.baud, localEnv, ctx);
+        ctx.engine.log(`Serial initialized at ${baud} baud.`);
+        // Note: the engine does not have a native `serialBegin`, just printing log.
+        break;
+      }
+
       // --- S5: Bus shims (UART/I2C/SPI) ---
       case 'uartWrite': {
         const port = await evalExpr(s.port, localEnv, ctx);
@@ -718,6 +726,20 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
     case 'literal':
       return expr.value;
 
+    case 'serialAvailable': {
+      return ctx.engine.serialAvailable();
+    }
+
+    case 'serialReadString': {
+      let str = '';
+      let byte = ctx.engine.serialRead();
+      while (byte !== -1) {
+        str += String.fromCharCode(byte);
+        byte = ctx.engine.serialRead();
+      }
+      return str;
+    }
+
     case 'var':
       return getVar(expr.name, env, ctx.globals);
 
@@ -845,6 +867,7 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         return await evalExpr(expr.args[0], env, ctx);
       }
 
+      // We'll keep generic call expressions as a fallback since they were there
       if (expr.callee === 'Serial.begin') return 0;
       if (expr.callee === 'Serial.available') {
         return ctx.engine.serialAvailable();

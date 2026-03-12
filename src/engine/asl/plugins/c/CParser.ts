@@ -794,10 +794,11 @@ export class RecursiveDescentCParser {
         const objName = (target.nodeType === 'Identifier' ? target.attributes.name : null) as string;
 
         if (objName === 'Serial') {
-            if (member === 'begin') return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'Serial.begin' }, children: args, metadata: meta };
-            if (member.startsWith('print')) return { nodeType: 'Print', id: this.genId(), attributes: { newline: member === 'println' }, children: args, metadata: meta };
-            if (member === 'available') return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'Serial.available' }, children: [], metadata: meta };
-            if (member === 'readString') return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'Serial.readString' }, children: [], metadata: meta };
+            if (member === 'begin') return { nodeType: 'SerialBegin', id: this.genId(), attributes: {}, children: args, metadata: meta };
+            if (member === 'print') return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'Serial.print' }, children: args, metadata: meta };
+            if (member === 'println') return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'Serial.println' }, children: args, metadata: meta };
+            if (member === 'available') return { nodeType: 'SerialAvailable', id: this.genId(), attributes: {}, children: [], metadata: meta };
+            if (member === 'readString') return { nodeType: 'SerialReadString', id: this.genId(), attributes: {}, children: [], metadata: meta };
         }
         if (objName === 'SPIFFS') {
             if (member === 'begin') return { nodeType: 'CallExpression', id: this.genId(), attributes: { callee: 'SPIFFS.begin' }, children: [], metadata: meta };

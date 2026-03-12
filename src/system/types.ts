@@ -18,7 +18,8 @@ export type NodeType =
     | 'CastExpression'
     | 'ConditionalExpression'
     | 'SwitchStatement'
-    | 'CaseClause';
+    | 'CaseClause'
+    | 'SerialBegin' | 'SerialAvailable' | 'SerialReadString';
 
 export interface BaseNode {
     nodeType: NodeType;

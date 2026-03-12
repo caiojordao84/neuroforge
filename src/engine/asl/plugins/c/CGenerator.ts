@@ -1,4 +1,3 @@
-
 import type { ProgramNode, BaseNode, SourceMapEntry } from '@/system/types';
 import { ShimManager } from '../core/ShimManager';
 import { cShims } from './shims';
@@ -317,6 +316,9 @@ export class CGenerator {
         else if (node.nodeType === 'HardwarePwm') {
             this.addLn(lines, `${indent}analogWrite(${node.attributes.pin}, ${Math.floor(node.attributes.duty / 4)}); // HW PWM`, node);
         }
+        else if (node.nodeType === 'SerialBegin') {
+            this.addLn(lines, `${indent}Serial.begin(${this.genExpr(node.children[0])});`, node);
+        }
         else if (node.nodeType === 'GpioBatch') {
             const ops = node.attributes.operations;
             this.addLn(lines, `${indent}// Batch Update`, node);
@@ -380,63 +382,35 @@ export class CGenerator {
             });
             this.addLn(lines, `${indent}};`, null);
         }
-        else {
-            this.addLn(lines, `${indent}// Unhandled Node: ${node.nodeType}`, node);
-        }
     }
 
     private genExpr(node: BaseNode): string {
+        if (!node) return '0';
+
         if (node.nodeType === 'Literal') {
-            if (node.attributes.isRaw) return String(node.attributes.value);
             if (node.attributes.isString) return `"${node.attributes.value}"`;
             return String(node.attributes.value);
         }
         if (node.nodeType === 'Identifier') return node.attributes.name;
+
         if (node.nodeType === 'BinaryExpression') {
-            const op = node.attributes.operator;
-            if (op === '=') {
-                return `${this.genExpr(node.children[0])} = ${this.genExpr(node.children[1])}`;
-            }
-            return `(${this.genExpr(node.children[0])} ${op} ${this.genExpr(node.children[1])})`;
+            return `(${this.genExpr(node.children[0])} ${node.attributes.operator} ${this.genExpr(node.children[1])})`;
         }
         if (node.nodeType === 'UnaryExpression') {
-            if (node.attributes.prefix) return `${node.attributes.operator}${this.genExpr(node.children[0])}`;
-            return `${this.genExpr(node.children[0])}${node.attributes.operator}`;
+            const op = node.attributes.operator;
+            if (node.attributes.prefix) return `(${op}${this.genExpr(node.children[0])})`;
+            return `(${this.genExpr(node.children[0])}${op})`;
         }
         if (node.nodeType === 'CallExpression') {
             const callee = node.attributes.callee;
-            let args = node.children.map(c => this.genExpr(c)).join(', ');
-
-            if (callee === 'pinMode') {
-                args = node.children.map((c, idx) => {
-                    const val = this.genExpr(c);
-                    if (idx === 1) {
-                        if (val === '1' || val === 'OUTPUT') return 'OUTPUT';
-                        if (val === '0' || val === 'INPUT') return 'INPUT';
-                    }
-                    return val;
-                }).join(', ');
-            }
-
-            if (callee === 'servo') return `servo.write(${args})`;
-            if (callee === 'len') return `(sizeof(${args}) / sizeof(${args}[0]))`;
-            if (callee === 'delayMicroseconds') return `delayMicroseconds(${args})`;
+            const args = node.children.map(c => this.genExpr(c)).join(', ');
             return `${callee}(${args})`;
         }
-        if (node.nodeType === 'AnalogRead') return `analogRead(${this.genExpr(node.children[0])})`;
-        if (node.nodeType === 'GpioRead') return `digitalRead(${this.genExpr(node.children[0])})`;
-        if (node.nodeType === 'SubscriptExpression') return `${this.genExpr(node.children[0])}[${this.genExpr(node.children[1])}]`;
         if (node.nodeType === 'ArrayInitializer') {
-            const elements = node.children.map(c => this.genExpr(c)).join(', ');
-            return `{ ${elements} }`;
+            return `{ ${node.children.map(c => this.genExpr(c)).join(', ')} }`;
         }
-        if (node.nodeType === 'DesignatedInitializer') {
-            const fields = node.children.map(c => {
-                const name = c.attributes?.name || 'field';
-                const val = this.genExpr(c);
-                return `.${name} = ${val}`;
-            }).join(', ');
-            return `{ ${fields} }`;
+        if (node.nodeType === 'SubscriptExpression') {
+            return `${this.genExpr(node.children[0])}[${this.genExpr(node.children[1])}]`;
         }
         if (node.nodeType === 'ConditionalExpression') {
             return `(${this.genExpr(node.children[0])} ? ${this.genExpr(node.children[1])} : ${this.genExpr(node.children[2])})`;
@@ -447,20 +421,27 @@ export class CGenerator {
         }
         if (node.nodeType === 'SizeofExpression') {
             const target = node.children[0];
-            if (!target) return '1';
-            // Simple optimization for common Arduino pattern
-            if (target.nodeType === 'Identifier') return `sizeof(${this.genExpr(target)})`;
             return `sizeof(${this.genExpr(target)})`;
         }
         if (node.nodeType === 'MemberExpression') {
             const op = node.attributes.operator || '.';
             return `${this.genExpr(node.children[0])}${op}${node.attributes.property}`;
         }
+        if (node.nodeType === 'GpioRead') return `digitalRead(${this.genExpr(node.children[0])})`;
+        if (node.nodeType === 'AnalogRead') return `analogRead(${this.genExpr(node.children[0])})`;
+        if (node.nodeType === 'SerialAvailable') return `Serial.available()`;
+        if (node.nodeType === 'SerialReadString') return `Serial.readString()`;
         if (node.nodeType === 'GpioSet') return `digitalWrite(${this.genExpr(node.children[0])}, ${this.genExpr(node.children[1])})`;
         if (node.nodeType === 'DelayMs') return `delay(${this.genExpr(node.children[0])})`;
         if (node.nodeType === 'AnalogWrite') return `analogWrite(${this.genExpr(node.children[0])}, ${this.genExpr(node.children[1])})`;
         if (node.nodeType === 'Print') return `Serial.println(${this.genExpr(node.children[0])})`;
 
-        return "";
+        // Fallback for DesignInitializers / Braced initializers
+        const fields = node.children.map(c => {
+            const name = c.attributes?.name || 'field';
+            const val = this.genExpr(c.children[0] || c);
+            return `.${name} = ${val}`;
+        }).join(', ');
+        return `{ ${fields} }`;
     }
 }

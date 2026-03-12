@@ -112,6 +112,7 @@ export type ASLStatement =
   | ASLForIn
   | ASLSwitch
   | ASLComment
+  | ASLSerialBegin
   // --- S5 NEW NODES (Bus/PWM/IEC) ---
   | ASLUartWrite
   | ASLUartRead
@@ -383,7 +384,9 @@ export type ASLExpr =
   | ASLCall
   | ASLArray
   | ASLObject
-  | ASLConditional;
+  | ASLConditional
+  | ASLSerialAvailable
+  | ASLSerialReadString;
 
 /**
  * Literal genérico (número, booleano, string, array, objeto, etc.).
@@ -515,6 +518,32 @@ export interface ASLConditional {
 // ============================================================================
 // S5 NEW NODES: UART/I2C/SPI, PWM, IEC (Timers, Counters, Latches, Triggers)
 // ============================================================================
+
+// ---------------------------------------------------------------------------
+// Serial (UART) Built-in Statements/Expressions
+// ---------------------------------------------------------------------------
+
+/**
+ * Initializes the Serial port with a given baud rate.
+ */
+export interface ASLSerialBegin {
+  kind: 'serialBegin';
+  baud: ASLExpr;
+}
+
+/**
+ * Checks if there are bytes available to read from the Serial port.
+ */
+export interface ASLSerialAvailable {
+  kind: 'serialAvailable';
+}
+
+/**
+ * Reads a string from the Serial port until a timeout or newline.
+ */
+export interface ASLSerialReadString {
+  kind: 'serialReadString';
+}
 
 // ---------------------------------------------------------------------------
 // UART/I2C/SPI Bus Statements

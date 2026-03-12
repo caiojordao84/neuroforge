@@ -168,9 +168,6 @@ export class RustGenerator {
             const child = node.children[0];
             if (child.nodeType === 'CallExpression') {
                 const callee = child.attributes.callee;
-                if (callee === 'Serial.begin') {
-                    return this.addLn(lines, `${indent}// Serial.begin(${this.genExpr(child.children[0])});`, node);
-                }
                 if (callee === 'attachInterrupt') {
                     return this.addLn(lines, `${indent}attach_interrupt(${child.children.map((c: any) => this.genExpr(c)).join(', ')});`, node);
                 }
@@ -197,6 +194,9 @@ export class RustGenerator {
         }
         else if (node.nodeType === 'DelayMs') {
             this.addLn(lines, `${indent}delay.delay_ms(${this.genExpr(node.children[0])}u32);`, node);
+        }
+        else if (node.nodeType === 'SerialBegin') {
+            this.addLn(lines, `${indent}Serial::begin(${this.genExpr(node.children[0])});`, node);
         }
         else if (node.nodeType === 'Print') {
             this.addLn(lines, `${indent}println!("{}", ${this.genExpr(node.children[0])});`, node);
@@ -380,6 +380,8 @@ export class RustGenerator {
         if (node.nodeType === 'AnalogRead') {
             return `adc.read(${this.genExpr(node.children[0])})`;
         }
+        if (node.nodeType === 'SerialAvailable') return 'Serial::available()';
+        if (node.nodeType === 'SerialReadString') return 'Serial::read_string()';
         if (node.nodeType === 'CallExpression') {
             const callee = node.attributes.callee;
             const args = node.children.map((c: any) => this.genExpr(c)).join(', ');

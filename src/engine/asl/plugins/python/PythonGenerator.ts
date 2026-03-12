@@ -384,6 +384,15 @@ export class PythonGenerator {
             return;
         }
 
+        if (n.nodeType === 'SerialBegin') {
+            const baud = this.genExpr(n.children[0]);
+            if (this.flavor === 'MICROPYTHON') {
+                return this.addLn(out, `${i}uart = machine.UART(0, baudrate=${baud})`, n);
+            } else {
+                return this.addLn(out, `${i}import busio, board\n${i}uart = busio.UART(board.TX, board.RX, baudrate=${baud})`, n);
+            }
+        }
+
         if (n.nodeType === 'ForIn') {
             const iterable = this.genExpr(n.children[0]);
             this.addLn(out, `${i}for ${n.attributes.varName} in ${iterable}:`, n);
@@ -409,9 +418,6 @@ export class PythonGenerator {
                     const mode = this.genExpr(child.children[1]);
                     const pyMode = mode === '1' || mode === 'OUTPUT' ? 'machine.Pin.OUT' : 'machine.Pin.IN';
                     return this.addLn(out, `${i}machine.Pin(${pin}, ${pyMode})`, n);
-                }
-                if (callee === 'Serial.begin') {
-                    return this.addLn(out, `${i}# Serial.begin(${this.genExpr(child.children[0])})`, n);
                 }
                 if (callee.startsWith('sevseg.')) {
                     this.shims.requireShim('sevseg');
@@ -568,6 +574,14 @@ export class PythonGenerator {
             const pin = this.evalLit(n.children[0]);
             if (this.flavor === 'MICROPYTHON') return `machine.ADC(machine.Pin(${pin})).read_u16()`;
             return `analog_in_${pin}.value`;
+        }
+        if (n.nodeType === 'SerialAvailable') {
+            if (this.flavor === 'MICROPYTHON') return 'uart.any()';
+            return 'uart.in_waiting';
+        }
+        if (n.nodeType === 'SerialReadString') {
+            if (this.flavor === 'MICROPYTHON') return 'uart.read()';
+            return 'uart.read()';
         }
         return '0';
     }

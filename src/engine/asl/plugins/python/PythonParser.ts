@@ -341,14 +341,29 @@ class RegexPythonParser {
         }
 
         // ── Serial.available stub ─────────────────────────────────────────────
-        if (/^(?:\w+\.any\(\)|Serial\.available\(\))/.test(trimmed)) return { nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {}, children: [{ nodeType: 'CallExpression', id: `sa-${lineNum}`, attributes: { callee: 'Serial.available' }, children: [] }], metadata: meta } as BaseNode;
+        if (/^(?:\w+\.any\(\)|Serial\.available\(\))/.test(trimmed)) {
+            return { nodeType: 'SerialAvailable', id: `sa-${lineNum}`, attributes: {}, children: [], metadata: meta } as BaseNode;
+        }
 
         // ── Serial.readString stub ────────────────────────────────────────────
-        const serialReadM = trimmed.match(/^(\w+)\s*=\s*(?:\w+\.read\(\)|Serial\.readString\(\))\s*$/);
-        if (serialReadM) return { nodeType: 'VariableDeclaration', id: `decl-${lineNum}`, attributes: { name: serialReadM[1], type: 'auto' }, children: [{ nodeType: 'CallExpression', id: `sr-${lineNum}`, attributes: { callee: 'Serial.readString' }, children: [] }], metadata: meta } as BaseNode;
+        const serialReadM = /^(?:let\s+|var\s+)?(\w+)\s*=\s*(?:\w+\.read\(\)|Serial\.readString\(\))/.exec(trimmed);
+        if (serialReadM) {
+            return {
+                nodeType: 'VariableDeclaration', id: `decl-${lineNum}`, attributes: { name: serialReadM[1], type: 'auto' },
+                children: [{ nodeType: 'SerialReadString', id: `sr-${lineNum}`, attributes: {}, children: [] }],
+                metadata: meta
+            } as BaseNode;
+        }
 
-        const serialBeginM = trimmed.match(/^(?:#\s*)?Serial\.begin\s*\((.+)\)\s*$/);
-        if (serialBeginM) return { nodeType: 'ExpressionStatement', id: `serial-${lineNum}`, attributes: {}, children: [{ nodeType: 'CallExpression', id: `call-${lineNum}`, attributes: { callee: 'Serial.begin' }, children: [this._parseExpr(serialBeginM[1].trim(), lineNum)] } as BaseNode], metadata: meta } as BaseNode;
+        // ── Serial.begin stub ─────────────────────────────────────────────────
+        const serialBeginM = /^Serial\.begin\(\s*(\d+)\s*\)/.exec(trimmed);
+        if (serialBeginM) {
+            return {
+                nodeType: 'ExpressionStatement', id: `serial-${lineNum}`, attributes: {},
+                children: [{ nodeType: 'SerialBegin', id: `call-${lineNum}`, attributes: {}, children: [this._parseExpr(serialBeginM[1].trim(), lineNum)] } as BaseNode],
+                metadata: meta
+            } as BaseNode;
+        }
 
         const chainedPinM = trimmed.match(/^(?:machine\.)?Pin\s*\(([^)]+)\)\.value\(([^)]+)\)\s*$/);
         if (chainedPinM) {
@@ -968,7 +983,7 @@ class PythonCstToAst {
         const leftText = leftExpr?.text || 'i';
 
         if (rightExpr?.type === 'call' && rightExpr.childForFieldName('function')?.text === 'range') {
-            const argsNode = rightExpr.childForFieldName('arguments');
+            const argsNode = rightExpr ? rightExpr.childForFieldName('arguments') : null;
             const vArgs = argsNode ? argsNode.children.filter((c: any) => c.type !== '(' && c.type !== ')' && c.type !== ',').map((c: any) => this.visitExpr(c)) : [];
             let start = 0, stop = 10, step = 1;
             if (vArgs.length === 1) { if (vArgs[0].nodeType === 'Literal') stop = vArgs[0].attributes.value; }
@@ -1002,7 +1017,7 @@ class PythonCstToAst {
                 const vars = leftText.split(',').map(v => v.trim());
                 const tmpVar = `__val_${node.id}`;
                 extraBody.push({ nodeType: 'VariableDeclaration', id: `map-${node.id}`, attributes: { name: tmpVar, type: 'auto' }, children: [{ nodeType: 'SubscriptExpression', id: `sub-${node.id}`, attributes: {}, children: [targetExpr, { nodeType: 'Identifier', id: `idx-a-${node.id}`, attributes: { name: indexVar }, children: [] }] } as BaseNode] });
-                vars.forEach((v, idx) => { extraBody.push({ nodeType: 'ExpressionStatement', id: `map-${node.id}-${idx}`, attributes: {}, children: [{ nodeType: 'BinaryExpression', id: `map-ass-${node.id}-${idx}`, attributes: { operator: '=' }, children: [{ nodeType: 'Identifier', id: `id-v-${node.id}-${idx}`, attributes: { name: v }, children: [] }, { nodeType: 'SubscriptExpression', id: `sub-v-${node.id}-${idx}`, attributes: {}, children: [{ nodeType: 'Identifier', id: `id-tmp-${node.id}-${idx}`, attributes: { name: tmpVar }, children: [] }, { nodeType: 'Literal', id: `lit-ix-${node.id}-${idx}`, attributes: { value: idx }, children: [] }] } as BaseNode] } as BaseNode] }); });
+                vars.forEach((v, idx) => { extraBody.push({ nodeType: 'ExpressionStatement', id: `map-${node.id}-${idx}`, attributes: {}, children: [{ nodeType: 'BinaryExpression', id: `map-ass-${node.id}-${idx}`, attributes: { operator: '=' }, children: [{ nodeType: 'Identifier', id: `id-v-${node.id}-${idx}`, attributes: { name: v }, children: [] }, { nodeType: 'SubscriptExpression', id: `sub-v-${node.id}-${idx}`, attributes: {}, children: [{ nodeType: 'Identifier', id: `id-tmp-${node.id}-${idx}`, attributes: { name: tmpVar }, children: [] }, { nodeType: 'Literal', id: `lit-ix-${node.id}-${idx}`, attributes: { value: idx }, children: [] }] } as BaseNode] } as BaseNode] } as BaseNode); });
             } else {
                 extraBody.push({ nodeType: 'ExpressionStatement', id: `map-${node.id}`, attributes: {}, children: [{ nodeType: 'BinaryExpression', id: `map-ass-${node.id}`, attributes: { operator: '=' }, children: [{ nodeType: 'Identifier', id: `id-v-${node.id}`, attributes: { name: leftText }, children: [] }, { nodeType: 'SubscriptExpression', id: `sub-${node.id}`, attributes: {}, children: [targetExpr, { nodeType: 'Identifier', id: `idx-a-${node.id}`, attributes: { name: indexVar }, children: [] }] } as BaseNode] } as BaseNode] });
             }
@@ -1162,7 +1177,7 @@ class PythonCstToAst {
                 if (attr === 'id' && args.length === 0) return { nodeType: 'CallExpression', id: `id-${node.id}`, attributes: { callee: 'Pin.id' }, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
                 if ((attr === 'read_u16' || attr === 'read') && args.length === 0) return { nodeType: 'AnalogRead', id: `adc-${node.id}`, attributes: {}, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
                 if (attr === 'duty' || attr === 'duty_u16' || attr === 'duty_cycle') return { nodeType: 'AnalogWrite', id: `aw-${node.id}`, attributes: {}, children: [this.visitExpr(func.childForFieldName('object'), env), ...args], metadata: meta };
-                if (attr === 'any') return { nodeType: 'CallExpression', id: `sa-${node.id}`, attributes: { callee: 'Serial.available' }, children: [], metadata: meta };
+                if (attr === 'any') return { nodeType: 'SerialAvailable', id: `sa-${node.id}`, attributes: {}, children: [], metadata: meta };
 
                 // ── LCD methods ───────────────────────────────────────────────
                 if (LCD_METHODS.includes(attr)) {
@@ -1243,6 +1258,10 @@ class PythonCstToAst {
                     metadata: meta
                 };
             }
+            if (callee === 'Serial.begin' || callee === 'UART' || callee === 'machine.UART') return { nodeType: 'SerialBegin', id: `sb-${node.id}`, attributes: {}, children: args, metadata: meta };
+            if (callee === 'Serial.readString') return { nodeType: 'SerialReadString', id: `sr-${node.id}`, attributes: {}, children: [], metadata: meta };
+            if (callee === 'Serial.available' || callee === 'any') return { nodeType: 'SerialAvailable', id: `sa-${node.id}`, attributes: {}, children: [], metadata: meta };
+
             if (callee === 'Pin' || callee === 'machine.Pin') return { nodeType: 'CallExpression', id: `pin-${node.id}`, attributes: { callee: 'Pin' }, children: args, metadata: meta };
             if (callee === 'digitalio.DigitalInOut') return { nodeType: 'CallExpression', id: `pin-${node.id}`, attributes: { callee: 'Pin' }, children: [...args, { nodeType: 'Literal', id: `m-${node.id}`, attributes: { value: 1 }, children: [] } as BaseNode], metadata: meta };
             if (callee === 'time.ticks_ms' || callee === 'utime.ticks_ms') return { nodeType: 'CallExpression', id: `ms-${node.id}`, attributes: { callee: 'millis' }, children: [], metadata: meta };
@@ -1250,8 +1269,7 @@ class PythonCstToAst {
             if (callee === 'random.randint' || callee === 'random.randrange' || callee === 'urandom.randint') return { nodeType: 'CallExpression', id: `rnd-${node.id}`, attributes: { callee: 'random' }, children: args, metadata: meta };
             if (callee === 'random.random') return { nodeType: 'CallExpression', id: `rnd-${node.id}`, attributes: { callee: 'random' }, children: [], metadata: meta };
             if (callee === 'pyb.Timer' || callee === 'machine.PWM' || callee === 'tone') return { nodeType: 'CallExpression', id: `tone-${node.id}`, attributes: { callee: 'tone' }, children: args, metadata: meta };
-            if (callee === 'Serial.begin' || callee === 'UART' || callee === 'machine.UART') return { nodeType: 'CallExpression', id: `sb-${node.id}`, attributes: { callee: 'Serial.begin' }, children: [], metadata: meta };
-            if (callee === 'Serial.readString') return { nodeType: 'CallExpression', id: `sr-${node.id}`, attributes: { callee: 'Serial.readString' }, children: [], metadata: meta };
+
 
             return { nodeType: 'CallExpression', id: `call-${node.id}`, attributes: { callee }, children: args, metadata: meta };
         }

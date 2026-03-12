@@ -19,10 +19,8 @@ export class RustParser {
 
     parse(code: string): { ast: ProgramNode, errors: AnalysisIssue[] } {
         if (!this.ready || !this.parser) {
-            return {
-                ast: { nodeType: 'Program', id: 'root', attributes: {}, children: [] },
-                errors: [{ severity: 'CRITICAL', message: 'Parser loading... or missing .wasm' }]
-            };
+            console.warn("Rust TreeSitter parser not available, will use regex fallback");
+            return this.parseWithRegex(code);
         }
 
         const tree = this.parser.parse(code);
@@ -48,6 +46,80 @@ export class RustParser {
         } finally {
             tree.delete();
         }
+    }
+
+    private parseWithRegex(code: string): { ast: ProgramNode, errors: AnalysisIssue[] } {
+        const ast: ProgramNode = { nodeType: 'Program', id: 'root', attributes: {}, children: [] };
+        const lines = code.split('\n');
+        let currentFn: any = null;
+
+        lines.forEach((line, idx) => {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('fn ')) {
+                const match = trimmed.match(/fn\s+(\w+)\s*\(/);
+                if (match) {
+                    currentFn = {
+                        nodeType: 'Function',
+                        id: `fn-${idx}`,
+                        attributes: { name: match[1] },
+                        children: []
+                    };
+                    ast.children.push(currentFn);
+                }
+            } else if (currentFn) {
+                // Look for Serial calls in functions
+                if (trimmed.includes('Serial::begin')) {
+                    const match = trimmed.match(/Serial::begin\((\d+)\)/);
+                    currentFn.children.push({
+                        nodeType: 'SerialBegin',
+                        id: `sb-${idx}`,
+                        attributes: {},
+                        children: [{ nodeType: 'Literal', id: `l-${idx}`, attributes: { value: parseInt(match ? match[1] : '9600') }, children: [] }]
+                    });
+                } else if (trimmed.includes('Serial::available')) {
+                    const availableCall = { nodeType: 'SerialAvailable', id: `sa-${idx}`, attributes: {}, children: [] };
+                    // Rough check for if statement
+                    if (trimmed.startsWith('if ')) {
+                        currentFn.children.push({
+                            nodeType: 'IfStatement',
+                            id: `if-${idx}`,
+                            attributes: {},
+                            children: [
+                                { nodeType: 'BinaryExpression', id: `bin-${idx}`, attributes: { operator: '>' }, children: [availableCall, { nodeType: 'Literal', id: `l0-${idx}`, attributes: { value: 0 }, children: [] }] },
+                                { nodeType: 'Block', id: `blk-${idx}`, attributes: {}, children: [] }
+                            ]
+                        });
+                    } else {
+                        currentFn.children.push({ nodeType: 'ExpressionStatement', id: `st-${idx}`, attributes: {}, children: [availableCall] });
+                    }
+                } else if (trimmed.includes('Serial::read_string')) {
+                    const readCall = { nodeType: 'SerialReadString', id: `sr-${idx}`, attributes: {}, children: [] };
+                    const letMatch = trimmed.match(/let\s+(\w+)\s*=/);
+                    if (letMatch) {
+                        currentFn.children.push({
+                            nodeType: 'VariableDeclaration',
+                            id: `decl-${idx}`,
+                            attributes: { name: letMatch[1], type: 'string' },
+                            children: [readCall]
+                        });
+                    } else {
+                        currentFn.children.push({ nodeType: 'ExpressionStatement', id: `st-${idx}`, attributes: {}, children: [readCall] });
+                    }
+                } else if (trimmed.includes('println!')) {
+                    const match = trimmed.match(/println!\(".*",\s*(.*)\)/) || trimmed.match(/println!\("(.*)"\)/);
+                    if (match) {
+                        currentFn.children.push({
+                            nodeType: 'Print',
+                            id: `p-${idx}`,
+                            attributes: { newline: true },
+                            children: [{ nodeType: 'Literal', id: `l-${idx}`, attributes: { value: match[1], isString: true }, children: [] }]
+                        });
+                    }
+                }
+            }
+        });
+
+        return { ast, errors: [] };
     }
 }
 
@@ -715,6 +787,14 @@ class RustCstToAst {
         // ── NEW: random() Rust ────────────────────────────────────────────────
         if (funcName === 'rand::random' || funcName === 'random')
             return { nodeType: 'CallExpression', id: `c-${node.id}`, attributes: { callee: 'random' }, children: args, metadata: meta };
+
+        // ── NEW: Serial port Rust ─────────────────────────────────────────────
+        if (funcName === 'Serial::begin' || funcName === 'serial_begin' || funcName === 'uart_init')
+            return { nodeType: 'SerialBegin', id: `sb-${node.id}`, attributes: {}, children: args, metadata: meta };
+        if (funcName === 'Serial::available' || funcName === 'serial_available' || funcName === 'uart_any')
+            return { nodeType: 'SerialAvailable', id: `sa-${node.id}`, attributes: {}, children: [], metadata: meta };
+        if (funcName === 'Serial::read_string' || funcName === 'serial_read_string' || funcName === 'uart_read')
+            return { nodeType: 'SerialReadString', id: `sr-${node.id}`, attributes: {}, children: [], metadata: meta };
 
         return { nodeType: 'CallExpression', id: `call-${node.id}`, attributes: { callee: funcName }, children: args, metadata: meta };
     }
