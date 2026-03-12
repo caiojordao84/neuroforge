@@ -393,20 +393,6 @@ async function executeStatements(
       case 'continue':
         throw new ContinueSignal();
 
-      case 'print': {
-        const parts: string[] = [];
-        for (const a of s.args) {
-          parts.push(String(await evalExpr(a, localEnv, ctx) ?? ''));
-        }
-        const msg = parts.join(' ');
-        if (s.newline !== false) {
-          ctx.engine.log(ctx.printBuffer + msg);
-          ctx.printBuffer = '';
-        } else {
-          ctx.printBuffer += msg;
-        }
-        break;
-      }
 
       case 'setPointer': {
         const ptrObj = await evalExpr(s.target, localEnv, ctx);

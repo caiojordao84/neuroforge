@@ -557,7 +557,7 @@ export class CodeParser {
 
     const delayUsMatch = cleanLine.match(/delayMicroseconds\s*\(\s*(\d+)\s*\)/);
     if (delayUsMatch) {
-      simulationEngine.delayMicroseconds();
+      simulationEngine.delayMicroseconds(parseInt(delayUsMatch[1], 10));
       return;
     }
 
