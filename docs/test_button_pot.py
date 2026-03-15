@@ -3,7 +3,7 @@ import time
 
 BUTTON_PIN = 2
 LED_PIN = 3
-POT_PIN = 26   # ADC0 no Pico
+POT_PIN = 14   # ADC0 no Arduino
 
 button = Pin(BUTTON_PIN, Pin.IN, Pin.PULL_UP)
 led = Pin(LED_PIN, Pin.OUT)

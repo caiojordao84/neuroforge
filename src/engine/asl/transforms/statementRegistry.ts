@@ -361,12 +361,19 @@ function handleVariableDeclaration(node: BaseNode, ctx: TransformContext): ASLSt
   if (valNode && valNode.nodeType === 'CallExpression' && valNode.attributes.callee === 'Pin') {
     const pinExpr = transformExpr(valNode.children[0]);
     const modeNode = valNode.children[1];
+    const pullNode = valNode.children[2];
     let mode: 'INPUT' | 'OUTPUT' | 'INPUT_PULLUP' = 'INPUT';
+    
     if (modeNode && modeNode.nodeType === 'Literal') {
       const v = modeNode.attributes.value;
       if (v === 1) mode = 'OUTPUT';
+    }
+    
+    if (pullNode && pullNode.nodeType === 'Literal') {
+      const v = pullNode.attributes.value;
       if (v === 2) mode = 'INPUT_PULLUP';
     }
+
     return [
       { kind: 'pinMode', pin: pinExpr, mode } as ASLStatement,
       { kind: 'assign', target: name, value: pinExpr } as ASLStatement
