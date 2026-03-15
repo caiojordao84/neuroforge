@@ -138,7 +138,11 @@ export class SimulationEngine extends EventEmitter {
     this.isPaused = false;
     this.setupExecuted = false;
     this.loopFunction = loopFn;
-    this.simulationStartTime = Date.now();
+    // NOTE: simulationStartTime is intentionally NOT set here.
+    // It is set after setupFn() completes so that millis() returns 0
+    // at the start of the first loop() call, matching real hardware behaviour
+    // where millis() resets after setup() finishes.
+    this.simulationStartTime = 0;
 
     const simulationStore = useSimulationStore.getState();
     const serialStore = useSerialStore.getState();
@@ -152,6 +156,8 @@ export class SimulationEngine extends EventEmitter {
     try {
       await setupFn();
       this.setupExecuted = true;
+      // Start the clock AFTER setup completes — millis() will be 0 on first loop tick.
+      this.simulationStartTime = Date.now();
     } catch (error) {
       serialStore.addTerminalLine(
         `❌ Setup error: ${error instanceof Error ? error.message : String(error)}`,
