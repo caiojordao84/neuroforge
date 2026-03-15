@@ -26,6 +26,38 @@ const HARDWARE_CALLEE_MAP: Record<string, string> = {
 
 const HARDWARE_NODES = Object.keys(HARDWARE_CALLEE_MAP);
 
+/** Callees whose return value is a servo instance (case-insensitive match via regex). */
+const SERVO_CALLEE_EXACT = new Set([
+  'Servo', 'servo.Servo', 'servo.ContinuousServo',
+  'ServoPDMRP2', 'ServoPDMRP2Async',
+]);
+
+/** Continuous-rotation servo callees. */
+const SERVO_CONTINUOUS_CALLEES = new Set([
+  'servo.ContinuousServo',
+]);
+
+/** C++ type names that identify a servo variable declaration. */
+const SERVO_TYPE_NAMES = new Set(['Servo', 'Servo&', 'Servo*', 'servo']);
+
+/** Methods on a servo instance that write an angle/speed (→ servoWrite). */
+const SERVO_WRITE_METHODS = new Set([
+  'write', 'set_angle', 'setAngle', 'move',
+]);
+
+/** Methods on a servo instance that write raw µs / duty (→ servoWrite rawMicroseconds). */
+const SERVO_WRITE_RAW_METHODS = new Set([
+  'writeMicroseconds', 'duty_u16', 'duty_ns', 'duty',
+]);
+
+/** Methods / properties that mean detach/release. */
+const SERVO_DETACH_METHODS = new Set([
+  'detach', 'deinit', 'release', 'stop',
+]);
+
+/** SetMember property names that mean write-angle (CircuitPython). */
+const SERVO_ANGLE_PROPS = new Set(['angle', 'throttle']);
+
 export type StatementHandler = (node: BaseNode, ctx: TransformContext) => ASLStatement[];
 
 export const statementRegistry: Record<string, StatementHandler> = {
@@ -70,12 +102,131 @@ export const statementRegistry: Record<string, StatementHandler> = {
   TrigR: handleTrigR,
   TrigF: handleTrigF,
   SerialBegin: handleSerialBegin,
+  // --- Servo Handlers ---
+  ServoAttach: handleServoAttach,
+  ServoWrite: handleServoWrite,
+  ServoDetach: handleServoDetach,
 
   ...HARDWARE_NODES.reduce((acc, nodeType) => {
     acc[nodeType] = handleHardware;
     return acc;
   }, {} as Record<string, StatementHandler>)
 };
+
+// ============================================================================
+// Servo helpers
+// ============================================================================
+
+/**
+ * Registers a variable name as a servo instance in the context.
+ * Idempotent — safe to call multiple times for the same name.
+ */
+function registerServo(ctx: TransformContext, varName: string): void {
+  ctx.servoInstances ??= new Set();
+  ctx.servoInstances.add(varName);
+}
+
+/**
+ * Registers function parameters whose type indicates a servo instance.
+ * Called at the start of function body transforms.
+ * Covers: Servo s, Servo &s, Servo *s (C++) and generic 'pwm' params in Python
+ * when the function name itself suggests servo usage.
+ */
+export function registerServoParams(params: { name: string; type: string }[], ctx: TransformContext): void {
+  for (const p of params) {
+    const normalised = (p.type ?? '').replace(/\s/g, '').replace(/[&*]/g, '');
+    if (SERVO_TYPE_NAMES.has(normalised)) {
+      registerServo(ctx, p.name);
+    }
+  }
+}
+
+/**
+ * Resolves `varName` from a dotted callee string like "myServo.write" → "myServo".
+ * Returns null if there is no dot.
+ */
+function splitCallee(callee: string): { varName: string; method: string } | null {
+  const dot = callee.lastIndexOf('.');
+  if (dot === -1) return null;
+  return { varName: callee.slice(0, dot), method: callee.slice(dot + 1) };
+}
+
+/**
+ * Tries to handle a CallExpression as a servo method call.
+ * Returns ASLStatement[] if handled, null otherwise.
+ *
+ * Layer 3 — lazy inference:
+ *   .attach()            → servoAttach (+ auto-register)
+ *   .write()             → servoWrite
+ *   .writeMicroseconds() → servoWrite { rawMicroseconds: true }
+ *   .duty_u16()          → servoWrite { rawMicroseconds: true }
+ *   .set_angle()         → servoWrite
+ *   .detach()/.deinit()/.release() → servoDetach
+ */
+function tryHandleServoCall(
+  expr: BaseNode,
+  ctx: TransformContext,
+): ASLStatement[] | null {
+  const callee: string = expr.attributes?.callee ?? '';
+  const parts = splitCallee(callee);
+  if (!parts) return null;
+
+  const { varName, method } = parts;
+  const isKnown = ctx.servoInstances?.has(varName) ?? false;
+
+  // .attach() → auto-register even if unknown, then emit servoAttach
+  if (method === 'attach') {
+    registerServo(ctx, varName);
+    const pinExpr = transformExpr(expr.children[0]);
+    const minPulse = expr.children[1] ? transformExpr(expr.children[1]) : undefined;
+    const maxPulse = expr.children[2] ? transformExpr(expr.children[2]) : undefined;
+    return [{ kind: 'servoAttach', varName, pin: pinExpr, minPulse, maxPulse } as ASLStatement];
+  }
+
+  if (!isKnown) return null;
+
+  if (SERVO_WRITE_METHODS.has(method)) {
+    return [{ kind: 'servoWrite', varName, angle: transformExpr(expr.children[0]) } as ASLStatement];
+  }
+
+  if (SERVO_WRITE_RAW_METHODS.has(method)) {
+    return [{ kind: 'servoWrite', varName, angle: transformExpr(expr.children[0]), rawMicroseconds: true } as ASLStatement];
+  }
+
+  if (SERVO_DETACH_METHODS.has(method)) {
+    return [{ kind: 'servoDetach', varName } as ASLStatement];
+  }
+
+  return null;
+}
+
+/**
+ * Tries to handle a SetMember as a servo angle/throttle assignment.
+ * CircuitPython: my_servo.angle = 90  /  my_servo.throttle = 0.5
+ * Returns ASLStatement[] if handled, null otherwise.
+ */
+function tryHandleServoSetMember(
+  expr: BaseNode,
+  ctx: TransformContext,
+): ASLStatement[] | null {
+  if (expr.nodeType !== 'MemberExpression' && expr.nodeType !== 'SetMember') return null;
+  const property: string = expr.attributes?.property ?? '';
+  if (!SERVO_ANGLE_PROPS.has(property)) return null;
+
+  const targetNode = expr.children[0];
+  if (!targetNode || targetNode.nodeType !== 'Identifier') return null;
+  const varName: string = targetNode.attributes?.name ?? '';
+  if (!ctx.servoInstances?.has(varName)) return null;
+
+  const valueNode = expr.children[1];
+  if (!valueNode) return null;
+
+  return [{ kind: 'servoWrite', varName, angle: transformExpr(valueNode) } as ASLStatement];
+}
+
+// ============================================================================
+// Core registry handlers
+// ============================================================================
 
 function handleBlock(node: BaseNode, ctx: TransformContext): ASLStatement[] {
   if (!ctx.transformBlock) return [];
@@ -91,9 +242,6 @@ function handleLoop(node: BaseNode, ctx: TransformContext): ASLStatement[] {
   return [{ kind: 'for', condition: { kind: 'literal', value: true }, body, update: [] } as ASLStatement];
 }
 
-/**
- * StructDeclaration — no-op handler.
- */
 function handleStructDeclaration(_node: BaseNode, _ctx: TransformContext): ASLStatement[] {
   return [];
 }
@@ -126,7 +274,11 @@ function handleIfStatement(node: BaseNode, ctx: TransformContext): ASLStatement[
   const thenNode = node.children[1];
   const elseNode = node.children[2];
 
-  const thenBranch = thenNode ? (thenNode.nodeType === 'Block' ? handleBlock(thenNode, ctx) : statementRegistry[thenNode.nodeType]?.(thenNode, ctx) || []) : [];
+  const thenBranch = thenNode
+    ? (thenNode.nodeType === 'Block'
+      ? handleBlock(thenNode, ctx)
+      : statementRegistry[thenNode.nodeType]?.(thenNode, ctx) || [])
+    : [];
 
   let elseBranch: ASLStatement[] | undefined;
   if (elseNode) {
@@ -139,19 +291,27 @@ function handleIfStatement(node: BaseNode, ctx: TransformContext): ASLStatement[
     }
   }
 
-  return [{ kind: 'if', condition, thenBranch, elseBranch: elseBranch } as ASLStatement];
+  return [{ kind: 'if', condition, thenBranch, elseBranch } as ASLStatement];
 }
 
 function handleWhileLoop(node: BaseNode, ctx: TransformContext): ASLStatement[] {
   const condition = transformExpr(node.children[0]);
   const bodyNode = node.children[1];
-  const body = bodyNode ? (bodyNode.nodeType === 'Block' ? handleBlock(bodyNode, ctx) : statementRegistry[bodyNode.nodeType]?.(bodyNode, ctx) || []) : [];
+  const body = bodyNode
+    ? (bodyNode.nodeType === 'Block'
+      ? handleBlock(bodyNode, ctx)
+      : statementRegistry[bodyNode.nodeType]?.(bodyNode, ctx) || [])
+    : [];
   return [{ kind: 'while', condition, body } as ASLStatement];
 }
 
 function handleDoWhileLoop(node: BaseNode, ctx: TransformContext): ASLStatement[] {
   const bodyNode = node.children[1];
-  const body = bodyNode ? (bodyNode.nodeType === 'Block' ? handleBlock(bodyNode, ctx) : statementRegistry[bodyNode.nodeType]?.(bodyNode, ctx) || []) : [];
+  const body = bodyNode
+    ? (bodyNode.nodeType === 'Block'
+      ? handleBlock(bodyNode, ctx)
+      : statementRegistry[bodyNode.nodeType]?.(bodyNode, ctx) || [])
+    : [];
   const condition = transformExpr(node.children[0]);
   return [{ kind: 'doWhile', condition, body } as ASLStatement];
 }
@@ -178,10 +338,8 @@ function handleForLoop(node: BaseNode, ctx: TransformContext): ASLStatement[] {
     condSideEffects.forEach(se => { bodyStmts.unshift(...handleAssignment(se)); });
   }
 
-  // Build update statements separately
   const updateStmts: ASLStatement[] = [];
   if (update && ctx.transformBlock) {
-    // Optimization: If update is a simple i++, i--, ++i, or --i, we don't need the __tmp_ variable.
     if (update.nodeType === 'UnaryExpression' && ['++', '--'].includes(update.attributes.operator)) {
       const child = update.children[0];
       if (child.nodeType === 'Identifier') {
@@ -224,7 +382,11 @@ function handleForIn(node: BaseNode, ctx: TransformContext): ASLStatement[] {
   const varName = node.attributes.varName || 'item';
   const iterable = transformExpr(node.children[0]);
   const bodyNode = node.children[1];
-  const body = bodyNode ? (bodyNode.nodeType === 'Block' ? handleBlock(bodyNode, ctx) : statementRegistry[bodyNode.nodeType]?.(bodyNode, ctx) || []) : [];
+  const body = bodyNode
+    ? (bodyNode.nodeType === 'Block'
+      ? handleBlock(bodyNode, ctx)
+      : statementRegistry[bodyNode.nodeType]?.(bodyNode, ctx) || [])
+    : [];
   return [{ kind: 'forIn', varName, iterable, body } as any];
 }
 
@@ -287,7 +449,9 @@ function handleGpioBatch(node: BaseNode, _ctx: TransformContext): ASLStatement[]
   } as ASLStatement));
 }
 
-// --- Service Handlers Implementation ---
+// ============================================================================
+// Service Handlers (S5)
+// ============================================================================
 
 function handleUartWrite(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
   return [{ kind: 'uartWrite', port: transformExpr(node.children[0]), data: transformExpr(node.children[1]) } as ASLStatement];
@@ -349,6 +513,31 @@ function handleSerialBegin(node: BaseNode, _ctx: TransformContext): ASLStatement
   return [{ kind: 'serialBegin', baud: transformExpr(node.children[0]) } as ASLStatement];
 }
 
+// ============================================================================
+// Dedicated Servo node handlers (Camada 1 — explicit Blockly nodes)
+// ============================================================================
+
+function handleServoAttach(node: BaseNode, ctx: TransformContext): ASLStatement[] {
+  const varName: string = node.attributes.varName;
+  registerServo(ctx, varName);
+  const pinExpr = transformExpr(node.children[0]);
+  const minPulse = node.children[1] ? transformExpr(node.children[1]) : undefined;
+  const maxPulse = node.children[2] ? transformExpr(node.children[2]) : undefined;
+  return [{ kind: 'servoAttach', varName, pin: pinExpr, minPulse, maxPulse } as ASLStatement];
+}
+
+function handleServoWrite(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [{ kind: 'servoWrite', varName: node.attributes.varName, angle: transformExpr(node.children[0]) } as ASLStatement];
+}
+
+function handleServoDetach(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+  return [{ kind: 'servoDetach', varName: node.attributes.varName } as ASLStatement];
+}
+
+// ============================================================================
+// VariableDeclaration — includes Camada 1 & 2 servo detection
+// ============================================================================
+
 function handleVariableDeclaration(node: BaseNode, ctx: TransformContext): ASLStatement[] {
   const name = node.attributes.name;
   const type = (node.attributes.type || 'int') as ASLType;
@@ -358,17 +547,46 @@ function handleVariableDeclaration(node: BaseNode, ctx: TransformContext): ASLSt
   const structType = node.attributes.structType;
   const structDef = structType ? ctx.structDefs?.[structType] : null;
 
+  // ── Camada 1a: C++ bare Servo declaration — Servo dragon; / Servo servos[5];
+  const normType = (node.attributes.type ?? '').replace(/\s/g, '').replace(/[&*]/g, '');
+  if (SERVO_TYPE_NAMES.has(normType)) {
+    registerServo(ctx, name);
+    return []; // no initialiser, attach comes later
+  }
+
+  // ── Camada 1b: explicit Servo() / servo.Servo() / servo.ContinuousServo() call
+  if (valNode?.nodeType === 'CallExpression') {
+    const callee: string = valNode.attributes.callee ?? '';
+    if (SERVO_CALLEE_EXACT.has(callee)) {
+      registerServo(ctx, name);
+      const isContinuous = SERVO_CONTINUOUS_CALLEES.has(callee);
+      // Emit assign so executor can hold the instance reference; attach is implicit
+      return [{ kind: 'assign', target: name, value: transformExpr(valNode) } as ASLStatement];
+    }
+
+    // ── Camada 2: infer from callee name matching /servo/i
+    if (/servo/i.test(callee)) {
+      registerServo(ctx, name);
+      // Still emit the assign — the helper function call stays in the ASL
+      return [{ kind: 'assign', target: name, value: transformExpr(valNode) } as ASLStatement];
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Standard variable declaration logic (unchanged from original)
+  // ─────────────────────────────────────────────────────────────────────────
+
   if (valNode && valNode.nodeType === 'CallExpression' && valNode.attributes.callee === 'Pin') {
     const pinExpr = transformExpr(valNode.children[0]);
     const modeNode = valNode.children[1];
     const pullNode = valNode.children[2];
     let mode: 'INPUT' | 'OUTPUT' | 'INPUT_PULLUP' = 'INPUT';
-    
+
     if (modeNode && modeNode.nodeType === 'Literal') {
       const v = modeNode.attributes.value;
       if (v === 1) mode = 'OUTPUT';
     }
-    
+
     if (pullNode && pullNode.nodeType === 'Literal') {
       const v = pullNode.attributes.value;
       if (v === 2) mode = 'INPUT_PULLUP';
@@ -492,34 +710,32 @@ function handleVariableDeclaration(node: BaseNode, ctx: TransformContext): ASLSt
   return [{ kind: 'assign', target: name, value: { kind: 'literal', value: 0 } }];
 }
 
+// ============================================================================
+// ExpressionStatement — includes Camada 3 servo detection
+// ============================================================================
+
 function handleExpressionStatement(node: BaseNode, ctx: TransformContext): ASLStatement[] {
   const expr = node.nodeType === 'ExpressionStatement' ? node.children[0] : node;
   if (!expr) return [];
 
   if (expr.nodeType === 'GpioSet') {
-    return [{
-      kind: 'digitalWrite',
-      pin: transformExpr(expr.children[0]),
-      value: transformExpr(expr.children[1]),
-    } as ASLStatement];
+    return [{ kind: 'digitalWrite', pin: transformExpr(expr.children[0]), value: transformExpr(expr.children[1]) } as ASLStatement];
   }
 
   if (expr.nodeType === 'AnalogWrite') {
-    return [{
-      kind: 'analogWrite',
-      pin: transformExpr(expr.children[0]),
-      value: transformExpr(expr.children[1]),
-    } as ASLStatement];
+    return [{ kind: 'analogWrite', pin: transformExpr(expr.children[0]), value: transformExpr(expr.children[1]) } as ASLStatement];
   }
 
   if (expr.nodeType === 'DelayMs') {
-    return [{
-      kind: 'delay',
-      milliseconds: transformExpr(expr.children[0]),
-    } as ASLStatement];
+    return [{ kind: 'delay', milliseconds: transformExpr(expr.children[0]) } as ASLStatement];
   }
 
   if (expr.nodeType === 'BinaryExpression' && ['=', '+=', '-=', '*=', '/='].includes(expr.attributes.operator)) {
+    // ── Camada 3: SetMember servo angle/throttle (CircuitPython)
+    if (expr.attributes.operator === '=') {
+      const servoSetMember = tryHandleServoSetMember(expr.children[0], ctx);
+      if (servoSetMember) return servoSetMember;
+    }
     return handleAssignment(expr);
   }
 
@@ -527,47 +743,30 @@ function handleExpressionStatement(node: BaseNode, ctx: TransformContext): ASLSt
     const child = expr.children[0];
     if (child.nodeType === 'Identifier') {
       const varName = child.attributes.name;
-      const isPostfix = expr.attributes.prefix === false;
-
-      if (isPostfix) {
-        // i++ -> i = i + 1
-        return [{
-          kind: 'assign',
-          target: varName,
-          value: {
-            kind: 'binary',
-            op: expr.attributes.operator === '++' ? '+' : '-',
-            left: { kind: 'var', name: varName },
-            right: { kind: 'literal', value: 1 },
-          },
-        } as ASLStatement];
-      } else {
-        // ++i as statement is the same as i++
-        return [{
-          kind: 'assign',
-          target: varName,
-          value: {
-            kind: 'binary',
-            op: expr.attributes.operator === '++' ? '+' : '-',
-            left: { kind: 'var', name: varName },
-            right: { kind: 'literal', value: 1 },
-          },
-        } as ASLStatement];
-      }
+      return [{
+        kind: 'assign',
+        target: varName,
+        value: {
+          kind: 'binary',
+          op: expr.attributes.operator === '++' ? '+' : '-',
+          left: { kind: 'var', name: varName },
+          right: { kind: 'literal', value: 1 },
+        },
+      } as ASLStatement];
     }
   }
 
+  // ── Camada 3: servo method call detection
   if (expr.nodeType === 'CallExpression') {
+    const servoStmts = tryHandleServoCall(expr, ctx);
+    if (servoStmts) return servoStmts;
+
     const stmt = transformCallToStmt(expr);
     if (stmt) return [stmt];
   }
 
   if (expr.nodeType === 'Print') {
-    return [{
-      kind: 'print',
-      args: expr.children.map(transformExpr),
-      newline: !!expr.attributes.newline,
-    } as ASLStatement];
+    return [{ kind: 'print', args: expr.children.map(transformExpr), newline: !!expr.attributes.newline } as ASLStatement];
   }
 
   if (HARDWARE_NODES.includes(expr.nodeType)) {
@@ -600,12 +799,7 @@ function handleAssignment(expr: BaseNode): ASLStatement[] {
         resStmts.push(readStmt);
         return resStmts;
       }
-
-      resStmts.push({
-        kind: 'assign',
-        target,
-        value: transformExpr(desugaredRight),
-      } as ASLStatement);
+      resStmts.push({ kind: 'assign', target, value: transformExpr(desugaredRight) } as ASLStatement);
       return resStmts;
     } else {
       const binOp = op.charAt(0) as any;
@@ -629,26 +823,13 @@ function handleAssignment(expr: BaseNode): ASLStatement[] {
       const d1Index = transformExpr(targetArr.children[0].children[1]);
       const d2Index = transformExpr(targetArr.children[1]);
       const d3Index = transformExpr(index);
-      return [{
-        kind: 'setIndex3D',
-        target: arrName,
-        d1Index,
-        d2Index,
-        d3Index,
-        value: transformExpr(right),
-      } as ASLStatement];
+      return [{ kind: 'setIndex3D', target: arrName, d1Index, d2Index, d3Index, value: transformExpr(right) } as ASLStatement];
     }
     if (targetArr.nodeType === 'SubscriptExpression' && targetArr.children[0].nodeType === 'Identifier') {
       const arrName = (targetArr.children[0] as any).attributes.name;
       const rowIndex = transformExpr(targetArr.children[1]);
       const colIndex = transformExpr(index);
-      return [{
-        kind: 'setIndex2D',
-        target: arrName,
-        rowIndex,
-        colIndex,
-        value: transformExpr(right),
-      } as ASLStatement];
+      return [{ kind: 'setIndex2D', target: arrName, rowIndex, colIndex, value: transformExpr(right) } as ASLStatement];
     }
     if (targetArr.nodeType === 'Identifier') {
       const targetName = targetArr.attributes.name;
@@ -662,30 +843,11 @@ function handleAssignment(expr: BaseNode): ASLStatement[] {
     const target = transformExpr(left.children[0]);
     const property = left.attributes.property;
     if (op === '=') {
-      return [{
-        kind: 'setMember',
-        target,
-        property,
-        value: transformExpr(right),
-      } as ASLStatement];
+      return [{ kind: 'setMember', target, property, value: transformExpr(right) } as ASLStatement];
     } else {
       const binOp = op.charAt(0) as any;
-      const currentVal: ASLExpr = {
-        kind: 'member',
-        target,
-        property,
-      };
-      return [{
-        kind: 'setMember',
-        target,
-        property,
-        value: {
-          kind: 'binary',
-          op: binOp,
-          left: currentVal,
-          right: transformExpr(right),
-        },
-      } as ASLStatement];
+      const currentVal: ASLExpr = { kind: 'member', target, property };
+      return [{ kind: 'setMember', target, property, value: { kind: 'binary', op: binOp, left: currentVal, right: transformExpr(right) } } as ASLStatement];
     }
   }
 

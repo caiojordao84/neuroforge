@@ -13,11 +13,21 @@ export interface TransformContext {
    * Populado por codeToASL ao processar StructDeclaration nodes.
    */
   structDefs?: Record<string, ASLStructDef>;
+  /**
+   * Conjunto de nomes de variáveis reconhecidas como instâncias servo.
+   * Populado pelas 3 camadas de detecção no statementRegistry:
+   *   Camada 1 — declaração explícita (type === 'Servo', CallExpression 'Servo')
+   *   Camada 2 — inferência por callee (/servo/i, 'servo.Servo', etc.)
+   *   Camada 3 — inferência lazy por método (.attach() auto-registo)
+   * Também inclui parâmetros de função cujo tipo seja Servo/Servo&/Servo*.
+   */
+  servoInstances?: Set<string>;
 }
 
 export function createTransformContext(language?: Language): TransformContext {
   return {
     globalsMap: new Map(),
     language,
+    servoInstances: new Set(),
   };
 }
