@@ -42,7 +42,6 @@ class ContinueSignal { }
 function splitMainLoopIntoSetupAndLoop(
   body: ASLStatement[],
 ): { setupStmts: ASLStatement[]; loopStmts: ASLStatement[] } {
-  // Find the last while or doWhile in the body (ignore comments)
   let lastLoopIdx = -1;
   for (let i = body.length - 1; i >= 0; i--) {
     const kind = body[i].kind;
@@ -53,17 +52,12 @@ function splitMainLoopIntoSetupAndLoop(
   }
 
   if (lastLoopIdx === -1) {
-    // No loop found — treat the entire body as a repeating loop (original behaviour)
     return { setupStmts: [], loopStmts: body };
   }
 
   const setupStmts = body.slice(0, lastLoopIdx);
   const loopNode = body[lastLoopIdx];
 
-  // The loop itself is infinite (while True / while 1 / doWhile).
-  // We unwrap its body so the SimulationEngine scheduleLoop() re-runs
-  // only the inner body, not the whole while wrapper (which would block
-  // the thread forever on the first call).
   let loopStmts: ASLStatement[];
   if (loopNode.kind === 'while' || loopNode.kind === 'doWhile') {
     loopStmts = (loopNode as any).body as ASLStatement[];
@@ -99,9 +93,6 @@ export function createASLRuntime(
   const setupFuncDef = program.functions.find((f) => f.name === 'setup');
   const mainTask = program.tasks[0];
 
-  // If no explicit setup() function exists, auto-split the mainLoop body:
-  // statements before the final while/doWhile run once as setup;
-  // the inner body of that loop runs repeatedly via scheduleLoop().
   let inlineSetupStmts: ASLStatement[] = [];
   let inlineLoopStmts: ASLStatement[] | null = null;
 
@@ -121,14 +112,12 @@ export function createASLRuntime(
 
   const setup = async () => {
     if (setupFuncDef) {
-      // Explicit setup() function — run it
       try {
         await executeStatements(setupFuncDef.body, globalEnv, runContext);
       } catch (e) {
         if (!(e instanceof ReturnSignal)) throw e;
       }
     } else if (inlineSetupStmts.length > 0) {
-      // Inline setup: statements before the while(1) in mainLoop
       try {
         await executeStatements(inlineSetupStmts, globalEnv, runContext);
       } catch (e) {
@@ -138,8 +127,6 @@ export function createASLRuntime(
   };
 
   const loop = async () => {
-    // Use unwrapped inline loop body when available, otherwise fall back
-    // to the full mainTask body (e.g. when there is no while at the top level).
     const stmts = inlineLoopStmts ?? (mainTask ? mainTask.body : []);
     if (stmts.length === 0) return;
     try {
@@ -289,7 +276,6 @@ async function executeStatements(
             } else throw e;
           }
           if (broken) break;
-          // Update always runs (even on continue), matching C/C++ for-loop semantics
           await executeStatements(s.update, localEnv, ctx);
           cycles++;
           if (cycles % 10 === 0) {
@@ -640,6 +626,48 @@ async function executeStatements(
         inst.prev = IN;
         break;
       }
+
+      // ---------------------------------------------------------------------------
+      // Servo Statements
+      // ---------------------------------------------------------------------------
+
+      case 'servoAttach': {
+        const pin = await evalExpr(s.pin, localEnv, ctx);
+        const minPulse = s.minPulse ? await evalExpr(s.minPulse, localEnv, ctx) : 544;
+        const maxPulse = s.maxPulse ? await evalExpr(s.maxPulse, localEnv, ctx) : 2400;
+        // Store servo state in globals so servoWrite can resolve pin & pulse range
+        ctx.globals.set(`__servo_${s.varName}`, { pin, minPulse, maxPulse, angle: 90 });
+        ctx.engine.emit('hardwareCall', { callee: 'servo.attach', args: [s.varName, pin, minPulse, maxPulse] });
+        break;
+      }
+
+      case 'servoWrite': {
+        const inst = ctx.globals.get(`__servo_${s.varName}`);
+        const rawVal = await evalExpr(s.angle, localEnv, ctx);
+
+        let angle: number;
+        if (s.rawMicroseconds) {
+          // duty_u16 (0–65535) or writeMicroseconds (µs) → convert to degrees
+          const minUs = inst?.minPulse ?? 544;
+          const maxUs = inst?.maxPulse ?? 2400;
+          angle = Math.round(((rawVal - minUs) / (maxUs - minUs)) * 180);
+          angle = Math.max(0, Math.min(180, angle));
+        } else {
+          angle = Number(rawVal);
+        }
+
+        if (inst) inst.angle = angle;
+        ctx.engine.emit('hardwareCall', { callee: 'servo.write', args: [s.varName, angle] });
+        break;
+      }
+
+      case 'servoDetach': {
+        const inst = ctx.globals.get(`__servo_${s.varName}`);
+        const pin = inst?.pin ?? -1;
+        ctx.engine.emit('hardwareCall', { callee: 'servo.detach', args: [s.varName, pin] });
+        ctx.globals.delete(`__servo_${s.varName}`);
+        break;
+      }
     }
   }
 }
@@ -950,7 +978,53 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         if (Array.isArray(arr)) return arr.map((val, idx) => [idx, val]);
         return [];
       }
+      // -----------------------------------------------------------------------
+      // Dotted callee: check for known servo instances first, then generic hardware
+      // -----------------------------------------------------------------------
       if (expr.callee.includes('.') || expr.callee === 'KeypadRead') {
+        if (expr.callee.includes('.')) {
+          const dot = expr.callee.lastIndexOf('.');
+          const varName = expr.callee.slice(0, dot);
+          const method = expr.callee.slice(dot + 1);
+          const servoInst = ctx.globals.get(`__servo_${varName}`);
+
+          if (servoInst) {
+            const args: any[] = [];
+            for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
+
+            if (method === 'write' || method === 'set_angle' || method === 'setAngle' || method === 'move') {
+              servoInst.angle = args[0];
+              ctx.engine.emit('hardwareCall', { callee: 'servo.write', args: [varName, args[0]] });
+              return 0;
+            }
+            if (method === 'writeMicroseconds' || method === 'duty_u16' || method === 'duty_ns' || method === 'duty') {
+              const minUs = servoInst.minPulse ?? 544;
+              const maxUs = servoInst.maxPulse ?? 2400;
+              const angle = Math.max(0, Math.min(180, Math.round(((args[0] - minUs) / (maxUs - minUs)) * 180)));
+              servoInst.angle = angle;
+              ctx.engine.emit('hardwareCall', { callee: 'servo.write', args: [varName, angle] });
+              return 0;
+            }
+            if (method === 'detach' || method === 'deinit' || method === 'release' || method === 'stop') {
+              ctx.engine.emit('hardwareCall', { callee: 'servo.detach', args: [varName, servoInst.pin] });
+              ctx.globals.delete(`__servo_${varName}`);
+              return 0;
+            }
+            if (method === 'attach') {
+              const pin = args[0] ?? servoInst.pin;
+              const minP = args[1] ?? servoInst.minPulse;
+              const maxP = args[2] ?? servoInst.maxPulse;
+              servoInst.pin = pin;
+              ctx.engine.emit('hardwareCall', { callee: 'servo.attach', args: [varName, pin, minP, maxP] });
+              return 0;
+            }
+            if (method === 'read' || method === 'readMicroseconds') return servoInst.angle ?? 90;
+            if (method === 'attached') return servoInst ? 1 : 0;
+            if (method === 'freq') return 0; // pwm.freq(50) — no-op in executor
+          }
+        }
+
+        // Generic hardware call fallback
         const args = [];
         for (const a of expr.args) args.push(await evalExpr(a, env, ctx));
         ctx.engine.emit('hardwareCall', { callee: expr.callee, args });
