@@ -131,7 +131,11 @@ export type ASLStatement =
   | ASLLatchSR
   | ASLLatchRS
   | ASLTrigR
-  | ASLTrigF;
+  | ASLTrigF
+  // --- Servo ---
+  | ASLServoAttach
+  | ASLServoWrite
+  | ASLServoDetach;
 
 /**
  * Statement de comentário (não afeta execução, mas preserva contexto).
@@ -745,4 +749,46 @@ export interface ASLTrigF {
   kind: 'trigF';
   instance: string;
   in: ASLExpr;
+}
+
+// ---------------------------------------------------------------------------
+// Servo Statements
+// ---------------------------------------------------------------------------
+
+/**
+ * Attach a servo to a PWM-capable pin.
+ * Corresponds to: Servo myServo; myServo.attach(pin);  (C++)
+ *                 pwm = PWM(Pin(pin)); pwm.freq(50);    (MicroPython)
+ */
+export interface ASLServoAttach {
+  kind: 'servoAttach';
+  /** Variable name used to reference this servo instance (e.g. "myServo"). */
+  varName: string;
+  pin: ASLExpr;
+  /** Optional pulse range in microseconds (default 544–2400 µs). */
+  minPulse?: ASLExpr;
+  maxPulse?: ASLExpr;
+}
+
+/**
+ * Write an angle to a servo (0–180°).
+ * Corresponds to: myServo.write(angle);   (C++)
+ *                 pwm.duty_u16(mapped);   (MicroPython)
+ */
+export interface ASLServoWrite {
+  kind: 'servoWrite';
+  /** Variable name of the attached servo instance. */
+  varName: string;
+  /** Target angle in degrees (0–180). */
+  angle: ASLExpr;
+}
+
+/**
+ * Detach a servo, releasing the PWM pin.
+ * Corresponds to: myServo.detach();  (C++)
+ *                 pwm.deinit();      (MicroPython)
+ */
+export interface ASLServoDetach {
+  kind: 'servoDetach';
+  varName: string;
 }
