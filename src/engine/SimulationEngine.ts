@@ -359,7 +359,8 @@ export class SimulationEngine extends EventEmitter {
       );
     }
 
-    return simulationStore.digitalRead(pin);
+    const val = simulationStore.digitalRead(pin);
+    return val;
   }
 
   analogWrite(pin: number, value: number): void {
@@ -408,7 +409,9 @@ export class SimulationEngine extends EventEmitter {
       simulationStore.setPinMode(pin, 'INPUT');
     }
 
-    return simulationStore.analogRead(pin);
+    const val = simulationStore.analogRead(pin);
+    // console.log(`[SimulationEngine] analogRead: pin=${pin}, value=${val}`);
+    return val;
   }
 
   // Method for external components (sensors, buttons) to drive pins
@@ -426,6 +429,23 @@ export class SimulationEngine extends EventEmitter {
     }
 
     this.emit('pinChange', { pin, value });
+  }
+
+  // Method for external components (sensors, potentiometers) to drive analog pins
+  externalAnalogWrite(pin: number, value: number): void {
+    const simulationStore = useSimulationStore.getState();
+    const clampedValue = Math.max(0, Math.min(1023, value));
+    
+    const storeValue = Math.round((clampedValue / 1023) * 255);
+    simulationStore.analogWrite(pin, storeValue);
+
+    const updatedPinState = simulationStore.getPinState(pin);
+    if (updatedPinState) {
+      this.pinCache.set(pin, updatedPinState);
+    }
+
+    this.emit('pinChange', { pin, value: storeValue });
+    this.emit('analogChange', { pin, value: clampedValue, percentage: (clampedValue / 1023) * 100 });
   }
 
   getPinState(pin: number): PinState | undefined {

@@ -56,11 +56,7 @@ export const PotentiometerNode: React.FC<PotentiometerNodeProps> = ({ data, sele
 
   useEffect(() => {
     if (connectedPin !== undefined && isProperlyWired) {
-      simulationEngine.emit('analogChange', {
-        pin: connectedPin,
-        value,
-        percentage,
-      });
+      simulationEngine.externalAnalogWrite(connectedPin, value);
     }
   }, [value, percentage, connectedPin, isProperlyWired]);
 
@@ -113,7 +109,7 @@ export const PotentiometerNode: React.FC<PotentiometerNodeProps> = ({ data, sele
         viewBox="0 0 50 70"
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        className={isDragging ? 'cursor-grabbing' : 'cursor-grab'}
+        className={cn('nodrag', isDragging ? 'cursor-grabbing' : 'cursor-grab')}
       >
         <defs>
           <linearGradient id={`potTrack-${id}`} x1="0%" y1="0%" x2="0%" y2="100%">

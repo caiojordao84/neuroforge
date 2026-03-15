@@ -816,6 +816,7 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
         case '^': return l ^ r;
         case '<<': return l << r;
         case '>>': return l >> r;
+        case '//': return Math.floor(l / r);
         default: return 0;
       }
     }
@@ -824,7 +825,13 @@ async function evalExpr(expr: ASLExpr, env: Map<string, any>, ctx: RunContext): 
       if (expr.callee === 'Pin') {
         const pinNum = await evalExpr(expr.args[0], env, ctx);
         const modeRaw = expr.args[1] ? await evalExpr(expr.args[1], env, ctx) : 1;
-        const mode = modeRaw === 0 ? 'INPUT' : 'OUTPUT';
+        const pull = expr.args[2] ? await evalExpr(expr.args[2], env, ctx) : 0;
+        
+        let mode: 'INPUT' | 'OUTPUT' | 'INPUT_PULLUP' = modeRaw === 0 ? 'INPUT' : 'OUTPUT';
+        if (mode === 'INPUT' && pull === 2) {
+          mode = 'INPUT_PULLUP';
+        }
+        
         ctx.engine.pinMode(pinNum, mode);
         return pinNum;
       }

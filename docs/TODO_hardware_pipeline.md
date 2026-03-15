@@ -25,23 +25,23 @@
 
 **Ficheiros:** `LEDNode.tsx` · `LEDPropertiesPanel.tsx`
 
-| Camada         | Estado | Notas                                                            |
-| :------------- | :----: | :--------------------------------------------------------------- |
-| Node Visual    |   ✅   | Implementado com física (Vf, corrente, burn-out, wiring check)   |
-| Properties     |   ✅   | Painel completo com cores, resistência, preview                  |
-| ASL Type       |   —    | Usa `ASLDigitalWrite` + `ASLAnalogWrite` existentes              |
-| Executor       |   ⚠️   | `digitalWrite` ✅ · **`analogWrite` (PWM) não reflete brightness** |
-| Transform      |   ✅   | Já existe para `digitalWrite` / `analogWrite`                    |
-| CGenerator     |   ✅   | Via `digitalWrite` / `analogWrite`                               |
-| PyGenerator    |   ✅   | Via `pin.value()` / `pwm.duty()`                                 |
-| RsGenerator    |   ✅   | Via GPIO                                                         |
-| Shims          |   —    | Não precisa (usa GPIO nativo)                                    |
-| CParser        |   ✅   | Via GPIO calls                                                   |
-| PyParser       |   ✅   | Via GPIO calls                                                   |
-| RsParser       |   ✅   | Via GPIO calls                                                   |
+| Camada      | Estado | Notas                                                             |
+| :---------- | :----: | :---------------------------------------------------------------- |
+| Node Visual |   ✅    | Implementado com física (Vf, corrente, burn-out, wiring check)    |
+| Properties  |   ✅    | Painel completo com cores, resistência, preview                   |
+| ASL Type    |   —    | Usa `ASLDigitalWrite` + `ASLAnalogWrite` existentes               |
+| Executor    |   ⚠️    | `digitalWrite` ✅ · **`analogWrite` (PWM) não reflete brightness** |
+| Transform   |   ✅    | Já existe para `digitalWrite` / `analogWrite`                     |
+| CGenerator  |   ✅    | Via `digitalWrite` / `analogWrite`                                |
+| PyGenerator |   ✅    | Via `pin.value()` / `pwm.duty()`                                  |
+| RsGenerator |   ✅    | Via GPIO                                                          |
+| Shims       |   —    | Não precisa (usa GPIO nativo)                                     |
+| CParser     |   ✅    | Via GPIO calls                                                    |
+| PyParser    |   ✅    | Via GPIO calls                                                    |
+| RsParser    |   ✅    | Via GPIO calls                                                    |
 
 ### TODO LED
-- [ ] **Simulação PWM**: `LEDNode.tsx` → quando `pinChange` recebe valor numérico (0–255), calcular brightness proporcional via `recalcPhysics` com duty-cycle
+- [x] **Simulação PWM**: `LEDNode.tsx` → quando `pinChange` recebe valor numérico (0–255), calcular brightness proporcional via `recalcPhysics` com duty-cycle
 - [ ] Testar: `analogWrite(pin, 128)` deve acender LED a ~50%
 
 ---
@@ -50,20 +50,20 @@
 
 **Ficheiros:** `RGBLEDNode.tsx` · `RGBLEDPropertiesPanel.tsx`
 
-| Camada         | Estado | Notas                                                            |
-| :------------- | :----: | :--------------------------------------------------------------- |
-| Node Visual    |   ✅   | Responde a `pinChange` por canal (R/G/B), suporta PWM numérico  |
-| Properties     |   ✅   | Painel com common anode/cathode                                  |
-| ASL Type       |   ❌   | **Não existe `ASLRGBSet` — depende de 3x `analogWrite`**        |
-| Executor       |   ❌   | Sem handler nativo para `rgb.setColor(r,g,b)`                   |
-| Transform      |   ❌   | `callTransform` sem regra `rgb.setColor`                         |
-| CGenerator     |   ❌   | Sem geração `analogWrite` triplo para RGB                        |
-| PyGenerator    |   ❌   | Idem                                                             |
-| RsGenerator    |   ❌   | Idem                                                             |
-| Shims          |   ❌   | Sem `rgb_shim.ts`                                                |
-| CParser        |   ⚠️   | Detecta como `CallExpression` genérico                           |
-| PyParser       |   ❌   | Não detecta                                                      |
-| RsParser       |   ❌   | Não detecta                                                      |
+| Camada      | Estado | Notas                                                          |
+| :---------- | :----: | :------------------------------------------------------------- |
+| Node Visual |   ✅    | Responde a `pinChange` por canal (R/G/B), suporta PWM numérico |
+| Properties  |   ✅    | Painel com common anode/cathode                                |
+| ASL Type    |   ❌    | **Não existe `ASLRGBSet` — depende de 3x `analogWrite`**       |
+| Executor    |   ❌    | Sem handler nativo para `rgb.setColor(r,g,b)`                  |
+| Transform   |   ❌    | `callTransform` sem regra `rgb.setColor`                       |
+| CGenerator  |   ❌    | Sem geração `analogWrite` triplo para RGB                      |
+| PyGenerator |   ❌    | Idem                                                           |
+| RsGenerator |   ❌    | Idem                                                           |
+| Shims       |   ❌    | Sem `rgb_shim.ts`                                              |
+| CParser     |   ⚠️    | Detecta como `CallExpression` genérico                         |
+| PyParser    |   ❌    | Não detecta                                                    |
+| RsParser    |   ❌    | Não detecta                                                    |
 
 ### TODO RGB LED
 - [ ] ASL Type: definir `ASLRGBSet { pin_r, pin_g, pin_b, r, g, b }`
@@ -83,20 +83,20 @@
 
 **Ficheiros:** `ServoNode.tsx` · `ServoPropertiesPanel.tsx`
 
-| Camada         | Estado | Notas                                                   |
-| :------------- | :----: | :------------------------------------------------------ |
-| Node Visual    |   ✅   | Animação do braço com ângulo, smooth interpolation       |
-| Properties     |   ✅   | Min/max angle, label                                    |
-| ASL Type       |   ❌   | **Não existe `ASLServoWrite`**                           |
-| Executor       |   ⚠️   | Detecta `servo.write()` como CallExpression genérico     |
-| Transform      |   ❌   | Sem regra para `servo.write/attach/detach`               |
-| CGenerator     |   ⚠️   | Fallback `CallExpression`                                |
-| PyGenerator    |   ❌   | Sem geração                                              |
-| RsGenerator    |   ❌   | Sem geração                                              |
-| Shims          |   ❌   | Sem `servo_shim.ts`                                      |
-| CParser        |   ✅   | Detecta como `CallExpression`                            |
-| PyParser       |   ❌   | Não detecta                                              |
-| RsParser       |   ❌   | Não detecta                                              |
+| Camada      | Estado | Notas                                                |
+| :---------- | :----: | :--------------------------------------------------- |
+| Node Visual |   ✅    | Animação do braço com ângulo, smooth interpolation   |
+| Properties  |   ✅    | Min/max angle, label                                 |
+| ASL Type    |   ❌    | **Não existe `ASLServoWrite`**                       |
+| Executor    |   ⚠️    | Detecta `servo.write()` como CallExpression genérico |
+| Transform   |   ❌    | Sem regra para `servo.write/attach/detach`           |
+| CGenerator  |   ⚠️    | Fallback `CallExpression`                            |
+| PyGenerator |   ❌    | Sem geração                                          |
+| RsGenerator |   ❌    | Sem geração                                          |
+| Shims       |   ❌    | Sem `servo_shim.ts`                                  |
+| CParser     |   ✅    | Detecta como `CallExpression`                        |
+| PyParser    |   ❌    | Não detecta                                          |
+| RsParser    |   ❌    | Não detecta                                          |
 
 ### TODO Servo
 - [ ] ASL Type: `ASLServoAttach { pin, varName }` + `ASLServoWrite { varName, angle }`
@@ -116,20 +116,20 @@
 
 **Ficheiros:** `ButtonNode.tsx` · `ButtonPropertiesPanel.tsx`
 
-| Camada         | Estado | Notas                                                      |
-| :------------- | :----: | :--------------------------------------------------------- |
-| Node Visual    |   ✅   | Interactivo (press/release), pull-up/down, debounce visual |
-| Properties     |   ✅   | Pull resistor config, debounce time                        |
-| ASL Type       |   ✅   | Usa `ASLRead` (DIGITAL) existente ← `digitalRead(pin)`    |
-| Executor       |   ✅   | `digitalRead` funciona + `externalDigitalWrite` do node    |
-| Transform      |   ✅   | Via `tryTransformRead`                                     |
-| CGenerator     |   ✅   | `digitalRead(pin)`                                         |
-| PyGenerator    |   ✅   | `pin.value()`                                              |
-| RsGenerator    |   ✅   | GPIO read                                                  |
-| Shims          |   —    | Não precisa                                                |
-| CParser        |   ✅   | Via `digitalRead` detection                                |
-| PyParser       |   ✅   | Via `pin.value()` detection                                |
-| RsParser       |   ✅   | Via GPIO read detection                                    |
+| Camada      | Estado | Notas                                                      |
+| :---------- | :----: | :--------------------------------------------------------- |
+| Node Visual |   ✅    | Interactivo (press/release), pull-up/down, debounce visual |
+| Properties  |   ✅    | Pull resistor config, debounce time                        |
+| ASL Type    |   ✅    | Usa `ASLRead` (DIGITAL) existente ← `digitalRead(pin)`     |
+| Executor    |   ✅    | `digitalRead` funciona + `externalDigitalWrite` do node    |
+| Transform   |   ✅    | Via `tryTransformRead`                                     |
+| CGenerator  |   ✅    | `digitalRead(pin)`                                         |
+| PyGenerator |   ✅    | `pin.value()`                                              |
+| RsGenerator |   ✅    | GPIO read                                                  |
+| Shims       |   —    | Não precisa                                                |
+| CParser     |   ✅    | Via `digitalRead` detection                                |
+| PyParser    |   ✅    | Via `pin.value()` detection                                |
+| RsParser    |   ✅    | Via GPIO read detection                                    |
 
 ### TODO Button
 - [ ] **Verificar simulação**: confirmar que clicar no botão → `externalDigitalWrite` → `digitalRead` no código ASL retorna o valor correcto
@@ -142,20 +142,20 @@
 
 **Ficheiros:** `PotentiometerNode.tsx` · `PotentiometerPropertiesPanel.tsx`
 
-| Camada         | Estado | Notas                                                  |
-| :------------- | :----: | :----------------------------------------------------- |
-| Node Visual    |   ✅   | Slider interactivo, emite `analogChange` event         |
-| Properties     |   ✅   | Label, pin mapping                                     |
-| ASL Type       |   ✅   | Usa `ASLRead` (ANALOG) existente ← `analogRead(pin)`  |
-| Executor       |   ✅   | `analogRead` funciona, mas **precisa ligar ao event**  |
-| Transform      |   ✅   | Via `tryTransformRead`                                 |
-| CGenerator     |   ✅   | `analogRead(pin)`                                      |
-| PyGenerator    |   ✅   | `adc.read()`                                           |
-| RsGenerator    |   ✅   | ADC read                                               |
-| Shims          |   —    | Não precisa                                            |
-| CParser        |   ✅   | Via `analogRead` detection                             |
-| PyParser       |   ✅   | Via ADC detection                                      |
-| RsParser       |   ✅   | Via ADC detection                                      |
+| Camada      | Estado | Notas                                                 |
+| :---------- | :----: | :---------------------------------------------------- |
+| Node Visual |   ✅    | Slider interactivo, emite `analogChange` event        |
+| Properties  |   ✅    | Label, pin mapping                                    |
+| ASL Type    |   ✅    | Usa `ASLRead` (ANALOG) existente ← `analogRead(pin)`  |
+| Executor    |   ✅    | `analogRead` funciona, mas **precisa ligar ao event** |
+| Transform   |   ✅    | Via `tryTransformRead`                                |
+| CGenerator  |   ✅    | `analogRead(pin)`                                     |
+| PyGenerator |   ✅    | `adc.read()`                                          |
+| RsGenerator |   ✅    | ADC read                                              |
+| Shims       |   —    | Não precisa                                           |
+| CParser     |   ✅    | Via `analogRead` detection                            |
+| PyParser    |   ✅    | Via ADC detection                                     |
+| RsParser    |   ✅    | Via ADC detection                                     |
 
 ### TODO Potentiometer
 - [ ] **Verificar simulação**: confirmar que `analogChange` event do slider → `analogRead(pin)` no executor retorna o valor correcto (0–1023)
@@ -167,20 +167,20 @@
 
 **Ficheiros:** Não tem Node visual (→ criar `BuzzerNode.tsx`)
 
-| Camada         | Estado | Notas                                   |
-| :------------- | :----: | :-------------------------------------- |
-| Node Visual    |   ❌   | **Criar `BuzzerNode.tsx`**              |
-| Properties     |   ❌   | **Criar `BuzzerPropertiesPanel.tsx`**    |
-| ASL Type       |   ❌   | Criar `ASLTone { pin, freq, duration }` |
-| Executor       |   ⚠️   | CallExpression fallback                  |
-| Transform      |   ❌   | Sem regra                                |
-| CGenerator     |   ❌   | Sem geração                              |
-| PyGenerator    |   ❌   | Sem geração                              |
-| RsGenerator    |   ❌   | Sem geração                              |
-| Shims          |   ❌   | Sem shim                                 |
-| CParser        |   ✅   | Detecta como CallExpression             |
-| PyParser       |   ✅   | Detecta como CallExpression             |
-| RsParser       |   ❌   |                                          |
+| Camada      | Estado | Notas                                   |
+| :---------- | :----: | :-------------------------------------- |
+| Node Visual |   ❌    | **Criar `BuzzerNode.tsx`**              |
+| Properties  |   ❌    | **Criar `BuzzerPropertiesPanel.tsx`**   |
+| ASL Type    |   ❌    | Criar `ASLTone { pin, freq, duration }` |
+| Executor    |   ⚠️    | CallExpression fallback                 |
+| Transform   |   ❌    | Sem regra                               |
+| CGenerator  |   ❌    | Sem geração                             |
+| PyGenerator |   ❌    | Sem geração                             |
+| RsGenerator |   ❌    | Sem geração                             |
+| Shims       |   ❌    | Sem shim                                |
+| CParser     |   ✅    | Detecta como CallExpression             |
+| PyParser    |   ✅    | Detecta como CallExpression             |
+| RsParser    |   ❌    |                                         |
 
 ### TODO Buzzer / Tone
 - [ ] Node Visual: `BuzzerNode.tsx` (visualização de som, animação de onda)
@@ -202,20 +202,20 @@
 
 **Ficheiros:** Não tem Node visual
 
-| Camada         | Estado | Notas                          |
-| :------------- | :----: | :----------------------------- |
-| Node Visual    |   ❌   | **Criar `DHTNode.tsx`**        |
-| Properties     |   ❌   | **Criar `DHTPropertiesPanel.tsx`** |
-| ASL Type       |   ❌   | Criar `ASLDHTRead`             |
-| Executor       |   ❌   |                                 |
-| Transform      |   ❌   |                                 |
-| CGenerator     |   ❌   |                                 |
-| PyGenerator    |   ❌   |                                 |
-| RsGenerator    |   ❌   |                                 |
-| Shims          |   ❌   | `dht_shim.ts`                  |
-| CParser        |   ✅   | Detecta CallExpression          |
-| PyParser       |   ❌   |                                 |
-| RsParser       |   ❌   |                                 |
+| Camada      | Estado | Notas                              |
+| :---------- | :----: | :--------------------------------- |
+| Node Visual |   ❌    | **Criar `DHTNode.tsx`**            |
+| Properties  |   ❌    | **Criar `DHTPropertiesPanel.tsx`** |
+| ASL Type    |   ❌    | Criar `ASLDHTRead`                 |
+| Executor    |   ❌    |                                    |
+| Transform   |   ❌    |                                    |
+| CGenerator  |   ❌    |                                    |
+| PyGenerator |   ❌    |                                    |
+| RsGenerator |   ❌    |                                    |
+| Shims       |   ❌    | `dht_shim.ts`                      |
+| CParser     |   ✅    | Detecta CallExpression             |
+| PyParser    |   ❌    |                                    |
+| RsParser    |   ❌    |                                    |
 
 ### TODO DHT
 - [ ] Node Visual: `DHTNode.tsx` (mostrar temp/humidity, slider para simular)
@@ -237,20 +237,20 @@
 
 **Ficheiros:** Não tem Node visual
 
-| Camada         | Estado | Notas                            |
-| :------------- | :----: | :------------------------------- |
-| Node Visual    |   ❌   | **Criar `UltrasonicNode.tsx`**   |
-| Properties     |   ❌   | **Criar `UltrasonicPropertiesPanel.tsx`** |
-| ASL Type       |   ❌   | Criar `ASLUltrasonicRead`       |
-| Executor       |   ❌   |                                   |
-| Transform      |   ❌   |                                   |
-| CGenerator     |   ❌   |                                   |
-| PyGenerator    |   ❌   |                                   |
-| RsGenerator    |   ❌   |                                   |
-| Shims          |   ❌   | `ultrasonic_shim.ts`             |
-| CParser        |   ✅   | Detecta CallExpression           |
-| PyParser       |   ❌   |                                   |
-| RsParser       |   ❌   |                                   |
+| Camada      | Estado | Notas                                     |
+| :---------- | :----: | :---------------------------------------- |
+| Node Visual |   ❌    | **Criar `UltrasonicNode.tsx`**            |
+| Properties  |   ❌    | **Criar `UltrasonicPropertiesPanel.tsx`** |
+| ASL Type    |   ❌    | Criar `ASLUltrasonicRead`                 |
+| Executor    |   ❌    |                                           |
+| Transform   |   ❌    |                                           |
+| CGenerator  |   ❌    |                                           |
+| PyGenerator |   ❌    |                                           |
+| RsGenerator |   ❌    |                                           |
+| Shims       |   ❌    | `ultrasonic_shim.ts`                      |
+| CParser     |   ✅    | Detecta CallExpression                    |
+| PyParser    |   ❌    |                                           |
+| RsParser    |   ❌    |                                           |
 
 ### TODO Ultrasonic
 - [ ] Node Visual: `UltrasonicNode.tsx` (slider distância 2–400 cm)
@@ -270,20 +270,20 @@
 
 **Ficheiros:** Não tem Node visual
 
-| Camada         | Estado | Notas                                    |
-| :------------- | :----: | :--------------------------------------- |
-| Node Visual    |   ❌   | **Criar `LDRNode.tsx`**                  |
-| Properties     |   ❌   | **Criar `LDRPropertiesPanel.tsx`**       |
-| ASL Type       |   ❌   | Pode usar `ASLRead (ANALOG)` existente   |
-| Executor       |   ✅   | Via `analogRead` (se wired ao slider)    |
-| Transform      |   ✅   | Via `tryTransformRead`                   |
-| CGenerator     |   ✅   | Via `analogRead(pin)`                    |
-| PyGenerator    |   ✅   | Via `adc.read()`                         |
-| RsGenerator    |   ✅   | Via ADC                                  |
-| Shims          |   —    | Não precisa (é analogRead puro)          |
-| CParser        |   ✅   | Via analogRead                           |
-| PyParser       |   ✅   | Via ADC                                  |
-| RsParser       |   ✅   | Via ADC                                  |
+| Camada      | Estado | Notas                                  |
+| :---------- | :----: | :------------------------------------- |
+| Node Visual |   ❌    | **Criar `LDRNode.tsx`**                |
+| Properties  |   ❌    | **Criar `LDRPropertiesPanel.tsx`**     |
+| ASL Type    |   ❌    | Pode usar `ASLRead (ANALOG)` existente |
+| Executor    |   ✅    | Via `analogRead` (se wired ao slider)  |
+| Transform   |   ✅    | Via `tryTransformRead`                 |
+| CGenerator  |   ✅    | Via `analogRead(pin)`                  |
+| PyGenerator |   ✅    | Via `adc.read()`                       |
+| RsGenerator |   ✅    | Via ADC                                |
+| Shims       |   —    | Não precisa (é analogRead puro)        |
+| CParser     |   ✅    | Via analogRead                         |
+| PyParser    |   ✅    | Via ADC                                |
+| RsParser    |   ✅    | Via ADC                                |
 
 ### TODO LDR
 - [ ] Node Visual: `LDRNode.tsx` (slider luminosidade 0–1023, ícone sol/lua)
@@ -296,18 +296,18 @@
 
 **Ficheiros:** Não tem Node visual
 
-| Camada         | Estado | Notas                        |
-| :------------- | :----: | :--------------------------- |
-| Node Visual    |   ❌   | **Criar `IRReceiverNode.tsx`** |
-| Properties     |   ❌   |                               |
-| ASL Type       |   ❌   |                               |
-| Executor       |   ❌   |                               |
-| Transform      |   ❌   |                               |
-| Generators     |   ❌   |                               |
-| Shims          |   ❌   | `ir_shim.ts`                 |
-| CParser        |   ✅   | Detecta CallExpression       |
-| PyParser       |   ❌   |                               |
-| RsParser       |   ❌   |                               |
+| Camada      | Estado | Notas                          |
+| :---------- | :----: | :----------------------------- |
+| Node Visual |   ❌    | **Criar `IRReceiverNode.tsx`** |
+| Properties  |   ❌    |                                |
+| ASL Type    |   ❌    |                                |
+| Executor    |   ❌    |                                |
+| Transform   |   ❌    |                                |
+| Generators  |   ❌    |                                |
+| Shims       |   ❌    | `ir_shim.ts`                   |
+| CParser     |   ✅    | Detecta CallExpression         |
+| PyParser    |   ❌    |                                |
+| RsParser    |   ❌    |                                |
 
 ### TODO IR Receiver
 - [ ] Node Visual: `IRReceiverNode.tsx` (botões de remote control para simular)
@@ -323,18 +323,18 @@
 
 **Ficheiros:** Não tem Node visual (shim já existe)
 
-| Camada         | Estado | Notas                        |
-| :------------- | :----: | :--------------------------- |
-| Node Visual    |   ❌   | **Criar `KeypadNode.tsx`**   |
-| Properties     |   ❌   |                               |
-| ASL Type       |   ❌   |                               |
-| Executor       |   ❌   |                               |
-| Transform      |   ❌   |                               |
-| Generators     |   ❌   |                               |
-| Shims          |   ✅   | `keypad_shim.ts` (C/Py/Rs)  |
-| CParser        |   ✅   | Detecta `KeypadRead`         |
-| PyParser       |   ❌   |                               |
-| RsParser       |   ❌   |                               |
+| Camada      | Estado | Notas                      |
+| :---------- | :----: | :------------------------- |
+| Node Visual |   ❌    | **Criar `KeypadNode.tsx`** |
+| Properties  |   ❌    |                            |
+| ASL Type    |   ❌    |                            |
+| Executor    |   ❌    |                            |
+| Transform   |   ❌    |                            |
+| Generators  |   ❌    |                            |
+| Shims       |   ✅    | `keypad_shim.ts` (C/Py/Rs) |
+| CParser     |   ✅    | Detecta `KeypadRead`       |
+| PyParser    |   ❌    |                            |
+| RsParser    |   ❌    |                            |
 
 ### TODO Keypad
 - [ ] Node Visual: `KeypadNode.tsx` (grid de botões clicáveis 4×4)
@@ -350,16 +350,16 @@
 
 **Ficheiros:** Não tem Node visual
 
-| Camada         | Estado | Notas                         |
-| :------------- | :----: | :---------------------------- |
-| Node Visual    |   ❌   | **Criar `JoystickNode.tsx`**  |
-| Properties     |   ❌   |                                |
-| ASL Type       |   ✅   | Usa `ASLRead` (ANALOG) ×2    |
-| Executor       |   ✅   | Via `analogRead`              |
-| Transform      |   ✅   |                                |
-| Generators     |   ✅   | Via `analogRead`              |
-| Parsers        |   ✅   | Via `analogRead`              |
-| Shims          |   ❌   |                                |
+| Camada      | Estado | Notas                        |
+| :---------- | :----: | :--------------------------- |
+| Node Visual |   ❌    | **Criar `JoystickNode.tsx`** |
+| Properties  |   ❌    |                              |
+| ASL Type    |   ✅    | Usa `ASLRead` (ANALOG) ×2    |
+| Executor    |   ✅    | Via `analogRead`             |
+| Transform   |   ✅    |                              |
+| Generators  |   ✅    | Via `analogRead`             |
+| Parsers     |   ✅    | Via `analogRead`             |
+| Shims       |   ❌    |                              |
 
 ### TODO Joystick
 - [ ] Node Visual: `JoystickNode.tsx` (thumb-stick interactivo X/Y + button)
@@ -372,18 +372,18 @@
 
 **Ficheiros:** Não tem Node visual
 
-| Camada         | Estado | Notas                       |
-| :------------- | :----: | :-------------------------- |
-| Node Visual    |   ❌   | **Criar `MPUNode.tsx`**     |
-| Properties     |   ❌   |                              |
-| ASL Type       |   ❌   |                              |
-| Executor       |   ❌   |                              |
-| Transform      |   ❌   |                              |
-| Generators     |   ❌   |                              |
-| Shims          |   ❌   | `mpu_shim.ts`               |
-| CParser        |   ✅   | Detecta CallExpression      |
-| PyParser       |   ❌   |                              |
-| RsParser       |   ❌   |                              |
+| Camada      | Estado | Notas                   |
+| :---------- | :----: | :---------------------- |
+| Node Visual |   ❌    | **Criar `MPUNode.tsx`** |
+| Properties  |   ❌    |                         |
+| ASL Type    |   ❌    |                         |
+| Executor    |   ❌    |                         |
+| Transform   |   ❌    |                         |
+| Generators  |   ❌    |                         |
+| Shims       |   ❌    | `mpu_shim.ts`           |
+| CParser     |   ✅    | Detecta CallExpression  |
+| PyParser    |   ❌    |                         |
+| RsParser    |   ❌    |                         |
 
 ### TODO MPU6050
 - [ ] Node Visual: `MPUNode.tsx` (sliders para accel X/Y/Z, gyro X/Y/Z)
@@ -397,18 +397,18 @@
 
 **Ficheiros:** Não tem Node visual (shim já existe)
 
-| Camada         | Estado | Notas                                         |
-| :------------- | :----: | :-------------------------------------------- |
-| Node Visual    |   ❌   | **Criar `LCDNode.tsx`**                       |
-| Properties     |   ❌   |                                                |
-| ASL Type       |   ❌   |                                                |
-| Executor       |   ❌   |                                                |
-| Transform      |   ❌   |                                                |
-| Generators     |   ❌   |                                                |
-| Shims          |   ✅   | `liquid_crystal_i2c_shim.ts` (C/Py/Rs)       |
-| CParser        |   ✅   | Detecta `LcdPrint/LcdClear/LcdCursor`        |
-| PyParser       |   ✅   | Detecta via CallExpression                    |
-| RsParser       |   ❌   |                                                |
+| Camada      | Estado | Notas                                  |
+| :---------- | :----: | :------------------------------------- |
+| Node Visual |   ❌    | **Criar `LCDNode.tsx`**                |
+| Properties  |   ❌    |                                        |
+| ASL Type    |   ❌    |                                        |
+| Executor    |   ❌    |                                        |
+| Transform   |   ❌    |                                        |
+| Generators  |   ❌    |                                        |
+| Shims       |   ✅    | `liquid_crystal_i2c_shim.ts` (C/Py/Rs) |
+| CParser     |   ✅    | Detecta `LcdPrint/LcdClear/LcdCursor`  |
+| PyParser    |   ✅    | Detecta via CallExpression             |
+| RsParser    |   ❌    |                                        |
 
 ### TODO LCD I2C
 - [ ] Node Visual: `LCDNode.tsx` (ecrã 16×2 simulado com texto)
@@ -425,18 +425,18 @@
 
 **Ficheiros:** Não tem Node visual
 
-| Camada         | Estado | Notas                        |
-| :------------- | :----: | :--------------------------- |
-| Node Visual    |   ❌   | **Criar `OLEDNode.tsx`**     |
-| Properties     |   ❌   |                               |
-| ASL Type       |   ❌   |                               |
-| Executor       |   ❌   |                               |
-| Transform      |   ❌   |                               |
-| Generators     |   ❌   |                               |
-| Shims          |   ❌   | `oled_shim.ts`               |
-| CParser        |   ✅   | Detecta `OledText/OledShow/OledClear` |
-| PyParser       |   ✅   | Via CallExpression           |
-| RsParser       |   ❌   |                               |
+| Camada      | Estado | Notas                                 |
+| :---------- | :----: | :------------------------------------ |
+| Node Visual |   ❌    | **Criar `OLEDNode.tsx`**              |
+| Properties  |   ❌    |                                       |
+| ASL Type    |   ❌    |                                       |
+| Executor    |   ❌    |                                       |
+| Transform   |   ❌    |                                       |
+| Generators  |   ❌    |                                       |
+| Shims       |   ❌    | `oled_shim.ts`                        |
+| CParser     |   ✅    | Detecta `OledText/OledShow/OledClear` |
+| PyParser    |   ✅    | Via CallExpression                    |
+| RsParser    |   ❌    |                                       |
 
 ### TODO OLED
 - [ ] Node Visual: `OLEDNode.tsx` (canvas 128×64 simulado)
@@ -451,20 +451,20 @@
 
 **Ficheiros:** Não tem Node visual (shim Python já existe)
 
-| Camada         | Estado | Notas                               |
-| :------------- | :----: | :---------------------------------- |
-| Node Visual    |   ❌   | **Criar `SevenSegNode.tsx`**        |
-| Properties     |   ❌   |                                      |
-| ASL Type       |   ❌   |                                      |
-| Executor       |   ❌   |                                      |
-| Transform      |   ❌   |                                      |
-| CGenerator     |   ⚠️   | `scanForShims` parcial              |
-| PyGenerator    |   ✅   | Via `sevseg_shim`                   |
-| RsGenerator    |   ❌   |                                      |
-| Shims          |   ⚠️   | Só Python (`sevseg_shim.ts`)        |
-| CParser        |   ✅   | `SevSegPrint`                       |
-| PyParser       |   ✅   | Via CallExpression                  |
-| RsParser       |   ❌   |                                      |
+| Camada      | Estado | Notas                        |
+| :---------- | :----: | :--------------------------- |
+| Node Visual |   ❌    | **Criar `SevenSegNode.tsx`** |
+| Properties  |   ❌    |                              |
+| ASL Type    |   ❌    |                              |
+| Executor    |   ❌    |                              |
+| Transform   |   ❌    |                              |
+| CGenerator  |   ⚠️    | `scanForShims` parcial       |
+| PyGenerator |   ✅    | Via `sevseg_shim`            |
+| RsGenerator |   ❌    |                              |
+| Shims       |   ⚠️    | Só Python (`sevseg_shim.ts`) |
+| CParser     |   ✅    | `SevSegPrint`                |
+| PyParser    |   ✅    | Via CallExpression           |
+| RsParser    |   ❌    |                              |
 
 ### TODO Seven Segment
 - [ ] Node Visual: `SevenSegNode.tsx` (segmentos A-G, ponto decimal)
@@ -481,18 +481,18 @@
 
 **Ficheiros:** Não tem Node visual
 
-| Camada         | Estado | Notas                          |
-| :------------- | :----: | :----------------------------- |
-| Node Visual    |   ❌   | **Criar `NeoPixelNode.tsx`**   |
-| Properties     |   ❌   |                                 |
-| ASL Type       |   ❌   |                                 |
-| Executor       |   ❌   |                                 |
-| Transform      |   ❌   |                                 |
-| Generators     |   ❌   |                                 |
-| Shims          |   ❌   | `neopixel_shim.ts`             |
-| CParser        |   ✅   | Detecta CallExpression         |
-| PyParser       |   ❌   |                                 |
-| RsParser       |   ❌   |                                 |
+| Camada      | Estado | Notas                        |
+| :---------- | :----: | :--------------------------- |
+| Node Visual |   ❌    | **Criar `NeoPixelNode.tsx`** |
+| Properties  |   ❌    |                              |
+| ASL Type    |   ❌    |                              |
+| Executor    |   ❌    |                              |
+| Transform   |   ❌    |                              |
+| Generators  |   ❌    |                              |
+| Shims       |   ❌    | `neopixel_shim.ts`           |
+| CParser     |   ✅    | Detecta CallExpression       |
+| PyParser    |   ❌    |                              |
+| RsParser    |   ❌    |                              |
 
 ### TODO NeoPixel
 - [ ] Node Visual: `NeoPixelNode.tsx` (strip de LEDs coloridos, configurável N pixels)
@@ -507,18 +507,18 @@
 
 **Ficheiros:** Não tem Node visual
 
-| Camada         | Estado | Notas                        |
-| :------------- | :----: | :--------------------------- |
-| Node Visual    |   ❌   | **Criar `MotorNode.tsx`**    |
-| Properties     |   ❌   |                               |
-| ASL Type       |   ❌   |                               |
-| Executor       |   ❌   |                               |
-| Transform      |   ❌   |                               |
-| Generators     |   ❌   |                               |
-| Shims          |   ❌   | `motor_shim.ts`              |
-| CParser        |   ✅   | Detecta CallExpression       |
-| PyParser       |   ❌   |                               |
-| RsParser       |   ❌   |                               |
+| Camada      | Estado | Notas                     |
+| :---------- | :----: | :------------------------ |
+| Node Visual |   ❌    | **Criar `MotorNode.tsx`** |
+| Properties  |   ❌    |                           |
+| ASL Type    |   ❌    |                           |
+| Executor    |   ❌    |                           |
+| Transform   |   ❌    |                           |
+| Generators  |   ❌    |                           |
+| Shims       |   ❌    | `motor_shim.ts`           |
+| CParser     |   ✅    | Detecta CallExpression    |
+| PyParser    |   ❌    |                           |
+| RsParser    |   ❌    |                           |
 
 ### TODO Motor
 - [ ] Node Visual: `MotorNode.tsx` (roda com animação de rotação, velocidade)
@@ -532,16 +532,16 @@
 
 **Ficheiros:** Não tem Node visual (conceito de serviço, não hardware)
 
-| Camada         | Estado | Notas                            |
-| :------------- | :----: | :------------------------------- |
-| ASL Type       |   ❌   |                                   |
-| Executor       |   ❌   |                                   |
-| Transform      |   ❌   |                                   |
-| Generators     |   ❌   |                                   |
-| Shims          |   ❌   | `wifi_shim.ts`                   |
-| CParser        |   ✅   | Detecta CallExpression           |
-| PyParser       |   ❌   |                                   |
-| RsParser       |   ❌   |                                   |
+| Camada     | Estado | Notas                  |
+| :--------- | :----: | :--------------------- |
+| ASL Type   |   ❌    |                        |
+| Executor   |   ❌    |                        |
+| Transform  |   ❌    |                        |
+| Generators |   ❌    |                        |
+| Shims      |   ❌    | `wifi_shim.ts`         |
+| CParser    |   ✅    | Detecta CallExpression |
+| PyParser   |   ❌    |                        |
+| RsParser   |   ❌    |                        |
 
 ### TODO WiFi
 - [ ] ASL Types: `ASLWiFiBegin { ssid, password }` + `ASLWiFiStatus`
@@ -555,16 +555,16 @@
 
 **Ficheiros:** Não tem Node visual (conceito de serviço)
 
-| Camada         | Estado | Notas                     |
-| :------------- | :----: | :------------------------ |
-| ASL Type       |   ❌   |                            |
-| Executor       |   ❌   |                            |
-| Transform      |   ❌   |                            |
-| Generators     |   ❌   |                            |
-| Shims          |   ❌   | `http_shim.ts`            |
-| CParser        |   ✅   | Detecta CallExpression    |
-| PyParser       |   ❌   |                            |
-| RsParser       |   ❌   |                            |
+| Camada     | Estado | Notas                  |
+| :--------- | :----: | :--------------------- |
+| ASL Type   |   ❌    |                        |
+| Executor   |   ❌    |                        |
+| Transform  |   ❌    |                        |
+| Generators |   ❌    |                        |
+| Shims      |   ❌    | `http_shim.ts`         |
+| CParser    |   ✅    | Detecta CallExpression |
+| PyParser   |   ❌    |                        |
+| RsParser   |   ❌    |                        |
 
 ### TODO HTTP
 - [ ] ASL Types: `ASLHTTPGet { url }` + `ASLHTTPPost { url, body }`
@@ -578,16 +578,16 @@
 
 **Ficheiros:** Não tem Node visual (conceito de serviço)
 
-| Camada         | Estado | Notas                          |
-| :------------- | :----: | :----------------------------- |
-| ASL Type       |   ❌   |                                 |
-| Executor       |   ❌   |                                 |
-| Transform      |   ❌   |                                 |
-| Generators     |   ❌   |                                 |
-| Shims          |   ❌   | `spiffs_shim.ts`               |
-| CParser        |   ✅   | Detecta CallExpression         |
-| PyParser       |   ❌   |                                 |
-| RsParser       |   ❌   |                                 |
+| Camada     | Estado | Notas                  |
+| :--------- | :----: | :--------------------- |
+| ASL Type   |   ❌    |                        |
+| Executor   |   ❌    |                        |
+| Transform  |   ❌    |                        |
+| Generators |   ❌    |                        |
+| Shims      |   ❌    | `spiffs_shim.ts`       |
+| CParser    |   ✅    | Detecta CallExpression |
+| PyParser   |   ❌    |                        |
+| RsParser   |   ❌    |                        |
 
 ### TODO SPIFFS
 - [ ] ASL Types: `ASLSPIFFSOpen { path, mode }` + `ASLFileWrite { content }`
@@ -601,10 +601,10 @@
 
 **Ficheiros:** `MCUNode.tsx` · `MCUPropertiesPanel.tsx`
 
-| Camada         | Estado | Notas                                   |
-| :------------- | :----: | :-------------------------------------- |
-| Node Visual    |   ✅   | Pin layout completo com board profiles  |
-| Properties     |   ✅   | Board selection (Uno/Mega/ESP32/Pico)   |
+| Camada      | Estado | Notas                                  |
+| :---------- | :----: | :------------------------------------- |
+| Node Visual |   ✅    | Pin layout completo com board profiles |
+| Properties  |   ✅    | Board selection (Uno/Mega/ESP32/Pico)  |
 
 > ✅ **Completo** — não precisa de trabalho adicional no pipeline.
 
@@ -612,26 +612,26 @@
 
 ## Resumo de Prioridades
 
-| Prioridade | Componente      | Razão                                              |
-| :--------: | :-------------- | :------------------------------------------------- |
-| 🔴 **P0**  | LED PWM         | Já tem tudo, falta só a simulação PWM              |
-| 🔴 **P0**  | Button verif.   | Já tem tudo, precisa validar simulação             |
-| 🔴 **P0**  | Pot verif.      | Já tem tudo, precisa validar analogRead + slider   |
-| 🟠 **P1**  | Servo           | Node existe, falta pipeline ASL                    |
-| 🟠 **P1**  | RGB LED         | Node existe, falta pipeline ASL                    |
-| 🟡 **P2**  | Buzzer/Tone     | Muito usado em projetos Arduino                    |
-| 🟡 **P2**  | LCD I2C         | Shim já existe, popular                            |
-| 🟡 **P2**  | DHT             | Muito popular                                      |
-| 🟢 **P3**  | Ultrasonic      | Popular em robótica                                |
-| 🟢 **P3**  | LDR             | Simples (só Node, ASL via analogRead)              |
-| 🟢 **P3**  | Joystick        | Simples (só Node, ASL via analogRead)              |
-| 🟢 **P3**  | Seven Segment   | Shim parcial existe                                |
-| 🔵 **P4**  | NeoPixel        | Complexo mas popular                               |
-| 🔵 **P4**  | Keypad          | Shim existe                                        |
-| 🔵 **P4**  | Motor           |                                                     |
-| 🔵 **P4**  | OLED            |                                                     |
-| ⚪ **P5**  | IR Receiver     |                                                     |
-| ⚪ **P5**  | MPU6050         |                                                     |
-| ⚪ **P5**  | WiFi            | Serviço, não hardware visual                       |
-| ⚪ **P5**  | HTTP            | Serviço                                             |
-| ⚪ **P5**  | SPIFFS          | Serviço                                             |
+| Prioridade | Componente    | Razão                                            |
+| :--------: | :------------ | :----------------------------------------------- |
+|  🔴 **P0**  | LED PWM       | Já tem tudo, falta só a simulação PWM            |
+|  🔴 **P0**  | Button verif. | Já tem tudo, precisa validar simulação           |
+|  🔴 **P0**  | Pot verif.    | Já tem tudo, precisa validar analogRead + slider |
+|  🟠 **P1**  | Servo         | Node existe, falta pipeline ASL                  |
+|  🟠 **P1**  | RGB LED       | Node existe, falta pipeline ASL                  |
+|  🟡 **P2**  | Buzzer/Tone   | Muito usado em projetos Arduino                  |
+|  🟡 **P2**  | LCD I2C       | Shim já existe, popular                          |
+|  🟡 **P2**  | DHT           | Muito popular                                    |
+|  🟢 **P3**  | Ultrasonic    | Popular em robótica                              |
+|  🟢 **P3**  | LDR           | Simples (só Node, ASL via analogRead)            |
+|  🟢 **P3**  | Joystick      | Simples (só Node, ASL via analogRead)            |
+|  🟢 **P3**  | Seven Segment | Shim parcial existe                              |
+|  🔵 **P4**  | NeoPixel      | Complexo mas popular                             |
+|  🔵 **P4**  | Keypad        | Shim existe                                      |
+|  🔵 **P4**  | Motor         |                                                  |
+|  🔵 **P4**  | OLED          |                                                  |
+|  ⚪ **P5**  | IR Receiver   |                                                  |
+|  ⚪ **P5**  | MPU6050       |                                                  |
+|  ⚪ **P5**  | WiFi          | Serviço, não hardware visual                     |
+|  ⚪ **P5**  | HTTP          | Serviço                                          |
+|  ⚪ **P5**  | SPIFFS        | Serviço                                          |

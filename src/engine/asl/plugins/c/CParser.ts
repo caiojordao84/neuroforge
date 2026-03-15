@@ -217,7 +217,7 @@ export class RecursiveDescentCParser {
             this.attachComments(node);
             return node;
         }
-        if (this.isType(t) || t.value === 'struct' || t.value === 'extern' || t.value === 'std') {
+        if (this.isType(t) || ['struct', 'extern', 'static', 'volatile', 'std'].includes(t.value)) {
             // Disambiguate: struct variable usage (p.x, p[0], p = ...) vs declaration (Point p)
             if (t.type === 'IDENTIFIER') {
                 const next = this.peek(1);
@@ -742,6 +742,7 @@ export class RecursiveDescentCParser {
         if ([
             'true', 'false', 'HIGH', 'LOW', 'INPUT', 'OUTPUT', 'INPUT_PULLUP',
             'WL_CONNECTED', 'WL_IDLE_STATUS', 'FILE_WRITE', 'FILE_READ', 'FILE_APPEND',
+            'A0', 'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7',
         ].includes(t.value)) {
             let v: any = 0;
             if (t.value === 'true' || t.value === 'HIGH') v = 1;
@@ -753,6 +754,17 @@ export class RecursiveDescentCParser {
             if (t.value === 'FILE_WRITE') v = 'w';
             if (t.value === 'FILE_READ') v = 'r';
             if (t.value === 'FILE_APPEND') v = 'a';
+            
+            // Analog pins mapping (Standard Arduino Uno)
+            if (t.value === 'A0') v = 14;
+            if (t.value === 'A1') v = 15;
+            if (t.value === 'A2') v = 16;
+            if (t.value === 'A3') v = 17;
+            if (t.value === 'A4') v = 18;
+            if (t.value === 'A5') v = 19;
+            if (t.value === 'A6') v = 20;
+            if (t.value === 'A7') v = 21;
+
             return { nodeType: 'Literal', id: this.genId(), attributes: { value: v, isString: typeof v === 'string' }, children: [], metadata: { line } };
         }
 

@@ -29,7 +29,6 @@ export const ButtonNode: React.FC<ButtonNodeProps> = ({ data, selected, id }) =>
   const debounceTime = (data.debounceTime as number) ?? 50;
   const label = (data.name as string) || (data.label as string) || 'BTN';
 
-  const [debounceTimeout, setDebounceTimeout] = useState<number | null>(null);
 
   const handleDoubleClick = useCallback(() => {
     openWindow('properties');
@@ -64,12 +63,14 @@ export const ButtonNode: React.FC<ButtonNodeProps> = ({ data, selected, id }) =>
     checkWiring();
   }, [connections, id, pullResistor]);
 
+  const debounceTimeoutRef = React.useRef<number | null>(null);
+
   const scheduleWrite = useCallback(
     (pressed: boolean) => {
       if (connectedPin === undefined) return;
 
-      if (debounceTimeout !== null) {
-        window.clearTimeout(debounceTimeout);
+      if (debounceTimeoutRef.current !== null) {
+        window.clearTimeout(debounceTimeoutRef.current);
       }
 
       const timeout = window.setTimeout(() => {
@@ -97,20 +98,19 @@ export const ButtonNode: React.FC<ButtonNodeProps> = ({ data, selected, id }) =>
           }
         }
 
-        // console.log(`[BTN ${id}] connectedPin=${connectedPin}, pressed=${pressed}, pullResistor=${pullResistor}`);
-        // console.log(`[BTN ${id}] externalDigitalWrite(${connectedPin}, ${value})`);
-
         simulationEngine.externalDigitalWrite(connectedPin, value);
         simulationEngine.emit('buttonPress', {
           pin: connectedPin,
           pressed,
           value,
         });
+        
+        debounceTimeoutRef.current = null;
       }, debounceTime);
 
-      setDebounceTimeout(timeout);
+      debounceTimeoutRef.current = timeout as unknown as number;
     },
-    [connectedPin, debounceTime, debounceTimeout, pullResistor]
+    [connectedPin, debounceTime, pullResistor]
   );
 
   const handleMouseDown = useCallback(() => {

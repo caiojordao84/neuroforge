@@ -231,6 +231,86 @@ class RegexPythonParser {
                 continue;
             }
 
+            // ── if / elif / else ──────────────────────────────────────────────
+            const ifM = trimmed.match(/^if\s+(.+?)\s*:\s*$/);
+            if (ifM) {
+                const condNode = this._parseExpr(ifM[1].trim(), this.pos + 1);
+                const thenBlock: BaseNode = { nodeType: 'Block', id: `blk-then-${this.pos}`, attributes: {}, children: [] };
+                const ifNode: BaseNode = {
+                    nodeType: 'IfStatement', id: `if-${this.pos}`,
+                    attributes: {}, children: [condNode, thenBlock],
+                    metadata: { line: this.pos + 1 }
+                };
+                getActiveChildren().push(ifNode);
+                stack.push({ node: thenBlock, indent, type: 'if' });
+                this.pos++;
+                continue;
+            }
+
+            const elifM = trimmed.match(/^elif\s+(.+?)\s*:\s*$/);
+            if (elifM) {
+                // Pop back to the if level
+                while (stack.length > 0 && stack[stack.length - 1].type !== 'if') stack.pop();
+                if (stack.length > 0) stack.pop(); // pop the then/else block
+
+                // Find the parent IfStatement to attach this elif as a nested IfStatement in its else branch
+                const parentChildren = stack.length > 0 ? stack[stack.length - 1].node.children : (loopNodes.length > 0 ? loopNodes : setupNodes);
+                // Walk up to find the last IfStatement
+                let lastIf: BaseNode | null = null;
+                for (let i = parentChildren.length - 1; i >= 0; i--) {
+                    if (parentChildren[i].nodeType === 'IfStatement') { lastIf = parentChildren[i]; break; }
+                }
+                // Drill down to the deepest IfStatement without an else
+                if (lastIf) {
+                    while (lastIf.children.length > 2) {
+                        const elseChild = lastIf.children[2];
+                        if (elseChild.nodeType === 'IfStatement') { lastIf = elseChild; } else break;
+                    }
+                }
+
+                const condNode = this._parseExpr(elifM[1].trim(), this.pos + 1);
+                const thenBlock: BaseNode = { nodeType: 'Block', id: `blk-elif-${this.pos}`, attributes: {}, children: [] };
+                const elifNode: BaseNode = {
+                    nodeType: 'IfStatement', id: `elif-${this.pos}`,
+                    attributes: {}, children: [condNode, thenBlock],
+                    metadata: { line: this.pos + 1 }
+                };
+                if (lastIf && lastIf.children.length === 2) {
+                    lastIf.children.push(elifNode);
+                }
+                stack.push({ node: thenBlock, indent, type: 'if' });
+                this.pos++;
+                continue;
+            }
+
+            if (/^else\s*:\s*$/.test(trimmed)) {
+                // Pop back to the if level
+                while (stack.length > 0 && stack[stack.length - 1].type !== 'if') stack.pop();
+                if (stack.length > 0) stack.pop(); // pop the then block
+
+                // Find the parent IfStatement to attach the else block
+                const parentChildren = stack.length > 0 ? stack[stack.length - 1].node.children : (loopNodes.length > 0 ? loopNodes : setupNodes);
+                let lastIf: BaseNode | null = null;
+                for (let i = parentChildren.length - 1; i >= 0; i--) {
+                    if (parentChildren[i].nodeType === 'IfStatement') { lastIf = parentChildren[i]; break; }
+                }
+                // Drill down to the deepest IfStatement without an else
+                if (lastIf) {
+                    while (lastIf.children.length > 2) {
+                        const elseChild = lastIf.children[2];
+                        if (elseChild.nodeType === 'IfStatement') { lastIf = elseChild; } else break;
+                    }
+                }
+
+                const elseBlock: BaseNode = { nodeType: 'Block', id: `blk-else-${this.pos}`, attributes: {}, children: [] };
+                if (lastIf && lastIf.children.length === 2) {
+                    lastIf.children.push(elseBlock);
+                }
+                stack.push({ node: elseBlock, indent, type: 'if' });
+                this.pos++;
+                continue;
+            }
+
             const matchM = trimmed.match(/^match\s+(.+)\s*:/);
             if (matchM) {
                 const subject = this._parseExpr(matchM[1].trim(), this.pos + 1);
@@ -302,6 +382,13 @@ class RegexPythonParser {
         // ── time.sleep_ms / sleep_ms ─────────────────────────────────────────
         const sleepMsM = trimmed.match(/^(?:time\.)?sleep_ms\s*\((.+)\)\s*$/);
         if (sleepMsM) return { nodeType: 'DelayMs', id: `delay-${lineNum}`, attributes: {}, children: [this._parseExpr(sleepMsM[1].trim(), lineNum)], metadata: meta } as BaseNode;
+
+        const ticksDiffM = trimmed.match(/^(?:time\.|utime\.)?ticks_diff\s*\((.+?)\s*,\s*(.+?)\)\s*$/);
+        if (ticksDiffM) {
+          const a = this._parseExpr(ticksDiffM[1].trim(), lineNum);
+          const b = this._parseExpr(ticksDiffM[2].trim(), lineNum);
+          return { nodeType: 'BinaryExpression', id: `sub-${lineNum}`, attributes: { operator: '-' }, children: [a, b] } as BaseNode;
+        }
 
         const sleepM = trimmed.match(/^(?:time\.)?sleep\s*\((.+)\)\s*$/);
         if (sleepM) {
@@ -389,7 +476,18 @@ class RegexPythonParser {
         if (pinValSetM) return { nodeType: 'GpioSet', id: `pinval-${lineNum}`, attributes: {}, children: [{ nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: pinValSetM[1] }, children: [] } as BaseNode, this._parseExpr(pinValSetM[2].trim(), lineNum)], metadata: meta } as BaseNode;
 
         const adcReadM = trimmed.match(/^(\w+)\.read(?:_u16)?\(\)\s*$/);
-        if (adcReadM) return { nodeType: 'ExpressionStatement', id: `stmt-${lineNum}`, attributes: {}, children: [{ nodeType: 'AnalogRead', id: `adc-${lineNum}`, attributes: {}, children: [{ nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: adcReadM[1] }, children: [] } as BaseNode] } as BaseNode], metadata: meta } as BaseNode;
+        if (adcReadM) {
+            const isU16 = trimmed.includes('read_u16');
+            const analogReadNode = { nodeType: 'AnalogRead', id: `adc-${lineNum}`, attributes: {}, children: [{ nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: adcReadM[1] }, children: [] } as BaseNode] } as BaseNode;
+            if (!isU16) return analogReadNode;
+            
+            return { nodeType: 'BinaryExpression', id: `scale-${lineNum}`, attributes: { operator: '*' }, children: [analogReadNode, { nodeType: 'Literal', id: `l64-${lineNum}`, attributes: { value: 64 }, children: [] } as BaseNode] } as BaseNode;
+        }
+
+        const adcAssignM = trimmed.match(/^(\w+)\s*=\s*(?:machine\.)?ADC\s*\(([^)]+)\)\s*$/);
+        if (adcAssignM) {
+           return { nodeType: 'VariableDeclaration', id: `decl-${lineNum}`, attributes: { name: adcAssignM[1], type: 'auto' }, children: [this._parseExpr(adcAssignM[2].trim(), lineNum)], metadata: meta } as BaseNode;
+        }
 
         const cpDioM = trimmed.match(/^(\w+)\.value\s*=\s*(.+)\s*$/);
         if (cpDioM) return { nodeType: 'GpioSet', id: `pinval-${lineNum}`, attributes: {}, children: [{ nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: cpDioM[1] }, children: [] } as BaseNode, this._parseBoolExpr(cpDioM[2].trim(), lineNum)], metadata: meta } as BaseNode;
@@ -399,7 +497,9 @@ class RegexPythonParser {
             const args = pinAssignM[2].split(',').map(s => s.trim());
             const pinNum = this._parseExpr(args[0], lineNum);
             const mode = /IN/.test(args[1] || 'Pin.OUT') ? 0 : 1;
-            return { nodeType: 'VariableDeclaration', id: `decl-${lineNum}`, attributes: { name: pinAssignM[1], type: 'auto' }, children: [{ nodeType: 'CallExpression', id: `pin-${lineNum}`, attributes: { callee: 'Pin' }, children: [pinNum, { nodeType: 'Literal', id: `mode-${lineNum}`, attributes: { value: mode }, children: [] } as BaseNode] } as BaseNode], metadata: meta } as BaseNode;
+            const pull = args[2] ? this._parseExpr(args[2], lineNum) : { nodeType: 'Literal', id: `pull-${lineNum}`, attributes: { value: 0 }, children: [] } as BaseNode;
+            
+            return { nodeType: 'VariableDeclaration', id: `decl-${lineNum}`, attributes: { name: pinAssignM[1], type: 'auto' }, children: [{ nodeType: 'CallExpression', id: `pin-${lineNum}`, attributes: { callee: 'Pin' }, children: [pinNum, { nodeType: 'Literal', id: `mode-${lineNum}`, attributes: { value: mode }, children: [] } as BaseNode, pull] } as BaseNode], metadata: meta } as BaseNode;
         }
 
         const cpPinAssignM = trimmed.match(/^(\w+)\s*=\s*digitalio\.DigitalInOut\s*\(([^)]+)\)\s*$/);
@@ -616,9 +716,45 @@ class RegexPythonParser {
         if (s === 'False' || s === 'LOW') return { nodeType: 'Literal', id: `l-${lineNum}`, attributes: { value: 0 }, children: [], metadata: meta };
         if (s === 'None') return { nodeType: 'Literal', id: `l-${lineNum}`, attributes: { value: 0 }, children: [], metadata: meta };
 
-        // ── millis / micros inline ───────────────────────────────────────────
+        // ── Parenthesized expression: (expr) ─────────────────────────────────
+        if (s.startsWith('(') && s.endsWith(')')) {
+            // Check if the outer parens are balanced
+            let depth = 0;
+            let balanced = true;
+            for (let i = 0; i < s.length; i++) {
+                if (s[i] === '(') depth++;
+                else if (s[i] === ')') depth--;
+                if (depth === 0 && i < s.length - 1) { balanced = false; break; }
+            }
+            if (balanced) return this._parseExpr(s.slice(1, -1).trim(), lineNum);
+        }
+
+        // ── Built-in function calls: int(), float(), abs(), len(), str(), bool() ──
+        const builtinM = s.match(/^(int|float|abs|len|str|bool|round|min|max)\s*\((.+)\)$/);
+        if (builtinM) {
+            const callee = builtinM[1];
+            const inner = builtinM[2].trim();
+            // For int/float/bool, just parse the inner expression (cast is implicit in simulation)
+            if (callee === 'int' || callee === 'float' || callee === 'bool') {
+                return this._parseExpr(inner, lineNum);
+            }
+            const args = inner.split(',').map(a => this._parseExpr(a.trim(), lineNum));
+            return { nodeType: 'CallExpression', id: `fn-${lineNum}`, attributes: { callee }, children: args, metadata: meta };
+        }
+
+        // ── ticks_ms / ticks_us / ticks_diff inline ────────────────────────
         if (/^(?:time|utime)\.ticks_ms\(\)$/.test(s)) return { nodeType: 'CallExpression', id: `ms-${lineNum}`, attributes: { callee: 'millis' }, children: [], metadata: meta };
         if (/^(?:time|utime)\.ticks_us\(\)$/.test(s)) return { nodeType: 'CallExpression', id: `us-${lineNum}`, attributes: { callee: 'micros' }, children: [], metadata: meta };
+        
+        const ticksDiffM = s.match(/^(?:time|utime)\.ticks_diff\s*\((.+?)\s*,\s*(.+?)\)\s*$/);
+        if (ticksDiffM) {
+            return {
+                nodeType: 'BinaryExpression', id: `sub-${lineNum}`,
+                attributes: { operator: '-' },
+                children: [this._parseExpr(ticksDiffM[1], lineNum), this._parseExpr(ticksDiffM[2], lineNum)],
+                metadata: meta
+            };
+        }
 
         // ── random inline ────────────────────────────────────────────────────
         const randInlineM = s.match(/^random\.rand(?:int|range)\s*\(([^)]+)\)$/);
@@ -627,9 +763,17 @@ class RegexPythonParser {
             return { nodeType: 'CallExpression', id: `rnd-${lineNum}`, attributes: { callee: 'random' }, children: args, metadata: meta };
         }
 
-        // ── GpioRead inline — pin.value() ────────────────────────────────────
+        // ── GpioRead & AnalogRead inline ────────────────────────────────────
         const pinValueM = s.match(/^(\w+)\.value\(\)$/);
         if (pinValueM) return { nodeType: 'GpioRead', id: `gr-${lineNum}`, attributes: {}, children: [{ nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: pinValueM[1] }, children: [] }], metadata: meta };
+
+        const adcReadM = s.match(/^(\w+)\.read(?:_u16)?\(\)$/);
+        if (adcReadM) {
+            const isU16 = s.includes('read_u16');
+            const analogReadNode = { nodeType: 'AnalogRead' as const, id: `adc-${lineNum}`, attributes: {}, children: [{ nodeType: 'Identifier' as const, id: `id-${lineNum}`, attributes: { name: adcReadM[1] }, children: [] }], metadata: meta };
+            if (!isU16) return analogReadNode;
+            return { nodeType: 'BinaryExpression' as const, id: `scale-${lineNum}`, attributes: { operator: '*' }, children: [analogReadNode, { nodeType: 'Literal' as const, id: `l64-${lineNum}`, attributes: { value: 64 }, children: [] }], metadata: meta };
+        }
 
         // ── ConditionalExpression — val if cond else other ────────────────────
         const condM = s.match(/^(.+?)\s+if\s+(.+?)\s+else\s+(.+)$/);
@@ -650,7 +794,7 @@ class RegexPythonParser {
         if (s.startsWith('-') && s.length > 1 && !/^-[\d]/.test(s)) return { nodeType: 'UnaryExpression', id: `un-${lineNum}`, attributes: { operator: '-', prefix: true }, children: [this._parseExpr(s.substring(1).trim(), lineNum)], metadata: meta };
 
         // ── Binary & Comparison — all operators ──────────────────────────────
-        for (const op of ['==', '!=', '<=', '>=', ' and ', ' or ', ' < ', ' > ', ' + ', ' - ', ' * ', ' / ', ' % ', ' & ', ' | ', ' ^ ']) {
+        for (const op of ['==', '!=', '<=', '>=', ' and ', ' or ', '//', ' < ', ' > ', ' + ', ' - ', ' * ', ' / ', ' % ', ' & ', ' | ', ' ^ ']) {
             const idx = s.indexOf(op);
             if (idx > 0) {
                 const left = s.substring(0, idx).trim();
@@ -840,7 +984,20 @@ class PythonCstToAst {
     visitFunction(node: any): BaseNode {
         const name = node.childForFieldName('name')?.text || 'anon';
         const body = node.childForFieldName('body');
-        return { nodeType: 'Function', id: `fn-${node.id}`, attributes: { name }, children: body ? this.visitBlockChildren(body) : [], metadata: { line: node.startPosition.row + 1 } };
+        const paramsNode = node.childForFieldName('parameters');
+        const params: { name: string; type: string }[] = [];
+        if (paramsNode) {
+            for (let i = 0; i < paramsNode.namedChildCount; i++) {
+                const p = paramsNode.namedChild(i);
+                if (p && p.type === 'identifier') {
+                    params.push({ name: p.text, type: 'auto' });
+                } else if (p && (p.type === 'default_parameter' || p.type === 'typed_parameter' || p.type === 'typed_default_parameter')) {
+                    const pName = p.childForFieldName('name')?.text || p.child(0)?.text || `arg${i}`;
+                    params.push({ name: pName, type: 'auto' });
+                }
+            }
+        }
+        return { nodeType: 'Function', id: `fn-${node.id}`, attributes: { name, params }, children: body ? this.visitBlockChildren(body) : [], metadata: { line: node.startPosition.row + 1 } };
     }
 
     // ── visitClass — EnumDeclaration or StructDeclaration ────────────────────
@@ -922,7 +1079,9 @@ class PythonCstToAst {
         const thenBlock: BaseNode = { nodeType: 'Block', id: `blk-${node.id}-then`, attributes: {}, children: cons ? this.visitBlockChildren(cons) : [], metadata: { line: node.startPosition.row + 1 } };
         const children = [cond, thenBlock];
         if (alt) {
-            const body = alt.child(1);
+            // else_clause children: "else"(0), ":"(1), block(2)
+            // elif_clause: handled as nested if_statement
+            const body = alt.childForFieldName('body') || alt.namedChild(0) || alt.child(2);
             if (body && body.type === 'if_statement') { const nestedIf = this.visitIf(body); if (nestedIf) children.push(nestedIf); }
             else if (body) children.push({ nodeType: 'Block', id: `blk-${node.id}-else`, attributes: {}, children: this.visitBlockChildren(body), metadata: { line: alt.startPosition.row + 1 } });
         }
@@ -1141,6 +1300,9 @@ class PythonCstToAst {
             let op = node.childForFieldName('operator')?.text || 'and';
             if (op === 'and') op = '&&';
             if (op === 'or') op = '||';
+            if (op === '//') {
+                return { nodeType: 'BinaryExpression', id: `bin-${node.id}`, attributes: { operator: '//' }, children: [left, right], metadata: meta };
+            }
             return { nodeType: 'BinaryExpression', id: `bin-${node.id}`, attributes: { operator: op }, children: [left, right], metadata: meta };
         }
 
@@ -1175,7 +1337,11 @@ class PythonCstToAst {
                     if (args.length === 0) return { nodeType: 'GpioRead', id: `gr-${node.id}`, attributes: {}, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
                 }
                 if (attr === 'id' && args.length === 0) return { nodeType: 'CallExpression', id: `id-${node.id}`, attributes: { callee: 'Pin.id' }, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
-                if ((attr === 'read_u16' || attr === 'read') && args.length === 0) return { nodeType: 'AnalogRead', id: `adc-${node.id}`, attributes: {}, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
+                if ((attr === 'read_u16' || attr === 'read') && args.length === 0) {
+                    const analogReadNode: BaseNode = { nodeType: 'AnalogRead', id: `adc-${node.id}`, attributes: {}, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
+                    if (attr !== 'read_u16') return analogReadNode;
+                    return { nodeType: 'BinaryExpression', id: `scale-${node.id}`, attributes: { operator: '*' }, children: [analogReadNode, { nodeType: 'Literal', id: `l64-${node.id}`, attributes: { value: 64 }, children: [] }], metadata: meta };
+                }
                 if (attr === 'duty' || attr === 'duty_u16' || attr === 'duty_cycle') return { nodeType: 'AnalogWrite', id: `aw-${node.id}`, attributes: {}, children: [this.visitExpr(func.childForFieldName('object'), env), ...args], metadata: meta };
                 if (attr === 'any') return { nodeType: 'SerialAvailable', id: `sa-${node.id}`, attributes: {}, children: [], metadata: meta };
 
@@ -1269,6 +1435,13 @@ class PythonCstToAst {
             if (callee === 'random.randint' || callee === 'random.randrange' || callee === 'urandom.randint') return { nodeType: 'CallExpression', id: `rnd-${node.id}`, attributes: { callee: 'random' }, children: args, metadata: meta };
             if (callee === 'random.random') return { nodeType: 'CallExpression', id: `rnd-${node.id}`, attributes: { callee: 'random' }, children: [], metadata: meta };
             if (callee === 'pyb.Timer' || callee === 'machine.PWM' || callee === 'tone') return { nodeType: 'CallExpression', id: `tone-${node.id}`, attributes: { callee: 'tone' }, children: args, metadata: meta };
+
+            if ((callee === 'time.ticks_diff' || callee === 'utime.ticks_diff') && args.length === 2) {
+                return { nodeType: 'BinaryExpression', id: `sub-${node.id}`, attributes: { operator: '-' }, children: [args[0], args[1]], metadata: meta };
+            }
+            if (callee === 'ADC' || callee === 'machine.ADC') {
+                return args[0];
+            }
 
 
             return { nodeType: 'CallExpression', id: `call-${node.id}`, attributes: { callee }, children: args, metadata: meta };

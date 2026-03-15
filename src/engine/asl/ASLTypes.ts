@@ -491,7 +491,8 @@ export interface ASLBinary {
   | '|'
   | '^'
   | '<<'
-  | '>>';
+  | '>>'
+  | '//';
   left: ASLExpr;
   right: ASLExpr;
 }

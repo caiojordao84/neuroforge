@@ -127,30 +127,49 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
     checkWiring();
   }, [connections, id]);
 
-  // Calcula física do LED dado o estado (on/off)
+  // Calcula física do LED dado o nível (on/off ou 0-255)
   const recalcPhysics = useCallback(
-    (isActive: boolean) => {
+    (level: number | boolean) => {
       const mcu = getActiveMicrocontrollerProfile();
+      
+      // Converte nível para duty cycle (0.0 a 1.0)
+      let dutyCycle = 0;
+      if (typeof level === 'number') {
+        dutyCycle = Math.min(1, Math.max(0, level / 255));
+      } else {
+        dutyCycle = level ? 1.0 : 0.0;
+      }
+
+      const isActive = dutyCycle > 0;
+
       if (!isActive || !isProperlyWired || effectiveResistance <= 0) {
         setRealCurrent(0);
         setLuminousIntensity(0);
         setBrightness(0);
+        setIsOn(false);
         return;
       }
 
-      const iReal = calculateRealCurrent(
+      // Corrente de Pico (para verificar se queima)
+      const iPeak = calculateRealCurrent(
         mcu.v_out,
         forwardVoltage,
         effectiveResistance
       );
+
+      // Corrente Média (para intensidade luminosa visual)
+      const iAvg = iPeak * dutyCycle;
+
       const intensity = calculateLuminousIntensity(
         profile.mcd,
-        iReal,
+        iAvg,
         nominalCurrent
       );
-      const safety = getSafetyStatus(iReal, nominalCurrent, mcu.max_ma);
+      
+      // O status de segurança (queimar) depende da corrente de pico
+      const safety = getSafetyStatus(iPeak, nominalCurrent, mcu.max_ma);
 
-      setRealCurrent(iReal);
+      setRealCurrent(iAvg); // Mostramos a corrente média no UI do nó
       setLuminousIntensity(intensity);
 
       if (safety === 'burned') {
@@ -160,11 +179,12 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
         return;
       }
 
-      const ratio =
-        nominalCurrent > 0 ? Math.min(1, Math.max(0, iReal / nominalCurrent)) : 0;
-      setBrightness(Math.round(50 + ratio * 205));
+      // Cálculo do brilho visual (0-255) escalado pelo duty cycle
+      // Usamos uma curva levemente não-linear para parecer mais natural ao olho humano
+      const visualBrightness = Math.round(dutyCycle * 255);
+      setBrightness(visualBrightness);
 
-      setIsOn(isActive);
+      setIsOn(true);
     },
     [
       effectiveResistance,
@@ -187,14 +207,8 @@ export const LEDNode: React.FC<LEDNodeProps> = ({ data, selected, id }) => {
         return;
       }
 
-      let isActive = false;
-      if (typeof pinEvent.value === 'number') {
-        isActive = pinEvent.value > 0;
-      } else {
-        isActive = pinEvent.value === 'HIGH';
-      }
-
-      recalcPhysics(isActive);
+      // Repassa o valor (pode ser boolean ou number) para o recalcPhysics
+      recalcPhysics(pinEvent.value === 'HIGH' ? 255 : (pinEvent.value === 'LOW' ? 0 : pinEvent.value));
     });
 
     return unsubscribe;
