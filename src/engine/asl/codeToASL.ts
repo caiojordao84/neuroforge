@@ -252,10 +252,21 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
     const existingLoop = tasks.find((t) => t.name === 'mainLoop');
 
     if (isPython) {
-      if (existingLoop) {
-        existingLoop.body.unshift(...topLevelStmts);
+      // Python top-level statements (e.g. pin setup, last_blink_time = ticks_ms())
+      // must run exactly once — like Arduino's setup(). They go into a dedicated
+      // 'pythonSetup' task so the engine executes them before scheduling the loop,
+      // preventing variables such as last_blink_time from being reset on every tick.
+      const setupTask = tasks.find((t) => t.name === 'pythonSetup');
+      if (setupTask) {
+        setupTask.body.push(...topLevelStmts);
       } else {
-        tasks.push({ name: 'mainLoop', body: topLevelStmts });
+        tasks.unshift({ name: 'pythonSetup', body: topLevelStmts });
+      }
+
+      // If there is no explicit loop task yet (no `while True` was found),
+      // create an empty mainLoop so the engine still has something to schedule.
+      if (!existingLoop) {
+        tasks.push({ name: 'mainLoop', body: [] });
       }
     } else {
       const setupFunc = functions.find(f => f.name === 'setup');
