@@ -47,9 +47,8 @@ export class PythonGenerator {
         // Setup GPIO objects (Crucial for CircuitPython)
         if (this.flavor === 'CIRCUITPYTHON') {
             this.usedPins.forEach(pin => {
-                // Check if it's PWM or Digital
                 if (this.pwmPins.has(pin)) {
-                    // PWM setup is usually done at call site or globally
+                    // PWM/servo setup is done at call site
                 } else {
                     this.addLn(output, `pin_${pin} = digitalio.DigitalInOut(board.GP${pin} if hasattr(board, "GP${pin}") else getattr(board, "D${pin}", board.D${pin}))`, null);
                     this.addLn(output, `pin_${pin}.direction = digitalio.Direction.OUTPUT`, null);
@@ -70,9 +69,13 @@ export class PythonGenerator {
         const setup = finalNodes.find(c => c.attributes.name === 'setup');
         const loops = finalNodes.find(c => c.attributes.name === 'loop');
         const mainFn = finalNodes.find(c => c.nodeType === 'Function' && c.attributes.name === 'main');
-        const globals = finalNodes.filter(c => c.nodeType === 'VariableDeclaration');
 
-        // Helper functions (não são setup/loop/main)
+        // 2. include ServoDeclaration in globals
+        const globals = finalNodes.filter(c =>
+            c.nodeType === 'VariableDeclaration' || c.nodeType === 'ServoDeclaration'
+        );
+
+        // Helper functions (not setup/loop/main)
         const helperFuncs = finalNodes.filter(c =>
             c.nodeType === 'Function' &&
             c.attributes.name !== 'setup' &&
@@ -80,8 +83,11 @@ export class PythonGenerator {
             c.attributes.name !== 'main'
         );
 
-        // Globals and non-loop code
-        const topLevelNodes = finalNodes.filter(c => c.nodeType !== 'Function' && c.nodeType !== 'VariableDeclaration');
+        const topLevelNodes = finalNodes.filter(c =>
+            c.nodeType !== 'Function' &&
+            c.nodeType !== 'VariableDeclaration' &&
+            c.nodeType !== 'ServoDeclaration'
+        );
         const setupBody: BaseNode[] = [];
         const loopBodies: BaseNode[] = [];
 
@@ -95,8 +101,6 @@ export class PythonGenerator {
 
         // Handle main function (standalone Python)
         if (mainFn) {
-            // Standalone main — não Arduino/MicroPython
-            // Emit helper functions before main
             helperFuncs.forEach(fn => {
                 this.addLn(output, `def ${fn.attributes.name}():`, null);
                 if (fn.children.length === 0) {
@@ -119,8 +123,6 @@ export class PythonGenerator {
             this.addLn(output, "if __name__ == '__main__':", null);
             this.addLn(output, '    main()', null);
         } else {
-            // Arduino/MicroPython path: setup + loop
-            // Emit helper functions before setup/loop
             helperFuncs.forEach(fn => {
                 this.addLn(output, `def ${fn.attributes.name}():`, null);
                 if (fn.children.length === 0) {
@@ -180,6 +182,24 @@ export class PythonGenerator {
             if (type === 'Keypad') this.shims.requireShim('Keypad');
         }
 
+        // 1. Servo detection
+        if (
+            node.nodeType === 'ServoDeclaration' ||
+            node.nodeType === 'ServoAttach' ||
+            node.nodeType === 'ServoWrite' ||
+            node.nodeType === 'ServoDetach' ||
+            node.nodeType === 'ServoRead' ||
+            node.nodeType === 'ServoAttached' ||
+            (node.nodeType === 'VariableDeclaration' && node.attributes.type === 'Servo') ||
+            (node.nodeType === 'CallExpression' && /servo/i.test(node.attributes.callee || ''))
+        ) {
+            this.shims.requireShim('servo');
+            // Collect servo pin for CircuitPython PWMOut setup
+            if (node.nodeType === 'ServoAttach' && node.attributes.pin != null) {
+                this.pwmPins.add(Number(node.attributes.pin));
+            }
+        }
+
         if (node.children) node.children.forEach(c => this.scanForPins(c));
     }
 
@@ -194,7 +214,6 @@ export class PythonGenerator {
     private printComments(node: BaseNode, out: string[], indent: string) {
         if (node.leadingComments) {
             node.leadingComments.forEach(c => {
-                // Convert C-style // or /* */ to #
                 let clean = c.replace(/^\/\//, '').replace(/^\/\* ?/, '').replace(/ ?\*\/$/, '').trim();
                 if (clean) this.addLn(out, `${indent}# ${clean}`, null);
                 else this.addLn(out, `${indent}#`, null);
@@ -303,7 +322,6 @@ export class PythonGenerator {
         if (n.nodeType === 'IfStatement') {
             this.addLn(out, `${i}if ${this.genExpr(n.children[0])}:`, n);
 
-            // then block — children[1]
             const thenNode = n.children[1];
             const thenChildren = thenNode
                 ? (thenNode.nodeType === 'Block' ? thenNode.children : [thenNode])
@@ -314,11 +332,9 @@ export class PythonGenerator {
                 thenChildren.forEach(c => this.genStmt(c, i + '    ', out));
             }
 
-            // else / elif — children[2]
             if (n.children[2]) {
                 const elseNode = n.children[2];
                 if (elseNode.nodeType === 'IfStatement') {
-                    // elif chain: generate into temp buffer, replace first 'if' with 'elif'
                     const tempOut: string[] = [];
                     const savedLineNum = this.currentLineNum;
                     this.genStmt(elseNode, i, tempOut);
@@ -328,7 +344,6 @@ export class PythonGenerator {
                         tempOut.forEach(l => { out.push(l); this.currentLineNum++; });
                     }
                 } else {
-                    // plain else block
                     this.addLn(out, `${i}else:`, null);
                     const elseChildren = elseNode.nodeType === 'Block'
                         ? elseNode.children
@@ -344,7 +359,6 @@ export class PythonGenerator {
         }
 
         if (n.nodeType === 'DoWhileLoop') {
-            // Python: while True: <body> \n if not <cond>: break
             this.addLn(out, `${i}while True:`, n);
             n.children.slice(1).forEach(c => this.genStmt(c, i + '    ', out));
             this.addLn(out, `${i}    if not (${this.genExpr(n.children[0])}):`, null);
@@ -488,6 +502,72 @@ export class PythonGenerator {
             return;
         }
 
+        // -----------------------------------------------------------------------
+        // 3. Servo statement nodes
+        // -----------------------------------------------------------------------
+        if (n.nodeType === 'ServoDeclaration') {
+            // Object is created at attach time — no declaration needed in Python
+            return;
+        }
+
+        if (n.nodeType === 'ServoAttach') {
+            const varName = n.attributes.varName ?? n.attributes.name;
+            const pin = n.children[0] ? this.genExpr(n.children[0]) : String(n.attributes.pin ?? 9);
+            const minPulse = n.children[1] ? Number(this.genExpr(n.children[1])) : 544;
+            const maxPulse = n.children[2] ? Number(this.genExpr(n.children[2])) : 2400;
+            const isContinuous = n.attributes.continuous ?? false;
+
+            if (this.flavor === 'MICROPYTHON') {
+                // MicroPython: raw PWM at 50Hz
+                this.addLn(out, `${i}${varName} = PWM(Pin(${pin}), freq=50)`, n);
+            } else {
+                // CircuitPython: adafruit_motor
+                this.addLn(out, `${i}import adafruit_motor.servo`, n);
+                this.addLn(out, `${i}_pwm_${varName} = pwmio.PWMOut(board.GP${pin}, frequency=50)`, n);
+                if (isContinuous) {
+                    this.addLn(out, `${i}${varName} = adafruit_motor.servo.ContinuousServo(_pwm_${varName})`, n);
+                } else {
+                    this.addLn(out, `${i}${varName} = adafruit_motor.servo.Servo(_pwm_${varName}, min_pulse=${minPulse}, max_pulse=${maxPulse})`, n);
+                }
+            }
+            return;
+        }
+
+        if (n.nodeType === 'ServoWrite') {
+            const varName = n.attributes.varName ?? n.attributes.name;
+            const rawVal = n.children[0] ? this.genExpr(n.children[0]) : String(n.attributes.angle ?? 90);
+            const isRawUs = n.attributes.rawMicroseconds ?? false;
+
+            if (this.flavor === 'MICROPYTHON') {
+                if (isRawUs) {
+                    // writeMicroseconds: convert µs to duty_u16
+                    this.addLn(out, `${i}${varName}.duty_u16(int((${rawVal} - 544) / (2400 - 544) * 65535))`, n);
+                } else {
+                    // degrees to duty_u16
+                    this.addLn(out, `${i}${varName}.duty_u16(int(${rawVal} / 180 * 65535))`, n);
+                }
+            } else {
+                // CircuitPython adafruit_motor
+                if (isRawUs) {
+                    this.addLn(out, `${i}${varName}.duty_cycle = int((${rawVal} / 20000) * 65535)`, n);
+                } else {
+                    this.addLn(out, `${i}${varName}.angle = ${rawVal}`, n);
+                }
+            }
+            return;
+        }
+
+        if (n.nodeType === 'ServoDetach') {
+            const varName = n.attributes.varName ?? n.attributes.name;
+            if (this.flavor === 'MICROPYTHON') {
+                this.addLn(out, `${i}${varName}.deinit()`, n);
+            } else {
+                // CircuitPython: deinit the underlying PWMOut
+                this.addLn(out, `${i}_pwm_${varName}.deinit()`, n);
+            }
+            return;
+        }
+
         this.addLn(out, `${i}pass # ${n.nodeType}`, n);
     }
 
@@ -583,6 +663,24 @@ export class PythonGenerator {
             if (this.flavor === 'MICROPYTHON') return 'uart.read()';
             return 'uart.read()';
         }
+
+        // -----------------------------------------------------------------------
+        // 4. Servo expression nodes
+        // -----------------------------------------------------------------------
+        if (n.nodeType === 'ServoRead') {
+            const varName = n.attributes.varName ?? n.attributes.name;
+            if (this.flavor === 'MICROPYTHON') {
+                // No native read — reverse-calculate from duty_u16
+                return `int(${varName}.duty_u16() / 65535 * 180)`;
+            }
+            return `${varName}.angle`; // CircuitPython adafruit_motor
+        }
+        if (n.nodeType === 'ServoAttached') {
+            const varName = n.attributes.varName ?? n.attributes.name;
+            // Python has no .attached() — check if object exists
+            return `(${varName} is not None)`;
+        }
+
         return '0';
     }
 
