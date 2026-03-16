@@ -54,28 +54,23 @@
 | :---------- | :----: | :------------------------------------------------------------- |
 | Node Visual |   ✅    | Responde a `pinChange` por canal (R/G/B), suporta PWM numérico |
 | Properties  |   ✅    | Painel com common anode/cathode                                |
-| ASL Type    |   ❌    | **Não existe `ASLRGBSet` — depende de 3x `analogWrite`**       |
-| Executor    |   ❌    | Sem handler nativo para `rgb.setColor(r,g,b)`                  |
-| Transform   |   ❌    | `callTransform` sem regra `rgb.setColor`                       |
-| CGenerator  |   ❌    | Sem geração `analogWrite` triplo para RGB                      |
-| PyGenerator |   ❌    | Idem                                                           |
-| RsGenerator |   ❌    | Idem                                                           |
-| Shims       |   ❌    | Sem `rgb_shim.ts`                                              |
-| CParser     |   ⚠️    | Detecta como `CallExpression` genérico                         |
-| PyParser    |   ❌    | Não detecta                                                    |
+| ASL Type    |   ✅    | Usa `rgbSet` (3x `analogWrite` interno)                        |
+| Executor    |   ✅    | Handler nativo para `rgbSet`                                   |
+| Transform   |   ✅    | `callTransform` com regra `rgb.setColor`                       |
+| CGenerator  |   ✅    | Suporta mapeamento via `RGBLED` class/objeto                   |
+| PyGenerator |   ✅    | Suporta mapeamento via `RGBLED` class/objeto                   |
+| RsGenerator |   ❌    | Pendente                                                       |
+| Shims       |   —    | Não precisa (usando detecção de tipo)                          |
+| CParser     |   ✅    | Detecta via `RGBLED` class e `setColor`                        |
+| PyParser    |   ✅    | Detecta via `RGBLED` import e `setColor`                       |
 | RsParser    |   ❌    | Não detecta                                                    |
 
 ### TODO RGB LED
-- [ ] ASL Type: definir `ASLRGBSet { pin_r, pin_g, pin_b, r, g, b }`
-- [ ] Executor: handler para `RGBSet` → 3× `analogWrite`
-- [ ] Transform: `callTransform` → `rgb.setColor(r,g,b)` ↦ `ASLRGBSet`
-- [ ] CGenerator: emitir 3× `analogWrite(pinR, r)` etc.
-- [ ] PyGenerator: emitir 3× `pwm_r.duty(r)` etc.
-- [ ] RsGenerator: emitir 3× PWM writes
-- [ ] Shim C/Py/Rs: `rgb_shim.ts` com wrapper de conveniência
-- [ ] CParser: detectar `analogWrite` triplo como RGB pattern
-- [ ] PyParser: detectar `pwm.duty()` triplo como RGB pattern
-- [ ] RsParser: detectar PWM triple-write como RGB pattern
+- [x] ASL Type: definir `rgbSet` (3x `analogWrite` interno)
+- [x] Executor: handler para `rgbSet`
+- [x] Transform: `callTransform` → `rgb.setColor(r,g,b)` ↦ `rgbSet`
+- [x] Detecção Robusta: `CParser` reconhece tipo `RGBLED` no escopo
+- [x] Suporte Posicional: Construtor C++ mapeado para pins R,G,B
 
 ---
 
@@ -132,8 +127,8 @@
 | RsParser    |   ✅    | Via GPIO read detection                                    |
 
 ### TODO Button
-- [ ] **Verificar simulação**: confirmar que clicar no botão → `externalDigitalWrite` → `digitalRead` no código ASL retorna o valor correcto
-- [ ] Testar cenário pull-up: `pinMode(pin, INPUT_PULLUP)` + button pressed → `digitalRead == LOW`
+- [x] **Verificar simulação**: confirmar que clicar no botão → `externalDigitalWrite` → `digitalRead` no código ASL retorna o valor correcto
+- [x] Testar cenário pull-up: `pinMode(pin, INPUT_PULLUP)` + button pressed → `digitalRead == LOW`
 - [ ] Testar cenário sem pull: floating warning exibido correctamente
 
 ---
@@ -158,8 +153,8 @@
 | RsParser    |   ✅    | Via ADC detection                                     |
 
 ### TODO Potentiometer
-- [ ] **Verificar simulação**: confirmar que `analogChange` event do slider → `analogRead(pin)` no executor retorna o valor correcto (0–1023)
-- [ ] Validar que o FlowEditor wiring para pinos analógicos (A0–A5) funciona
+- [x] **Verificar simulação**: confirmar que `analogChange` event do slider → `analogRead(pin)` no executor retorna o valor correcto (0–1023)
+- [x] Validar que o FlowEditor wiring para pinos analógicos (A0–A5) funciona
 
 ---
 
