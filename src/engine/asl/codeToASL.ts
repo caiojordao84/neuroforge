@@ -19,18 +19,31 @@ import { mapToASLType } from './helpers/typeUtils';
 import { buildEmptyArray, deepCopyValue, resolveSize } from './helpers/arrayUtils';
 import { transformExpr } from './transforms/exprTransform';
 import { normalizeAST } from './transforms/astNormalizer';
+import type { Library } from '@/stores/useLibraryStore';
 
-export async function codeToASL(source: string, language: Language): Promise<ASLProgram> {
-  let programAst = await codeToAST(source, language);
-  programAst = normalizeAST(programAst);
-  return astToASL(programAst, language);
+export async function codeToASL(source: string, language: Language, libraries: Library[] = []): Promise<ASLProgram> {
+  console.log(`[codeToASL] Starting transpilation for ${language}. Libraries: ${libraries.length}`);
+  try {
+    let programAst = await codeToAST(source, language, libraries);
+    console.log(`[codeToASL] AST Generated. Top nodes: ${programAst.children.length}`);
+    programAst = normalizeAST(programAst);
+    const asl = astToASL(programAst, language);
+    console.log(`[codeToASL] ASL Program generated. Globals: ${asl.globals.length}, Tasks: ${asl.tasks.length}`);
+    return asl;
+  } catch (e) {
+    console.error(`[codeToASL] Critical failure:`, e);
+    throw e;
+  }
 }
 
-export async function codeToAST(source: string, language: Language): Promise<ProgramNode> {
+export async function codeToAST(source: string, language: Language, libraries: Library[] = []): Promise<ProgramNode> {
   switch (language) {
     case 'c':
     case 'cpp': {
       const parser = new RecursiveDescentCParser();
+      if (libraries.length > 0) {
+        parser.setLibraries(libraries.map(l => ({ name: l.name, content: l.content })));
+      }
       const { ast } = parser.parse(source);
       return ast;
     }
@@ -150,6 +163,27 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
 
         const valNode = node.children[0];
         if (valNode) {
+          // --- S5: Pre-register special objects (RGBLED, PWM) so functions can see them ---
+          if (valNode.nodeType === 'CallExpression') {
+            const callee = valNode.attributes.callee;
+            if (callee === 'RGBLED') {
+              let pins = valNode.attributes.pins;
+              if (!pins && valNode.children.length >= 3) {
+                pins = { r: valNode.children[0], g: valNode.children[1], b: valNode.children[2] };
+              }
+              if (pins) ctx.rgbPins?.set(name, pins);
+              initialValue = {};
+            } else if (callee === 'PWM') {
+               const pinNode = valNode.children[0];
+               let actualPin = pinNode;
+               if (pinNode && pinNode.nodeType === 'CallExpression' && pinNode.attributes.callee === 'Pin') {
+                 actualPin = pinNode.children[0];
+               }
+               if (actualPin) ctx.pwmPins?.set(name, actualPin);
+               initialValue = 0;
+            }
+          }
+
           if (valNode.nodeType === 'ArrayInitializer') {
             const structType = node.attributes.structType;
             const structDef = structType ? ctx.structDefs?.[structType] : null;
@@ -203,14 +237,19 @@ export function astToASL(program: ProgramNode, language?: Language): ASLProgram 
               });
             } else {
               const size = resolveSize(node.attributes.arraySizeExpr, ctx.globalsMap) || valNode.children.length;
-              const arr = Array(size).fill(0);
-              valNode.children.forEach((c, i) => {
-                if (i < size) {
-                  const e = transformExpr(c);
-                  arr[i] = e.kind === 'literal' ? e.value : 0;
+              const evaluateArray = (arrNode: BaseNode): any => {
+                if (arrNode.nodeType === 'ArrayInitializer') {
+                  return arrNode.children.map(c => {
+                    const e = transformExpr(c);
+                    if (e.kind === 'literal') return e.value;
+                    if (e.kind === 'array') return evaluateArray(c);
+                    return 0;
+                  });
                 }
-              });
-              initialValue = arr;
+                const et = transformExpr(arrNode);
+                return et.kind === 'literal' ? et.value : 0;
+              };
+              initialValue = evaluateArray(valNode);
             }
           } else if (valNode.nodeType === 'Literal') {
             if (isArray) {

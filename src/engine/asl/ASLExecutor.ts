@@ -213,6 +213,19 @@ async function executeStatements(
         break;
       }
 
+      case 'rgbSet': {
+        const pr = await evalExpr(s.pinR, localEnv, ctx);
+        const pg = await evalExpr(s.pinG, localEnv, ctx);
+        const pb = await evalExpr(s.pinB, localEnv, ctx);
+        const vr = await evalExpr(s.r, localEnv, ctx);
+        const vg = await evalExpr(s.g, localEnv, ctx);
+        const vb = await evalExpr(s.b, localEnv, ctx);
+        ctx.engine.analogWrite(pr, vr);
+        ctx.engine.analogWrite(pg, vg);
+        ctx.engine.analogWrite(pb, vb);
+        break;
+      }
+
       case 'read': {
         const pin = await evalExpr(s.pin, localEnv, ctx);
         let v: number;
@@ -275,6 +288,7 @@ async function executeStatements(
       }
 
       case 'for': {
+        if (s.init) await executeStatements(s.init, localEnv, ctx);
         let cycles = 0;
         while (await evalExpr(s.condition, localEnv, ctx)) {
           if (ctx.abortSignal?.aborted) return;

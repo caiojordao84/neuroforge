@@ -175,7 +175,7 @@ function handleForLoop(node: BaseNode, ctx: TransformContext): ASLStatement[] {
 
   const bodyStmts = ctx.transformBlock ? ctx.transformBlock(bodyNodes, ctx) : [];
   if (condSideEffects.length > 0) {
-    condSideEffects.forEach(se => { bodyStmts.unshift(...handleAssignment(se)); });
+    condSideEffects.forEach(se => { bodyStmts.unshift(...handleAssignment(se, ctx)); });
   }
 
   // Build update statements separately
@@ -206,7 +206,7 @@ function handleForLoop(node: BaseNode, ctx: TransformContext): ASLStatement[] {
       ], ctx));
 
       if (updateSideEffects.length > 0) {
-        updateSideEffects.forEach(se => { updateStmts.push(...handleAssignment(se)); });
+        updateSideEffects.forEach(se => { updateStmts.push(...handleAssignment(se, ctx)); });
       }
     }
   }
@@ -240,13 +240,13 @@ function handleDelayMs(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
   return [{ kind: 'delay', milliseconds: transformExpr(node.children[0]) } as ASLStatement];
 }
 
-function handleReturnStatement(node: BaseNode, _ctx: TransformContext): ASLStatement[] {
+function handleReturnStatement(node: BaseNode, ctx: TransformContext): ASLStatement[] {
   const expr = node.children[0];
   if (!expr) return [{ kind: 'return' } as ASLStatement];
   const sideEffects: BaseNode[] = [];
   const desugaredExpr = extractPostfix(expr, sideEffects);
   const stmts: ASLStatement[] = [];
-  sideEffects.forEach(se => { stmts.push(...handleAssignment(se)); });
+  sideEffects.forEach(se => { stmts.push(...handleAssignment(se, ctx)); });
   stmts.push({ kind: 'return', value: transformExpr(desugaredExpr) } as ASLStatement);
   return stmts;
 }
@@ -380,6 +380,47 @@ function handleVariableDeclaration(node: BaseNode, ctx: TransformContext): ASLSt
     ];
   }
 
+  if (valNode && valNode.nodeType === 'CallExpression' && valNode.attributes.callee === 'RGBLED') {
+    let pins = valNode.attributes.pins;
+    
+    // Support positional arguments (for C++)
+    if (!pins && valNode.children.length >= 3) {
+      pins = {
+        r: valNode.children[0],
+        g: valNode.children[1],
+        b: valNode.children[2]
+      };
+    }
+
+    if (ctx.rgbPins && pins) {
+      ctx.rgbPins.set(name, pins);
+    }
+    const r = pins?.r || { nodeType: 'Literal', attributes: { value: 0 } };
+    const g = pins?.g || { nodeType: 'Literal', attributes: { value: 0 } };
+    const b = pins?.b || { nodeType: 'Literal', attributes: { value: 0 } };
+    return [
+      { kind: 'pinMode', pin: transformExpr(r), mode: 'OUTPUT' },
+      { kind: 'pinMode', pin: transformExpr(g), mode: 'OUTPUT' },
+      { kind: 'pinMode', pin: transformExpr(b), mode: 'OUTPUT' },
+      { kind: 'assign', target: name, value: { kind: 'object', properties: [] } } as ASLStatement
+    ] as ASLStatement[];
+  }
+ 
+  if (valNode && valNode.nodeType === 'CallExpression' && valNode.attributes.callee === 'PWM') {
+    const pinNode = valNode.children[0];
+    let actualPin = pinNode;
+    if (pinNode && pinNode.nodeType === 'CallExpression' && pinNode.attributes.callee === 'Pin') {
+      actualPin = pinNode.children[0];
+    }
+    if (ctx.pwmPins && actualPin) {
+      ctx.pwmPins.set(name, actualPin);
+    }
+    return [
+      { kind: 'pinMode', pin: transformExpr(actualPin), mode: 'OUTPUT' },
+      { kind: 'assign', target: name, value: transformExpr(actualPin) } as ASLStatement
+    ] as ASLStatement[];
+  }
+
   const readStmt = tryTransformRead(name, valNode);
   if (readStmt) return [readStmt];
 
@@ -483,7 +524,7 @@ function handleVariableDeclaration(node: BaseNode, ctx: TransformContext): ASLSt
     const desugaredVal = extractPostfix(valNode, sideEffects);
     const resultStmts: ASLStatement[] = [];
     sideEffects.forEach(se => {
-      resultStmts.push(...handleAssignment(se));
+      resultStmts.push(...handleAssignment(se, ctx));
     });
     resultStmts.push({ kind: 'assign', target: name, value: transformExpr(desugaredVal) });
     return resultStmts;
@@ -520,7 +561,7 @@ function handleExpressionStatement(node: BaseNode, ctx: TransformContext): ASLSt
   }
 
   if (expr.nodeType === 'BinaryExpression' && ['=', '+=', '-=', '*=', '/='].includes(expr.attributes.operator)) {
-    return handleAssignment(expr);
+    return handleAssignment(expr, ctx);
   }
 
   if (expr.nodeType === 'UnaryExpression' && ['++', '--'].includes(expr.attributes.operator)) {
@@ -558,7 +599,7 @@ function handleExpressionStatement(node: BaseNode, ctx: TransformContext): ASLSt
   }
 
   if (expr.nodeType === 'CallExpression') {
-    const stmt = transformCallToStmt(expr);
+    const stmt = transformCallToStmt(expr, ctx);
     if (stmt) return [stmt];
   }
 
@@ -578,11 +619,11 @@ function handleExpressionStatement(node: BaseNode, ctx: TransformContext): ASLSt
   resetPostfixTempCounter();
   extractPostfix(expr, sideEffects);
   const resultStmts: ASLStatement[] = [];
-  sideEffects.forEach(se => { resultStmts.push(...handleAssignment(se)); });
+  sideEffects.forEach(se => { resultStmts.push(...handleAssignment(se, ctx)); });
   return resultStmts;
 }
 
-function handleAssignment(expr: BaseNode): ASLStatement[] {
+function handleAssignment(expr: BaseNode, ctx: TransformContext): ASLStatement[] {
   const op = expr.attributes.operator as string;
   const left = expr.children[0];
   const right = expr.children[1];
@@ -594,7 +635,39 @@ function handleAssignment(expr: BaseNode): ASLStatement[] {
       resetPostfixTempCounter();
       const desugaredRight = extractPostfix(right, sideEffects);
       const resStmts: ASLStatement[] = [];
-      sideEffects.forEach(se => { resStmts.push(...handleAssignment(se)); });
+      sideEffects.forEach(se => { resStmts.push(...handleAssignment(se, ctx)); });
+
+      // --- S5: Handle special types during assignment (RGBLED, PWM) ---
+      if (desugaredRight.nodeType === 'CallExpression') {
+        const callee = desugaredRight.attributes.callee;
+        if (callee === 'RGBLED') {
+           let pins = desugaredRight.attributes.pins;
+           if (!pins && desugaredRight.children.length >= 3) {
+             pins = { r: desugaredRight.children[0], g: desugaredRight.children[1], b: desugaredRight.children[2] };
+           }
+           if (pins) ctx.rgbPins?.set(target, pins);
+           // Also emit pinMode
+           const r = pins?.r || { nodeType: 'Literal', attributes: { value: 0 } };
+           const g = pins?.g || { nodeType: 'Literal', attributes: { value: 0 } };
+           const b = pins?.b || { nodeType: 'Literal', attributes: { value: 0 } };
+           resStmts.push({ kind: 'pinMode', pin: transformExpr(r), mode: 'OUTPUT' });
+           resStmts.push({ kind: 'pinMode', pin: transformExpr(g), mode: 'OUTPUT' });
+           resStmts.push({ kind: 'pinMode', pin: transformExpr(b), mode: 'OUTPUT' });
+           resStmts.push({ kind: 'assign', target, value: { kind: 'object', properties: [] } });
+           return resStmts;
+        } else if (callee === 'PWM') {
+           const pinNode = desugaredRight.children[0];
+           let actualPin = pinNode;
+           if (pinNode && pinNode.nodeType === 'CallExpression' && pinNode.attributes.callee === 'Pin') {
+             actualPin = pinNode.children[0];
+           }
+           if (actualPin) ctx.pwmPins?.set(target, actualPin);
+           resStmts.push({ kind: 'pinMode', pin: transformExpr(actualPin), mode: 'OUTPUT' });
+           resStmts.push({ kind: 'assign', target, value: transformExpr(actualPin) });
+           return resStmts;
+        }
+      }
+
       const readStmt = tryTransformRead(target, desugaredRight);
       if (readStmt) {
         resStmts.push(readStmt);

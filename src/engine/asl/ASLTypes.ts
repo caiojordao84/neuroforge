@@ -131,7 +131,8 @@ export type ASLStatement =
   | ASLLatchSR
   | ASLLatchRS
   | ASLTrigR
-  | ASLTrigF;
+  | ASLTrigF
+  | ASLRGBSet;
 
 /**
  * Statement de comentário (não afeta execução, mas preserva contexto).
@@ -208,6 +209,7 @@ export interface ASLWhile {
  */
 export interface ASLFor {
   kind: 'for';
+  init?: ASLStatement[];
   condition: ASLExpr;
   body: ASLStatement[];
   update: ASLStatement[];
@@ -745,4 +747,17 @@ export interface ASLTrigF {
   kind: 'trigF';
   instance: string;
   in: ASLExpr;
+}
+
+/**
+ * Sets RGB LED color on specific pins.
+ */
+export interface ASLRGBSet {
+  kind: 'rgbSet';
+  pinR: ASLExpr;
+  pinG: ASLExpr;
+  pinB: ASLExpr;
+  r: ASLExpr;
+  g: ASLExpr;
+  b: ASLExpr;
 }

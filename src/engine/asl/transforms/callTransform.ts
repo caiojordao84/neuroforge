@@ -1,8 +1,9 @@
 import type { BaseNode } from '@/system/types';
 import type { ASLStatement, ASLExpr } from '../ASLTypes';
 import { transformExpr } from './exprTransform';
+import type { TransformContext } from './context';
 
-export function transformCallToStmt(node: BaseNode): ASLStatement | null {
+export function transformCallToStmt(node: BaseNode, ctx: TransformContext): ASLStatement | null {
   const callee = node.attributes.callee;
 
   if (callee === 'pinMode') {
@@ -239,6 +240,62 @@ export function transformCallToStmt(node: BaseNode): ASLStatement | null {
       instance: node.attributes.instance,
       in: transformExpr(node.children[0]),
     } as ASLStatement;
+  }
+
+  if (callee === 'setColor' || (callee.endsWith && callee.endsWith('.setColor'))) {
+    const objName = node.attributes.object || (callee.includes('.') ? callee.split('.')[0] : null);
+    const pins = objName ? ctx.rgbPins?.get(objName) : null;
+    if (pins) {
+      const arg = node.children[0];
+      let r: ASLExpr, g: ASLExpr, b: ASLExpr;
+
+      if (arg && arg.nodeType === 'ArrayInitializer' && arg.children.length >= 3) {
+        // setColor((255, 0, 0))
+        r = transformExpr(arg.children[0]);
+        g = transformExpr(arg.children[1]);
+        b = transformExpr(arg.children[2]);
+      } else if (node.children.length >= 3) {
+        // setColor(255, 0, 0)
+        r = transformExpr(node.children[0]);
+        g = transformExpr(node.children[1]);
+        b = transformExpr(node.children[2]);
+      } else if (arg) {
+        // setColor(c) -> c[0], c[1], c[2]
+        const base = transformExpr(arg);
+        r = { kind: 'index', target: base, index: { kind: 'literal', value: 0 } };
+        g = { kind: 'index', target: base, index: { kind: 'literal', value: 1 } };
+        b = { kind: 'index', target: base, index: { kind: 'literal', value: 2 } };
+      } else {
+        r = g = b = { kind: 'literal', value: 0 };
+      }
+
+      return {
+        kind: 'rgbSet',
+        pinR: transformExpr(pins.r),
+        pinG: transformExpr(pins.g),
+        pinB: transformExpr(pins.b),
+        r, g, b
+      } as ASLStatement;
+    }
+  }
+
+  if (callee.endsWith && (callee === 'duty_u16' || callee.endsWith('.duty_u16'))) {
+    const objName = callee.includes('.') ? callee.split('.')[0] : node.attributes.object;
+    if (objName) {
+      const pin = ctx.pwmPins?.get(objName);
+      if (pin) {
+        return {
+          kind: 'analogWrite',
+          pin: transformExpr(pin),
+          value: {
+            kind: 'binary',
+            op: '/',
+            left: transformExpr(node.children[0]),
+            right: { kind: 'literal', value: 257 }
+          }
+        } as ASLStatement;
+      }
+    }
   }
 
   return {

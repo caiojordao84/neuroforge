@@ -481,7 +481,17 @@ class RegexPythonParser {
             const analogReadNode = { nodeType: 'AnalogRead', id: `adc-${lineNum}`, attributes: {}, children: [{ nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: adcReadM[1] }, children: [] } as BaseNode] } as BaseNode;
             if (!isU16) return analogReadNode;
             
-            return { nodeType: 'BinaryExpression', id: `scale-${lineNum}`, attributes: { operator: '*' }, children: [analogReadNode, { nodeType: 'Literal', id: `l64-${lineNum}`, attributes: { value: 64 }, children: [] } as BaseNode] } as BaseNode;
+            return { nodeType: 'BinaryExpression', id: `scale-${lineNum}`, attributes: { operator: '*' }, children: [analogReadNode, { nodeType: 'Literal', id: `l257-${lineNum}`, attributes: { value: 257 }, children: [] } as BaseNode] } as BaseNode;
+        }
+
+        const pwmDutyM = trimmed.match(/^(\w+)\.(duty|duty_u16|duty_cycle)\s*\((.+)\)\s*$/);
+        if (pwmDutyM) {
+            const obj = { nodeType: 'Identifier', id: `id-${lineNum}`, attributes: { name: pwmDutyM[1] }, children: [] } as BaseNode;
+            let val = this._parseExpr(pwmDutyM[3].trim(), lineNum);
+            if (pwmDutyM[2] !== 'duty') {
+                val = { nodeType: 'BinaryExpression', id: `div-${lineNum}`, attributes: { operator: '/' }, children: [val, { nodeType: 'Literal', id: `l257-${lineNum}`, attributes: { value: 257 }, children: [] } as BaseNode] } as BaseNode;
+            }
+            return { nodeType: 'AnalogWrite', id: `aw-${lineNum}`, attributes: {}, children: [obj, val], metadata: meta } as BaseNode;
         }
 
         const adcAssignM = trimmed.match(/^(\w+)\s*=\s*(?:machine\.)?ADC\s*\(([^)]+)\)\s*$/);
@@ -1075,17 +1085,59 @@ class PythonCstToAst {
     visitIf(node: any): BaseNode {
         const cond = this.visitExpr(node.childForFieldName('condition')!);
         const cons = node.childForFieldName('consequence');
-        const alt = node.childForFieldName('alternative');
-        const thenBlock: BaseNode = { nodeType: 'Block', id: `blk-${node.id}-then`, attributes: {}, children: cons ? this.visitBlockChildren(cons) : [], metadata: { line: node.startPosition.row + 1 } };
-        const children = [cond, thenBlock];
-        if (alt) {
-            // else_clause children: "else"(0), ":"(1), block(2)
-            // elif_clause: handled as nested if_statement
-            const body = alt.childForFieldName('body') || alt.namedChild(0) || alt.child(2);
-            if (body && body.type === 'if_statement') { const nestedIf = this.visitIf(body); if (nestedIf) children.push(nestedIf); }
-            else if (body) children.push({ nodeType: 'Block', id: `blk-${node.id}-else`, attributes: {}, children: this.visitBlockChildren(body), metadata: { line: alt.startPosition.row + 1 } });
+        const thenBlock: BaseNode = {
+            nodeType: 'Block',
+            id: `blk-${node.id}-then`,
+            attributes: {},
+            children: cons ? this.visitBlockChildren(cons) : [],
+            metadata: { line: node.startPosition.row + 1 }
+        };
+
+        const alts = node.namedChildren.filter((c: any) => c.type === 'elif_clause' || c.type === 'else_clause');
+        let currentIf: BaseNode = {
+            nodeType: 'IfStatement',
+            id: `if-${node.id}`,
+            attributes: {},
+            children: [cond, thenBlock],
+            metadata: { line: node.startPosition.row + 1 }
+        };
+        const rootIf = currentIf;
+
+        for (const alt of alts) {
+            const meta = { line: alt.startPosition.row + 1 };
+            if (alt.type === 'elif_clause') {
+                const eCond = this.visitExpr(alt.childForFieldName('condition')!);
+                const eCons = alt.childForFieldName('consequence');
+                const eThen: BaseNode = {
+                    nodeType: 'Block',
+                    id: `blk-${alt.id}-elif`,
+                    attributes: {},
+                    children: eCons ? this.visitBlockChildren(eCons) : [],
+                    metadata: meta
+                };
+                const nextIf: BaseNode = {
+                    nodeType: 'IfStatement',
+                    id: `if-${alt.id}`,
+                    attributes: {},
+                    children: [eCond, eThen],
+                    metadata: meta
+                };
+                currentIf.children.push(nextIf);
+                currentIf = nextIf;
+            } else if (alt.type === 'else_clause') {
+                const eBody = alt.childForFieldName('body') || alt.namedChild(0);
+                const eElse: BaseNode = {
+                    nodeType: 'Block',
+                    id: `blk-${alt.id}-else`,
+                    attributes: {},
+                    children: eBody ? this.visitBlockChildren(eBody) : [],
+                    metadata: meta
+                };
+                currentIf.children.push(eElse);
+            }
         }
-        return { nodeType: 'IfStatement', id: `if-${node.id}`, attributes: {}, children, metadata: { line: node.startPosition.row + 1 } };
+
+        return rootIf;
     }
 
     // ── visitWhile — WhileLoop (any cond) + DoWhileLoop heuristic ────────────
@@ -1279,6 +1331,11 @@ class PythonCstToAst {
             return { nodeType: 'ArrayInitializer', id: `list-${node.id}`, attributes: { isArray: true, is2D }, children: elements, metadata: meta };
         }
 
+        if (node.type === 'tuple') {
+            const elements = node.namedChildren.map((c: any) => this.visitExpr(c, env)) as BaseNode[];
+            return { nodeType: 'ArrayInitializer', id: `tuple-${node.id}`, attributes: { isArray: true, isTuple: true }, children: elements, metadata: meta };
+        }
+
         if (node.type === 'true' || (node.type === 'identifier' && node.text === 'True')) return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: 1 }, children: [], metadata: meta };
         if (node.type === 'false' || (node.type === 'identifier' && node.text === 'False')) return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: 0 }, children: [], metadata: meta };
         if (node.type === 'none' || (node.type === 'identifier' && node.text === 'None')) return { nodeType: 'Literal', id: `l-${node.id}`, attributes: { value: 0 }, children: [], metadata: meta };
@@ -1320,7 +1377,19 @@ class PythonCstToAst {
         if (node.type === 'call') {
             const func = node.childForFieldName('function');
             const argsNode = node.childForFieldName('arguments');
-            const args = argsNode ? argsNode.children.filter((c: any) => c.type !== '(' && c.type !== ')' && c.type !== ',').map((c: any) => this.visitExpr(c, env)) : [];
+            const args: BaseNode[] = [];
+            if (argsNode) {
+                for (let i = 0; i < argsNode.namedChildCount; i++) {
+                    const c = argsNode.namedChild(i);
+                    if (c.type === 'keyword_argument') {
+                        const kName = c.childForFieldName('name')?.text || '';
+                        const kVal = this.visitExpr(c.childForFieldName('value')!, env);
+                        args.push({ nodeType: 'Argument', id: `arg-${c.id}`, attributes: { name: kName }, children: [kVal], metadata: meta });
+                    } else {
+                        args.push(this.visitExpr(c, env));
+                    }
+                }
+            }
             let callee = func?.text || '';
 
             if (func?.type === 'attribute') {
@@ -1340,9 +1409,16 @@ class PythonCstToAst {
                 if ((attr === 'read_u16' || attr === 'read') && args.length === 0) {
                     const analogReadNode: BaseNode = { nodeType: 'AnalogRead', id: `adc-${node.id}`, attributes: {}, children: [this.visitExpr(func.childForFieldName('object'), env)], metadata: meta };
                     if (attr !== 'read_u16') return analogReadNode;
-                    return { nodeType: 'BinaryExpression', id: `scale-${node.id}`, attributes: { operator: '*' }, children: [analogReadNode, { nodeType: 'Literal', id: `l64-${node.id}`, attributes: { value: 64 }, children: [] }], metadata: meta };
+                    return { nodeType: 'BinaryExpression', id: `scale-${node.id}`, attributes: { operator: '*' }, children: [analogReadNode, { nodeType: 'Literal', id: `l257-${node.id}`, attributes: { value: 257 }, children: [] }], metadata: meta };
                 }
-                if (attr === 'duty' || attr === 'duty_u16' || attr === 'duty_cycle') return { nodeType: 'AnalogWrite', id: `aw-${node.id}`, attributes: {}, children: [this.visitExpr(func.childForFieldName('object'), env), ...args], metadata: meta };
+                if (attr === 'duty' || attr === 'duty_u16' || attr === 'duty_cycle') {
+                    const obj = this.visitExpr(func.childForFieldName('object'), env);
+                    let val = args[0];
+                    if (attr !== 'duty' && val) {
+                        val = { nodeType: 'BinaryExpression', id: `div-${node.id}`, attributes: { operator: '/' }, children: [val, { nodeType: 'Literal', id: `l257-${node.id}`, attributes: { value: 257 }, children: [] }], metadata: meta } as BaseNode;
+                    }
+                    return { nodeType: 'AnalogWrite', id: `aw-${node.id}`, attributes: {}, children: [obj, val], metadata: meta };
+                }
                 if (attr === 'any') return { nodeType: 'SerialAvailable', id: `sa-${node.id}`, attributes: {}, children: [], metadata: meta };
 
                 // ── LCD methods ───────────────────────────────────────────────
@@ -1441,6 +1517,31 @@ class PythonCstToAst {
             }
             if (callee === 'ADC' || callee === 'machine.ADC') {
                 return args[0];
+            }
+
+            if (callee === 'RGBLED') {
+                // Map RGBLED(...) to a special node that stores the pins
+                // rgb = RGBLED(red=9, green=10, blue=11)
+                const pins: Record<string, BaseNode> = {};
+                args.forEach(a => {
+                    if (a.nodeType === 'Argument') {
+                        pins[a.attributes.name] = a.children[0];
+                    }
+                });
+                return {
+                    nodeType: 'CallExpression', id: `rgb-${node.id}`,
+                    attributes: { callee: 'RGBLED', pins: { r: pins['red'], g: pins['green'], b: pins['blue'] } },
+                    children: args, metadata: meta
+                };
+            }
+
+            if (callee.endsWith('.setColor')) {
+                const obj = callee.split('.')[0];
+                return {
+                    nodeType: 'CallExpression', id: `rgbset-${node.id}`,
+                    attributes: { callee: 'setColor', object: obj },
+                    children: args, metadata: meta
+                };
             }
 
 

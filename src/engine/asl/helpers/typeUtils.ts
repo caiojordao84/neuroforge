@@ -23,7 +23,7 @@ export function mapToASLType(cppType: string): ASLType {
   // String
   if (lower === 'string' || lower.includes('std::string')) return 'string';
 
-  if (lower === 'struct') return 'struct';
+  if (lower === 'struct' || lower === 'class' || lower === 'rgbled') return 'struct';
 
   return 'int';
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useFileStore } from '@/stores/useFileStore';
+import { useLibraryStore } from '@/stores/useLibraryStore';
 import { codeToASL } from '@/engine/asl/codeToASL';
 import type { ASLProgram } from '@/engine/asl/ASLTypes';
 import { cn } from '@/lib/utils';
@@ -13,6 +14,7 @@ export const ASLViewer: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const { libraries } = useLibraryStore();
     const regenerate = useCallback(async () => {
         if (!activeFile) {
             setAslJson('// No file active');
@@ -34,7 +36,7 @@ export const ASLViewer: React.FC = () => {
         setError(null);
 
         try {
-            const asl: ASLProgram = await codeToASL(activeFile.code, activeFile.language);
+            const asl: ASLProgram = await codeToASL(activeFile.code, activeFile.language, libraries);
             setAslJson(JSON.stringify(asl, null, 2));
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
@@ -43,7 +45,7 @@ export const ASLViewer: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [activeFile]);
+    }, [activeFile, libraries]);
 
     // Debounced auto-regeneration on code/file change
     useEffect(() => {

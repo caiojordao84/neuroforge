@@ -13,11 +13,15 @@ export interface TransformContext {
    * Populado por codeToASL ao processar StructDeclaration nodes.
    */
   structDefs?: Record<string, ASLStructDef>;
+  rgbPins?: Map<string, { r: BaseNode, g: BaseNode, b: BaseNode }>;
+  pwmPins?: Map<string, BaseNode>;
 }
 
 export function createTransformContext(language?: Language): TransformContext {
   return {
     globalsMap: new Map(),
+    rgbPins: new Map(),
+    pwmPins: new Map(),
     language,
   };
 }

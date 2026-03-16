@@ -91,8 +91,11 @@ export function useRunSimulation() {
 
             if (isASLSupported) {
                 try {
+                    // Pull libraries from store to support #include in C++
+                    const { libraries } = (await import('@/stores/useLibraryStore')).useLibraryStore.getState();
+                    
                     // Compile code to standard ASL AST
-                    const aslProgram = await codeToASL(processedCode, activeMCU.language);
+                    const aslProgram = await codeToASL(processedCode, activeMCU.language, libraries);
                     addTerminalLine(`✅ ASL Program generated (${aslProgram.globals.length} globals, ${aslProgram.tasks.length} tasks)`, 'success');
 
                     abortControllerRef.current = new AbortController();

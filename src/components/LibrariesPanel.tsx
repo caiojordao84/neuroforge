@@ -8,16 +8,9 @@ import {
     Trash2,
     Upload,
     FileCode,
-    MoreVertical,
     Globe
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
     Dialog,
     DialogContent,
@@ -114,25 +107,18 @@ export const LibrariesPanel: React.FC = () => {
                     >
                         <FileCode className="w-3.5 h-3.5 shrink-0" />
                         <span className="truncate flex-1">{lib.name}</span>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <button
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-[rgba(0,217,255,0.2)] rounded transition-opacity"
-                                >
-                                    <MoreVertical className="w-3 h-3" />
-                                </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="bg-[#151b24] border-[rgba(0,217,255,0.3)]">
-                                <DropdownMenuItem
-                                    onClick={() => deleteLibrary(lib.id)}
-                                    className="text-red-400 hover:bg-[rgba(255,0,0,0.1)] focus:bg-[rgba(255,0,0,0.1)] text-xs"
-                                >
-                                    <Trash2 className="w-3 h-3 mr-2" />
-                                    Delete
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm(`Delete library "${lib.name}"?`)) {
+                                    deleteLibrary(lib.id);
+                                }
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[rgba(255,0,0,0.2)] text-[#9ca3af] hover:text-red-400 rounded transition-all duration-150"
+                            title="Delete Library"
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                     </div>
                 ))}
 
