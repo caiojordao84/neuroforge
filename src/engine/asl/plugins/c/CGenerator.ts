@@ -75,7 +75,7 @@ export class CGenerator {
             for (const node of finalNodes) {
                 if (node.nodeType === 'Function') {
                     functions.push(node);
-                } else if (node.nodeType === 'VariableDeclaration') {
+                } else if (node.nodeType === 'VariableDeclaration' || node.nodeType === 'ServoDeclaration') {
                     globals.push(node);
                 } else if (node.nodeType === 'WhileLoop' && node.attributes.isInfinite) {
                     // Infinite while True → becomes loop() body
@@ -138,10 +138,15 @@ export class CGenerator {
         );
     }
 
-    /** Emit a global variable with special handling for Pin arrays */
+    /** Emit a global variable with special handling for Pin arrays and Servo declarations */
     private genGlobalVar(node: BaseNode, lines: string[]) {
         const comments = this.printComments(node);
         if (comments) this.addLn(lines, comments, null);
+
+        if (node.nodeType === 'ServoDeclaration') {
+            this.addLn(lines, `Servo ${node.attributes.name};`, node);
+            return;
+        }
 
         const init = node.children[0];
         if (init && this.isPinArrayDecl(node)) {
@@ -157,12 +162,28 @@ export class CGenerator {
         }
     }
 
+    // -------------------------------------------------------------------------
+    // 1. scanForShims — detect servo nodes and callee patterns
+    // -------------------------------------------------------------------------
     private scanForShims(node: BaseNode) {
         if (node.nodeType === 'CallExpression') {
             const callee = node.attributes.callee || '';
             if (callee.startsWith('sevseg.')) {
                 this.shims.requireShim('sevseg');
             }
+        }
+        // Servo: any servo nodeType or callee matching /servo/i → include <Servo.h>
+        if (
+            node.nodeType === 'ServoDeclaration' ||
+            node.nodeType === 'ServoAttach' ||
+            node.nodeType === 'ServoWrite' ||
+            node.nodeType === 'ServoDetach' ||
+            node.nodeType === 'ServoRead' ||
+            node.nodeType === 'ServoAttached' ||
+            (node.nodeType === 'VariableDeclaration' && node.attributes.type === 'Servo') ||
+            (node.nodeType === 'CallExpression' && /servo/i.test(node.attributes.callee || ''))
+        ) {
+            this.shims.requireShim('servo');
         }
         if (node.children) {
             node.children.forEach(c => this.scanForShims(c));
@@ -382,6 +403,37 @@ export class CGenerator {
             });
             this.addLn(lines, `${indent}};`, null);
         }
+        // -----------------------------------------------------------------------
+        // 2. Servo statement nodes
+        // -----------------------------------------------------------------------
+        else if (node.nodeType === 'ServoDeclaration') {
+            // Servo dragon;  (local scope declaration)
+            this.addLn(lines, `${indent}Servo ${node.attributes.name};`, node);
+        }
+        else if (node.nodeType === 'ServoAttach') {
+            const varName = node.attributes.varName ?? node.attributes.name;
+            const pin = node.children[0] ? this.genExpr(node.children[0]) : String(node.attributes.pin ?? 9);
+            if (node.children[1] && node.children[2]) {
+                const minPulse = this.genExpr(node.children[1]);
+                const maxPulse = this.genExpr(node.children[2]);
+                this.addLn(lines, `${indent}${varName}.attach(${pin}, ${minPulse}, ${maxPulse});`, node);
+            } else {
+                this.addLn(lines, `${indent}${varName}.attach(${pin});`, node);
+            }
+        }
+        else if (node.nodeType === 'ServoWrite') {
+            const varName = node.attributes.varName ?? node.attributes.name;
+            const angle = node.children[0] ? this.genExpr(node.children[0]) : String(node.attributes.angle ?? 90);
+            if (node.attributes.rawMicroseconds) {
+                this.addLn(lines, `${indent}${varName}.writeMicroseconds(${angle});`, node);
+            } else {
+                this.addLn(lines, `${indent}${varName}.write(${angle});`, node);
+            }
+        }
+        else if (node.nodeType === 'ServoDetach') {
+            const varName = node.attributes.varName ?? node.attributes.name;
+            this.addLn(lines, `${indent}${varName}.detach();`, node);
+        }
     }
 
     private genExpr(node: BaseNode): string {
@@ -435,6 +487,18 @@ export class CGenerator {
         if (node.nodeType === 'DelayMs') return `delay(${this.genExpr(node.children[0])})`;
         if (node.nodeType === 'AnalogWrite') return `analogWrite(${this.genExpr(node.children[0])}, ${this.genExpr(node.children[1])})`;
         if (node.nodeType === 'Print') return `Serial.println(${this.genExpr(node.children[0])})`;
+
+        // -----------------------------------------------------------------------
+        // 3. Servo expression nodes
+        // -----------------------------------------------------------------------
+        if (node.nodeType === 'ServoRead') {
+            const varName = node.attributes.varName ?? node.attributes.name;
+            return `${varName}.read()`;
+        }
+        if (node.nodeType === 'ServoAttached') {
+            const varName = node.attributes.varName ?? node.attributes.name;
+            return `${varName}.attached()`;
+        }
 
         // Fallback for DesignInitializers / Braced initializers
         const fields = node.children.map(c => {
