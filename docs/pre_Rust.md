@@ -177,6 +177,7 @@ Shims para emulação de bibliotecas hardware:
 | `input/keypad_shim.ts`               | Emulação keypad     |
 | `display/liquid_crystal_i2c_shim.ts` | Display LCD I2C     |
 | `display/sevseg_shim.ts`             | Display 7 segmentos |
+| `actuator/servo_shim.ts`            | Shim servo (C/Python) - Injeta `#include <Servo.h>` para C++ ou imports dinâmicos para Python |
 
 #### 2.5.3 Sistema Blockly (src/engine/blockly/)
 
