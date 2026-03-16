@@ -132,6 +132,10 @@ export type ASLStatement =
   | ASLLatchRS
   | ASLTrigR
   | ASLTrigF
+  // --- Servo ---
+  | ASLServoAttach
+  | ASLServoWrite
+  | ASLServoDetach
   | ASLRGBSet;
 
 /**
@@ -760,4 +764,61 @@ export interface ASLRGBSet {
   r: ASLExpr;
   g: ASLExpr;
   b: ASLExpr;
+}
+
+// ---------------------------------------------------------------------------
+// Servo Statements
+// ---------------------------------------------------------------------------
+
+/**
+ * Attach a servo to a PWM-capable pin.
+ * Corresponds to: Servo myServo; myServo.attach(pin);           (C++)
+ *                 Servo myServo; myServo.attach(pin, min, max); (C++ with pulse range)
+ *                 pwm = PWM(Pin(pin)); pwm.freq(50);            (MicroPython)
+ *                 servo.Servo(pwm) / servo.ContinuousServo(pwm) (CircuitPython/Adafruit)
+ */
+export interface ASLServoAttach {
+  kind: 'servoAttach';
+  /** Variable name used to reference this servo instance (e.g. "myServo", "dragon"). */
+  varName: string;
+  pin: ASLExpr;
+  /** Optional pulse range in microseconds (default 544–2400 µs). */
+  minPulse?: ASLExpr;
+  maxPulse?: ASLExpr;
+  /** True if this is a continuous-rotation servo (360°). */
+  continuous?: boolean;
+}
+
+/**
+ * Write an angle (or speed for continuous) to a servo.
+ * Corresponds to: myServo.write(angle);            (C++ — degrees 0–180)
+ *                 myServo.writeMicroseconds(us);   (C++ — raw µs)
+ *                 pwm.duty_u16(val);               (MicroPython — raw 0–65535)
+ *                 my_servo.angle = 90;             (CircuitPython — SetMember)
+ *                 my_servo.throttle = 0.5;         (CircuitPython ContinuousServo)
+ *                 srv.set_angle(90);               (micropython_servo_pdm library)
+ */
+export interface ASLServoWrite {
+  kind: 'servoWrite';
+  /** Variable name of the attached servo instance. */
+  varName: string;
+  /** Target angle in degrees (0–180) or speed (-100..100 for continuous). */
+  angle: ASLExpr;
+  /**
+   * If true, 'angle' is already in microseconds (writeMicroseconds) or
+   * raw PWM units (duty_u16) — generators must NOT apply angle→duty conversion.
+   */
+  rawMicroseconds?: boolean;
+}
+
+/**
+ * Detach a servo, releasing the PWM pin.
+ * Corresponds to: myServo.detach();  (C++)
+ *                 pwm.deinit();      (MicroPython)
+ *                 srv.release();     (micropython_servo_pdm)
+ *                 srv.deinit();      (generic)
+ */
+export interface ASLServoDetach {
+  kind: 'servoDetach';
+  varName: string;
 }
