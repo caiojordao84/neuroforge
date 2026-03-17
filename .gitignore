@@ -98,3 +98,9 @@ neuroforge.code-workspace
 .snapshots/readme.md
 .snapshots/sponsors.md
 *.gdoc
+
+# Rust
+target/
+**/*.rs.bk
+Cargo.lock (if you want to track it in binary/app, but for library workspace it depends)
+# For now, let's just track Cargo.lock as it is a workspace and we want reproducible dev env for apps.

@@ -1,0 +1,16 @@
+{
+  "name": "@neuroforge/mobile",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev":   "tauri android dev",
+    "build": "tauri android build"
+  },
+  "dependencies": {
+    "@neuroforge/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "svelte": "^5.0.0"
+  }
+}
