@@ -1,37 +1,28 @@
-//! Generator Python — percorre ProgramNode e emite código MicroPython/Python
+//! Generator Python — percorre AslProgram e emite código MicroPython/Python
 //!
-//! Mapeamento NodeType → código Python:
-//!   Function         → def name(params): body
-//!   IfStatement      → if cond: / elif / else:
-//!   WhileLoop        → while cond:
+//! Mapeamento AslStatement → Python:
+//!   AslFunction      → def name(params): body
+//!   If               → if cond: / else:
+//!   While            → while cond:
 //!   ForIn            → for var in iterable:
-//!   ForLoop          → for init; converte em while equivalente
 //!   DoWhile          → while True: body + if not cond: break
-//!   SwitchStatement  → if/elif chain (Python não tem switch nativo)
 //!   Return           → return [value]
 //!   Break            → break
 //!   Continue         → continue
-//!   Assignment       → left op right
-//!   VarDeclaration   → name = value  (tipos ignorados em Python)
-//!   GpioSet          → pin.value(val)
-//!   GpioRead         → pin.value()
-//!   PinMode          → machine.Pin(pin, mode)
-//!   AnalogWrite      → pwm.duty_u16(val)
-//!   AnalogRead       → adc.read_u16()
-//!   DelayMs          → utime.sleep_ms(ms)
-//!   DelayUs          → utime.sleep_us(us)
-//!   Millis           → utime.ticks_ms()
-//!   SerialBegin      → uart = machine.UART(0, baudrate=baud)
+//!   Assign           → target = value
+//!   Declare          → name = value
+//!   Delay            → utime.sleep_ms(ms)
 //!   Print            → print(val)
-//!   PrintLn          → print(val)
+//!   PinMode          → machine.Pin(pin, mode)
 //!   UartWrite        → uart.write(val)
-//!   UartRead         → uart.read()
 //!   I2cWrite         → i2c.writeto(addr, data)
 //!   I2cRead          → i2c.readfrom(addr, n)
 //!   SpiTransfer      → spi.write(data)
-//!   FunctionCall     → name(args)
+//!   Expr             → expr
 
-use crate::types::nodes::{BaseNode, FunctionNode, NodeType, ProgramNode};
+use crate::types::asl_types::{
+    AslProgram, AslFunction, AslStatement, AslExpr,
+};
 
 pub struct PythonGenerator {
     indent_size: usize,
@@ -44,13 +35,15 @@ impl Default for PythonGenerator {
 impl PythonGenerator {
     pub fn new() -> Self { Self::default() }
 
-    pub fn generate(&self, program: &ProgramNode) -> String {
+    pub fn generate(&self, program: &AslProgram) -> String {
         let mut out = String::new();
         out.push_str("import machine\nimport utime\n\n");
 
         for global in &program.globals {
-            out.push_str(&self.gen_node(global, 0));
-            out.push('\n');
+            out.push_str(&format!("{} = {}\n",
+                global.name,
+                global.initial_value.as_ref().map(|v| v.to_string()).unwrap_or_else(|| "None".to_string())
+            ));
         }
         if !program.globals.is_empty() { out.push('\n'); }
 
@@ -65,7 +58,7 @@ impl PythonGenerator {
         " ".repeat(level * self.indent_size)
     }
 
-    fn gen_function(&self, func: &FunctionNode, level: usize) -> String {
+    fn gen_function(&self, func: &AslFunction, level: usize) -> String {
         let ind = self.indent(level);
         let params: Vec<&str> = func.params.iter().map(|p| p.name.as_str()).collect();
         let mut out = format!("{}def {}({}):\n", ind, func.name, params.join(", "));
@@ -73,174 +66,108 @@ impl PythonGenerator {
             out.push_str(&format!("{}    pass\n", ind));
         } else {
             for stmt in &func.body {
-                out.push_str(&self.gen_node(stmt, level + 1));
+                out.push_str(&self.gen_stmt(stmt, level + 1));
                 out.push('\n');
             }
         }
         out
     }
 
-    fn gen_node(&self, node: &BaseNode, level: usize) -> String {
-        let ind = self.indent(level);
-        match node.node_type {
-            NodeType::GpioSet     => format!("{}{}" , ind, self.gen_gpio_set(node)),
-            NodeType::GpioRead    => format!("{}{}" , ind, self.gen_gpio_read(node)),
-            NodeType::PinMode     => format!("{}{}", ind, self.gen_pin_mode(node)),
-            NodeType::AnalogWrite => format!("{}pwm.duty_u16({})", ind, self.arg(node, 1)),
-            NodeType::AnalogRead  => format!("{}adc.read_u16()", ind),
-            NodeType::DelayMs     => format!("{}utime.sleep_ms({})", ind, self.arg(node, 0)),
-            NodeType::DelayUs     => format!("{}utime.sleep_us({})", ind, self.arg(node, 0)),
-            NodeType::Millis      => format!("{}utime.ticks_ms()", ind),
-            NodeType::Micros      => format!("{}utime.ticks_us()", ind),
-            NodeType::Print | NodeType::PrintLn => format!("{}print({})", ind, self.arg(node, 0)),
-            NodeType::SerialBegin => format!("{}uart = machine.UART(0, baudrate={})", ind, self.arg(node, 0)),
-            NodeType::UartWrite   => format!("{}uart.write({})", ind, self.arg(node, 0)),
-            NodeType::UartRead    => format!("{}uart.read()", ind),
-            NodeType::UartAvailable => format!("{}uart.any()", ind),
-            NodeType::I2cWrite    => format!("{}i2c.writeto({}, {})", ind, self.arg(node, 0), self.arg(node, 1)),
-            NodeType::I2cRead     => format!("{}i2c.readfrom({}, {})", ind, self.arg(node, 0), self.arg(node, 1)),
-            NodeType::SpiTransfer => format!("{}spi.write({})", ind, self.arg(node, 0)),
-            NodeType::IfStatement => self.gen_if(node, level),
-            NodeType::WhileLoop   => self.gen_while(node, level),
-            NodeType::ForIn       => self.gen_for_in(node, level),
-            NodeType::ForLoop     => self.gen_for_as_while(node, level),
-            NodeType::DoWhile     => self.gen_do_while(node, level),
-            NodeType::SwitchStatement => self.gen_switch(node, level),
-            NodeType::Return      => format!("{}return {}", ind, node.value.as_deref().unwrap_or("")),
-            NodeType::Break       => format!("{}break", ind),
-            NodeType::Continue    => format!("{}continue", ind),
-            NodeType::Assignment  => format!("{}{} {} {}", ind,
-                node.name.as_deref().unwrap_or(""),
-                node.operator.as_deref().unwrap_or("="),
-                node.value.as_deref().unwrap_or("")),
-            NodeType::VarDeclaration => format!("{}{} = {}", ind,
-                node.name.as_deref().unwrap_or(""),
-                node.value.as_deref().unwrap_or("None")),
-            NodeType::FunctionCall => format!("{}{}", ind, node.raw.as_deref().unwrap_or("")),
-            NodeType::Tone        => format!("{}# tone({}, {})", ind, self.arg(node, 0), self.arg(node, 1)),
-            NodeType::ServoAttach => format!("{}servo = Servo({})", ind, self.arg(node, 0)),
-            NodeType::ServoWrite  => format!("{}servo.angle({})", ind, self.arg(node, 0)),
-            NodeType::ServoDetach => format!("{}servo.deinit()", ind),
-            _ => format!("{}{}", ind, node.raw.as_deref().unwrap_or("")),
+    fn gen_expr(&self, expr: &AslExpr) -> String {
+        match expr {
+            AslExpr::Literal(l) => l.value.to_string(),
+            AslExpr::Var(v) => v.name.clone(),
+            AslExpr::Binary(b) => format!("({} {} {})", self.gen_expr(&b.left), b.op.to_symbol(), self.gen_expr(&b.right)),
+            AslExpr::Unary(u) => format!("{}{}", u.op.to_symbol(), self.gen_expr(&u.expr)),
+            AslExpr::Call(c) => format!("{}({})", c.callee, c.args.iter().map(|a| self.gen_expr(a)).collect::<Vec<_>>().join(", ")),
+            AslExpr::Member(m) => format!("{}.{}", self.gen_expr(&m.target), m.property),
+            AslExpr::Index(i) => format!("{}[{}]", self.gen_expr(&i.target), self.gen_expr(&i.index)),
+            AslExpr::Array(a) => format!("[{}]", a.elements.iter().map(|e| self.gen_expr(e)).collect::<Vec<_>>().join(", ")),
+            _ => "None".to_string(),
         }
     }
 
-    fn arg(&self, node: &BaseNode, idx: usize) -> String {
-        node.children.get(idx).and_then(|c| c.raw.clone()).unwrap_or_default()
-    }
-
-    fn gen_gpio_set(&self, node: &BaseNode) -> String {
-        let pin = self.arg(node, 0);
-        let val = self.arg(node, 1);
-        format!("pin_{}.value({})", pin, val)
-    }
-
-    fn gen_gpio_read(&self, node: &BaseNode) -> String {
-        let pin = self.arg(node, 0);
-        format!("pin_{}.value()", pin)
-    }
-
-    fn gen_pin_mode(&self, node: &BaseNode) -> String {
-        let pin = self.arg(node, 0);
-        let mode = self.arg(node, 1);
-        let py_mode = match mode.as_str() {
-            "OUTPUT" | "1" => "machine.Pin.OUT",
-            "INPUT"  | "0" => "machine.Pin.IN",
-            "INPUT_PULLUP" => "machine.Pin.IN, machine.Pin.PULL_UP",
-            _ => "machine.Pin.OUT",
-        };
-        format!("pin_{} = machine.Pin({}, {})", pin, pin, py_mode)
-    }
-
-    fn gen_if(&self, node: &BaseNode, level: usize) -> String {
-        let ind = self.indent(level);
-        let cond = node.condition.as_deref().unwrap_or("True");
-        let mut out = format!("{}if {}:\n", ind, cond);
-        for stmt in &node.then_body {
-            out.push_str(&self.gen_node(stmt, level + 1));
-            out.push('\n');
+    fn gen_block(&self, stmts: &[AslStatement], level: usize) -> String {
+        if stmts.is_empty() {
+            return format!("{}pass\n", self.indent(level));
         }
-        if let Some(else_body) = &node.else_body {
-            out.push_str(&format!("{}else:\n", ind));
-            for stmt in else_body {
-                out.push_str(&self.gen_node(stmt, level + 1));
-                out.push('\n');
+        stmts.iter().map(|s| {
+            let mut line = self.gen_stmt(s, level);
+            line.push('\n');
+            line
+        }).collect()
+    }
+
+    fn gen_stmt(&self, stmt: &AslStatement, level: usize) -> String {
+        let ind = self.indent(level);
+        match stmt {
+            AslStatement::Assign(a) =>
+                format!("{}{} = {}", ind, a.target, self.gen_expr(&a.value)),
+            AslStatement::Declare(d) =>
+                format!("{}{} = {}", ind, d.name,
+                    d.value.as_ref().map(|v| self.gen_expr(v)).unwrap_or_else(|| "None".to_string())),
+            AslStatement::If(s) => {
+                let mut out = format!("{}if {}:\n", ind, self.gen_expr(&s.condition));
+                out.push_str(&self.gen_block(&s.then_branch, level + 1));
+                if let Some(eb) = &s.else_branch {
+                    out.push_str(&format!("{}else:\n", ind));
+                    out.push_str(&self.gen_block(eb, level + 1));
+                }
+                out
             }
-        }
-        out
-    }
-
-    fn gen_while(&self, node: &BaseNode, level: usize) -> String {
-        let ind = self.indent(level);
-        let cond = node.condition.as_deref().unwrap_or("True");
-        let mut out = format!("{}while {}:\n", ind, cond);
-        for stmt in &node.body {
-            out.push_str(&self.gen_node(stmt, level + 1));
-            out.push('\n');
-        }
-        out
-    }
-
-    fn gen_for_in(&self, node: &BaseNode, level: usize) -> String {
-        let ind = self.indent(level);
-        let var = node.name.as_deref().unwrap_or("_");
-        let iter = node.value.as_deref().unwrap_or("");
-        let mut out = format!("{}for {} in {}:\n", ind, var, iter);
-        for stmt in &node.body {
-            out.push_str(&self.gen_node(stmt, level + 1));
-            out.push('\n');
-        }
-        out
-    }
-
-    fn gen_for_as_while(&self, node: &BaseNode, level: usize) -> String {
-        let ind = self.indent(level);
-        let init = node.init.as_deref().unwrap_or("");
-        let cond = node.condition.as_deref().unwrap_or("True");
-        let upd  = node.update.as_deref().unwrap_or("");
-        let mut out = format!("{}{}\n", ind, init);
-        out.push_str(&format!("{}while {}:\n", ind, cond));
-        for stmt in &node.body {
-            out.push_str(&self.gen_node(stmt, level + 1));
-            out.push('\n');
-        }
-        if !upd.is_empty() {
-            out.push_str(&format!("{}    {}\n", ind, upd));
-        }
-        out
-    }
-
-    fn gen_do_while(&self, node: &BaseNode, level: usize) -> String {
-        let ind  = self.indent(level);
-        let cond = node.condition.as_deref().unwrap_or("True");
-        let mut out = format!("{}while True:\n", ind);
-        for stmt in &node.body {
-            out.push_str(&self.gen_node(stmt, level + 1));
-            out.push('\n');
-        }
-        out.push_str(&format!("{}    if not ({}):\n{}        break\n", ind, cond, ind));
-        out
-    }
-
-    fn gen_switch(&self, node: &BaseNode, level: usize) -> String {
-        let ind = self.indent(level);
-        let val = node.value.as_deref().unwrap_or("");
-        let mut out = String::new();
-        let mut first = true;
-        for case in &node.cases {
-            if let Some(case_val) = &case.value {
-                let kw = if first { "if" } else { "elif" };
-                out.push_str(&format!("{}{} {} == {}:\n", ind, kw, val, case_val));
-                first = false;
-            } else {
-                out.push_str(&format!("{}else:\n", ind));
+            AslStatement::While(s) => {
+                let mut out = format!("{}while {}:\n", ind, self.gen_expr(&s.condition));
+                out.push_str(&self.gen_block(&s.body, level + 1));
+                out
             }
-            for stmt in &case.body {
-                out.push_str(&self.gen_node(stmt, level + 1));
-                out.push('\n');
+            AslStatement::DoWhile(s) => {
+                let mut out = format!("{}while True:\n", ind);
+                out.push_str(&self.gen_block(&s.body, level + 1));
+                out.push_str(&format!("{}    if not ({}):\n{}        break\n", ind, self.gen_expr(&s.condition), ind));
+                out
             }
+            AslStatement::ForIn(s) => {
+                let mut out = format!("{}for {} in {}:\n", ind, s.var_name, self.gen_expr(&s.iterable));
+                out.push_str(&self.gen_block(&s.body, level + 1));
+                out
+            }
+            AslStatement::Return(r) =>
+                format!("{}return {}", ind, r.value.as_ref().map(|v| self.gen_expr(v)).unwrap_or_default()),
+            AslStatement::Break => format!("{}break", ind),
+            AslStatement::Continue => format!("{}continue", ind),
+            AslStatement::Delay(d) =>
+                format!("{}utime.sleep_ms({})", ind, self.gen_expr(&d.milliseconds)),
+            AslStatement::Print(p) => {
+                let args: Vec<String> = p.args.iter().map(|a| self.gen_expr(a)).collect();
+                format!("{}print({})", ind, args.join(", "))
+            }
+            AslStatement::PinMode(p) => {
+                let mode = match p.mode {
+                    crate::types::asl_types::PinModeKind::Output => "machine.Pin.OUT",
+                    crate::types::asl_types::PinModeKind::Input => "machine.Pin.IN",
+                    crate::types::asl_types::PinModeKind::InputPullup => "machine.Pin.IN, machine.Pin.PULL_UP",
+                };
+                format!("{}{} = machine.Pin({}, {})", ind,
+                    self.gen_expr(&p.pin), self.gen_expr(&p.pin), mode)
+            }
+            AslStatement::SerialBegin(s) =>
+                format!("{}uart = machine.UART(0, baudrate={})", ind, self.gen_expr(&s.baud)),
+            AslStatement::UartWrite(u) =>
+                format!("{}uart.write({})", ind, self.gen_expr(&u.data)),
+            AslStatement::UartRead(_) =>
+                format!("{}uart.read()", ind),
+            AslStatement::I2cWrite(i) =>
+                format!("{}i2c.writeto({}, {})", ind, self.gen_expr(&i.address), self.gen_expr(&i.data)),
+            AslStatement::I2cRead(i) =>
+                format!("{}i2c.readfrom({}, {})", ind, self.gen_expr(&i.address), self.gen_expr(&i.length)),
+            AslStatement::SpiTransfer(s) =>
+                format!("{}spi.write({})", ind, self.gen_expr(&s.tx_data)),
+            AslStatement::Expr(e) =>
+                format!("{}{}", ind, self.gen_expr(&e.expr)),
+            AslStatement::Comment(c) =>
+                format!("{}# {}", ind, c.text),
+            _ => format!("{}# (stmt não suportado)", ind),
         }
-        out
     }
 }
 

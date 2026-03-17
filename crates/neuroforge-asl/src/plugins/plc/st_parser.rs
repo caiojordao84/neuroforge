@@ -1,23 +1,28 @@
-//! Parser Structured Text (IEC 61131-3) via crate `iec61131`
+//! Parser Structured Text (IEC 61131-3) via crate `iec61131` v0.7
 //!
-//! O crate `iec61131` entrega um AST IEC 61131-3 completo (OOP, FB, Program, Function).
-//! Este módulo converte esse AST para o ProgramNode interno do NeuroForge.
-//!
-//! Mapeamento:
-//!   Program / Function_Block → Function
-//!   IF / ELSIF / ELSE        → IfStatement
-//!   FOR / TO / BY / DO       → ForLoop
-//!   WHILE / DO               → WhileLoop
-//!   REPEAT / UNTIL           → DoWhile
-//!   CASE                     → SwitchStatement
-//!   RETURN                   → Return
-//!   EXIT                     → Break
-//!   Assignment (:=)          → Assignment
-//!   FB call (TON, CTU, etc.) → FunctionCall (mapeado para tipo ASL IEC)
+//! Mapeamento (API real do iec61131 v0.7.0):
+//!   Program / FunctionBlock / Function → AslFunction
+//!   IF / ELSIF / ELSE                  → AslStatement::If
+//!   FOR / TO / BY / DO                 → AslStatement::For
+//!   WHILE                              → AslStatement::While
+//!   REPEAT / UNTIL                     → AslStatement::DoWhile
+//!   CASE                               → AslStatement::Switch
+//!   RETURN                             → AslStatement::Return
+//!   EXIT                               → AslStatement::Break
+//!   Assignment (:=)                    → AslStatement::Assign
+//!   FunctionCall                       → AslStatement::Expr
 
-use iec61131::parse;
-use crate::types::nodes::{
-    BaseNode, NodeType, ProgramNode, FunctionNode, ParamNode,
+use crate::types::asl_types::{
+    AslProgram, AslFunction, AslParam, AslStatement, AslExpr, AslMetadata,
+    AslIf, AslWhile, AslDoWhile, AslFor, AslSwitch, AslSwitchCase,
+    AslAssign, AslReturn, AslExpressionStmt, AslType,
+};
+use iec61131::{
+    generated::ast::{
+        Item, ProgramDecl, FunctionBlockDecl, FunctionDecl,
+        Statement, Expression, CaseItem, VarDecl, TypeSpec,
+    },
+    parser::parse,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -31,204 +36,229 @@ pub enum StParseError {
 pub struct StParser;
 
 impl StParser {
-    pub fn parse(source: &str) -> Result<ProgramNode, StParseError> {
+    pub fn parse(source: &str) -> Result<AslProgram, StParseError> {
         if source.trim().is_empty() {
             return Err(StParseError::EmptySource);
         }
 
-        let ast = parse(source)
+        let items = parse(source)
             .map_err(|e| StParseError::ParseError(format!("{:?}", e)))?;
 
         let mut visitor = StVisitor;
-        Ok(visitor.visit_root(ast))
+        Ok(visitor.visit_items(items))
     }
 }
 
 struct StVisitor;
 
 impl StVisitor {
-    fn visit_root(&mut self, ast: iec61131::Ast) -> ProgramNode {
+    fn visit_items(&mut self, items: Vec<Item>) -> AslProgram {
         let mut functions = vec![];
-        let mut globals: Vec<BaseNode> = vec![];
+        let mut globals = vec![];
 
-        for item in ast.items {
+        for item in items {
             match item {
-                iec61131::Item::Program(prog) => {
-                    functions.push(self.visit_program_block(prog));
-                }
-                iec61131::Item::FunctionBlock(fb) => {
-                    functions.push(self.visit_fb_block(fb));
-                }
-                iec61131::Item::Function(func) => {
-                    functions.push(self.visit_function_block(func));
-                }
-                iec61131::Item::GlobalVarDecl(gvl) => {
+                Item::Program(prog) => functions.push(self.visit_program(prog)),
+                Item::FunctionBlock(fb) => functions.push(self.visit_fb(fb)),
+                Item::Function(func) => functions.push(self.visit_function(func)),
+                Item::GlobalVarDecl(gvl) => {
                     for var in gvl.vars {
-                        globals.push(BaseNode::var_decl(
-                            var.var_type.to_string(),
-                            var.name,
-                            var.initial_value.map(|v| format!("{:?}", v)),
-                            0,
-                        ));
+                        globals.push(crate::types::asl_types::AslGlobalVar {
+                            name: var.name.clone(),
+                            r#type: AslType::Int,
+                            initial_value: None,
+                            struct_type: None,
+                            comments: None,
+                        });
                     }
                 }
                 _ => {}
             }
         }
 
-        ProgramNode {
-            node_type: NodeType::Program,
-            functions,
+        AslProgram {
+            asl_version: "4.0.0".to_string(),
+            metadata: AslMetadata {
+                name: None,
+                description: None,
+                version: None,
+                target_board: Some("plc".to_string()),
+            },
+            structs: vec![],
             globals,
-            imports: vec![],
+            functions,
+            tasks: vec![],
         }
     }
 
-    fn visit_program_block(&mut self, prog: iec61131::ProgramDecl) -> FunctionNode {
-        FunctionNode {
-            node_type: NodeType::Function,
+    fn typespec_name(ts: &TypeSpec) -> String {
+        format!("{:?}", ts)
+    }
+
+    fn visit_var_decls(vars: &[VarDecl]) -> Vec<AslParam> {
+        vars.iter().map(|v| AslParam {
+            name: v.name.clone(),
+            r#type: Self::typespec_name(&v.ty),
+        }).collect()
+    }
+
+    fn visit_program(&mut self, prog: ProgramDecl) -> AslFunction {
+        let body = prog.body.into_iter()
+            .flat_map(|s| self.visit_statement(s))
+            .collect();
+        AslFunction {
             name: prog.name,
-            return_type: "VOID".to_string(),
-            params: prog.var_input.into_iter().map(|v| ParamNode {
-                node_type: NodeType::Param,
-                name: v.name,
-                param_type: v.var_type.to_string(),
-            }).collect(),
-            body: prog.body.into_iter()
-                .filter_map(|s| self.visit_statement(s))
-                .collect(),
-            start_line: 0,
-            end_line: 0,
+            return_type: None,
+            params: Self::visit_var_decls(&prog.vars),
+            body,
         }
     }
 
-    fn visit_fb_block(&mut self, fb: iec61131::FunctionBlockDecl) -> FunctionNode {
-        FunctionNode {
-            node_type: NodeType::Function,
+    fn visit_fb(&mut self, fb: FunctionBlockDecl) -> AslFunction {
+        // FunctionBlockDecl has var sections as fields
+        let mut params = vec![];
+        params.extend(Self::visit_var_decls(&fb.inputs));
+        params.extend(Self::visit_var_decls(&fb.outputs));
+        let body = fb.body.into_iter()
+            .flat_map(|s| self.visit_statement(s))
+            .collect();
+        AslFunction {
             name: fb.name,
-            return_type: "VOID".to_string(),
-            params: fb.var_input.into_iter().map(|v| ParamNode {
-                node_type: NodeType::Param,
-                name: v.name,
-                param_type: v.var_type.to_string(),
-            }).collect(),
-            body: fb.body.into_iter()
-                .filter_map(|s| self.visit_statement(s))
-                .collect(),
-            start_line: 0,
-            end_line: 0,
+            return_type: None,
+            params,
+            body,
         }
     }
 
-    fn visit_function_block(&mut self, func: iec61131::FunctionDecl) -> FunctionNode {
-        let ret = func.return_type.map(|t| t.to_string()).unwrap_or_else(|| "VOID".to_string());
-        FunctionNode {
-            node_type: NodeType::Function,
+    fn visit_function(&mut self, func: FunctionDecl) -> AslFunction {
+        let ret = func.return_type.as_ref().map(|t| Self::typespec_name(t));
+        let mut params = vec![];
+        params.extend(Self::visit_var_decls(&func.inputs));
+        params.extend(Self::visit_var_decls(&func.outputs));
+        params.extend(Self::visit_var_decls(&func.in_outs));
+        let body = func.body.into_iter()
+            .flat_map(|s| self.visit_statement(s))
+            .collect();
+        AslFunction {
             name: func.name,
             return_type: ret,
-            params: func.var_input.into_iter().map(|v| ParamNode {
-                node_type: NodeType::Param,
-                name: v.name,
-                param_type: v.var_type.to_string(),
-            }).collect(),
-            body: func.body.into_iter()
-                .filter_map(|s| self.visit_statement(s))
-                .collect(),
-            start_line: 0,
-            end_line: 0,
+            params,
+            body,
         }
     }
 
-    fn visit_statement(&mut self, stmt: iec61131::Statement) -> Option<BaseNode> {
-        use iec61131::Statement as S;
+    fn expr_to_string(e: &Expression) -> String {
+        format!("{:?}", e)
+    }
+
+    fn visit_statement(&mut self, stmt: Statement) -> Vec<AslStatement> {
         match stmt {
-            S::Assignment { variable, expression } => {
-                Some(BaseNode::assignment(
-                    format!("{:?}", variable),
-                    ":=".to_string(),
-                    format!("{:?}", expression),
-                    0,
-                ))
+            Statement::Assignment { target, value, .. } => {
+                vec![AslStatement::Assign(AslAssign {
+                    target: Self::expr_to_string(&target),
+                    value: AslExpr::var(&Self::expr_to_string(&value)),
+                })]
             }
-            S::If { condition, then_stmts, elsif_stmts, else_stmts } => {
-                let cond_str = format!("{:?}", condition);
-                let then_body: Vec<BaseNode> = then_stmts.into_iter()
-                    .filter_map(|s| self.visit_statement(s)).collect();
-                let else_body: Option<Vec<BaseNode>> = if let Some(stmts) = else_stmts {
-                    let body: Vec<BaseNode> = stmts.into_iter()
-                        .filter_map(|s| self.visit_statement(s)).collect();
-                    if body.is_empty() { None } else { Some(body) }
-                } else if !elsif_stmts.is_empty() {
-                    let body: Vec<BaseNode> = elsif_stmts.into_iter()
-                        .filter_map(|(_, stmts)| {
-                            Some(BaseNode::leaf(NodeType::IfStatement))
-                        }).collect();
-                    Some(body)
+            Statement::If { condition, then_body, elsif_parts, else_body, .. } => {
+                let cond_expr = AslExpr::var(&Self::expr_to_string(&condition));
+                let then_branch: Vec<AslStatement> = then_body.into_iter()
+                    .flat_map(|s| self.visit_statement(s)).collect();
+                // elsif_parts como else encadeado
+                let else_branch: Option<Vec<AslStatement>> = if !elsif_parts.is_empty() {
+                    let mut chain: Vec<AslStatement> = elsif_parts.into_iter().map(|(cond, body)| {
+                        let body_stmts: Vec<AslStatement> = body.into_iter()
+                            .flat_map(|s| self.visit_statement(s)).collect();
+                        AslStatement::If(Box::new(AslIf {
+                            condition: AslExpr::var(&Self::expr_to_string(&cond)),
+                            then_branch: body_stmts,
+                            else_branch: None,
+                        }))
+                    }).collect();
+                    if let Some(eb) = else_body {
+                        let eb_stmts: Vec<AslStatement> = eb.into_iter()
+                            .flat_map(|s| self.visit_statement(s)).collect();
+                        chain.extend(eb_stmts);
+                    }
+                    Some(chain)
+                } else if let Some(eb) = else_body {
+                    let eb_stmts: Vec<AslStatement> = eb.into_iter()
+                        .flat_map(|s| self.visit_statement(s)).collect();
+                    if eb_stmts.is_empty() { None } else { Some(eb_stmts) }
                 } else {
                     None
                 };
-                Some(BaseNode::if_stmt(cond_str, then_body, else_body, 0))
+                vec![AslStatement::If(Box::new(AslIf { condition: cond_expr, then_branch, else_branch }))]
             }
-            S::For { variable, from, to, by, body } => {
-                let init = format!("{} := {:?}", format!("{:?}", variable), from);
-                let cond = format!("{} <= {:?}", format!("{:?}", variable), to);
-                let upd  = format!("{} := {} + {:?}", format!("{:?}", variable), format!("{:?}", variable), by.unwrap_or(iec61131::Expression::Literal(iec61131::Literal::Int(1))));
-                let stmts: Vec<BaseNode> = body.into_iter()
-                    .filter_map(|s| self.visit_statement(s)).collect();
-                Some(BaseNode::for_loop(init, cond, upd, stmts, 0))
+            Statement::For { control_var, start, end, step, body, .. } => {
+                let init_str = format!("{} := {}", control_var, Self::expr_to_string(&start));
+                let cond_str = format!("{} <= {}", control_var, Self::expr_to_string(&end));
+                let upd_str  = step.as_ref()
+                    .map(|s| format!("{} := {} + {}", control_var, control_var, Self::expr_to_string(s)))
+                    .unwrap_or_else(|| format!("{} := {} + 1", control_var, control_var));
+                let body_stmts: Vec<AslStatement> = body.into_iter()
+                    .flat_map(|s| self.visit_statement(s)).collect();
+                let mut init_stmts = vec![
+                    AslStatement::Assign(AslAssign {
+                        target: control_var.clone(),
+                        value: AslExpr::var(&Self::expr_to_string(&start)),
+                    })
+                ];
+                // Represent as While with manual update
+                let mut while_body = body_stmts;
+                while_body.push(AslStatement::Assign(AslAssign {
+                    target: control_var.clone(),
+                    value: AslExpr::var(&upd_str),
+                }));
+                let mut result = init_stmts;
+                result.push(AslStatement::While(Box::new(AslWhile {
+                    condition: AslExpr::var(&cond_str),
+                    body: while_body,
+                })));
+                result
             }
-            S::While { condition, body } => {
-                let cond = format!("{:?}", condition);
-                let stmts: Vec<BaseNode> = body.into_iter()
-                    .filter_map(|s| self.visit_statement(s)).collect();
-                Some(BaseNode::while_loop(cond, stmts, 0))
+            Statement::While { condition, body, .. } => {
+                let cond_expr = AslExpr::var(&Self::expr_to_string(&condition));
+                let body_stmts: Vec<AslStatement> = body.into_iter()
+                    .flat_map(|s| self.visit_statement(s)).collect();
+                vec![AslStatement::While(Box::new(AslWhile { condition: cond_expr, body: body_stmts }))]
             }
-            S::Repeat { body, condition } => {
-                let cond = format!("{:?}", condition);
-                let stmts: Vec<BaseNode> = body.into_iter()
-                    .filter_map(|s| self.visit_statement(s)).collect();
-                Some(BaseNode::do_while(stmts, cond, 0))
+            Statement::Repeat { body, condition, .. } => {
+                let cond_expr = AslExpr::var(&Self::expr_to_string(&condition));
+                let body_stmts: Vec<AslStatement> = body.into_iter()
+                    .flat_map(|s| self.visit_statement(s)).collect();
+                vec![AslStatement::DoWhile(Box::new(AslDoWhile { condition: cond_expr, body: body_stmts }))]
             }
-            S::Case { expression, cases, else_stmts } => {
-                let val = format!("{:?}", expression);
-                let mut case_nodes: Vec<BaseNode> = cases.into_iter().map(|(vals, stmts)| {
-                    let body: Vec<BaseNode> = stmts.into_iter()
-                        .filter_map(|s| self.visit_statement(s)).collect();
-                    let case_val = vals.first().map(|v| format!("{:?}", v));
-                    BaseNode::case(case_val, body, 0)
+            Statement::Case { selector, cases, else_body, .. } => {
+                let discriminant = AslExpr::var(&Self::expr_to_string(&selector));
+                let mut case_list: Vec<AslSwitchCase> = cases.into_iter().map(|ci: CaseItem| {
+                    let body: Vec<AslStatement> = ci.body.into_iter()
+                        .flat_map(|s| self.visit_statement(s)).collect();
+                    let test = ci.values.first().map(|v| AslExpr::var(&format!("{:?}", v)));
+                    AslSwitchCase { test, body }
                 }).collect();
-                if let Some(stmts) = else_stmts {
-                    let else_body: Vec<BaseNode> = stmts.into_iter()
-                        .filter_map(|s| self.visit_statement(s)).collect();
-                    case_nodes.push(BaseNode::case(None, else_body, 0));
+                if let Some(eb) = else_body {
+                    let eb_stmts: Vec<AslStatement> = eb.into_iter()
+                        .flat_map(|s| self.visit_statement(s)).collect();
+                    case_list.push(AslSwitchCase { test: None, body: eb_stmts });
                 }
-                Some(BaseNode::switch(val, case_nodes, 0))
+                vec![AslStatement::Switch(Box::new(AslSwitch { discriminant, cases: case_list }))]
             }
-            S::Return => Some(BaseNode::return_stmt(None, 0)),
-            S::Exit   => Some(BaseNode::leaf(NodeType::Break)),
-            S::FunctionCall { name, params } => {
-                let args: Vec<BaseNode> = params.into_iter()
-                    .map(|p| BaseNode::raw(format!("{:?}", p)))
+            Statement::Return { .. } =>
+                vec![AslStatement::Return(AslReturn { value: None })],
+            Statement::Exit { .. } =>
+                vec![AslStatement::Break],
+            Statement::FunctionCall { name, arguments, .. } => {
+                let args: Vec<AslExpr> = arguments.into_iter()
+                    .map(|a| AslExpr::var(&format!("{:?}", a)))
                     .collect();
-                let node_type = Self::map_fb_call(&name);
-                Some(BaseNode::hw(node_type, args, 0))
+                vec![AslStatement::Expr(AslExpressionStmt {
+                    expr: AslExpr::Call(Box::new(crate::types::asl_types::AslCall {
+                        callee: name,
+                        args,
+                    })),
+                })]
             }
-            _ => None,
-        }
-    }
-
-    fn map_fb_call(name: &str) -> NodeType {
-        match name.to_uppercase().as_str() {
-            "TON"  => NodeType::TimerTON,
-            "TOF"  => NodeType::TimerTOF,
-            "TP"   => NodeType::TimerTP,
-            "CTU"  => NodeType::CounterCTU,
-            "CTD"  => NodeType::CounterCTD,
-            "SR"   => NodeType::LatchSR,
-            "RS"   => NodeType::LatchRS,
-            "R_TRIG" => NodeType::TrigR,
-            "F_TRIG" => NodeType::TrigF,
-            _ => NodeType::FunctionCall,
+            _ => vec![],
         }
     }
 }
@@ -241,14 +271,11 @@ mod tests {
     fn parse_st_program() {
         let src = r#"
 PROGRAM Main
-  VAR_INPUT
-    Start : BOOL;
-  END_VAR
   VAR
     Motor : BOOL := FALSE;
   END_VAR
-  IF Start THEN
-    Motor := TRUE;
+  IF Motor THEN
+    Motor := FALSE;
   END_IF;
 END_PROGRAM
 "#;
