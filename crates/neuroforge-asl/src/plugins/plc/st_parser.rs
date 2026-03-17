@@ -5,7 +5,7 @@
 //!   FunctionBlockDecl  { name, extends, implements, is_final, is_abstract, ... body: Option<Vec<Statement>> }
 //!   FunctionDecl       { name, return_type, inputs, outputs, in_outs, body, ... }
 //!   Statement::Assignment { target: Variable, value: Expression }
-//!   CaseItem           { values: Vec<Argument>, body: Vec<Statement> } (struct, não tupla)
+//!   Statement::Case.cases  → Vec de item interno com .values e .body (CaseItem não é pub)
 
 #![allow(unused_imports)]
 
@@ -24,7 +24,6 @@ use iec61131::{
     Argument,
     StatementList,
     Variable,
-    CaseItem,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -57,9 +56,9 @@ impl StVisitor {
         let mut functions = vec![];
         for decl in decls {
             match decl {
-                PouDeclaration::Program(prog)       => functions.push(self.visit_program(prog)),
-                PouDeclaration::FunctionBlock(fb)   => functions.push(self.visit_fb(fb)),
-                PouDeclaration::Function(func)      => functions.push(self.visit_function(func)),
+                PouDeclaration::Program(prog)     => functions.push(self.visit_program(prog)),
+                PouDeclaration::FunctionBlock(fb) => functions.push(self.visit_fb(fb)),
+                PouDeclaration::Function(func)    => functions.push(self.visit_function(func)),
                 _ => {}
             }
         }
@@ -83,30 +82,26 @@ impl StVisitor {
         }).collect()
     }
 
-    // ProgramDecl: { name, vars, body, span }
     fn visit_program(&mut self, prog: iec61131::ProgramDecl) -> AslFunction {
         let params = Self::vars_to_params(&prog.vars);
         let body   = self.visit_stmts(prog.body);
         AslFunction { name: prog.name, return_type: None, params, body }
     }
 
-    // FunctionBlockDecl: body e' Option<Vec<Statement>>
     fn visit_fb(&mut self, fb: iec61131::FunctionBlockDecl) -> AslFunction {
-        // FunctionBlockDecl nao tem var_input/var_output directo — usa vars se existir
         let params: Vec<AslParam> = vec![];
         let body = self.visit_stmts(fb.body.unwrap_or_default());
         AslFunction { name: fb.name, return_type: None, params, body }
     }
 
-    // FunctionDecl: { name, return_type, inputs, outputs, in_outs, body, ... }
     fn visit_function(&mut self, func: iec61131::FunctionDecl) -> AslFunction {
         let mut params = vec![];
         params.extend(Self::vars_to_params(&func.inputs));
         params.extend(Self::vars_to_params(&func.outputs));
         params.extend(Self::vars_to_params(&func.in_outs));
         let body = self.visit_stmts(func.body);
-        // return_type e' Option<AslType> — mapear de TypeSpec
-        let return_type = func.return_type.map(|_| AslType::Any);
+        // AslType::Any não existe — usar Int como fallback para return_type desconhecido
+        let return_type = func.return_type.map(|_| AslType::Int);
         AslFunction { name: func.name, return_type, params, body }
     }
 
@@ -119,7 +114,6 @@ impl StVisitor {
 
     fn visit_stmt(&mut self, stmt: Statement) -> Vec<AslStatement> {
         match stmt {
-            // target e' Variable, não Expression
             Statement::Assignment { target, value, .. } => {
                 vec![AslStatement::Assign(AslAssign {
                     target: Self::var_str(&target),
@@ -196,10 +190,10 @@ impl StVisitor {
             }
             Statement::Case { selector, cases, else_body, .. } => {
                 let discriminant = AslExpr::var(&Self::expr_str(&selector));
-                // CaseItem e' um struct com .values e .body
+                // CaseItem não é pub — iterar sem anotar o tipo; aceder .values e .body
                 let mut case_list: Vec<AslSwitchCase> = cases
                     .into_iter()
-                    .map(|ci: CaseItem| {
+                    .map(|ci| {
                         let body_stmts = self.visit_stmts(ci.body);
                         let test = ci.values.first()
                             .map(|v| AslExpr::var(&format!("{:?}", v)));
