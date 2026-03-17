@@ -1,27 +1,27 @@
 //! Parser Python via tree-sitter-python
 //!
-//! Mapeamento node.kind() → AslStatement (subset principal):
-//!   "module"                   → raiz (AslProgram)
-//!   "function_definition"      → AslFunction
-//!   "if_statement"             → AslStatement::If
-//!   "for_statement"            → AslStatement::ForIn
-//!   "while_statement"          → AslStatement::While
-//!   "return_statement"         → AslStatement::Return
-//!   "break_statement"          → AslStatement::Break
-//!   "continue_statement"       → AslStatement::Continue
-//!   "assignment"               → AslStatement::Assign
+//! Mapeamento node.kind() → AslStatement:
+//!   "module"              → AslProgram
+//!   "function_definition" → AslFunction
+//!   "if_statement"        → AslStatement::If
+//!   "for_statement"       → AslStatement::ForIn
+//!   "while_statement"     → AslStatement::While
+//!   "return_statement"    → AslStatement::Return
+//!   "break_statement"     → AslStatement::Break
+//!   "continue_statement"  → AslStatement::Continue
+//!   "assignment"          → AslStatement::Assign
 //!   "call":
-//!     "machine.Pin"            → AslStatement::PinMode
-//!     "utime.sleep_ms"         → AslStatement::Delay
-//!     "uart.write"             → AslStatement::UartWrite
-//!     "i2c.writeto"            → AslStatement::I2cWrite
-//!     "print"                  → AslStatement::Print
-//!     else                     → AslStatement::Expr
+//!     "machine.Pin"       → AslStatement::PinMode
+//!     "utime.sleep_ms"    → AslStatement::Delay
+//!     "uart.write"        → AslStatement::UartWrite
+//!     "i2c.writeto"       → AslStatement::I2cWrite
+//!     "print"             → AslStatement::Print
+//!     else                → AslStatement::Expr
 
 use tree_sitter::{Node, Parser, Tree};
 use crate::types::asl_types::{
     AslProgram, AslFunction, AslParam, AslStatement, AslExpr, AslMetadata,
-    AslIf, AslWhile, AslForIn, AslAssign, AslDeclare, AslType,
+    AslIf, AslWhile, AslForIn, AslAssign,
     AslPrint, AslDelay, AslPinMode, PinModeKind, AslReturn,
     AslUartWrite, AslI2cWrite, AslI2cRead, AslSpiTransfer,
     AslExpressionStmt,
@@ -74,7 +74,7 @@ impl<'src> PythonVisitor<'src> {
 
     fn visit_module(&mut self, root: Node) -> AslProgram {
         let mut functions = vec![];
-        let mut tasks = vec![];
+        let tasks = vec![];
         let mut globals = vec![];
 
         let mut cursor = root.walk();
@@ -133,12 +133,7 @@ impl<'src> PythonVisitor<'src> {
             .map(|b| self.visit_block(b))
             .unwrap_or_default();
 
-        AslFunction {
-            name,
-            params,
-            body,
-            return_type: None,
-        }
+        AslFunction { name, params, body, return_type: None }
     }
 
     fn visit_params(&self, node: Node) -> Vec<AslParam> {
@@ -190,8 +185,7 @@ impl<'src> PythonVisitor<'src> {
             }
             "break_statement" => vec![AslStatement::Break],
             "continue_statement" => vec![AslStatement::Continue],
-            "assignment" => vec![self.visit_assignment(node)],
-            "augmented_assignment" => vec![self.visit_assignment(node)],
+            "assignment" | "augmented_assignment" => vec![self.visit_assignment(node)],
             _ => vec![],
         }
     }
