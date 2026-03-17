@@ -5,7 +5,7 @@
 //!   FunctionBlockDecl  { name, extends, implements, is_final, is_abstract, ... body: Option<Vec<Statement>> }
 //!   FunctionDecl       { name, return_type, inputs, outputs, in_outs, body, ... }
 //!   Statement::Assignment { target: Variable, value: Expression }
-//!   Statement::Case.cases  → Vec de item interno com .values e .body (CaseItem não é pub)
+//!   CaseItem           { selectors, body }  (NÃO .values)
 
 #![allow(unused_imports)]
 
@@ -100,7 +100,6 @@ impl StVisitor {
         params.extend(Self::vars_to_params(&func.outputs));
         params.extend(Self::vars_to_params(&func.in_outs));
         let body = self.visit_stmts(func.body);
-        // AslType::Any não existe — usar Int como fallback para return_type desconhecido
         let return_type = func.return_type.map(|_| AslType::Int);
         AslFunction { name: func.name, return_type, params, body }
     }
@@ -190,12 +189,12 @@ impl StVisitor {
             }
             Statement::Case { selector, cases, else_body, .. } => {
                 let discriminant = AslExpr::var(&Self::expr_str(&selector));
-                // CaseItem não é pub — iterar sem anotar o tipo; aceder .values e .body
+                // CaseItem: campos reais sao .selectors e .body
                 let mut case_list: Vec<AslSwitchCase> = cases
                     .into_iter()
                     .map(|ci| {
                         let body_stmts = self.visit_stmts(ci.body);
-                        let test = ci.values.first()
+                        let test = ci.selectors.first()
                             .map(|v| AslExpr::var(&format!("{:?}", v)));
                         AslSwitchCase { test, body: body_stmts }
                     })
