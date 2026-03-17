@@ -60,7 +60,6 @@ pub enum CParseError {
 pub struct CParser;
 
 impl CParser {
-    /// Tenta parsear como sketch Arduino; se o CST tiver erros tenta C++ genérico.
     pub fn parse(source: &str) -> Result<ProgramNode, CParseError> {
         match Self::parse_with_arduino(source) {
             Ok(prog) => Ok(prog),
@@ -88,13 +87,11 @@ impl CParser {
         let tree: Tree = parser
             .parse(source, None)
             .ok_or(CParseError::ParseFailed)?;
-
         let root = tree.root_node();
         if root.has_error() {
             let pos = root.start_position();
             return Err(CParseError::SyntaxError(pos.row + 1, pos.column + 1));
         }
-
         let mut visitor = CVisitor::new(source);
         visitor.visit_program(root)
     }
@@ -107,9 +104,7 @@ struct CVisitor<'src> {
 }
 
 impl<'src> CVisitor<'src> {
-    fn new(source: &'src str) -> Self {
-        Self { source }
-    }
+    fn new(source: &'src str) -> Self { Self { source } }
 
     fn text(&self, node: Node) -> &str {
         node.utf8_text(self.source.as_bytes()).unwrap_or("")
@@ -118,27 +113,15 @@ impl<'src> CVisitor<'src> {
     fn visit_program(&mut self, root: Node) -> Result<ProgramNode, CParseError> {
         let mut functions = vec![];
         let mut globals: Vec<BaseNode> = vec![];
-
         let mut cursor = root.walk();
         for child in root.children(&mut cursor) {
             match child.kind() {
-                "function_definition" => {
-                    functions.push(self.visit_function(child));
-                }
-                "declaration" => {
-                    globals.push(self.visit_declaration(child));
-                }
-                "comment" | "preproc_include" | "preproc_def" => {}
+                "function_definition" => functions.push(self.visit_function(child)),
+                "declaration"        => globals.push(self.visit_declaration(child)),
                 _ => {}
             }
         }
-
-        Ok(ProgramNode {
-            node_type: NodeType::Program,
-            functions,
-            globals,
-            imports: vec![],
-        })
+        Ok(ProgramNode { node_type: NodeType::Program, functions, globals, imports: vec![] })
     }
 
     fn visit_function(&mut self, node: Node) -> FunctionNode {
@@ -147,31 +130,24 @@ impl<'src> CVisitor<'src> {
             .and_then(|d| d.child_by_field_name("declarator"))
             .map(|n| self.text(n).to_string())
             .unwrap_or_default();
-
         let return_type = node
             .child_by_field_name("type")
             .map(|t| self.text(t).to_string())
             .unwrap_or_else(|| "void".to_string());
-
         let params = node
             .child_by_field_name("declarator")
             .and_then(|d| d.child_by_field_name("parameters"))
             .map(|p| self.visit_params(p))
             .unwrap_or_default();
-
         let body = node
             .child_by_field_name("body")
             .map(|b| self.visit_block(b))
             .unwrap_or_default();
-
         FunctionNode {
             node_type: NodeType::Function,
-            name,
-            return_type,
-            params,
-            body,
+            name, return_type, params, body,
             start_line: node.start_position().row + 1,
-            end_line: node.end_position().row + 1,
+            end_line:   node.end_position().row + 1,
         }
     }
 
@@ -180,19 +156,9 @@ impl<'src> CVisitor<'src> {
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
             if child.kind() == "parameter_declaration" {
-                let type_name = child
-                    .child_by_field_name("type")
-                    .map(|t| self.text(t).to_string())
-                    .unwrap_or_default();
-                let param_name = child
-                    .child_by_field_name("declarator")
-                    .map(|d| self.text(d).to_string())
-                    .unwrap_or_default();
-                params.push(ParamNode {
-                    node_type: NodeType::Param,
-                    name: param_name,
-                    param_type: type_name,
-                });
+                let type_name  = child.child_by_field_name("type").map(|t| self.text(t).to_string()).unwrap_or_default();
+                let param_name = child.child_by_field_name("declarator").map(|d| self.text(d).to_string()).unwrap_or_default();
+                params.push(ParamNode { node_type: NodeType::Param, name: param_name, param_type: type_name });
             }
         }
         params
@@ -202,47 +168,43 @@ impl<'src> CVisitor<'src> {
         let mut stmts = vec![];
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
-            if let Some(stmt) = self.visit_statement(child) {
-                stmts.push(stmt);
-            }
+            if let Some(s) = self.visit_statement(child) { stmts.push(s); }
         }
         stmts
     }
 
     fn visit_statement(&mut self, node: Node) -> Option<BaseNode> {
         match node.kind() {
-            "expression_statement" => {
-                let inner = node.named_child(0)?;
-                self.visit_expr(inner)
-            }
-            "if_statement"     => Some(self.visit_if(node)),
-            "for_statement"    => Some(self.visit_for(node)),
-            "while_statement"  => Some(self.visit_while(node)),
-            "do_statement"     => Some(self.visit_do_while(node)),
-            "switch_statement" => Some(self.visit_switch(node)),
-            "return_statement" => Some(self.visit_return(node)),
-            "break_statement"  => Some(BaseNode::leaf(NodeType::Break)),
+            "expression_statement" => { let inner = node.named_child(0)?; self.visit_expr(inner) }
+            "if_statement"       => Some(self.visit_if(node)),
+            "for_statement"      => Some(self.visit_for(node)),
+            "while_statement"    => Some(self.visit_while(node)),
+            "do_statement"       => Some(self.visit_do_while(node)),
+            "switch_statement"   => Some(self.visit_switch(node)),
+            "return_statement"   => Some(self.visit_return(node)),
+            "break_statement"    => Some(BaseNode::leaf(NodeType::Break)),
             "continue_statement" => Some(BaseNode::leaf(NodeType::Continue)),
-            "declaration"      => Some(self.visit_declaration(node)),
-            "comment"          => None,
-            _                  => None,
+            "declaration"        => Some(self.visit_declaration(node)),
+            _                    => None,
         }
     }
 
     fn visit_expr(&mut self, node: Node) -> Option<BaseNode> {
         match node.kind() {
-            "call_expression" => Some(self.visit_call(node)),
+            "call_expression"       => Some(self.visit_call(node)),
             "assignment_expression" => Some(self.visit_assignment(node)),
-            "update_expression" => Some(self.visit_update(node)),
-            _ => Some(BaseNode::raw(self.text(node))),
+            "update_expression"     => Some(self.visit_update(node)),
+            _                       => Some(BaseNode::raw(self.text(node))),
         }
     }
 
     fn visit_call(&mut self, node: Node) -> BaseNode {
-        let callee = node
+        // Extrair callee como String owned ANTES de chamar collect_args,
+        // para evitar E0500 (dois borrows de &self em closures encadeadas).
+        let callee: String = node
             .child_by_field_name("function")
-            .map(|f| self.text(f))
-            .unwrap_or("");
+            .map(|f| self.text(f).to_string())
+            .unwrap_or_default();
 
         let args = node
             .child_by_field_name("arguments")
@@ -251,37 +213,37 @@ impl<'src> CVisitor<'src> {
 
         let line = node.start_position().row + 1;
 
-        match callee {
-            "digitalWrite"        => BaseNode::hw(NodeType::GpioSet,    args, line),
-            "digitalRead"         => BaseNode::hw(NodeType::GpioRead,   args, line),
-            "analogWrite"         => BaseNode::hw(NodeType::AnalogWrite, args, line),
-            "analogRead"          => BaseNode::hw(NodeType::AnalogRead,  args, line),
-            "pinMode"             => BaseNode::hw(NodeType::PinMode,     args, line),
-            "delay"               => BaseNode::hw(NodeType::DelayMs,     args, line),
-            "delayMicroseconds"   => BaseNode::hw(NodeType::DelayUs,     args, line),
-            "millis"              => BaseNode::hw(NodeType::Millis,      args, line),
-            "micros"              => BaseNode::hw(NodeType::Micros,      args, line),
-            "tone"                => BaseNode::hw(NodeType::Tone,        args, line),
-            "noTone"              => BaseNode::hw(NodeType::NoTone,      args, line),
-            "Serial.begin"        => BaseNode::hw(NodeType::SerialBegin, args, line),
-            "Serial.print"        => BaseNode::hw(NodeType::Print,       args, line),
-            "Serial.println"      => BaseNode::hw(NodeType::PrintLn,     args, line),
-            "Serial.read"         => BaseNode::hw(NodeType::UartRead,    args, line),
-            "Serial.available"    => BaseNode::hw(NodeType::UartAvailable, args, line),
-            "Serial.write"        => BaseNode::hw(NodeType::UartWrite,   args, line),
-            "Wire.begin"          => BaseNode::hw(NodeType::I2cBegin,    args, line),
-            "Wire.requestFrom"    => BaseNode::hw(NodeType::I2cRequestFrom, args, line),
+        match callee.as_str() {
+            "digitalWrite"           => BaseNode::hw(NodeType::GpioSet,              args, line),
+            "digitalRead"            => BaseNode::hw(NodeType::GpioRead,             args, line),
+            "analogWrite"            => BaseNode::hw(NodeType::AnalogWrite,          args, line),
+            "analogRead"             => BaseNode::hw(NodeType::AnalogRead,           args, line),
+            "pinMode"                => BaseNode::hw(NodeType::PinMode,              args, line),
+            "delay"                  => BaseNode::hw(NodeType::DelayMs,              args, line),
+            "delayMicroseconds"      => BaseNode::hw(NodeType::DelayUs,              args, line),
+            "millis"                 => BaseNode::hw(NodeType::Millis,               args, line),
+            "micros"                 => BaseNode::hw(NodeType::Micros,               args, line),
+            "tone"                   => BaseNode::hw(NodeType::Tone,                 args, line),
+            "noTone"                 => BaseNode::hw(NodeType::NoTone,               args, line),
+            "Serial.begin"           => BaseNode::hw(NodeType::SerialBegin,          args, line),
+            "Serial.print"           => BaseNode::hw(NodeType::Print,                args, line),
+            "Serial.println"         => BaseNode::hw(NodeType::PrintLn,              args, line),
+            "Serial.read"            => BaseNode::hw(NodeType::UartRead,             args, line),
+            "Serial.available"       => BaseNode::hw(NodeType::UartAvailable,        args, line),
+            "Serial.write"           => BaseNode::hw(NodeType::UartWrite,            args, line),
+            "Wire.begin"             => BaseNode::hw(NodeType::I2cBegin,             args, line),
+            "Wire.requestFrom"       => BaseNode::hw(NodeType::I2cRequestFrom,       args, line),
             "Wire.beginTransmission" => BaseNode::hw(NodeType::I2cBeginTransmission, args, line),
-            "Wire.endTransmission"   => BaseNode::hw(NodeType::I2cEndTransmission, args, line),
-            "Wire.write"          => BaseNode::hw(NodeType::I2cWrite,    args, line),
-            "Wire.read"           => BaseNode::hw(NodeType::I2cRead,     args, line),
-            "SPI.begin"           => BaseNode::hw(NodeType::SpiBegin,    args, line),
-            "SPI.transfer"        => BaseNode::hw(NodeType::SpiTransfer, args, line),
-            "SPI.end"             => BaseNode::hw(NodeType::SpiEnd,      args, line),
+            "Wire.endTransmission"   => BaseNode::hw(NodeType::I2cEndTransmission,   args, line),
+            "Wire.write"             => BaseNode::hw(NodeType::I2cWrite,             args, line),
+            "Wire.read"              => BaseNode::hw(NodeType::I2cRead,              args, line),
+            "SPI.begin"              => BaseNode::hw(NodeType::SpiBegin,             args, line),
+            "SPI.transfer"           => BaseNode::hw(NodeType::SpiTransfer,          args, line),
+            "SPI.end"                => BaseNode::hw(NodeType::SpiEnd,               args, line),
             c if c.ends_with(".attach") => BaseNode::hw(NodeType::ServoAttach, args, line),
             c if c.ends_with(".write")  => BaseNode::hw(NodeType::ServoWrite,  args, line),
             c if c.ends_with(".detach") => BaseNode::hw(NodeType::ServoDetach, args, line),
-            _ => BaseNode::call(callee, args, line),
+            _                           => BaseNode::call(&callee, args, line),
         }
     }
 
@@ -303,30 +265,27 @@ impl<'src> CVisitor<'src> {
         BaseNode::assignment(left, op, right, node.start_position().row + 1)
     }
 
-    fn visit_update(&self, node: Node) -> BaseNode {
-        BaseNode::raw(self.text(node))
-    }
+    fn visit_update(&self, node: Node) -> BaseNode { BaseNode::raw(self.text(node)) }
 
     fn visit_declaration(&mut self, node: Node) -> BaseNode {
-        let type_name = node.child_by_field_name("type").map(|t| self.text(t).to_string()).unwrap_or_default();
-        let declarator = node.child_by_field_name("declarator");
-        let name  = declarator.map(|d| self.text(d).to_string()).unwrap_or_default();
-        let value = node.child_by_field_name("value").map(|v| self.text(v).to_string());
+        let type_name  = node.child_by_field_name("type").map(|t| self.text(t).to_string()).unwrap_or_default();
+        let name       = node.child_by_field_name("declarator").map(|d| self.text(d).to_string()).unwrap_or_default();
+        let value      = node.child_by_field_name("value").map(|v| self.text(v).to_string());
         BaseNode::var_decl(type_name, name, value, node.start_position().row + 1)
     }
 
     fn visit_if(&mut self, node: Node) -> BaseNode {
-        let cond = node.child_by_field_name("condition").map(|c| self.text(c).to_string()).unwrap_or_default();
+        let cond      = node.child_by_field_name("condition").map(|c| self.text(c).to_string()).unwrap_or_default();
         let then_body = node.child_by_field_name("consequence").map(|b| self.visit_block(b)).unwrap_or_default();
         let else_body = node.child_by_field_name("alternative").map(|b| self.visit_block(b));
         BaseNode::if_stmt(cond, then_body, else_body, node.start_position().row + 1)
     }
 
     fn visit_for(&mut self, node: Node) -> BaseNode {
-        let init  = node.child_by_field_name("initializer").map(|n| self.text(n).to_string()).unwrap_or_default();
-        let cond  = node.child_by_field_name("condition").map(|n| self.text(n).to_string()).unwrap_or_default();
-        let upd   = node.child_by_field_name("update").map(|n| self.text(n).to_string()).unwrap_or_default();
-        let body  = node.child_by_field_name("body").map(|b| self.visit_block(b)).unwrap_or_default();
+        let init = node.child_by_field_name("initializer").map(|n| self.text(n).to_string()).unwrap_or_default();
+        let cond = node.child_by_field_name("condition").map(|n| self.text(n).to_string()).unwrap_or_default();
+        let upd  = node.child_by_field_name("update").map(|n| self.text(n).to_string()).unwrap_or_default();
+        let body = node.child_by_field_name("body").map(|b| self.visit_block(b)).unwrap_or_default();
         BaseNode::for_loop(init, cond, upd, body, node.start_position().row + 1)
     }
 
@@ -349,9 +308,7 @@ impl<'src> CVisitor<'src> {
             let mut cursor = body.walk();
             for child in body.children(&mut cursor) {
                 match child.kind() {
-                    "case_statement" | "default_statement" => {
-                        cases.push(self.visit_case(child));
-                    }
+                    "case_statement" | "default_statement" => cases.push(self.visit_case(child)),
                     _ => {}
                 }
             }
@@ -361,17 +318,12 @@ impl<'src> CVisitor<'src> {
 
     fn visit_case(&mut self, node: Node) -> BaseNode {
         let value = node.child_by_field_name("value").map(|v| self.text(v).to_string());
-        let body: Vec<BaseNode> = {
-            let mut stmts = vec![];
-            let mut cursor = node.walk();
-            for child in node.children(&mut cursor) {
-                if let Some(s) = self.visit_statement(child) {
-                    stmts.push(s);
-                }
-            }
-            stmts
-        };
-        BaseNode::case(value, body, node.start_position().row + 1)
+        let mut stmts = vec![];
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            if let Some(s) = self.visit_statement(child) { stmts.push(s); }
+        }
+        BaseNode::case(value, stmts, node.start_position().row + 1)
     }
 
     fn visit_return(&mut self, node: Node) -> BaseNode {
@@ -400,24 +352,19 @@ void loop() {
 }
 "#;
         let prog = CParser::parse(src).expect("parse falhou");
-        assert!(!prog.functions.is_empty(), "deve ter funções");
-        let setup_fn = prog.functions.iter().find(|f| f.name == "setup");
-        assert!(setup_fn.is_some(), "deve ter função setup");
-        let loop_fn = prog.functions.iter().find(|f| f.name == "loop");
-        assert!(loop_fn.is_some(), "deve ter função loop");
+        assert!(!prog.functions.is_empty());
+        assert!(prog.functions.iter().any(|f| f.name == "setup"));
+        assert!(prog.functions.iter().any(|f| f.name == "loop"));
     }
 
     #[test]
     fn parse_serial_begin() {
         let src = r#"
-void setup() {
-    Serial.begin(9600);
-}
+void setup() { Serial.begin(9600); }
 void loop() {}
 "#;
         let prog = CParser::parse(src).expect("parse falhou");
         let setup_fn = prog.functions.iter().find(|f| f.name == "setup").unwrap();
-        let has_serial = setup_fn.body.iter().any(|n| n.node_type == NodeType::SerialBegin);
-        assert!(has_serial, "deve ter SerialBegin");
+        assert!(setup_fn.body.iter().any(|n| n.node_type == NodeType::SerialBegin));
     }
 }

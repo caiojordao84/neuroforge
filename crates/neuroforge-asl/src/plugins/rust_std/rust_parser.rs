@@ -57,25 +57,18 @@ impl RustParser {
         parser
             .set_language(&tree_sitter_rust::LANGUAGE.into())
             .map_err(|e| RustParseError::LanguageError(e.to_string()))?;
-
-        let tree: Tree = parser
-            .parse(source, None)
-            .ok_or(RustParseError::ParseFailed)?;
-
+        let tree: Tree = parser.parse(source, None).ok_or(RustParseError::ParseFailed)?;
         let root = tree.root_node();
         if root.has_error() {
             let pos = root.start_position();
             return Err(RustParseError::SyntaxError(pos.row + 1, pos.column + 1));
         }
-
         let mut visitor = RustVisitor::new(source);
         visitor.visit_source_file(root)
     }
 }
 
-struct RustVisitor<'src> {
-    source: &'src str,
-}
+struct RustVisitor<'src> { source: &'src str }
 
 impl<'src> RustVisitor<'src> {
     fn new(source: &'src str) -> Self { Self { source } }
@@ -87,56 +80,27 @@ impl<'src> RustVisitor<'src> {
     fn visit_source_file(&mut self, root: Node) -> Result<ProgramNode, RustParseError> {
         let mut functions = vec![];
         let mut globals: Vec<BaseNode> = vec![];
-
         let mut cursor = root.walk();
         for child in root.children(&mut cursor) {
             match child.kind() {
-                "function_item"  => functions.push(self.visit_function(child)),
-                "use_declaration" | "attribute_item" | "line_comment" | "block_comment" => {}
-                "const_item" | "static_item" | "let_declaration" => {
-                    globals.push(self.visit_let(child));
-                }
+                "function_item" => functions.push(self.visit_function(child)),
+                "const_item" | "static_item" | "let_declaration" => globals.push(self.visit_let(child)),
                 _ => {}
             }
         }
-
-        Ok(ProgramNode {
-            node_type: NodeType::Program,
-            functions,
-            globals,
-            imports: vec![],
-        })
+        Ok(ProgramNode { node_type: NodeType::Program, functions, globals, imports: vec![] })
     }
 
     fn visit_function(&mut self, node: Node) -> FunctionNode {
-        let name = node
-            .child_by_field_name("name")
-            .map(|n| self.text(n).to_string())
-            .unwrap_or_default();
-
-        let return_type = node
-            .child_by_field_name("return_type")
-            .map(|t| self.text(t).to_string())
-            .unwrap_or_else(|| "()".to_string());
-
-        let params = node
-            .child_by_field_name("parameters")
-            .map(|p| self.visit_params(p))
-            .unwrap_or_default();
-
-        let body = node
-            .child_by_field_name("body")
-            .map(|b| self.visit_block(b))
-            .unwrap_or_default();
-
+        let name        = node.child_by_field_name("name").map(|n| self.text(n).to_string()).unwrap_or_default();
+        let return_type = node.child_by_field_name("return_type").map(|t| self.text(t).to_string()).unwrap_or_else(|| "()".to_string());
+        let params      = node.child_by_field_name("parameters").map(|p| self.visit_params(p)).unwrap_or_default();
+        let body        = node.child_by_field_name("body").map(|b| self.visit_block(b)).unwrap_or_default();
         FunctionNode {
             node_type: NodeType::Function,
-            name,
-            return_type,
-            params,
-            body,
+            name, return_type, params, body,
             start_line: node.start_position().row + 1,
-            end_line: node.end_position().row + 1,
+            end_line:   node.end_position().row + 1,
         }
     }
 
@@ -145,9 +109,9 @@ impl<'src> RustVisitor<'src> {
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
             if child.kind() == "parameter" {
-                let name = child.child_by_field_name("pattern").map(|n| self.text(n).to_string()).unwrap_or_default();
+                let name      = child.child_by_field_name("pattern").map(|n| self.text(n).to_string()).unwrap_or_default();
                 let type_name = child.child_by_field_name("type").map(|t| self.text(t).to_string()).unwrap_or_default();
-                if name != "self" && name != "&self" && name != "&mut self" {
+                if !matches!(name.as_str(), "self" | "&self" | "&mut self") {
                     params.push(ParamNode { node_type: NodeType::Param, name, param_type: type_name });
                 }
             }
@@ -159,19 +123,14 @@ impl<'src> RustVisitor<'src> {
         let mut stmts = vec![];
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
-            if let Some(s) = self.visit_statement(child) {
-                stmts.push(s);
-            }
+            if let Some(s) = self.visit_statement(child) { stmts.push(s); }
         }
         stmts
     }
 
     fn visit_statement(&mut self, node: Node) -> Option<BaseNode> {
         match node.kind() {
-            "expression_statement" => {
-                let inner = node.named_child(0)?;
-                self.visit_expr_node(inner)
-            }
+            "expression_statement"     => { let inner = node.named_child(0)?; self.visit_expr_node(inner) }
             "let_declaration"          => Some(self.visit_let(node)),
             "if_expression"            => Some(self.visit_if(node)),
             "while_expression"         => Some(self.visit_while(node)),
@@ -183,7 +142,6 @@ impl<'src> RustVisitor<'src> {
             "continue_expression"      => Some(BaseNode::leaf(NodeType::Continue)),
             "assignment_expression"    => Some(self.visit_assignment(node)),
             "compound_assignment_expr" => Some(self.visit_assignment(node)),
-            "line_comment" | "block_comment" => None,
             _                          => None,
         }
     }
@@ -199,10 +157,12 @@ impl<'src> RustVisitor<'src> {
     }
 
     fn visit_call(&mut self, node: Node) -> BaseNode {
-        let callee = node
+        // Extrair callee como String owned ANTES de chamar collect_args,
+        // para evitar E0500 (dois borrows de &self em closures encadeadas).
+        let callee: String = node
             .child_by_field_name("function")
-            .map(|f| self.text(f))
-            .unwrap_or("");
+            .map(|f| self.text(f).to_string())
+            .unwrap_or_default();
 
         let args = node
             .child_by_field_name("arguments")
@@ -211,28 +171,28 @@ impl<'src> RustVisitor<'src> {
 
         let line = node.start_position().row + 1;
 
-        match callee {
-            "gpio_set"      => BaseNode::hw(NodeType::GpioSet,    args, line),
-            "gpio_get"      => BaseNode::hw(NodeType::GpioRead,   args, line),
-            "gpio_mode"     => BaseNode::hw(NodeType::PinMode,    args, line),
-            "analog_write"  => BaseNode::hw(NodeType::AnalogWrite, args, line),
-            "analog_read"   => BaseNode::hw(NodeType::AnalogRead,  args, line),
-            "delay_ms"      => BaseNode::hw(NodeType::DelayMs,    args, line),
-            "delay_us"      => BaseNode::hw(NodeType::DelayUs,    args, line),
-            "millis"        => BaseNode::hw(NodeType::Millis,     args, line),
-            "micros"        => BaseNode::hw(NodeType::Micros,     args, line),
-            "serial_begin"  => BaseNode::hw(NodeType::SerialBegin, args, line),
-            "serial_print"  => BaseNode::hw(NodeType::Print,      args, line),
-            "serial_println"=> BaseNode::hw(NodeType::PrintLn,    args, line),
-            "serial_read"   => BaseNode::hw(NodeType::UartRead,   args, line),
-            "i2c_write"     => BaseNode::hw(NodeType::I2cWrite,   args, line),
-            "i2c_read"      => BaseNode::hw(NodeType::I2cRead,    args, line),
-            "spi_transfer"  => BaseNode::hw(NodeType::SpiTransfer, args, line),
-            "pwm_init"      => BaseNode::hw(NodeType::PwmInit,    args, line),
-            "pwm_set_duty"  => BaseNode::hw(NodeType::PwmSetDuty, args, line),
-            "pwm_set_freq"  => BaseNode::hw(NodeType::PwmSetFreq, args, line),
-            "pwm_stop"      => BaseNode::hw(NodeType::PwmStop,    args, line),
-            _               => BaseNode::call(callee, args, line),
+        match callee.as_str() {
+            "gpio_set"       => BaseNode::hw(NodeType::GpioSet,     args, line),
+            "gpio_get"       => BaseNode::hw(NodeType::GpioRead,    args, line),
+            "gpio_mode"      => BaseNode::hw(NodeType::PinMode,     args, line),
+            "analog_write"   => BaseNode::hw(NodeType::AnalogWrite, args, line),
+            "analog_read"    => BaseNode::hw(NodeType::AnalogRead,  args, line),
+            "delay_ms"       => BaseNode::hw(NodeType::DelayMs,     args, line),
+            "delay_us"       => BaseNode::hw(NodeType::DelayUs,     args, line),
+            "millis"         => BaseNode::hw(NodeType::Millis,      args, line),
+            "micros"         => BaseNode::hw(NodeType::Micros,      args, line),
+            "serial_begin"   => BaseNode::hw(NodeType::SerialBegin, args, line),
+            "serial_print"   => BaseNode::hw(NodeType::Print,       args, line),
+            "serial_println" => BaseNode::hw(NodeType::PrintLn,     args, line),
+            "serial_read"    => BaseNode::hw(NodeType::UartRead,    args, line),
+            "i2c_write"      => BaseNode::hw(NodeType::I2cWrite,    args, line),
+            "i2c_read"       => BaseNode::hw(NodeType::I2cRead,     args, line),
+            "spi_transfer"   => BaseNode::hw(NodeType::SpiTransfer, args, line),
+            "pwm_init"       => BaseNode::hw(NodeType::PwmInit,     args, line),
+            "pwm_set_duty"   => BaseNode::hw(NodeType::PwmSetDuty,  args, line),
+            "pwm_set_freq"   => BaseNode::hw(NodeType::PwmSetFreq,  args, line),
+            "pwm_stop"       => BaseNode::hw(NodeType::PwmStop,     args, line),
+            _                => BaseNode::call(&callee, args, line),
         }
     }
 
@@ -299,10 +259,10 @@ impl<'src> RustVisitor<'src> {
     }
 
     fn visit_for(&mut self, node: Node) -> BaseNode {
-        let pattern = node.child_by_field_name("pattern").map(|n| self.text(n).to_string()).unwrap_or_default();
-        let value   = node.child_by_field_name("value").map(|n| self.text(n).to_string()).unwrap_or_default();
-        let body    = node.child_by_field_name("body").map(|b| self.visit_block(b)).unwrap_or_default();
-        BaseNode::for_in(pattern, value, body, node.start_position().row + 1)
+        let pattern  = node.child_by_field_name("pattern").map(|n| self.text(n).to_string()).unwrap_or_default();
+        let iterable = node.child_by_field_name("value").map(|n| self.text(n).to_string()).unwrap_or_default();
+        let body     = node.child_by_field_name("body").map(|b| self.visit_block(b)).unwrap_or_default();
+        BaseNode::for_in(pattern, iterable, body, node.start_position().row + 1)
     }
 
     fn visit_match(&mut self, node: Node) -> BaseNode {
@@ -312,7 +272,7 @@ impl<'src> RustVisitor<'src> {
             let mut cursor = body.walk();
             for child in body.children(&mut cursor) {
                 if child.kind() == "match_arm" {
-                    let pat  = child.child_by_field_name("pattern").map(|p| self.text(p).to_string());
+                    let pat      = child.child_by_field_name("pattern").map(|p| self.text(p).to_string());
                     let arm_body = child.child_by_field_name("value")
                         .map(|b| if b.kind() == "block" { self.visit_block(b) } else { vec![BaseNode::raw(self.text(b))] })
                         .unwrap_or_default();
@@ -347,7 +307,6 @@ fn main() {
 }
 "#;
         let prog = RustParser::parse(src).expect("parse falhou");
-        let main_fn = prog.functions.iter().find(|f| f.name == "main");
-        assert!(main_fn.is_some());
+        assert!(prog.functions.iter().any(|f| f.name == "main"));
     }
 }
