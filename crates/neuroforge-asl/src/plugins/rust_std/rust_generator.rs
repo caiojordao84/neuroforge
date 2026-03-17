@@ -165,8 +165,7 @@ impl RustGenerator {
                 let name = attr_str(node, "name");
                 self.add_ln(lines, &format!("{indent}let mut {name} = {val};"), Some(node));
             }
-            "PinMode" => self.add_ln(lines, &format!("{indent}gpio_mode({}, {});",
-                self.gen_child(node, 0), self.gen_child(node, 1)), Some(node)),
+            "PinMode" => { let a = self.gen_child(node, 0); let b = self.gen_child(node, 1); self.add_ln(lines, &format!("{indent}gpio_mode({a}, {b});"), Some(node)); }
             "ExpressionStatement" => {
                 if let Some(child) = node.children.first() {
                     if child.node_type == "CallExpression" {
@@ -182,24 +181,22 @@ impl RustGenerator {
                             return;
                         }
                     }
-                    self.add_ln(lines, &format!("{indent}{};", self.gen_expr(child)), Some(node));
+                    let expr = self.gen_expr(child); self.add_ln(lines, &format!("{indent}{expr};"), Some(node));
                 }
             }
             "Block"           => { for c in &node.children { self.gen_stmt(c, lines, indent); } }
-            "GpioSet"         => self.add_ln(lines, &format!("{indent}gpio_set({}, {});",
-                self.gen_child(node, 0), self.gen_child(node, 1)), Some(node)),
-            "GpioRead"        => self.add_ln(lines, &format!("{indent}gpio_get({});", self.gen_child(node, 0)), Some(node)),
-            "AnalogRead"      => self.add_ln(lines, &format!("{indent}adc.read({});", self.gen_child(node, 0)), Some(node)),
-            "AnalogWrite"     => self.add_ln(lines, &format!("{indent}pwm.set_duty({}, {});",
-                self.gen_child(node, 0), self.gen_child(node, 1)), Some(node)),
-            "DelayMs"         => self.add_ln(lines, &format!("{indent}delay.delay_ms({}u32);", self.gen_child(node, 0)), Some(node)),
-            "SerialBegin"     => self.add_ln(lines, &format!("{indent}Serial::begin({});", self.gen_child(node, 0)), Some(node)),
-            "Print"           => self.add_ln(lines, &format!("{indent}println!(\"{{}}\", {});", self.gen_child(node, 0)), Some(node)),
+            "GpioSet"         => { let a = self.gen_child(node, 0); let b = self.gen_child(node, 1); self.add_ln(lines, &format!("{indent}gpio_set({a}, {b});"), Some(node)); }
+            "GpioRead"        => { let a = self.gen_child(node, 0); self.add_ln(lines, &format!("{indent}gpio_get({a});"), Some(node)); }
+            "AnalogRead"      => { let a = self.gen_child(node, 0); self.add_ln(lines, &format!("{indent}adc.read({a});"), Some(node)); }
+            "AnalogWrite"     => { let a = self.gen_child(node, 0); let b = self.gen_child(node, 1); self.add_ln(lines, &format!("{indent}pwm.set_duty({a}, {b});"), Some(node)); }
+            "DelayMs"         => { let a = self.gen_child(node, 0); self.add_ln(lines, &format!("{indent}delay.delay_ms({a}u32);"), Some(node)); }
+            "SerialBegin"     => { let a = self.gen_child(node, 0); self.add_ln(lines, &format!("{indent}Serial::begin({a});"), Some(node)); }
+            "Print"           => { let a = self.gen_child(node, 0); self.add_ln(lines, &format!("{indent}println!(\"{{}}\", {a});"), Some(node)); }
             "BreakStatement"  => self.add_ln(lines, &format!("{indent}break;"), Some(node)),
             "ContinueStatement" => self.add_ln(lines, &format!("{indent}continue;"), Some(node)),
             "ReturnStatement" => {
                 if let Some(c) = node.children.first() {
-                    self.add_ln(lines, &format!("{indent}return {};", self.gen_expr(c)), Some(node));
+                    let val = self.gen_expr(c); self.add_ln(lines, &format!("{indent}return {val};"), Some(node));
                 } else {
                     self.add_ln(lines, &format!("{indent}return;"), Some(node));
                 }
@@ -238,11 +235,11 @@ impl RustGenerator {
             "DoWhileLoop"  => {
                 self.add_ln(lines, &format!("{indent}loop {{"), Some(node));
                 for c in node.children.iter().skip(1) { self.gen_stmt(c, lines, &format!("{indent}    ")); }
-                self.add_ln(lines, &format!("{indent}    if !({}) {{ break; }}", self.gen_child(node, 0)), Some(node));
+                let cond = self.gen_child(node, 0); self.add_ln(lines, &format!("{indent}    if !({cond}) {{ break; }}"), Some(node));
                 self.add_ln(lines, &format!("{indent}}}"), Some(node));
             }
             "WhileLoop" => {
-                self.add_ln(lines, &format!("{indent}while {} {{", self.gen_child(node, 0)), Some(node));
+                let cond = self.gen_child(node, 0); self.add_ln(lines, &format!("{indent}while {cond} {{"), Some(node));
                 for c in node.children.iter().skip(1) { self.gen_stmt(c, lines, &format!("{indent}    ")); }
                 self.add_ln(lines, &format!("{indent}}}"), Some(node));
             }

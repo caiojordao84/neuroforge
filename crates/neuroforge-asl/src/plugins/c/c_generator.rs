@@ -240,24 +240,21 @@ impl CGenerator {
             }
             "BreakStatement"    => self.add_ln(lines, &format!("{indent}break;"), Some(node)),
             "ContinueStatement" => self.add_ln(lines, &format!("{indent}continue;"), Some(node)),
-            "GpioSet"   => self.add_ln(lines, &format!("{indent}digitalWrite({}, {});",
-                self.gen_child(node, 0), self.gen_child(node, 1)), Some(node)),
-            "DelayMs"   => self.add_ln(lines, &format!("{indent}delay({});", self.gen_child(node, 0)), Some(node)),
-            "AnalogWrite" => self.add_ln(lines, &format!("{indent}analogWrite({}, {});",
-                self.gen_child(node, 0), self.gen_child(node, 1)), Some(node)),
-            "GpioRead"  => self.add_ln(lines, &format!("{indent}digitalRead({});", self.gen_child(node, 0)), Some(node)),
-            "SerialBegin" => self.add_ln(lines, &format!("{indent}Serial.begin({});", self.gen_child(node, 0)), Some(node)),
-            "Print"     => self.add_ln(lines, &format!("{indent}Serial.println({});", self.gen_child(node, 0)), Some(node)),
+            "GpioSet"   => { let a = self.gen_child(node, 0); let b = self.gen_child(node, 1); self.add_ln(lines, &format!("{indent}digitalWrite({a}, {b});"), Some(node)); }
+            "DelayMs"   => { let a = self.gen_child(node, 0); self.add_ln(lines, &format!("{indent}delay({a});"), Some(node)); }
+            "AnalogWrite" => { let a = self.gen_child(node, 0); let b = self.gen_child(node, 1); self.add_ln(lines, &format!("{indent}analogWrite({a}, {b});"), Some(node)); }
+            "GpioRead"  => { let a = self.gen_child(node, 0); self.add_ln(lines, &format!("{indent}digitalRead({a});"), Some(node)); }
+            "SerialBegin" => { let a = self.gen_child(node, 0); self.add_ln(lines, &format!("{indent}Serial.begin({a});"), Some(node)); }
+            "Print"     => { let a = self.gen_child(node, 0); self.add_ln(lines, &format!("{indent}Serial.println({a});"), Some(node)); }
             "HardwarePwm" => {
                 let pin  = attr_str(node, "pin").to_string();
                 let duty = node.attributes.get("duty").and_then(|v| v.as_f64()).unwrap_or(0.0);
                 self.add_ln(lines, &format!("{indent}analogWrite({pin}, {}); // HW PWM", (duty / 4.0) as u32), Some(node));
             }
-            "PinMode" => self.add_ln(lines, &format!("{indent}pinMode({}, {});",
-                self.gen_child(node, 0), self.gen_child(node, 1)), Some(node)),
+            "PinMode" => { let a = self.gen_child(node, 0); let b = self.gen_child(node, 1); self.add_ln(lines, &format!("{indent}pinMode({a}, {b});"), Some(node)); }
             "ReturnStatement" => {
                 if let Some(c) = node.children.first() {
-                    self.add_ln(lines, &format!("{indent}return {};", self.gen_expr(c)), Some(node));
+                    let val = self.gen_expr(c); self.add_ln(lines, &format!("{indent}return {val};"), Some(node));
                 } else {
                     self.add_ln(lines, &format!("{indent}return;"), Some(node));
                 }
@@ -266,7 +263,7 @@ impl CGenerator {
             "DoWhileLoop" => {
                 self.add_ln(lines, &format!("{indent}do {{"), Some(node));
                 for c in node.children.iter().skip(1) { self.gen_stmt(c, lines, &format!("{indent}  ")); }
-                self.add_ln(lines, &format!("{indent}}} while ({});", self.gen_child(node, 0)), Some(node));
+                let cond = self.gen_child(node, 0); self.add_ln(lines, &format!("{indent}}} while ({cond});"), Some(node));
             }
             "Loop" => {
                 self.add_ln(lines, &format!("{indent}for (;;) {{"), Some(node));
@@ -274,7 +271,7 @@ impl CGenerator {
                 self.add_ln(lines, &format!("{indent}}}"), Some(node));
             }
             "WhileLoop" => {
-                self.add_ln(lines, &format!("{indent}while ({}) {{", self.gen_child(node, 0)), Some(node));
+                let cond = self.gen_child(node, 0); self.add_ln(lines, &format!("{indent}while ({cond}) {{"), Some(node));
                 for c in node.children.iter().skip(1) { self.gen_stmt(c, lines, &format!("{indent}  ")); }
                 self.add_ln(lines, &format!("{indent}}}"), Some(node));
             }
@@ -291,7 +288,7 @@ impl CGenerator {
                     let ft  = f.get("type").and_then(|v| v.as_str()).unwrap_or("int");
                     self.add_ln(lines, &format!("{indent}  {ft} {fn_};"), None);
                 }
-                self.add_ln(lines, &format!("{indent}};"), None);
+                self.add_ln(lines, &format!("{indent}}};"), None);
             }
             "EnumDeclaration" => {
                 let name    = attr_str(node, "name").to_string();
@@ -354,7 +351,7 @@ impl CGenerator {
     }
 
     fn gen_if(&mut self, node: &BaseNode, lines: &mut Vec<String>, indent: &str) {
-        self.add_ln(lines, &format!("{indent}if ({}) {{", self.gen_child(node, 0)), Some(node));
+        let cond = self.gen_child(node, 0); self.add_ln(lines, &format!("{indent}if ({cond}) {{"), Some(node));
         if let Some(then_block) = node.children.get(1) {
             for c in &then_block.children { self.gen_stmt(c, lines, &format!("{indent}  ")); }
         }
@@ -362,7 +359,7 @@ impl CGenerator {
         // Loop de else/else-if
         while let Some(else_node) = current.children.get(2) {
             if else_node.node_type == "IfStatement" {
-                self.add_ln(lines, &format!("{indent}}} else if ({}) {{", self.gen_expr(&else_node.children[0])), Some(else_node));
+                let cond = self.gen_expr(&else_node.children[0]); self.add_ln(lines, &format!("{indent}}} else if ({cond}) {{"), Some(else_node));
                 if let Some(eb) = else_node.children.get(1) {
                     for c in &eb.children { self.gen_stmt(c, lines, &format!("{indent}  ")); }
                 }

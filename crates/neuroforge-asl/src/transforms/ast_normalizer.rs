@@ -68,7 +68,7 @@ fn normalize_list(nodes: Vec<BaseNode>) -> Vec<BaseNode> {
             && transformed.children.len() == 1
             && HARDWARE_NODES.contains(&transformed.children[0].node_type.as_str())
         {
-            let mut inner = transformed.children.into_iter().next().unwrap();
+            let inner = transformed.children.into_iter().next().unwrap();
             inner
         } else {
             transformed
@@ -176,7 +176,7 @@ fn process_postfix_in_expr(node: BaseNode, stmts: &mut Vec<BaseNode>) -> BaseNod
 }
 
 // Helpers internos para construir nós de atribuição
-fn make_ident(name: &str, id_prefix: &str) -> BaseNode {
+fn make_ident(name: &str, _id_prefix: &str) -> BaseNode {
     let mut attrs = std::collections::HashMap::new();
     attrs.insert("name".to_string(), Value::String(name.to_string()));
     BaseNode {
@@ -201,7 +201,7 @@ fn make_assign_node(tmp_name: &str, src_name: &str, _id: &str) -> BaseNode {
     }
 }
 
-fn make_increment_node(var_name: &str, op: &str, tid: &str) -> BaseNode {
+fn make_increment_node(var_name: &str, op: &str, _tid: &str) -> BaseNode {
     let bin_inner = BaseNode {
         node_type: "BinaryExpression".to_string(),
         attributes: {
