@@ -1,0 +1,89 @@
+name: Rust CI
+
+on:
+  push:
+    branches: [preRust, main]
+  pull_request:
+    branches: [preRust, main]
+
+jobs:
+  test:
+    name: cargo test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable + wasm32 target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: cargo check (workspace)
+        run: cargo check --workspace
+
+      - name: cargo clippy (workspace)
+        run: cargo clippy --workspace -- -D warnings
+
+      - name: cargo test (neuroforge-asl)
+        run: cargo test -p neuroforge-asl
+
+  wasm:
+    name: WASM build + size check
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable + wasm32 target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ubuntu-wasm-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ubuntu-wasm-
+
+      - name: Build WASM bundle
+        run: |
+          cd crates/neuroforge-asl
+          wasm-pack build --target web --out-dir ../../../../apps/webapp/src/lib/wasm
+
+      - name: Check WASM bundle size (< 2 MB)
+        run: |
+          SIZE=$(wc -c < apps/webapp/src/lib/wasm/neuroforge_asl_bg.wasm)
+          echo "WASM size: ${SIZE} bytes"
+          if [ "$SIZE" -ge 2097152 ]; then
+            echo "WASM bundle excede 2 MB!"
+            exit 1
+          fi
+
+      - name: Upload WASM bundle as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neuroforge-asl-wasm
+          path: apps/webapp/src/lib/wasm/
+          retention-days: 7
