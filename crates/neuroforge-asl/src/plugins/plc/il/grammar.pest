@@ -1,0 +1,69 @@
+// ── Whitespace & Comments ────────────────────────────────────────────────────
+WHITESPACE  = _{ " " | "\t" | "\r" | "\n" }
+block_comment = _{ "(*" ~ (!"*)" ~ ANY)* ~ "*)" }
+line_comment  = _{ "//" ~ (!"\n" ~ ANY)* }
+COMMENT     = _{ block_comment | line_comment }
+
+// ── Identifiers & Literals ────────────────────────────────────────────────────
+ident   = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+integer = @{ "-"? ~ ASCII_DIGIT+ }
+float   = @{ "-"? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* }
+bool_true  = { ^"TRUE"  }
+bool_false = { ^"FALSE" }
+duration   = @{ ^"T#" ~ (ASCII_DIGIT+ ~ (^"ms" | ^"s" | ^"m" | ^"h"))+ }
+string_lit = @{ "'" ~ (!"'" ~ ANY)* ~ "'" }
+
+literal = { duration | float | integer | bool_true | bool_false | string_lit }
+
+// ── Operand ───────────────────────────────────────────────────────────────────
+// Suporta: endereço directo %IX0.0, membro var.field, literal, ident
+direct_addr = @{ "%" ~ ASCII_ALPHA ~ ("X" | "B" | "W" | "D" | "L") ~ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+member_acc  = @{ ident ~ ("." ~ ident)+ }
+operand     = { direct_addr | member_acc | literal | ident }
+
+// ── Operadores IL (ordem: tokens mais longos primeiro) ────────────────────────
+// CRÍTICO: ANDN/ORN/XORN antes de AND/OR/XOR para evitar match parcial
+// JMPCN/CALCN/RETCN antes de JMPC/CALC/RETC antes de JMP/CAL/RET
+op = {
+    ^"ANDN" | ^"ORN"  | ^"XORN"  |
+    ^"AND"  | ^"OR"   | ^"XOR"   |
+    ^"LDN"  | ^"STN"  | ^"LD"    | ^"ST"   |
+    ^"ADD"  | ^"SUB"  | ^"MUL"  | ^"DIV"  |
+    ^"GT"   | ^"GE"   | ^"EQ"   | ^"NE"   | ^"LE"  | ^"LT"  |
+    ^"JMPCN"| ^"JMPC" | ^"JMP"  |
+    ^"CALCN"| ^"CALC" | ^"CAL"  |
+    ^"RETCN"| ^"RETC" | ^"RET"  |
+    ^"S"    | ^"R"
+}
+
+// ── Label ─────────────────────────────────────────────────────────────────────
+label = { ident ~ ":" }
+
+// ── Instrução ─────────────────────────────────────────────────────────────────
+// label opcional + operador obrigatório + operand opcional
+instruction = { label? ~ op ~ operand? }
+
+// ── Parênteses de acumulador IL  ( e ) ───────────────────────────────────────
+paren_open  = { "(" }
+paren_close = { ")" }
+
+// ── Secção de variáveis ───────────────────────────────────────────────────────
+var_kind  = { ^"VAR_INPUT" | ^"VAR_OUTPUT" | ^"VAR_IN_OUT" | ^"VAR" }
+type_spec = { ident }
+var_decl  = { ident ~ ":" ~ type_spec ~ (":=" ~ (literal | ident))? ~ ";" }
+var_block = { var_kind ~ var_decl* ~ ^"END_VAR" }
+
+// ── POU ───────────────────────────────────────────────────────────────────────
+pou_type    = { ^"PROGRAM" | ^"FUNCTION_BLOCK" | ^"FUNCTION" }
+return_type = { ":" ~ type_spec }
+pou_end     = { ^"END_PROGRAM" | ^"END_FUNCTION_BLOCK" | ^"END_FUNCTION" }
+
+pou = {
+    pou_type ~ ident ~ return_type? ~
+    var_block* ~
+    (instruction | paren_open | paren_close)* ~
+    pou_end
+}
+
+// ── Ficheiro completo ─────────────────────────────────────────────────────────
+file = _{ SOI ~ pou* ~ EOI }

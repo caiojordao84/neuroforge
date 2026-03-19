@@ -14,8 +14,6 @@ anyhow      = { workspace = true }
 wasm-bindgen = "0.2"
 
 # ── Tree-sitter core ─────────────────────────────────────────────────────────
-# API 0.24+: usar LANGUAGE constante estática (não language() função)
-# Exemplo: parser.set_language(&tree_sitter_arduino::LANGUAGE.into()).unwrap();
 tree-sitter         = "0.26.3"
 
 # ── Language grammars ────────────────────────────────────────────────────────
@@ -27,10 +25,15 @@ tree-sitter-arduino = "0.24.0"
 tree-sitter-xml     = "0.7.0"
 
 # ── PLC / Structured Text (IEC 61131-3) ──────────────────────────────────────
-# iecst está deprecated — usar iec61131 (mais completo, cobertura OOP IEC 61131-3:2013)
 iec61131            = "0.7.0"
 
-# ── Compat. explícita (evita conflito tree-sitter-cpp 0.23 <> core 0.26) ─────
+# ── PLC Multi-Language (IL / LD / FBD / SFC) ────────────────────────────────
+pest        = "2"
+pest_derive = "2"
+quick-xml   = { version = "0.39.2", features = ["serialize", "overlapped-lists"] }
+plcopen     = "0.3.1"
+
+# ── Compat. explícita ─────────────────────────────────────────────────────────
 tree-sitter-language = "0.1.7"
 
 [dev-dependencies]

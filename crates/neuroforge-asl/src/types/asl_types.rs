@@ -237,6 +237,12 @@ pub enum AslStatement {
     // RGB
     #[serde(rename = "rgbSet")]
     RgbSet(AslRgbSet),
+
+    // ── IEC 61131-3 State Machine (SFC) ────────────────────────────────────
+    /// Máquina de estados tipada gerada a partir de SFC (Sequential Function Chart).
+    /// Preserva steps, actions e transições condicionais com AND/OR estruturados.
+    #[serde(rename = "stateMachine")]
+    StateMachine(Box<AslStateMachine>),
 }
 
 // ============================================================================
@@ -269,7 +275,6 @@ pub enum DigitalValue {
     Expr(AslExpr),
 }
 
-// Serialização manual para HIGH/LOW string
 impl DigitalValue {
     pub fn is_high(&self) -> bool { matches!(self, DigitalValue::High) }
     pub fn is_low(&self)  -> bool { matches!(self, DigitalValue::Low)  }
@@ -504,6 +509,50 @@ pub struct AslRgbSet {
 }
 
 // ============================================================================
+// AslStateMachine — SFC (Sequential Function Chart)
+// ============================================================================
+
+/// Máquina de estados tipada gerada a partir de SFC.
+/// Preserva a semântica completa: steps, actions (inline ST ou referência),
+/// transições condicionais com AslExpr::Binary (AND/OR estruturados),
+/// divergências seletivas (prioridade) e simultâneas (paralelas).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AslStateMachine {
+    /// Nome do POU SFC de origem
+    pub name: String,
+    /// Nome da variável de estado interno (padrão: "_state")
+    pub state_var: String,
+    /// Nome do step inicial
+    pub initial_step: String,
+    /// Lista ordenada de steps
+    pub steps: Vec<AslSmStep>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AslSmStep {
+    /// Nome do step (ex: "Init", "Running", "Fault")
+    pub name: String,
+    /// Actions executadas enquanto o step está ativo
+    pub actions: Vec<AslStatement>,
+    /// Transições de saída avaliadas em ordem (first-match)
+    pub transitions: Vec<AslSmTransition>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AslSmTransition {
+    /// Condição booleana estruturada — usa AslExpr::Binary para AND/OR compostos.
+    /// Nunca uma string crua: garante transpilação correta para qualquer alvo.
+    pub condition: AslExpr,
+    /// Nome do step destino
+    pub target_step: String,
+    /// Prioridade para divergências seletivas (0 = maior prioridade)
+    pub priority: Option<u32>,
+}
+
+// ============================================================================
 // Expressões
 // ============================================================================
 
@@ -540,7 +589,6 @@ pub enum AslExpr {
     SerialReadString,
 }
 
-// Construtores de conveniência
 impl AslExpr {
     pub fn int(v: i64) -> Self { AslExpr::Literal(AslLiteral { value: serde_json::json!(v) }) }
     pub fn float(v: f64) -> Self { AslExpr::Literal(AslLiteral { value: serde_json::json!(v) }) }
@@ -610,6 +658,15 @@ impl UnaryOp {
             UnaryOp::Deref  => "*",
         }
     }
+    /// Símbolo conforme IEC 61131-3 (ST/IL)
+    pub fn to_iec_symbol(&self) -> &'static str {
+        match self {
+            UnaryOp::Not    => "NOT ",
+            UnaryOp::Neg    => "-",
+            UnaryOp::BitNot => "NOT ",
+            other => other.to_symbol(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -639,6 +696,10 @@ impl BinaryOp {
             "&"  => BinaryOp::BitAnd, "|" => BinaryOp::BitOr,
             "^"  => BinaryOp::BitXor,
             "<<" => BinaryOp::Shl,  ">>" => BinaryOp::Shr,
+            // IEC 61131-3 text operators
+            "AND" | "and" => BinaryOp::And,
+            "OR"  | "or"  => BinaryOp::Or,
+            "XOR" | "xor" => BinaryOp::BitXor,
             _    => BinaryOp::Add,
         }
     }
@@ -654,6 +715,22 @@ impl BinaryOp {
             BinaryOp::BitAnd => "&",  BinaryOp::BitOr  => "|",
             BinaryOp::BitXor => "^",
             BinaryOp::Shl    => "<<", BinaryOp::Shr    => ">>",
+        }
+    }
+    /// Símbolo conforme IEC 61131-3 (ST/IL/SFC).
+    /// Difere de to_symbol() em: Eq="=", Neq="<>", And="AND", Or="OR", XOR="XOR".
+    pub fn to_iec_symbol(&self) -> &'static str {
+        match self {
+            BinaryOp::And    => "AND",
+            BinaryOp::Or     => "OR",
+            BinaryOp::BitAnd => "AND",
+            BinaryOp::BitOr  => "OR",
+            BinaryOp::BitXor => "XOR",
+            BinaryOp::Eq     => "=",
+            BinaryOp::Neq    => "<>",
+            BinaryOp::Gte    => ">=",
+            BinaryOp::Lte    => "<=",
+            other            => other.to_symbol(),
         }
     }
 }
