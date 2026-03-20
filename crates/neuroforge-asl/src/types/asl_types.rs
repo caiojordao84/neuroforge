@@ -587,6 +587,12 @@ pub enum AslExpr {
     SerialAvailable,
     #[serde(rename = "serialReadString")]
     SerialReadString,
+    #[serde(rename = "postfixInc")]
+    PostfixInc(String),
+    #[serde(rename = "postfixDec")]
+    PostfixDec(String),
+    #[serde(rename = "cast")]
+    Cast { target_type: String, expr: Box<AslExpr> },
 }
 
 impl AslExpr {

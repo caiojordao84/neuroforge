@@ -1891,13 +1891,17 @@ version = "4.0.0"
 dependencies = [
  "anyhow",
  "iec61131",
+ "js-sys",
  "pest",
  "pest_derive",
  "plcopen",
  "quick-xml 0.39.2",
+ "roxmltree",
+ "semver",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
+ "tokio",
  "tree-sitter",
  "tree-sitter-arduino",
  "tree-sitter-c",
@@ -1906,7 +1910,9 @@ dependencies = [
  "tree-sitter-python",
  "tree-sitter-rust",
  "tree-sitter-xml",
+ "uuid",
  "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -2823,6 +2829,12 @@ dependencies = [
  "wasm-streams",
  "web-sys",
 ]
+
+[[package]]
+name = "roxmltree"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3cd14fd5e3b777a7422cca79358c57a8f6e3a703d9ac187448d0daf220c2407f"
 
 [[package]]
 name = "rustc-hash"

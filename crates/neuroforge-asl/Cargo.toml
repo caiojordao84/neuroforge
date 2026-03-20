@@ -24,6 +24,9 @@ tree-sitter-rust    = "0.24.0"
 tree-sitter-arduino = "0.24.0"
 tree-sitter-xml     = "0.7.0"
 
+# ── Compat. explícita ─────────────────────────────────────────────────────────
+tree-sitter-language = "0.1.7"
+
 # ── PLC / Structured Text (IEC 61131-3) ──────────────────────────────────────
 iec61131            = "0.7.0"
 
@@ -33,8 +36,21 @@ pest_derive = "2"
 quick-xml   = { version = "0.39.2", features = ["serialize", "overlapped-lists"] }
 plcopen     = "0.3.1"
 
-# ── Compat. explícita ─────────────────────────────────────────────────────────
-tree-sitter-language = "0.1.7"
+# ── Schema + versionamento ────────────────────────────────────────────────────
+semver    = { version = "1", features = ["serde"] }
+uuid      = { version = "1", features = ["v4", "js"] }
+roxmltree = "0.19"
+
+# ── Runtime async — feature-flagged para não puxar tokio no WASM ─────────────
+tokio = { version = "1", features = ["rt", "time"], optional = true }
+
+[features]
+default = ["native"]
+native  = ["tokio"]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys  = "0.3"
+web-sys = { version = "0.3", features = ["console"] }
 
 [dev-dependencies]
 serde_json = { workspace = true }
