@@ -328,7 +328,7 @@ impl StVisitor {
             Statement::Exit { .. } =>
                 vec![AslStatement::Break],
             Statement::FunctionCall { name, arguments, .. } => {
-                let args = arguments.into_iter().map(|a| Self::lower_argument(a)).collect();
+                let args = arguments.into_iter().map(Self::lower_argument).collect();
                 vec![AslStatement::Expr(AslExpressionStmt {
                     expr: AslExpr::Call(Box::new(AslCall { callee: name, args })),
                 })]

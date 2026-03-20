@@ -8,7 +8,9 @@ use crate::helpers::array_utils::BaseNode;
 
 static TEMP_COUNTER: AtomicU32 = AtomicU32::new(0);
 
-fn reset_counter() { TEMP_COUNTER.store(0, Ordering::SeqCst); }
+fn reset_counter() {
+    TEMP_COUNTER.store(0, Ordering::SeqCst);
+}
 fn next_temp_id() -> String {
     let n = TEMP_COUNTER.fetch_add(1, Ordering::SeqCst);
     format!("__tmp_{n}")
@@ -16,17 +18,25 @@ fn next_temp_id() -> String {
 
 // Nós de hardware cujo wrapper ExpressionStatement deve ser removido.
 const HARDWARE_NODES: &[&str] = &[
-    "GpioSet", "GpioRead", "AnalogRead", "AnalogWrite",
-    "HardwarePwm", "LcdClear", "LcdCursor", "LcdPrint",
-    "OledText", "OledShow", "OledClear",
-    "SerialBegin", "SerialAvailable", "SerialReadString",
+    "GpioSet",
+    "GpioRead",
+    "AnalogRead",
+    "AnalogWrite",
+    "HardwarePwm",
+    "LcdClear",
+    "LcdCursor",
+    "LcdPrint",
+    "OledText",
+    "OledShow",
+    "OledClear",
+    "SerialBegin",
+    "SerialAvailable",
+    "SerialReadString",
     "CallExpression",
 ];
 
 // Nós de hardware que precisam de simplificação do pino `Pin(x)` → `x`.
-const PIN_SIMPLIFY_NODES: &[&str] = &[
-    "GpioSet", "GpioRead", "AnalogRead", "AnalogWrite",
-];
+const PIN_SIMPLIFY_NODES: &[&str] = &["GpioSet", "GpioRead", "AnalogRead", "AnalogWrite"];
 
 /// Entry point público — equivalente a `normalizeAST()` em TypeScript.
 pub fn normalize_ast(mut node: BaseNode) -> BaseNode {
@@ -68,8 +78,8 @@ fn normalize_list(nodes: Vec<BaseNode>) -> Vec<BaseNode> {
             && transformed.children.len() == 1
             && HARDWARE_NODES.contains(&transformed.children[0].node_type.as_str())
         {
-            let inner = transformed.children.into_iter().next().unwrap();
-            inner
+            
+            transformed.children.into_iter().next().unwrap()
         } else {
             transformed
         };
@@ -97,16 +107,18 @@ fn normalize_list(nodes: Vec<BaseNode>) -> Vec<BaseNode> {
 fn process_postfix_in_expr(node: BaseNode, stmts: &mut Vec<BaseNode>) -> BaseNode {
     // Detecta postfix `i++` / `i--` sobre um Identifier simples
     if node.node_type == "UnaryExpression" {
-        let is_postfix = node.attributes.get("prefix")
-            .and_then(|v| v.as_bool()) == Some(false);
-        let op = node.attributes.get("operator")
+        let is_postfix = node.attributes.get("prefix").and_then(|v| v.as_bool()) == Some(false);
+        let op = node
+            .attributes
+            .get("operator")
             .and_then(|v| v.as_str())
             .unwrap_or("");
 
         if is_postfix && (op == "++" || op == "--") {
             if let Some(operand) = node.children.first() {
                 if operand.node_type == "Identifier" {
-                    let var_name = operand.attributes
+                    let var_name = operand
+                        .attributes
                         .get("name")
                         .and_then(|v| v.as_str())
                         .unwrap_or("")
@@ -134,16 +146,24 @@ fn process_postfix_in_expr(node: BaseNode, stmts: &mut Vec<BaseNode>) -> BaseNod
     }
 
     let structural = [
-        "IfStatement", "WhileLoop", "ForLoop", "ReturnStatement",
-        "ExpressionStatement", "Assignment", "Expression",
+        "IfStatement",
+        "WhileLoop",
+        "ForLoop",
+        "ReturnStatement",
+        "ExpressionStatement",
+        "Assignment",
+        "Expression",
     ];
 
     if structural.contains(&node.node_type.as_str()) {
         let mut new_node = node;
         match new_node.node_type.as_str() {
             "ForLoop" => return new_node,
-            "IfStatement" | "WhileLoop" | "ReturnStatement"
-            | "ExpressionStatement" | "Expression" => {
+            "IfStatement"
+            | "WhileLoop"
+            | "ReturnStatement"
+            | "ExpressionStatement"
+            | "Expression" => {
                 if !new_node.children.is_empty() {
                     let first = new_node.children.remove(0);
                     let processed = process_postfix_in_expr(first, stmts);
@@ -194,10 +214,7 @@ fn make_assign_node(tmp_name: &str, src_name: &str, _id: &str) -> BaseNode {
             m.insert("operator".to_string(), Value::String("=".to_string()));
             m
         },
-        children: vec![
-            make_ident(tmp_name, "tid"),
-            make_ident(src_name, "oid"),
-        ],
+        children: vec![make_ident(tmp_name, "tid"), make_ident(src_name, "oid")],
     }
 }
 
@@ -242,7 +259,11 @@ mod tests {
     fn ident(name: &str) -> BaseNode {
         let mut attrs = HashMap::new();
         attrs.insert("name".to_string(), Value::String(name.to_string()));
-        BaseNode { node_type: "Identifier".to_string(), attributes: attrs, children: vec![] }
+        BaseNode {
+            node_type: "Identifier".to_string(),
+            attributes: attrs,
+            children: vec![],
+        }
     }
 
     fn postfix_node(var: &str, op: &str) -> BaseNode {

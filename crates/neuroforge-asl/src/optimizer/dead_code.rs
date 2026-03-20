@@ -26,7 +26,7 @@ fn dce_body(stmts: Vec<AslStatement>) -> Vec<AslStatement> {
     let mut out = Vec::new();
     for stmt in stmts {
         match dce_stmt(stmt) {
-            DceResult::Keep(s)       => { out.push(s); }
+            DceResult::Keep(s)       => { out.push(*s); }
             DceResult::Replace(many) => { out.extend(many); }
             DceResult::Remove        => {}
         }
@@ -36,7 +36,7 @@ fn dce_body(stmts: Vec<AslStatement>) -> Vec<AslStatement> {
 }
 
 enum DceResult {
-    Keep(AslStatement),
+    Keep(Box<AslStatement>),
     Replace(Vec<AslStatement>),
     Remove,
 }
@@ -55,7 +55,7 @@ fn dce_stmt(stmt: AslStatement) -> DceResult {
             None => {
                 s.then_branch = dce_body(std::mem::take(&mut s.then_branch));
                 s.else_branch = s.else_branch.map(dce_body);
-                DceResult::Keep(AslStatement::If(s))
+                DceResult::Keep(Box::new(AslStatement::If(s)))
             }
         },
         AslStatement::While(mut s) => {
@@ -63,9 +63,9 @@ fn dce_stmt(stmt: AslStatement) -> DceResult {
                 return DceResult::Remove;
             }
             s.body = dce_body(std::mem::take(&mut s.body));
-            DceResult::Keep(AslStatement::While(s))
+            DceResult::Keep(Box::new(AslStatement::While(s)))
         }
-        other => DceResult::Keep(other),
+        other => DceResult::Keep(Box::new(other)),
     }
 }
 

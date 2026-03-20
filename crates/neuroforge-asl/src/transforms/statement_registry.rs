@@ -2,13 +2,13 @@
 //! Migrado de: src/engine/asl/transforms/statementRegistry.ts
 //! Este é o módulo mais crítico da pipeline ProgramNode → AslProgram.
 
-use crate::types::asl_types::*;
-use crate::types::typed_nodes::{ProgramNode, StatementNode, StatementKind, FunctionNode};
+use crate::transforms::block_transform::transform_block;
+use crate::transforms::call_transform::transform_call;
 use crate::transforms::context::TransformContext;
 use crate::transforms::expr_transform::transform_expr;
-use crate::transforms::call_transform::transform_call;
-use crate::transforms::block_transform::{transform_block, transform_body};
 use crate::transforms::postfix_utils::extract_postfix;
+use crate::types::asl_types::*;
+use crate::types::typed_nodes::{FunctionNode, ProgramNode, StatementKind, StatementNode};
 
 fn resolve_type(s: &str) -> AslType {
     match s {
@@ -23,16 +23,22 @@ fn resolve_type(s: &str) -> AslType {
 
 /// Transforma um `ProgramNode` completo em `AslProgram`
 pub fn program_to_asl(program: &ProgramNode, ctx: &mut TransformContext) -> AslProgram {
-    let globals: Vec<AslGlobalVar> = program.globals.iter()
+    let globals: Vec<AslGlobalVar> = program
+        .globals
+        .iter()
         .map(|v| transform_var_decl(v, ctx))
         .collect();
 
-    let functions: Vec<AslFunction> = program.functions.iter()
+    let functions: Vec<AslFunction> = program
+        .functions
+        .iter()
         .map(|f| transform_function(f, ctx))
         .collect();
 
     // O programa principal (setup + loop ou main) torna-se a task "main"
-    let main_body: Vec<AslStatement> = program.body.iter()
+    let main_body: Vec<AslStatement> = program
+        .body
+        .iter()
         .flat_map(|s| transform_statement(s, ctx))
         .collect();
 
@@ -53,11 +59,15 @@ pub fn program_to_asl(program: &ProgramNode, ctx: &mut TransformContext) -> AslP
 /// Transforma um `StatementNode` em zero ou mais `AslStatement`
 pub fn transform_statement(node: &StatementNode, ctx: &mut TransformContext) -> Vec<AslStatement> {
     match &node.kind {
-
         // ── Declaração de variável ────────────────────────────────────────────
-        StatementKind::VarDecl(crate::types::typed_nodes::VarDeclNode { name, var_type, value, is_const: _ }) => {
+        StatementKind::VarDecl(crate::types::typed_nodes::VarDeclNode {
+            name,
+            var_type,
+            value,
+            is_const: _,
+        }) => {
             let asl_type = resolve_type(var_type.as_deref().unwrap_or("int"));
-            let init     = value.as_ref().map(|v| transform_expr(v, ctx));
+            let init = value.as_ref().map(|v| transform_expr(v, ctx));
             vec![AslStatement::Declare(AslDeclare {
                 name: name.clone(),
                 r#type: asl_type,
@@ -86,7 +96,7 @@ pub fn transform_statement(node: &StatementNode, ctx: &mut TransformContext) -> 
 
         // ── Expressão standalone (ex: i++, chamada sem retorno) ───────────────
         StatementKind::Expr(expr_node) => {
-            let expr   = transform_expr(expr_node, ctx);
+            let expr = transform_expr(expr_node, ctx);
             let extracted = extract_postfix(expr.clone());
             let mut result = vec![];
             // Se é apenas um postfix standalone, converte em Assign
@@ -99,9 +109,7 @@ pub fn transform_statement(node: &StatementNode, ctx: &mut TransformContext) -> 
         }
 
         // ── Blocos de controlo de fluxo ───────────────────────────────────────
-        StatementKind::Block(block_node) => {
-            transform_block(block_node, ctx)
-        }
+        StatementKind::Block(block_node) => transform_block(block_node, ctx),
 
         // ── Return ────────────────────────────────────────────────────────────
         StatementKind::Return(expr) => {
@@ -110,17 +118,20 @@ pub fn transform_statement(node: &StatementNode, ctx: &mut TransformContext) -> 
         }
 
         // ── Break / Continue ─────────────────────────────────────────────────
-        StatementKind::Break    => vec![AslStatement::Break],
+        StatementKind::Break => vec![AslStatement::Break],
         StatementKind::Continue => vec![AslStatement::Continue],
 
         // ── Comentário (preservado como metadata) ────────────────────────────
         StatementKind::Comment(text) => {
-            vec![AslStatement::Comment(AslComment{text: text.clone()})]
+            vec![AslStatement::Comment(AslComment { text: text.clone() })]
         }
     }
 }
 
-fn transform_var_decl(v: &crate::types::typed_nodes::VarDeclNode, ctx: &mut TransformContext) -> AslGlobalVar {
+fn transform_var_decl(
+    v: &crate::types::typed_nodes::VarDeclNode,
+    ctx: &mut TransformContext,
+) -> AslGlobalVar {
     let _ = ctx;
     AslGlobalVar {
         name: v.name.clone(),
@@ -132,12 +143,18 @@ fn transform_var_decl(v: &crate::types::typed_nodes::VarDeclNode, ctx: &mut Tran
 }
 
 fn transform_function(f: &FunctionNode, ctx: &mut TransformContext) -> AslFunction {
-    let params: Vec<AslParam> = f.params.iter().map(|p| AslParam {
-        name: p.name.clone(),
-        r#type: p.param_type.clone(),
-    }).collect();
+    let params: Vec<AslParam> = f
+        .params
+        .iter()
+        .map(|p| AslParam {
+            name: p.name.clone(),
+            r#type: p.param_type.clone(),
+        })
+        .collect();
 
-    let body: Vec<AslStatement> = f.body.iter()
+    let body: Vec<AslStatement> = f
+        .body
+        .iter()
         .flat_map(|s| transform_statement(s, ctx))
         .collect();
 

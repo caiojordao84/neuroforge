@@ -25,6 +25,12 @@ pub struct CGenerator {
     shims: ShimManager,
 }
 
+impl Default for CGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CGenerator {
     pub fn new() -> Self {
         let mut shims = ShimManager::new(ShimLanguage::C);
@@ -387,7 +393,7 @@ impl CGenerator {
 
         let update = if node.attributes.get("hasUpdate").and_then(|v| v.as_bool()) == Some(true) {
             let n = &node.children[idx]; idx += 1;
-            if n.node_type == "ExpressionStatement" && n.children.first().is_some() {
+            if n.node_type == "ExpressionStatement" && !n.children.is_empty() {
                 self.gen_expr(n.children.first().unwrap())
             } else { self.gen_expr(n) }
         } else { String::new() };

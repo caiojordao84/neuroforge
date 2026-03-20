@@ -9,21 +9,21 @@
 //! Tipos de nós em `Body_SFC_Inline`:
 //!   - `step`         — estado; `.initial_step` marca o estado inicial
 //!   - `transition`   — aresta entre steps; `.condition` pode ser:
-//!                        · reference (nome de variável/função)
-//!                        · inline ST (texto ST bruto → parseado com `iec61131`)
-//!                        · connectionPointIn (via FBD — tratado como opaque Var)
+//!      · reference (nome de variável/função)
+//!      · inline ST (texto ST bruto → parseado com `iec61131`)
+//!      · connectionPointIn (via FBD — tratado como opaque Var)
 //!   - `action_block` — actions ligadas a steps via `.connection_point_in`
 //!
 //! Estratégia:
 //!   1. Construir mapa  localId → SfcNode.
 //!   2. Determinar initial_step (initialStep=="true" || primeiro step).
 //!   3. Para cada step:
-//!        a. Recolher action blocks cujo connectionPointIn.connection.refLocalId == step.localId
-//!           → converter cada action em AslStatement.
-//!        b. Recolher transitions cujo connectionPointIn.connection.refLocalId == step.localId
-//!           → resolver condição → AslExpr
-//!           → encontrar step destino (step cujo connectionPointIn.ref == transition.localId)
-//!           → AslSmTransition { condition, target_step, priority }
+//!      a. Recolher action blocks cujo connectionPointIn.connection.refLocalId == step.localId
+//!         → converter cada action em AslStatement.
+//!      b. Recolher transitions cujo connectionPointIn.connection.refLocalId == step.localId
+//!         → resolver condição → AslExpr
+//!         → encontrar step destino (step cujo connectionPointIn.ref == transition.localId)
+//!         → AslSmTransition { condition, target_step, priority }
 //!   4. Emitir AslStatement::StateMachine.
 //!
 //! Condição inline ST:
@@ -52,6 +52,7 @@
 //!           .inline: Option<Box<Body>>    → .st: Option<FormattedText> → .text
 
 #![allow(dead_code, unused_imports)]
+#![allow(clippy::doc_lazy_continuation, clippy::doc_overindented_list_items)]
 
 use std::collections::HashMap;
 
@@ -438,7 +439,7 @@ impl SfcParser {
         cu.declarations.into_iter().find_map(|decl| {
             if let PouDeclaration::Function(func) = decl {
                 let stmts: Vec<AslStatement> = func.body.into_iter()
-                    .filter_map(|s| Self::lower_st_stmt(s))
+                    .filter_map(Self::lower_st_stmt)
                     .collect();
                 Some(stmts)
             } else {

@@ -141,6 +141,7 @@ impl LdGenerator {
 
     // ─── Emissores de nós LD ───────────────────────────────────────────────────
 
+    #[allow(clippy::too_many_arguments)]
     fn emit_contact(
         &self,
         var: &str, negated: bool,

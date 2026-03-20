@@ -12,11 +12,11 @@
 //!   1. Parsear o XML com `plcopen::from_str::<Project>`.
 //!   2. Para cada POU do tipo "program", percorrer os seus bodies LD.
 //!   3. Por cada body LD:
-//!        a. Construir um mapa  localId → LdNode  (contact | coil | leftPowerRail).
-//!        b. Para cada coil, calcular a expressão booleana dos seus inputs:
-//!             - recolher todos os contactos que chegam directamente à coil → OR
-//!             - para cada caminho, seguir a cadeia de ligações → AND
-//!        c. Emitir `AslStatement::Assign` com o resultado.
+//!      a. Construir um mapa  localId → LdNode  (contact | coil | leftPowerRail).
+//!      b. Para cada coil, calcular a expressão booleana dos seus inputs:
+//!         - recolher todos os contactos que chegam directamente à coil → OR
+//!         - para cada caminho, seguir a cadeia de ligações → AND
+//!      c. Emitir `AslStatement::Assign` com o resultado.
 //!   4. Emitir `AslProgram` com uma função por POU.
 //!
 //! Tipos PLCopen confirmados em RT-2 / plcopen_xml.rs e gerados pelo XSD:
@@ -39,6 +39,7 @@
 //!       .ref_local_id: String  (não Option, não camelCase)
 
 #![allow(dead_code, unused_imports)]
+#![allow(clippy::doc_lazy_continuation, clippy::doc_overindented_list_items)]
 
 use std::collections::HashMap;
 

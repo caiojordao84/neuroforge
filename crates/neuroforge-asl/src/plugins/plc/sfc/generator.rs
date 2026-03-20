@@ -20,7 +20,7 @@
 #![allow(dead_code)]
 
 use crate::types::asl_types::{
-    AslProgram, AslStatement, AslExpr, AslStateMachine, AslSmStep,
+    AslProgram, AslStatement, AslExpr, AslStateMachine,
     BinaryOp, UnaryOp,
 };
 

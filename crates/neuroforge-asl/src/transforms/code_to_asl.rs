@@ -5,10 +5,10 @@
 //! REGRA DE OURO: AslProgram é estritamente o IR de SIMULAÇÃO.
 //! Nunca é usado na transpilação (Pipeline 2 usa ProgramNode directamente).
 
-use crate::types::asl_types::AslProgram;
-use crate::types::typed_nodes::ProgramNode;
 use crate::transforms::context::{Language, TransformContext};
 use crate::transforms::statement_registry::program_to_asl;
+use crate::types::asl_types::AslProgram;
+use crate::types::typed_nodes::ProgramNode;
 
 /// Converte um `ProgramNode` normalizado em `AslProgram`.
 ///
@@ -26,8 +26,8 @@ pub fn ast_to_asl(program: &ProgramNode, language: Language) -> AslProgram {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::typed_nodes::ProgramNode;
     use crate::transforms::context::Language;
+    use crate::types::typed_nodes::ProgramNode;
 
     #[test]
     fn test_empty_program_produces_valid_asl() {

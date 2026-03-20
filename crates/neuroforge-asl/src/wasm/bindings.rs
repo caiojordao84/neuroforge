@@ -12,9 +12,10 @@
 //! );
 //! ```
 
+#![allow(dead_code)]
+
 use wasm_bindgen::prelude::*;
 
-use crate::transpile::{transpile, transpile_with_map};
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -158,8 +159,8 @@ fn parse_to_asl_program(
     target: &crate::executor::TargetLanguage,
 ) -> Result<crate::types::asl_types::AslProgram, String> {
     use crate::executor::TargetLanguage::*;
-    use crate::transforms::code_to_asl::ast_to_asl;
-    use crate::transforms::context::Language;
+    
+    
 
     match target {
         C | Cpp | Arduino => {

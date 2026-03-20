@@ -10,7 +10,9 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum AslType {
+    #[default]
     Int,
     Float,
     Bool,
@@ -19,9 +21,6 @@ pub enum AslType {
     Struct,
 }
 
-impl Default for AslType {
-    fn default() -> Self { AslType::Int }
-}
 
 // ============================================================================
 // Structs
@@ -643,6 +642,7 @@ pub struct AslUnary {
 pub enum UnaryOp { Neg, Not, BitNot, Pos, Addr, Deref }
 
 impl UnaryOp {
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Self {
         match s {
             "-" => UnaryOp::Neg,
@@ -690,6 +690,7 @@ pub enum BinaryOp {
 }
 
 impl BinaryOp {
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Self {
         match s {
             "+"  => BinaryOp::Add,  "-"  => BinaryOp::Sub,

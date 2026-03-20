@@ -4,7 +4,7 @@
 //!   - variável declarada mas nunca usada (warning)
 
 use std::collections::{HashMap, HashSet};
-use crate::types::asl_types::{AslProgram, AslFunction, AslStatement, AslExpr};
+use crate::types::asl_types::{AslProgram, AslStatement, AslExpr};
 use super::type_checker::Diagnostic;
 
 pub fn check_variable_scope(program: &AslProgram) -> Vec<Diagnostic> {

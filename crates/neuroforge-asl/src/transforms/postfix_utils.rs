@@ -1,7 +1,7 @@
 //! postfix_utils.rs — extrai side-effects i++/i-- de expressões
 //! Migrado de: src/engine/asl/transforms/postfixUtils.ts
 
-use crate::types::asl_types::{AslExpr, AslStatement, AslAssign, AslBinary, BinaryOp};
+use crate::types::asl_types::{AslAssign, AslBinary, AslExpr, AslStatement, BinaryOp};
 
 /// Resultado da extracção de side-effects de uma expressão postfix
 #[derive(Debug, Clone)]

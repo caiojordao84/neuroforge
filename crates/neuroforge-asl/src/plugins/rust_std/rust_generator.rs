@@ -12,6 +12,12 @@ pub struct RustGenerator {
     shims: ShimManager,
 }
 
+impl Default for RustGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RustGenerator {
     pub fn new() -> Self {
         let mut shims = ShimManager::new(ShimLanguage::Rust);

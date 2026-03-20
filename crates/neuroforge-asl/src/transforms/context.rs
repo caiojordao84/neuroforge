@@ -1,8 +1,8 @@
 //! TransformContext — contexto partilhado por todos os transforms ASL.
 //! Migrado de: src/engine/asl/transforms/context.ts
 
-use std::collections::{HashMap, HashSet};
 use serde_json::Value;
+use std::collections::{HashMap, HashSet};
 
 /// Linguagens suportadas pelo motor ASL.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -17,14 +17,15 @@ pub enum Language {
 }
 
 impl Language {
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "cpp" | "c" | "c++" | "arduino" => Some(Language::Cpp),
-            "python" | "micropython"         => Some(Language::Python),
+            "python" | "micropython" => Some(Language::Python),
             "rust" | "rust_std" | "rust_embassy" => Some(Language::Rust),
-            "st" | "structured_text"         => Some(Language::St),
-            "ladder"                          => Some(Language::Ladder),
-            _                                => None,
+            "st" | "structured_text" => Some(Language::St),
+            "ladder" => Some(Language::Ladder),
+            _ => None,
         }
     }
 }
@@ -94,7 +95,8 @@ impl TransformContext {
 
     /// Regista um grupo de pinos RGB.
     pub fn add_rgb(&mut self, var_name: &str, r: Value, g: Value, b: Value) {
-        self.rgb_pins.insert(var_name.to_string(), RgbPins { r, g, b });
+        self.rgb_pins
+            .insert(var_name.to_string(), RgbPins { r, g, b });
     }
 
     /// Regista um pino PWM.

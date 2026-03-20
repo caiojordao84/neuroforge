@@ -15,11 +15,11 @@
 //! Estratégia:
 //!   1. Construir mapa  localId → FbdNode.
 //!   2. Para cada outVariable (e inOutVariable como saída):
-//!        a. Seguir connectionPointIn → nó fonte.
-//!        b. Resolver recursivamente a expressão ASL.
-//!        c. Emitir AslStatement::Assign.
+//!      a. Seguir connectionPointIn → nó fonte.
+//!      b. Resolver recursivamente a expressão ASL.
+//!      c. Emitir AslStatement::Assign.
 //!   3. Para blocos IEC especiais (TON, TOF, TP, CTU, CTD, SR, RS, R_TRIG, F_TRIG):
-//!        emitir o AslStatement IEC especializado.
+//!      emitir o AslStatement IEC especializado.
 //!   4. Para outros blocos: AslExpr::Call genérico.
 //!
 //! Tipos PLCopen confirmados em generated_body.rs / generated_variables.rs:
@@ -45,6 +45,7 @@
 //!                                    .connection_point_out: Option<ConnectionPointOut>
 
 #![allow(dead_code, unused_imports)]
+#![allow(clippy::doc_lazy_continuation, clippy::doc_overindented_list_items)]
 
 use std::collections::HashMap;
 

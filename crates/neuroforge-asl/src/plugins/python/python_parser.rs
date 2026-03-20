@@ -18,14 +18,12 @@
 //!     "print"             → AslStatement::Print
 //!     else                → AslStatement::Expr
 
-use tree_sitter::{Node, Parser, Tree};
 use crate::types::asl_types::{
-    AslProgram, AslFunction, AslParam, AslStatement, AslExpr, AslMetadata,
-    AslIf, AslWhile, AslForIn, AslAssign,
-    AslPrint, AslDelay, AslPinMode, PinModeKind, AslReturn,
-    AslUartWrite, AslI2cWrite, AslI2cRead, AslSpiTransfer,
-    AslExpressionStmt,
+    AslAssign, AslDelay, AslExpr, AslExpressionStmt, AslForIn, AslFunction, AslI2cRead,
+    AslI2cWrite, AslIf, AslMetadata, AslParam, AslPinMode, AslPrint, AslProgram, AslReturn,
+    AslSpiTransfer, AslStatement, AslUartWrite, AslWhile, PinModeKind,
 };
+use tree_sitter::{Node, Parser, Tree};
 
 #[derive(Debug, thiserror::Error)]
 pub enum PythonParseError {
@@ -66,7 +64,9 @@ struct PythonVisitor<'src> {
 }
 
 impl<'src> PythonVisitor<'src> {
-    fn new(source: &'src str) -> Self { Self { source } }
+    fn new(source: &'src str) -> Self {
+        Self { source }
+    }
 
     fn text(&self, node: Node) -> &str {
         node.utf8_text(self.source.as_bytes()).unwrap_or("")
@@ -84,8 +84,8 @@ impl<'src> PythonVisitor<'src> {
                 "import_statement" | "import_from_statement" | "comment" => {}
                 _ => {
                     for stmt in self.visit_statement(child) {
-                        match stmt {
-                            AslStatement::Declare(d) => globals.push(crate::types::asl_types::AslGlobalVar {
+                        if let AslStatement::Declare(d) = stmt {
+                            globals.push(crate::types::asl_types::AslGlobalVar {
                                 name: d.name,
                                 r#type: d.r#type,
                                 initial_value: d.value.map(|e| match e {
@@ -94,8 +94,7 @@ impl<'src> PythonVisitor<'src> {
                                 }),
                                 struct_type: None,
                                 comments: None,
-                            }),
-                            _ => {}
+                            })
                         }
                     }
                 }
@@ -133,7 +132,12 @@ impl<'src> PythonVisitor<'src> {
             .map(|b| self.visit_block(b))
             .unwrap_or_default();
 
-        AslFunction { name, params, body, return_type: None }
+        AslFunction {
+            name,
+            params,
+            body,
+            return_type: None,
+        }
     }
 
     fn visit_params(&self, node: Node) -> Vec<AslParam> {
@@ -144,13 +148,25 @@ impl<'src> PythonVisitor<'src> {
                 "identifier" => {
                     let name = self.text(child).to_string();
                     if name != "self" {
-                        params.push(AslParam { name, r#type: "Any".to_string() });
+                        params.push(AslParam {
+                            name,
+                            r#type: "Any".to_string(),
+                        });
                     }
                 }
                 "typed_parameter" => {
-                    let name = child.named_child(0).map(|n| self.text(n).to_string()).unwrap_or_default();
-                    let type_name = child.child_by_field_name("type").map(|t| self.text(t).to_string()).unwrap_or_else(|| "Any".to_string());
-                    params.push(AslParam { name, r#type: type_name });
+                    let name = child
+                        .named_child(0)
+                        .map(|n| self.text(n).to_string())
+                        .unwrap_or_default();
+                    let type_name = child
+                        .child_by_field_name("type")
+                        .map(|t| self.text(t).to_string())
+                        .unwrap_or_else(|| "Any".to_string());
+                    params.push(AslParam {
+                        name,
+                        r#type: type_name,
+                    });
                 }
                 _ => {}
             }
@@ -193,7 +209,9 @@ impl<'src> PythonVisitor<'src> {
     fn visit_expr_stmt(&mut self, node: Node) -> Vec<AslStatement> {
         match node.kind() {
             "call" => vec![self.visit_call(node)],
-            _ => vec![AslStatement::Expr(AslExpressionStmt { expr: AslExpr::var(self.text(node)) })],
+            _ => vec![AslStatement::Expr(AslExpressionStmt {
+                expr: AslExpr::var(self.text(node)),
+            })],
         }
     }
 
@@ -215,7 +233,10 @@ impl<'src> PythonVisitor<'src> {
             .unwrap_or_default();
 
         let arg = |idx: usize| -> AslExpr {
-            raw_args.get(idx).map(|s| AslExpr::var(s)).unwrap_or_else(|| AslExpr::int(0))
+            raw_args
+                .get(idx)
+                .map(|s| AslExpr::var(s))
+                .unwrap_or_else(|| AslExpr::int(0))
         };
 
         match func_text.as_str() {
@@ -223,8 +244,9 @@ impl<'src> PythonVisitor<'src> {
                 pin: arg(0),
                 mode: PinModeKind::Output,
             }),
-            f if f == "utime.sleep_ms" || f == "time.sleep_ms" =>
-                AslStatement::Delay(AslDelay { milliseconds: arg(0) }),
+            f if f == "utime.sleep_ms" || f == "time.sleep_ms" => AslStatement::Delay(AslDelay {
+                milliseconds: arg(0),
+            }),
             "print" => AslStatement::Print(AslPrint {
                 args: raw_args.iter().map(|s| AslExpr::var(s)).collect(),
                 newline: true,
@@ -257,36 +279,66 @@ impl<'src> PythonVisitor<'src> {
     }
 
     fn visit_assignment(&mut self, node: Node) -> AslStatement {
-        let target = node.child_by_field_name("left").map(|n| self.text(n).to_string()).unwrap_or_default();
-        let value  = node.child_by_field_name("right").map(|n| AslExpr::var(self.text(n))).unwrap_or_else(|| AslExpr::int(0));
+        let target = node
+            .child_by_field_name("left")
+            .map(|n| self.text(n).to_string())
+            .unwrap_or_default();
+        let value = node
+            .child_by_field_name("right")
+            .map(|n| AslExpr::var(self.text(n)))
+            .unwrap_or_else(|| AslExpr::int(0));
         AslStatement::Assign(AslAssign { target, value })
     }
 
     fn visit_if(&mut self, node: Node) -> AslStatement {
-        let condition = node.child_by_field_name("condition")
+        let condition = node
+            .child_by_field_name("condition")
             .map(|c| AslExpr::var(self.text(c)))
             .unwrap_or_else(|| AslExpr::bool_val(true));
-        let then_branch = node.child_by_field_name("consequence")
+        let then_branch = node
+            .child_by_field_name("consequence")
             .map(|b| self.visit_block(b))
             .unwrap_or_default();
-        let else_branch = node.child_by_field_name("alternative")
+        let else_branch = node
+            .child_by_field_name("alternative")
             .map(|b| self.visit_block(b))
             .filter(|v| !v.is_empty());
-        AslStatement::If(Box::new(AslIf { condition, then_branch, else_branch }))
+        AslStatement::If(Box::new(AslIf {
+            condition,
+            then_branch,
+            else_branch,
+        }))
     }
 
     fn visit_for(&mut self, node: Node) -> AslStatement {
-        let var_name = node.child_by_field_name("left").map(|n| self.text(n).to_string()).unwrap_or_default();
-        let iterable = node.child_by_field_name("right").map(|n| AslExpr::var(self.text(n))).unwrap_or_else(|| AslExpr::int(0));
-        let body = node.child_by_field_name("body").map(|b| self.visit_block(b)).unwrap_or_default();
-        AslStatement::ForIn(Box::new(AslForIn { var_name, iterable, body }))
+        let var_name = node
+            .child_by_field_name("left")
+            .map(|n| self.text(n).to_string())
+            .unwrap_or_default();
+        let iterable = node
+            .child_by_field_name("right")
+            .map(|n| AslExpr::var(self.text(n)))
+            .unwrap_or_else(|| AslExpr::int(0));
+        let body = node
+            .child_by_field_name("body")
+            .map(|b| self.visit_block(b))
+            .unwrap_or_default();
+        AslStatement::ForIn(Box::new(AslForIn {
+            var_name,
+            iterable,
+            body,
+        }))
     }
 
     fn visit_while(&mut self, node: Node) -> AslStatement {
-        let condition = node.child_by_field_name("condition")
+        let condition = node
+            .child_by_field_name("condition")
             .map(|c| AslExpr::var(self.text(c)))
             .unwrap_or_else(|| AslExpr::bool_val(true));
-        let body = node.child_by_field_name("body").map(|b| self.visit_block(b)).unwrap_or_default();
+        let body = node
+            .child_by_field_name("body")
+            .map(|b| self.visit_block(b))
+            .unwrap_or_default();
         AslStatement::While(Box::new(AslWhile { condition, body }))
     }
 }

@@ -88,8 +88,8 @@ impl StGenerator {
             AslStatement::Assign(a) =>
                 format!("{}{} := {};", ind, a.target, self.gen_expr(&a.value)),
             AslStatement::Declare(d) =>
-                format!("{}VAR {} : {}{}; END_VAR", ind, d.name,
-                    format!("{:?}", d.r#type),
+                format!("{}VAR {} : {:?}{}; END_VAR", ind, d.name,
+                    d.r#type,
                     d.value.as_ref().map(|v| format!(" := {}", self.gen_expr(v))).unwrap_or_default()),
             AslStatement::If(s) => {
                 let mut out = format!("{}IF {} THEN\n", ind, self.gen_expr(&s.condition));
