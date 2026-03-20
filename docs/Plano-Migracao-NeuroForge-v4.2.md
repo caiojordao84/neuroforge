@@ -691,9 +691,15 @@ crates/neuroforge-asl/
 │   │           ├── parser.rs
 │   │           └── generator.rs
 │   ├── optimizer/
-│   │   └── optimizer.rs         # Elimina dead code, funde delays (← Optimizer.ts)
+│   │   ├── mod.rs               # Pipeline de optimização: constant_fold → dead_code → inline_const
+│   │   ├── constant_fold.rs     # Fobolding de constantes literais em expressões
+│   │   ├── dead_code.rs         # Eliminação de código inalcançável (if(false), após return)
+│   │   └── inline_const.rs      # Substituição de constantes por literais
 │   └── analysis/
-│       └── pattern_detector.rs  # Detecta padrões: PWM bit-bang, polling loop, state machine (← PatternDetector.ts)
+│       ├── mod.rs               # Pipeline de análise: type_checker → variable_scope → dependency_graph
+│       ├── type_checker.rs      # Validação rigorosa de tipos do AslProgram
+│       ├── variable_scope.rs    # Verificação de variáveis (não declaradas/não usadas)
+│       └── dependency_graph.rs  # Call graph e deteção de funções inalcançáveis
 └── wasm/
     ├── mod.rs           # pub mod bindings (criado Fase 1D)
     └── bindings.rs      # #[wasm_bindgen] — só compila em target_arch=wasm32
@@ -1910,6 +1916,8 @@ Se `AslTimerTON` é adicionado ao ST Generator, deve imediatamente ter equivalen
 **Estado:** ✅ Concluída
 
 **Tarefas:**
+- [x] ✅ Implementar módulo `analysis` abrangente (`type_checker`, `variable_scope`, `dependency_graph`) superando o plano original
+- [x] ✅ Implementar módulo `optimizer` estruturado em pipeline (`constant_fold` → `dead_code` → `inline_const`)
 - [x] ✅ Criar crate `neuroforge-asl` com estrutura completa (incluindo `schema/`, `transforms/code_to_asl.rs`)
 - [x] ✅ Migrar `ASLTypes.ts` → `asl_types.rs` (com campo `asl_version: "4.0.0"`)
 - [x] ✅ Implementar `schema/nfv.rs` e `schema/migration.rs`
@@ -1978,11 +1986,12 @@ Se `AslTimerTON` é adicionado ao ST Generator, deve imediatamente ter equivalen
 - [ ] Migrar todos os 7 painéis de propriedades para Svelte
 - [ ] Migrar `LibrariesPanel.svelte`
 
-#### Sub-Fase 2D — Editores de Código e ASL (1 semana)
+#### Sub-Fase 2D — Editores de Código e ASL (1 a 2 semanas)
 
 - [ ] Migrar `CodeEditor.svelte` (Monaco standalone)
 - [ ] Migrar `CodeEditorWithTabs.svelte`
 - [ ] Migrar `ASLViewer.svelte`
+- [ ] **Débito Técnico Fase 1:** Implementar conversor de AST (`nodes::ProgramNode` → `typed_nodes::ProgramNode`) no `neuroforge-asl` para viabilizar a transformação de C/Rust para o formato visual de Simulação (Pipeline 1).
 
 #### Sub-Fase 2E — Canvas de Simulação e Nós (2 semanas + spike obrigatório)
 
