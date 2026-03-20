@@ -63,14 +63,33 @@ Usa `@xyflow/react` para o canvas de simulação. Os nós custom (`LEDNode`, `MC
 **ASL Engine actual (a migrar para Rust):**
 
 O motor ASL em TypeScript já implementa um conjunto rico de tipos:
-- Controlo de fluxo: `if`, `while`, `for`, `doWhile`, `forIn`, `switch`, `break`, `continue`
-- Hardware: `pinMode`, `digitalWrite`, `analogWrite`, `read`
-- Serial: `serialBegin`, `print`, `uartWrite`, `uartRead`
-- Bus: `i2cWrite`, `i2cRead`, `spiTransfer`
-- PWM: `pwmInit`, `pwmSetDuty`, `pwmSetFreq`, `pwmStop`
-- IEC 61131-3 (já iniciado): `timerTON`, `timerTOF`, `timerTP`, `counterCTU`, `counterCTD`, `latchSR`, `latchRS`, `trigR`, `trigF`
-- Servo: `servoAttach`, `servoWrite`, `servoDetach`
-- RGB: `rgbSet`
+
+| Categoria | Tipos ASL | Estado |
+|---|---|---|
+| **Controlo de fluxo** | `if`, `while`, `for`, `doWhile`, `forIn`, `switch`, `break`, `continue` | ✅ Completo |
+| **Hardware (GPIO)** | `pinMode`, `digitalWrite`, `analogWrite`, `read` | ✅ Completo |
+| **Serial / UART** | `serialBegin`, `print`, `uartWrite`, `uartRead` | ✅ Completo |
+| **I2C** | `i2cWrite`, `i2cRead` | ⚠️ Parcial — falta `i2cBegin`, `i2cScan` |
+| **SPI** | `spiTransfer` | ⚠️ Parcial — falta `spiBegin`, `spiConfig`, `spiTransferFull` |
+| **PWM** | `pwmInit`, `pwmSetDuty`, `pwmSetFreq`, `pwmStop` | ✅ Completo |
+| **IEC 61131-3 (PLCs)** | `timerTON`, `timerTOF`, `timerTP`, `counterCTU`, `counterCTD`, `latchSR`, `latchRS`, `trigR`, `trigF` | ✅ Completo (Fase 1) |
+| **PLC Languages** | ST, IL, LD, FBD, SFC | ✅ Migrados para Rust (Fase 1, commit cf6c54e) |
+| **Servo** | `servoAttach`, `servoWrite`, `servoDetach` | ✅ Completo |
+| **RGB** | `rgbSet` | ✅ Completo |
+
+**Protocolos físicos a expandir (Fase 3+):**
+
+| Protocolo | Tipos a adicionar | Referência |
+|---|---|---|
+| RS485 | `rs485Begin`, `rs485Write`, `rs485Read` | `embedded-hal` + `serialport` |
+| CAN Bus | `canBegin`, `canSend`, `canReceive` | `embedded-can` crate |
+| 1-Wire | `oneWireBegin`, `oneWireSearch`, `oneWireRead`, `oneWireWrite` | `embedded-onewire` crate |
+| LIN Bus | `linBegin`, `linSend`, `linRead` | UART com timing específico |
+| IR | `irSend`, `irRead` | `infrared` crate (NEC/RC5/RC6) |
+| Ethernet | `ethernetBegin`, `tcpConnect`, `tcpWrite`, `tcpRead`, `udpSend`, `udpReceive` | `smoltcp` (MCU) |
+| USB Device | `usbBegin`, `usbWrite`, `usbRead` | `usb-device` + `usbd-serial` |
+| I2S (Áudio) | `i2sBegin`, `i2sWrite`, `i2sRead` | `i2s` crate |
+| BLE | `bleBegin`, `bleScan`, `bleConnect`, `bleWrite`, `bleRead` | `btleplug` (Desktop) / `embassy-bluetooth` (MCU) |
 
 **Os dois pipelines do motor ASL — Simulação vs Transpilação:**
 
@@ -252,8 +271,10 @@ Código fonte / .nfv / .nfladder
 ├──────────────────────────────────────────────────────────────────────┤
 │                       CAMADA DE TRANSPORTE                            │
 │  Desktop: UART · USB · MODBUS RTU/TCP · Ethernet · SPI · I2C · CAN  │
+│            RS485 · RS232 · LIN Bus · 1-Wire · IR · BLE (btleplug)   │
 │  WebApp:  WebSerial · WebUSB · WebSocket bridge · REST cloud          │
 │  Mobile:  Wi-Fi OTA · BLE · USB OTG (Android) · mDNS discovery       │
+│           ZigBee · IR · BLE · 1-Wire                                  │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -562,10 +583,11 @@ pub struct AslProgram {
 
 | Versão ASL | Novos Tipos | Fase |
 |---|---|---|
-| 4.0.0 | Versão base (tipos actuais migrados) | Fase 1 |
-| 4.1.0 | `AslTimerTON`, `AslTimerTOF`, `AslCounterCTU`, `AslLatchSR` completos | Fase 3 |
-| 4.2.0 | `AslRung`, `AslContact`, `AslCoil` (Ladder) | Fase 4 |
-| 4.3.0 | `AslSFC`, `AslFbd` | Fase 6 |
+| 4.0.0 | Versão base (tipos actuais migrados) | ✅ Fase 1 |
+| 4.3.0 | ST + IL + LD + FBD + SFC + PLCopen XML + todos os tipos PLC IEC 61131-3 | ✅ Fase 1 |
+| 4.4.0 | RS485, CAN Bus, 1-Wire, LIN Bus, IR, Ethernet TCP/UDP (smoltcp) | Planeada: Fase 3 |
+| 4.5.0 | USB Device (HID/CDC), I2S (Áudio), BLE | Planeada: Fase 4 |
+| 4.6.0 | ZigBee, NTSC/PAL | Planeada: Fase 5/6 |
 
 ---
 
@@ -598,7 +620,7 @@ crates/neuroforge-asl/
 │   │   ├── mod.rs
 │   │   ├── asl_types.rs          # Espelho de ASLTypes.ts (todos os tipos actuais)
 │   │   ├── asl_plc_types.rs      # Tipos IEC 61131-3
-│   │   └── asl_transport_types.rs
+│   │   └── asl_transport_types.rs   # Expansão planeada: RS485, CAN, 1-Wire, LIN, IR, Ethernet, BLE, USB, I2S
 │   ├── executor/
 │   │   └── asl_executor.rs       # Iterador assíncrono com virtual time (← ASLExecutor.ts)
 │   ├── parser/
@@ -777,6 +799,144 @@ wasm-opt = false
 
 > **Nota:** `wasm-opt = false` é necessário porque o `wasm-opt` do wasm-pack não suporta
 > certas instruções `bulk-memory` geradas pelo LLVM 22+ usado pelo wasi-sdk v25.
+
+### 5.6 Protocolos de Transporte
+
+Esta secção documenta todos os protocolos suportados pelo NeuroForge, organizados por camada física e estratégia de implementação.
+
+#### 5.6.1 Protocolos Físicos ( Novos Tipos ASL)
+
+Estes protocolos requerem **novos tipos `AslXxx`** no crate `neuroforge-asl`. A implementação segue os traits `embedded-hal` v1.0 para MCUs e bibliotecas nativas para Desktop.
+
+**Nota:** JTAG **não** precisa de tipos ASL — está coberto pelo `probe-rs = "0.24"` no `neuroforge-firmware` como ferramenta de flash/debug, não como protocolo de aplicação para o utilizador final.
+
+##### RS485 / RS232
+
+Ambos são UART com camada física diferente — RS232 usa ±12 V, RS485 usa par diferencial A/B com 120 Ω de terminação. A `serialport` crate (já no `neuroforge-transport`) cobre ambos via configuração de flow control e linha DE/RE.
+
+```rust
+// asl_transport_types.rs
+pub struct AslRs485Begin { pub port: String, pub baud: u32, pub de_re_pin: Option<u8> }
+pub struct AslRs485Write { pub data: AslExpr }
+pub struct AslRs485Read  { pub timeout_ms: u32, pub result: String }
+// RS232 partilha os tipos UART existentes — diferencia apenas o physical layer no gerador
+```
+
+##### CAN Bus (base para DeviceNet e NMEA2000)
+
+CAN usa par diferencial CANH/CANL. DeviceNet e NMEA 2000 correm sobre CAN com perfis de aplicação diferentes. O `embedded-hal` tem o crate separado `embedded-can` para traits CAN.
+
+```rust
+pub struct AslCanBegin    { pub baud: u32, pub mode: CanMode }  // CanMode: Normal | Loopback | Silent
+pub struct AslCanSend     { pub id: AslExpr, pub data: AslExpr, pub is_extended: bool }
+pub struct AslCanReceive  { pub filter_id: Option<u32>, pub filter_mask: Option<u32>,
+                              pub result: String, pub timeout_ms: u32 }
+// DeviceNet e NMEA2000: encapsulados sobre AslCanSend/Receive com shims de camada de aplicação
+pub enum CanMode { Normal, Loopback, Silent }
+```
+
+##### 1-Wire
+
+Protocolo single-wire com pull-up, identifica dispositivos por ID de 64 bits (ex: DS18B20). Existe o crate `embedded-onewire` com traits `no_std` e async.
+
+```rust
+pub struct AslOneWireBegin  { pub pin: u8 }
+pub struct AslOneWireSearch { pub result: String }  // retorna lista de IDs 64-bit
+pub struct AslOneWireRead   { pub device_id: AslExpr, pub bytes: u8, pub result: String }
+pub struct AslOneWireWrite  { pub device_id: AslExpr, pub command: AslExpr }
+```
+
+##### LIN Bus
+
+Protocolo single-wire master/slave, típico em automóvel a 12 V/24 V.
+
+```rust
+pub struct AslLinBegin  { pub baud: u32 }  // tipicamente 9600–20000
+pub struct AslLinSend   { pub frame_id: u8, pub data: AslExpr }
+pub struct AslLinRead   { pub frame_id: u8, pub result: String }
+```
+
+##### I2S (Áudio)
+
+Protocolo síncrono serial para áudio — SCK (bit clock), WS (word select), SD (dados). Relevante para ESP32 e RP2040.
+
+```rust
+pub struct AslI2sBegin  { pub sample_rate: u32, pub bits_per_sample: u8, pub channel: I2sChannel }
+pub struct AslI2sWrite  { pub buffer: AslExpr }
+pub struct AslI2sRead   { pub num_samples: u16, pub result: String }
+pub enum I2sChannel { Stereo, LeftOnly, RightOnly }
+```
+
+##### USB Device (controlo a nível de firmware)
+
+Diferente de "USB como transporte de flash" — aqui refere-se a implementar um dispositivo USB (HID, CDC, bulk) no MCU. O `usb-device` crate é o padrão `no_std`.
+
+```rust
+pub struct AslUsbBegin  { pub class: UsbDeviceClass }  // HID | CDC | Vendor
+pub struct AslUsbWrite  { pub endpoint: u8, pub data: AslExpr }
+pub struct AslUsbRead   { pub endpoint: u8, pub result: String }
+pub enum UsbDeviceClass { HID, CDC, Vendor(u8) }
+```
+
+##### IR (InfraRed)
+
+```rust
+pub struct AslIrSend  { pub pin: u8, pub protocol: IrProtocol, pub code: AslExpr }
+// IrProtocol: NEC | RC5 | RC6 | Sony | Samsung | Raw
+pub struct AslIrRead  { pub pin: u8, pub result: String }
+pub enum IrProtocol { Nec, Rc5, Rc6, Sony, Samsung, Raw }
+```
+
+##### Ethernet (TCP/UDP a nível MCU — smoltcp)
+
+```rust
+pub struct AslEthernetBegin  { pub mac: [u8; 6], pub ip: Option<String> }
+pub struct AslTcpConnect     { pub host: AslExpr, pub port: u16, pub result: String }
+pub struct AslTcpWrite       { pub conn: AslExpr, pub data: AslExpr }
+pub struct AslTcpRead        { pub conn: AslExpr, pub result: String }
+pub struct AslUdpSend        { pub host: AslExpr, pub port: u16, pub data: AslExpr }
+pub struct AslUdpReceive     { pub port: u16, pub result: String }
+```
+
+##### Bluetooth LE
+
+```rust
+pub struct AslBleBegin     { pub device_name: String }
+pub struct AslBleScan      { pub duration_ms: u32, pub result: String }
+pub struct AslBleConnect   { pub address: AslExpr }
+pub struct AslBleWrite     { pub char_uuid: String, pub data: AslExpr }
+pub struct AslBleRead      { pub char_uuid: String, pub result: String }
+```
+
+#### 5.6.2 Protocolos via Shims (Sem Novos Tipos ASL)
+
+Estes protocolos correm sobre os físicos já existentes ou em implementação. São tratados como **shims de geração de código** no `ShimManager`, não como novos tipos ASL base.
+
+| Protocolo | Corre sobre | Estratégia Rust | Crate |
+|---|---|---|---|
+| **Modbus RTU** | RS485 | `tokio-modbus` (já no plano) | `tokio-modbus = "0.5"` |
+| **Modbus ASCII** | UART | `tokio-modbus` | já incluído |
+| **Modbus TCP** | Ethernet | `tokio-modbus` | já incluído |
+| **DMX512** | RS485 | Shim sobre `AslRs485Write` | `dmx` crate ou impl manual |
+| **MIDI** | UART a 31.25 kbps | Shim sobre `AslUartWrite/Read` | `midi-types` crate |
+| **Firmata** | Serial (UART) | Shim sobre `serialBegin`/`uartWrite` | `firmata` crate |
+| **rosserial** | Serial (UART) | Shim sobre `serialBegin`/`uartWrite` | impl manual |
+| **S.N.A.P / YASP / LOP / ICSC** | Serial (UART) | Shims sobre UART existente | impl manual |
+| **netstring / JSON-over-serial** | Serial (UART) | Shim + `serde_json` | `serde_json` (já no workspace) |
+| **IP over Serial (SLIP/PPP)** | Serial (UART) | Shim | `smoltcp` crate |
+| **DeviceNet** | CAN | Shim sobre `AslCanSend/Receive` | impl manual |
+| **NMEA 2000** | CAN | Shim sobre `AslCanSend/Receive` | `nmea` crate |
+| **IEEE 1451 (TEDS)** | I2C/SPI | Shim que gera código de inicialização de TEDS sobre `AslI2cWrite/Read` | impl manual |
+
+#### 5.6.3 Prioridades por Fase
+
+| Fase | Protocolos a Adicionar | ASL Version |
+|---|---|---|
+| **Fase 3** | RS485, CAN Bus, 1-Wire, LIN, IR, Ethernet TCP/UDP | `4.4.0` |
+| **Fase 3** | Shims: Modbus RTU/TCP (já parcial), DMX512, MIDI, Firmata | shims, sem bump |
+| **Fase 4** | USB Device (HID/CDC), I2S, BLE | `4.5.0` |
+| **Fase 5** | ZigBee, NTSC/PAL | `4.6.0` |
+| **Fora de scope ASL** | JTAG (→ `probe-rs` firmware), Myrinet, InfiniBand, AoE | — |
 
 ## 6. Saída do React/JavaScript — Plano Detalhado
 
@@ -2019,14 +2179,51 @@ thiserror.workspace  = true
 tokio.workspace      = true
 anyhow.workspace     = true
 
+# Serial / UART
 serialport             = "4"
 tauri-plugin-serialport = "2"
+
+# Modbus (já no plano — shim sobre RS485)
 tokio-modbus           = "0.5"
+
+# USB
 rusb                   = "0.9"
+
+# Network
 reqwest                = { version = "0.12", features = ["json"] }
 mdns-sd                = "0.10"    # mDNS device discovery
+smoltcp                = { version = "0.12", features = ["socket-tcp", "socket-udp"] }
+
+# Debug / Flash
 probe-rs               = "0.24"    # SWD/JTAG flash + debugging (STM32, nRF, RP2040)
 subtle                 = "2"       # Constant-time comparisons (segurança bridge)
+
+# === Protocolos de Transporte — Fase 3 ===
+# CAN Bus
+embedded-can           = "0.4"         # Traits CAN (embedded-hal ecosystem)
+
+# 1-Wire
+embedded-onewire       = "0.1"         # Traits 1-Wire no_std + async
+ds18b20                = "0.2"         # Driver DS18B20
+
+# I2S (Áudio)
+i2s                    = "0.1"         # ou via embedded-hal-async
+
+# USB Device (MCU)
+usb-device             = "0.3"         # Padrão no_std para dispositivos USB
+usbd-serial            = "0.2"         # Classe CDC-ACM
+
+# IR
+infrared               = "0.14"        # no_std, suporta NEC/RC5/RC6/Sony/Samsung
+
+# Bluetooth Desktop
+btleplug               = "0.11"        # BLE host para Desktop (Windows/macOS/Linux)
+
+# MIDI
+midi-types             = "0.4"         # Tipos MIDI no_std
+
+# DMX512
+dmx                    = "0.1"         # ou impl sobre serialport com baud=250000
 ```
 
 ### `neuroforge-firmware`
@@ -2067,16 +2264,100 @@ roxmltree = "0.19"
 
 ---
 
-## Apêndice C — Referências Técnicas
+## Apêndice C — Inventário Completo de Protocolos por Camada
+
+### Camada Física
+
+| Protocolo | Camada | Velocidade | Distância | Tipos ASL | Fase | Estado |
+|---|---|---|---|---|---|---|
+| UART / Serial | Físico | 300–115200 bps | < 15 m | `serialBegin`, `print`, `uartWrite`, `uartRead` | ✅ 1 | ✅ Completo |
+| RS485 | Físico | 100 kbps–10 Mbps | < 1200 m | `rs485Begin`, `rs485Write`, `rs485Read` | Planeada: 3 | ❌ Planeado |
+| RS232 | Físico | 300–115200 bps | < 15 m | partilha UART | ✅ 1 | ✅ Completo |
+| SPI | Físico | 100 kHz–50 MHz | < 1 m | `spiTransfer` | ✅ 1 | ⚠️ Parcial |
+| I2C | Físico | 100 kHz–5 MHz | < 1 m | `i2cWrite`, `i2cRead` | ✅ 1 | ⚠️ Parcial |
+| CAN Bus | Físico | 125 kbps–1 Mbps | < 40 m | `canBegin`, `canSend`, `canReceive` | Planeada: 3 | ❌ Planeado |
+| LIN Bus | Físico | 1–20 kbps | < 40 m | `linBegin`, `linSend`, `linRead` | Planeada: 3 | ❌ Planeado |
+| 1-Wire | Físico | 15 kbps | < 300 m | `oneWireBegin`, `oneWireSearch`, `oneWireRead`, `oneWireWrite` | Planeada: 3 | ❌ Planeado |
+| I2S (Áudio) | Físico | variável | < 0.5 m | `i2sBegin`, `i2sWrite`, `i2sRead` | Planeada: 4 | ❌ Planeado |
+| USB Device | Físico | 1.5–480 Mbps | < 5 m | `usbBegin`, `usbWrite`, `usbRead` | Planeada: 4 | ❌ Planeado |
+| Ethernet | Físico | 10–1000 Mbps | < 100 m | `ethernetBegin`, `tcpConnect`, `udpSend` | Planeada: 3 | ❌ Planeado |
+
+### Camada de Aplicação sobre Físicos Existentes (Shims)
+
+| Protocolo | Corre sobre | Tipos ASL | Fase | Estado |
+|---|---|---|---|---|
+| Modbus RTU | RS485 | shim (não precisa tipo novo) | Planeada: 3 | ⚠️ Parcial |
+| Modbus TCP | Ethernet | shim | Planeada: 3 | ⚠️ Parcial |
+| DMX512 | RS485 | shim sobre `rs485Write` | Planeada: 3 | ❌ Planeado |
+| MIDI | UART | shim sobre `uartWrite/Read` | Planeada: 3 | ❌ Planeado |
+| Firmata | Serial | shim | Planeada: 3 | ❌ Planeado |
+| DeviceNet | CAN Bus | shim sobre `canSend/Receive` | Planeada: 3 | ❌ Planeado |
+| NMEA 2000 | CAN Bus | shim sobre `canSend/Receive` | Planeada: 3 | ❌ Planeado |
+| JSON-over-serial | UART | shim + `serde_json` | Planeada: 3 | ❌ Planeado |
+
+### Wireless / Alta-Performance
+
+| Protocolo | Camada | Tipos ASL | Fase | Estado |
+|---|---|---|---|---|
+| IR (InfraRed) | Wireless | `irSend`, `irRead` | Planeada: 3 | ❌ Planeado |
+| BLE (Bluetooth LE) | Wireless | `bleBegin`, `bleScan`, `bleConnect`, `bleWrite`, `bleRead` | Planeada: 4 | ❌ Planeado |
+| ZigBee | Wireless | `zigbeeBegin`, `zigbeeSend`, `zigbeeRead` | Planeada: 5 | ❌ Planeado |
+| Wi-Fi OTA | Wireless | shim sobre UART/TCP | ✅ 1 | ✅ Completo |
+| BLE Desktop | Wireless | `btleplug` | Planeada: 4 | ❌ Planeado |
+
+### Camada de Aplicação IEEE / Industriais
+
+| Protocolo | Corre sobre | Estratégia | Fase |
+|---|---|---|---|
+| IEEE 1451 (TEDS) | I2C/SPI | Shim que gera código de inicialização de TEDS sobre `AslI2cWrite/Read` | Planeada: 4 |
+| Tiny Embedded Network | UART | Shim minimalista orientado a bytes | Planeada: 3 |
+| NTSC/PAL | GPIO/PWM | shim sobre `pwmInit` + timing | Planeada: 5 |
+
+### Fora de Scope
+
+| Tecnologia | Razão |
+|---|---|
+| JTAG | Não é protocolo de aplicação — ferramenta de debug/flash (→ `probe-rs`) |
+| Myrinet / InfiniBand | Fora do scope de MCUs/PLCs |
+| AoE (ATA over Ethernet) | Fora do scope de MCUs/PLCs |
+
+---
+
+## Apêndice D — Referências Técnicas
+
+### Crates Rust
+
+- [embedded-can](https://crates.io/crates/embedded-can) — Traits CAN (embedded-hal ecosystem)
+- [embedded-onewire](https://crates.io/crates/embedded-onewire) — Traits 1-Wire no_std + async
+- [ds18b20](https://crates.io/crates/ds18b20) — Driver DS18B20 (1-Wire)
+- [infrared](https://crates.io/crates/infrared) — no_std IR: NEC/RC5/RC6/Sony/Samsung
+- [usb-device](https://crates.io/crates/usb-device) — Padrão no_std para dispositivos USB
+- [usbd-serial](https://crates.io/crates/usbd-serial) — Classe CDC-ACM para USB
+- [smoltcp](https://github.com/smoltcp-org/smoltcp) — TCP/UDP stack para MCUs
+- [btleplug](https://crates.io/crates/btleplug) — BLE host para Desktop (Windows/macOS/Linux)
+- [midi-types](https://crates.io/crates/midi-types) — Tipos MIDI no_std
+- [dmx](https://crates.io/crates/dmx) — DMX512 em Rust
+- [i2s crate](https://crates.io/crates/i2s) — I2S para áudio em MCUs
+
+### Frameworks e Bibliotecas
 
 - [Embassy Framework](https://embassy.dev) — Framework Rust async para sistemas embarcados
+- [embedded-hal](https://github.com/rust-embedded/embedded-hal) — Traits hardware abstraction (v1.0)
 - [IronPLC](https://github.com/ironplc/ironplc) — Parser IEC 61131-3 em Rust (referência)
 - [crates.io/crates/iec61131](https://crates.io/crates/iec61131) — Parser ST em Rust
+- [plcopen](https://crates.io/crates/plcopen) — PLCopen XML em Rust
 - [tree-sitter-structured-text](https://github.com/tmatijevich/tree-sitter-structured-text) — Grammar tree-sitter para ST
+
+### Frontend / UI
+
 - [@xyflow/svelte](https://svelteflow.dev) — SvelteFlow 1.x com Svelte 5 Runes (lançado Maio 2025)
 - [Tauri 2 SvelteKit Guide](https://v2.tauri.app/start/frontend/sveltekit/) — Guia oficial
+- [shadcn-svelte](https://www.shadcn-svelte.com) — Substituto Svelte do Radix UI
+
+### Ferramentas
+
 - [tokio-modbus](https://github.com/slowtec/tokio-modbus) — MODBUS assíncrono em Rust
 - [probe-rs](https://probe.rs) — Flash + debug SWD/JTAG para MCUs em Rust
-- [shadcn-svelte](https://www.shadcn-svelte.com) — Substituto Svelte do Radix UI
 - [com0com](https://sourceforge.net/projects/com0com/) — Virtual serial ports Windows (CI)
 - [socat manual](http://www.dest-unreach.org/socat/doc/socat.html) — Virtual serial ports Linux/macOS (CI)
+- [wasi-sdk](https://github.com/WebAssembly/wasi-sdk) — WASM toolchain para Windows (necessário para tree-sitter WASM)
