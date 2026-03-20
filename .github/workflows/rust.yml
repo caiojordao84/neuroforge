@@ -8,19 +8,24 @@ on:
 
 jobs:
   test:
-    name: cargo test (${{ matrix.os }})
+    name: check + test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust stable + wasm32 target
+      - name: Install system dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
 
       - name: Cache cargo registry
         uses: actions/cache@v4
@@ -49,7 +54,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust stable + wasm32 target
+      - name: Install Rust stable + wasm32-unknown-unknown
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
@@ -57,7 +62,13 @@ jobs:
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
-      - name: Cache cargo registry
+      - name: Setup wasi-sdk (sysroot for tree-sitter grammars)
+        run: |
+          wget https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-25/wasi-sdk-25.0-x86_64-linux.tar.gz
+          tar -xzf wasi-sdk-25.0-x86_64-linux.tar.gz
+          sudo mv wasi-sdk-25.0 /opt/wasi-sdk
+
+      - name: Cache cargo registry (wasm)
         uses: actions/cache@v4
         with:
           path: |
@@ -68,13 +79,25 @@ jobs:
           restore-keys: ubuntu-wasm-
 
       - name: Build WASM bundle
+        env:
+          CC: /opt/wasi-sdk/bin/clang
+          AR: /opt/wasi-sdk/bin/llvm-ar
+          NM: /opt/wasi-sdk/bin/llvm-nm
+          STRIP: /opt/wasi-sdk/bin/llvm-strip
+          RANLIB: /opt/wasi-sdk/bin/llvm-ranlib
+          CFLAGS: "--target=wasm32-unknown-unknown --sysroot=/opt/wasi-sdk/share/wasi-sysroot"
         run: |
           cd crates/neuroforge-asl
-          wasm-pack build --target web --out-dir ../../../../apps/webapp/src/lib/wasm
+          wasm-pack build --target web --out-dir ../../apps/webapp/src/lib/wasm
 
       - name: Check WASM bundle size (< 2 MB)
         run: |
-          SIZE=$(wc -c < apps/webapp/src/lib/wasm/neuroforge_asl_bg.wasm)
+          WASM_FILE="apps/webapp/src/lib/wasm/neuroforge_asl_bg.wasm"
+          if [ ! -f "$WASM_FILE" ]; then
+            echo "Error: $WASM_FILE not found!"
+            exit 1
+          fi
+          SIZE=$(wc -c < "$WASM_FILE")
           echo "WASM size: ${SIZE} bytes"
           if [ "$SIZE" -ge 2097152 ]; then
             echo "WASM bundle excede 2 MB!"
