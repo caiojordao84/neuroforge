@@ -2,6 +2,10 @@
   "name": "@neuroforge/shared",
   "version": "0.1.0",
   "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "svelte-check": "svelte-check"
+  },
   "dependencies": {
     "@xyflow/svelte": "^1.0.0",
     "@monaco-editor/loader": "^1.4.0",
@@ -10,6 +14,7 @@
   },
   "devDependencies": {
     "svelte": "^5.0.0",
+    "svelte-check": "^4.0.0",
     "typescript": "^5.5.0",
     "@sveltejs/kit": "^2.0.0",
     "tailwindcss": "^4.0.0",
