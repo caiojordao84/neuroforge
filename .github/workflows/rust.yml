@@ -77,12 +77,12 @@ jobs:
 
       - name: Build WASM bundle
         env:
-          CC: /opt/wasi-sdk/bin/clang
-          AR: /opt/wasi-sdk/bin/llvm-ar
-          NM: /opt/wasi-sdk/bin/llvm-nm
-          STRIP: /opt/wasi-sdk/bin/llvm-strip
-          RANLIB: /opt/wasi-sdk/bin/llvm-ranlib
-          CFLAGS: "--target=wasm32-unknown-unknown --sysroot=/opt/wasi-sdk/share/wasi-sysroot"
+          CC_wasm32_unknown_unknown: /opt/wasi-sdk/bin/clang
+          AR_wasm32_unknown_unknown: /opt/wasi-sdk/bin/llvm-ar
+          NM_wasm32_unknown_unknown: /opt/wasi-sdk/bin/llvm-nm
+          STRIP_wasm32_unknown_unknown: /opt/wasi-sdk/bin/llvm-strip
+          RANLIB_wasm32_unknown_unknown: /opt/wasi-sdk/bin/llvm-ranlib
+          CFLAGS_wasm32_unknown_unknown: "--target=wasm32-wasip1 --sysroot=/opt/wasi-sdk/share/wasi-sysroot"
         run: |
           cd crates/neuroforge-asl
           wasm-pack build --target web --out-dir ../../apps/webapp/src/lib/wasm
