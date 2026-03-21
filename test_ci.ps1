@@ -36,4 +36,4 @@ try {
     Pop-Location
 }
 
-Write-Host "`n✓ Todos os testes do CI passaram localmente!" -ForegroundColor Green
+Write-Host "`n[OK] Todos os testes do CI passaram localmente!" -ForegroundColor Green
