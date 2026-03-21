@@ -16,6 +16,7 @@
 use crate::types::asl_types::{
     AslProgram, AslFunction, AslStatement, AslExpr,
 };
+use crate::plugins::core::{AslGenerator, GeneratorOutput};
 
 pub struct StGenerator {
     indent_size: usize,
@@ -27,15 +28,20 @@ impl Default for StGenerator {
 
 impl StGenerator {
     pub fn new() -> Self { Self::default() }
+}
 
-    pub fn generate(&self, program: &AslProgram) -> String {
+impl AslGenerator for StGenerator {
+    fn generate(&mut self, program: &AslProgram) -> GeneratorOutput {
         let mut out = String::new();
         for func in &program.functions {
             out.push_str(&self.gen_program_block(func));
             out.push('\n');
         }
-        out
+        GeneratorOutput::new(out)
     }
+}
+
+impl StGenerator {
 
     fn indent(&self, level: usize) -> String {
         " ".repeat(level * self.indent_size)

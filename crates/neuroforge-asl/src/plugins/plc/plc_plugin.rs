@@ -15,6 +15,7 @@ use crate::plugins::plc::{
     fbd::generator::FbdGenerator,
     sfc::generator::SfcGenerator,
 };
+use crate::plugins::core::{AslGenerator, GeneratorOutput};
 
 /// Dialecto IEC 61131-3 a gerar.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -35,13 +36,14 @@ pub struct PlcPlugin;
 
 impl PlcPlugin {
     /// Gera código no dialecto pedido a partir de um `AslProgram`.
-    pub fn generate(dialect: PlcDialect, program: &AslProgram) -> String {
+    pub fn generate(dialect: PlcDialect, program: &AslProgram) -> GeneratorOutput {
         match dialect {
             PlcDialect::St  => StGenerator::new().generate(program),
-            PlcDialect::Il  => IlGenerator::new().generate(program),
-            PlcDialect::Ld  => LdGenerator::new().generate(program),
-            PlcDialect::Fbd => FbdGenerator::new().generate(program),
-            PlcDialect::Sfc => SfcGenerator::new().generate(program, "st"),
+            // As outras linguagens ainda vão devolver strings diretas. Iremos embrulhar aqui por agora para manter a API.
+            PlcDialect::Il  => GeneratorOutput::new(IlGenerator::new().generate(program)),
+            PlcDialect::Ld  => GeneratorOutput::new(LdGenerator::new().generate(program)),
+            PlcDialect::Fbd => GeneratorOutput::new(FbdGenerator::new().generate(program)),
+            PlcDialect::Sfc => GeneratorOutput::new(SfcGenerator::new().generate(program, "st")),
         }
     }
 
@@ -111,23 +113,23 @@ mod tests {
     fn plugin_st_generate() {
         let prog = binary_prog("StProg", BinaryOp::And);
         let out  = PlcPlugin::generate(PlcDialect::St, &prog);
-        assert!(out.contains("PROGRAM"),
-            "ST deve conter PROGRAM:\n{out}");
+        assert!(out.code.contains("PROGRAM"),
+            "ST deve conter PROGRAM:\n{out:?}");
     }
 
     #[test]
     fn plugin_il_generate() {
         let prog = binary_prog("IlProg", BinaryOp::And);
         let out  = PlcPlugin::generate(PlcDialect::Il, &prog);
-        assert!(out.contains("END_PROGRAM"),
-            "IL deve conter END_PROGRAM:\n{out}");
+        assert!(out.code.contains("END_PROGRAM"),
+            "IL deve conter END_PROGRAM:\n{out:?}");
     }
 
     #[test]
     fn plugin_ld_generate() {
         let prog = binary_prog("LdProg", BinaryOp::And);
         let out  = PlcPlugin::generate(PlcDialect::Ld, &prog);
-        assert!(!out.is_empty(),
+        assert!(!out.code.is_empty(),
             "LD não deve produzir output vazio");
     }
 
@@ -135,7 +137,7 @@ mod tests {
     fn plugin_fbd_generate() {
         let prog = binary_prog("FbdProg", BinaryOp::And);
         let out  = PlcPlugin::generate(PlcDialect::Fbd, &prog);
-        assert!(!out.is_empty(),
+        assert!(!out.code.is_empty(),
             "FBD não deve produzir output vazio");
     }
 
@@ -148,10 +150,10 @@ mod tests {
   </SFC></body></pou></pous></types></project>"#;
         let prog = SfcParser::parse(xml).expect("parse SFC");
         let out  = PlcPlugin::generate(PlcDialect::Sfc, &prog);
-        assert!(!out.is_empty(),
+        assert!(!out.code.is_empty(),
             "SFC não deve produzir output vazio");
-        assert!(out.contains("CASE") || out.contains("switch") || out.contains("match"),
-            "SFC deve conter estrutura de controlo, output:\n{out}");
+        assert!(out.code.contains("CASE") || out.code.contains("switch") || out.code.contains("match"),
+            "SFC deve conter estrutura de controlo, output:\n{out:?}");
     }
 
     // ─── roundtrip ST ──────────────────────────────────────────────────
@@ -170,10 +172,10 @@ END_PROGRAM
 "#;
         let prog = PlcPlugin::parse_st(src).expect("parse ST falhou");
         let out  = PlcPlugin::generate(PlcDialect::St, &prog);
-        assert!(out.contains("PROGRAM Main"),
-            "roundtrip ST deve preservar nome:\n{out}");
-        assert!(out.contains("IF"),
-            "roundtrip ST deve preservar IF:\n{out}");
+        assert!(out.code.contains("PROGRAM Main"),
+            "roundtrip ST deve preservar nome:\n{out:?}");
+        assert!(out.code.contains("IF"),
+            "roundtrip ST deve preservar IF:\n{out:?}");
     }
 
     // ─── roundtrip IL ──────────────────────────────────────────────────
@@ -194,9 +196,9 @@ END_PROGRAM
 "#;
         let prog = PlcPlugin::parse_il(src).expect("parse IL falhou");
         let out  = PlcPlugin::generate(PlcDialect::Il, &prog);
-        assert!(out.contains("AND"),
-            "roundtrip IL deve conter AND:\n{out}");
-        assert!(out.contains("ST"),
-            "roundtrip IL deve conter ST:\n{out}");
+        assert!(out.code.contains("AND"),
+            "roundtrip IL deve conter AND:\n{out:?}");
+        assert!(out.code.contains("ST"),
+            "roundtrip IL deve conter ST:\n{out:?}");
     }
 }

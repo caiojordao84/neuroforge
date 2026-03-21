@@ -9,10 +9,12 @@
 //! Stubs Fase 2 PLC:
 //!   IL, LD, FBD, SFC   → todo!()
 
-use crate::plugins::c::{CGenerator, GeneratorOutput};
+use crate::plugins::c::CGenerator;
+use crate::plugins::core::GeneratorOutput;
 use crate::plugins::rust_std::RustGenerator;
 use crate::plugins::python::python_parser::PythonParser;
 use crate::plugins::python::python_generator::PythonGenerator;
+use crate::plugins::core::AslGenerator;
 use crate::plugins::plc::st_parser::StParser;
 use crate::plugins::plc::st_generator::StGenerator;
 use crate::plugins::c::c_parser::CParser;
@@ -117,16 +119,16 @@ impl AslExecutor {
             TargetLanguage::Python | TargetLanguage::MicroPython => {
                 let prog = PythonParser::parse(source)
                     .map_err(|e| format!("PythonParser: {e}"))?;
-                let code = PythonGenerator::new().generate(&prog);
-                Ok(TranspileOutput::from_string(code))
+                let out = PythonGenerator::new().generate(&prog);
+                Ok(TranspileOutput::from_generator_output(out))
             }
 
             // ── Structured Text ──────────────────────────────────────────────
             TargetLanguage::St => {
                 let prog = StParser::parse(source)
                     .map_err(|e| format!("StParser: {e}"))?;
-                let code = StGenerator::new().generate(&prog);
-                Ok(TranspileOutput::from_string(code))
+                let out = StGenerator::new().generate(&prog);
+                Ok(TranspileOutput::from_generator_output(out))
             }
 
             // ── Stubs Fase 2 PLC ─────────────────────────────────────────────

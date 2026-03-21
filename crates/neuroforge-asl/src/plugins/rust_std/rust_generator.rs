@@ -2,7 +2,7 @@
 //! Migrado de: src/engine/asl/plugins/rust/RustGenerator.ts
 
 use crate::helpers::array_utils::BaseNode;
-use crate::plugins::c::SourceMapEntry;
+use crate::plugins::core::{GeneratorOutput, SourceMapEntry};
 use crate::plugins::core::{ShimDefinition, ShimLanguage, ShimManager};
 use serde_json::Value;
 
@@ -25,7 +25,7 @@ impl RustGenerator {
         Self { source_map: vec![], current_line: 1, shims }
     }
 
-    pub fn generate(&mut self, ast: &BaseNode) -> crate::plugins::c::GeneratorOutput {
+    pub fn generate(&mut self, ast: &BaseNode) -> GeneratorOutput {
         self.source_map.clear();
         self.current_line = 1;
         self.shims.reset_runtime();
@@ -115,7 +115,7 @@ impl RustGenerator {
             }
         }
 
-        crate::plugins::c::GeneratorOutput {
+        GeneratorOutput {
             code: lines.join("\n"),
             map: self.source_map.clone(),
         }

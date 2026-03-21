@@ -2,22 +2,8 @@
 //! Migrado de: src/engine/asl/plugins/c/CGenerator.ts
 
 use crate::helpers::array_utils::BaseNode;
-use crate::plugins::core::{ShimDefinition, ShimLanguage, ShimManager};
+use crate::plugins::core::{ShimDefinition, ShimLanguage, ShimManager, GeneratorOutput, SourceMapEntry};
 use serde_json::Value;
-
-/// Mapeamento de linha gerada → linha fonte.
-#[derive(Debug, Clone)]
-pub struct SourceMapEntry {
-    pub generated_line: u32,
-    pub source_line: u32,
-}
-
-/// Resultado da geração de código.
-#[derive(Debug)]
-pub struct GeneratorOutput {
-    pub code: String,
-    pub map: Vec<SourceMapEntry>,
-}
 
 pub struct CGenerator {
     source_map: Vec<SourceMapEntry>,

@@ -21,6 +21,7 @@
 //!   Expr             → expr
 
 use crate::types::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement};
+use crate::plugins::core::{AslGenerator, GeneratorOutput};
 
 pub struct PythonGenerator {
     indent_size: usize,
@@ -36,8 +37,10 @@ impl PythonGenerator {
     pub fn new() -> Self {
         Self::default()
     }
+}
 
-    pub fn generate(&self, program: &AslProgram) -> String {
+impl AslGenerator for PythonGenerator {
+    fn generate(&mut self, program: &AslProgram) -> GeneratorOutput {
         let mut out = String::new();
         out.push_str("import machine\nimport utime\n\n");
 
@@ -60,8 +63,11 @@ impl PythonGenerator {
             out.push_str(&self.gen_function(func, 0));
             out.push_str("\n\n");
         }
-        out
+        GeneratorOutput::new(out)
     }
+}
+
+impl PythonGenerator {
 
     fn indent(&self, level: usize) -> String {
         " ".repeat(level * self.indent_size)
