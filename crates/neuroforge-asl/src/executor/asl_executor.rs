@@ -83,10 +83,6 @@ impl TranspileOutput {
             source_map: out.map.iter().map(|e| (e.generated_line, e.source_line)).collect(),
         }
     }
-
-    fn from_string(code: String) -> Self {
-        Self { code, source_map: vec![] }
-    }
 }
 
 /// Motor de transpilação ASL.
