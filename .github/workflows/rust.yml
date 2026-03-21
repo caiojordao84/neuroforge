@@ -61,8 +61,9 @@ jobs:
       - name: Setup wasi-sdk (sysroot for tree-sitter grammars)
         run: |
           wget https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-25/wasi-sdk-25.0-x86_64-linux.tar.gz
+          DIR_NAME=$(tar -tzf wasi-sdk-25.0-x86_64-linux.tar.gz | head -1 | cut -f1 -d"/")
           tar -xzf wasi-sdk-25.0-x86_64-linux.tar.gz
-          sudo mv wasi-sdk-25.0 /opt/wasi-sdk
+          sudo mv "$DIR_NAME" /opt/wasi-sdk
 
       - name: Cache cargo registry (wasm)
         uses: actions/cache@v4
