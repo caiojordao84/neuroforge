@@ -1949,75 +1949,175 @@ Se `AslTimerTON` é adicionado ao ST Generator, deve imediatamente ter equivalen
 - [x] ✅ Implementar `plcopen_xml.rs` — import/export PLCopen XML (commit `cf6c54e`)
 - [x] ✅ Implementar `plc_plugin.rs` — registo unificado de todos os sub-parsers PLC (commit `cf6c54e`)
 
-**Movidas para Fase 2+:**
-- [ ] ☐ Migrar `FlowValidator.ts` → `flow/flow_validator.rs` (depende do SvelteFlow)
-- [ ] ☐ Migrar `CfgBuilder.ts` → `flow/cfg_builder.rs`
-- [ ] ☐ Migrar `FlowToAst.ts` → `flow/flow_to_ast.rs`
-- [ ] ☐ Migrar `flowToASL.ts` → `flow/flow_to_asl.rs`
-
 **Critério de sucesso:** ✅ Todos os testes de roundtrip passam (40/40). Bundle WASM < 2 MB. `code_to_asl.rs` tem cobertura de testes unitários > 90%.
 
 ---
 
-### Fase 2 — Desktop (Tauri 2 + Svelte 5) (6–8 semanas)
+### Fase 2 Revista — Desktop (Tauri 2 + Svelte 5)
 
-**Objectivo:** App Desktop funcional, substituindo React por Svelte 5.
+Duas decisões que mudam o plano original:
 
-#### Sub-Fase 2A — Setup + Componentes Atómicos (2 semanas)
+1. **Sem coexistência React/Svelte** — elimina `vite-plugin-react`, `vite-plugin-svelte` juntos, e toda a estratégia de remoção gradual das sub-fases 2A→2F. O React sai de uma vez antes de qualquer componente Svelte existir.
+2. **Módulos `flow/` integrados na Fase 2** — `FlowValidator`, `CfgBuilder`, `FlowToAst`, `flowToASL` eram produção activa no TS e têm de viver no crate antes do Flow Editor Svelte ser construído — caso contrário a sub-fase 2E fica sem backend.
 
-- [ ] Setup Tauri 2 com SvelteKit + Svelte 5 em `apps/desktop/`
-- [ ] Coexistência React + Svelte no Vite (vite-plugin-svelte + @vitejs/plugin-react)
-- [ ] Instalar `@xyflow/svelte` 1.x, `shadcn-svelte`, `@monaco-editor/loader`
-- [ ] Eliminar `BlocklyEditor.tsx`, stores QEMU
-- [ ] Migrar stores: `useSerialStore`, `useLibraryStore`, `useConnectionStore`
-- [ ] Migrar: `Terminal`, `SimulationModeToggle`, `PropertiesPanel`, `SerialMonitor`, `SerialTerminalPanel`
-- [ ] Implementar `transport/serial.rs` no Tauri backend
+---
 
-#### Sub-Fase 2B — Layout e Estrutura (2 semanas)
+#### Pré-condição — "React Tombstone" (0.5 semanas)
 
-- [ ] Migrar stores: `useFileStore`, `useUIStore`
-- [ ] Migrar: `TopToolbar`, `LeftSidebar`, `FloatingWindow`, `ComponentsLibrary`
-- [ ] Implementar `transport/usb.rs`, `transport/modbus.rs`, `transport/ethernet.rs`
-- [ ] Implementar `firmware/compiler.rs` (arduino-cli integration)
-- [ ] Implementar picotool flash em `firmware/compiler.rs` (secção 10.3)
+Antes de qualquer linha Svelte, o React é eliminado de uma só vez. Isto é possível porque não há utilizadores e não há rollback necessário.
+
+**Tarefas:**
+- `npm uninstall react react-dom @vitejs/plugin-react @xyflow/react zustand radix-ui @monaco-editor/react framer-motion react-hook-form recharts blockly`
+- Remover todos os `.tsx` (preservar `.ts` de engine e stores que ainda servem de referência durante a migração)
+- Remover `vite.config.ts` plugin React
+- Instalar: `@xyflow/svelte`, `shadcn-svelte`, `@monaco-editor/loader`, `vite-plugin-svelte`
+- Setup Tauri 2 + SvelteKit + Svelte 5 em `apps/desktop/`
+- `npm run dev` falha — esperado. O CI Svelte fica desactivado até 2A terminar.
+
+**Critério de saída:** `cargo check --workspace` verde. `vite build` sem dependências React.
+
+---
+
+#### Sub-Fase 2A — Setup + Stores + Componentes Atómicos (2 semanas)
+
+Com React eliminado, o foco é criar a fundação Svelte funcional.
+
+**Tarefas:**
+- Criar `apps/shared/src/state/` com os stores Svelte 5 Runes:
+  - `serial.svelte.ts` (de `useSerialStore`)
+  - `library.svelte.ts` (de `useLibraryStore`)
+  - `connection.svelte.ts` (de `useConnectionStore`)
+  - `files.svelte.ts`, `ui.svelte.ts`
+- Migrar componentes atómicos sem dependências de SvelteFlow:
+  - `Terminal.svelte`, `SerialMonitor.svelte`, `SerialTerminalPanel.svelte`
+  - `SimulationModeToggle.svelte`, `PropertiesPanel.svelte`
+  - `TopToolbar.svelte`, `LeftSidebar.svelte`, `FloatingWindow.svelte`, `ComponentsLibrary.svelte`
+- Implementar `transport/serial.rs` no Tauri backend + Tauri commands `serial_open`, `serial_write`, `serial_list_ports`
+- Integrar WASM do crate `neuroforge-asl` (`wasm-bindgen`) na app
+
+**Critério de saída:** `npm run dev` funciona. Terminal e Serial Monitor operacionais via Tauri invoke.
+
+---
+
+#### Sub-Fase 2B — Editores de Código e ASL Viewer (1 semana)
+
+**Tarefas:**
+- `CodeEditor.svelte` — Monaco standalone (`@monaco-editor/loader`), tokenizer Arduino/C++/Python/Rust preservado
+- `CodeEditorWithTabs.svelte`
+- `ASLViewer.svelte` — consome crate Rust via WASM
+
+**Critério de saída:** Editor de código abre, edita, e o ASLViewer renderiza o `AslProgram` em JSON.
+
+---
 
 #### Sub-Fase 2C — Painéis de Propriedades (1 semana)
 
-- [ ] Migrar todos os 7 painéis de propriedades para Svelte
-- [ ] Migrar `LibrariesPanel.svelte`
+**Tarefas:**
+- Migrar os 7 painéis de propriedades para Svelte
+- `LibrariesPanel.svelte`
+- `BoardLibrary.svelte` (SVGs e JSONs de placas preservados intactos)
 
-#### Sub-Fase 2D — Editores de Código e ASL (1 a 2 semanas)
+**Critério de saída:** Todos os 7 painéis funcionam com os stores Runes da 2A.
 
-- [ ] Migrar `CodeEditor.svelte` (Monaco standalone)
-- [ ] Migrar `CodeEditorWithTabs.svelte`
-- [ ] Migrar `ASLViewer.svelte`
-- [ ] **Débito Técnico Fase 1:** Implementar conversor de AST (`nodes::ProgramNode` → `typed_nodes::ProgramNode`) no `neuroforge-asl` para viabilizar a transformação de C/Rust para o formato visual de Simulação (Pipeline 1).
+---
 
-#### Sub-Fase 2E — Canvas de Simulação e Nós (2 semanas + spike obrigatório)
+#### Sub-Fase 2D — Módulos `flow/` no Crate Rust ⭐
 
-> ⚠️ **Risco de Estimativa — FlowEditor.tsx (42KB):** O `FlowEditor.tsx` é o maior componente do projecto (42KB). Antes de comprometer o calendário de 2 semanas para esta sub-fase, é **obrigatório** um spike de 3–5 dias com `@xyflow/svelte` para validar que todos os padrões usados (`Handle`, custom edges, nodos SVG com pinos, `useReactFlow` hooks) têm equivalêntes funcionais na versão Svelte. Só depois do spike se define o calendário real.
+Esta é a sub-fase que **não existia** no plano original. Sem ela, a 2E não tem backend. O Flow Editor Svelte precisa que `flow_validator`, `cfg_builder`, `flow_to_ast` e `flow_to_asl` existam em Rust antes de os nós Svelte poderem invocar a pipeline.
 
-- [ ] **Spike obrigatório (3–5 dias): validar @xyflow/svelte 1.x** com MCUNode completo (SVG + handles + pinos interactivos). Avaliar: `Handle`, `ManhattanEdge` custom, `useReactFlow` equivalente, performance com 20+ nós.
-- [ ] Migrar todos os nós de simulação (`LEDNode`, `MCUNode`, `ButtonNode`, `ServoNode`, `RGBLEDNode`, `PotentiometerNode`)
-- [ ] Migrar `ManhattanEdge.svelte`
-- [ ] Migrar `SimulationCanvas.svelte` (antigo `FlowEditor.tsx` — 42KB, complexidade alta)
-- [ ] Migrar `useSimulationStore` → `simulation.svelte.ts`
-- [ ] Migrar `CanvasArea.svelte`
-- [ ] Implementar `firmware/flash_manager.rs` com `ErrorRecoveryStrategy` (secção 10.2)
-- [ ] Implementar `firmware/firmware_hub.rs`
-- [ ] Criar `FirmwarePanel.svelte`, `FlashProgressPanel.svelte` (com UX de erros), `BoardLibrary.svelte`
-- [ ] Adicionar CI: virtual serial port tests
+**Tarefas (crate `neuroforge-asl/src/flow/`):**
 
-#### Sub-Fase 2F — Remoção do React (0.5 semanas)
+| Ficheiro Rust | Origem TS | Responsabilidade |
+|---|---|---|
+| `flow/flow_validator.rs` | `FlowValidator.ts` | Valida grafo: Start/End presentes, IDs únicos em blocos com estado |
+| `flow/cfg_builder.rs` | `CfgBuilder.ts` | Constrói CFG, detecta ciclos, `WHILE_LOOP`, `FOR_LOOP`, `INFINITE_LOOP` |
+| `flow/flow_to_ast.rs` | `FlowToAst.ts` (49KB) | CFG → `ProgramNode`, estratégia estruturada ou máquina de estados; nós Ladder |
+| `flow/flow_to_asl.rs` | `flowToASL.ts` | Entry point público: `flow_to_asl(nodes, edges) -> AslProgram` |
+| `flow/mod.rs` | — | `pub use` de todos os módulos; feature-flagged identicamente ao WASM |
 
-- [ ] Confirmar todos os 26 componentes + 7 stores migrados
-- [ ] Testes de integração end-to-end
-- [ ] `npm uninstall react react-dom @xyflow/react zustand @radix-ui/* @monaco-editor/react`
-- [ ] `npm uninstall framer-motion react-hook-form recharts embla-carousel-react cmdk next-themes vaul blockly`
-- [ ] Remover `@vitejs/plugin-react` do `vite.config.ts`
-- [ ] **Zero dependências React em runtime** ✅
+**Inputs/Outputs:**
+```rust
+// Tipos de entrada (definir em flow/types.rs)
+pub struct FlowNode { pub id: String, pub node_type: String, pub data: serde_json::Value }
+pub struct FlowEdge { pub id: String, pub source: String, pub target: String, ... }
 
-**Critério de sucesso:** App Desktop funciona sem React. Flash de firmware em Arduino, ESP32 e RP2040 (hardware-in-the-loop manual). CI verde em ubuntu/windows/macos.
+// Pipeline
+FlowValidator::validate(&nodes, &edges) -> Result<(), FlowError>
+CfgBuilder::build(&nodes, &edges)       -> Result<ControlFlowGraph, CfgError>
+FlowToAst::generate(&cfg)               -> Result<ProgramNode, FlowError>
+flow_to_asl(&nodes, &edges)             -> Result<AslProgram, FlowError>  // entry point
+```
+
+**Testes em `tests/flow_pipeline.rs`:**
+- `flow_blink_produces_pinmode_and_delay()` — nós Start→PinMode→Loop→Delay→End
+- `flow_if_node_produces_asl_if()` — IfNode com then/else branches
+- `flow_invalid_missing_end_is_err()` — FlowValidator rejeita grafo sem EndNode
+- `flow_ladder_timer_ton()` — nó `TimerTONNode` produz `AslStatement::TimerTon`
+
+**Critério de saída:** `cargo test -p neuroforge-asl -- flow` verde. `flow_to_asl` exposto via `wasm-bindgen`.
+
+---
+
+#### Sub-Fase 2E — Canvas de Simulação e Nós SvelteFlow (2 semanas + spike)
+
+Só começa depois da 2D estar verde. O spike de 3–5 dias valida `@xyflow/svelte` com `MCUNode` completo antes de comprometer o calendário.
+
+**Spike obrigatório (3–5 dias):**
+- Validar `Handle`, `ManhattanEdge` custom, equivalente de `useReactFlow`, performance com 20 nós
+- `MCUNode.svelte` com SVG Arduino Uno e pinos interactivos como Handles SvelteFlow
+
+**Tarefas (após spike verde):**
+- `LEDNode.svelte`, `MCUNode.svelte`, `ButtonNode.svelte`, `ServoNode.svelte`, `RGBLEDNode.svelte`, `PotentiometerNode.svelte`
+- `ManhattanEdge.svelte`
+- `SimulationCanvas.svelte` (ex-`FlowEditor.tsx`, 42KB)
+- `simulation.svelte.ts` (ex-`useSimulationStore`)
+- `CanvasArea.svelte`
+- `SimulationEngine.ts` mantido — apenas a fonte dos eventos muda (Tauri events em vez de browser events)
+- Implementar `firmware/flash_manager.rs` com `ErrorRecoveryStrategy` (secção 10.2 do plano)
+- Implementar `firmware/firmware_hub.rs`
+- `FirmwarePanel.svelte`, `FlashProgressPanel.svelte` (UX de erros accionáveis), `BoardLibrary.svelte`
+- CI virtual serial port tests
+
+**Critério de saída:** Simulação blink funciona end-to-end. Flash em Arduino via UART.
+
+---
+
+#### Sub-Fase 2F — Transports Adicionais + Compiler (1 semana)
+
+**Tarefas:**
+- `transport/usb.rs`, `transport/modbus.rs`, `transport/ethernet.rs`
+- `firmware/compiler.rs` — integração arduino-cli
+- `firmware/compiler.rs` — flash RP2040 via picotool (secção 10.3)
+- Migrar stores restantes: `useFileStore`, `useUIStore`
+
+**Critério de saída:** Flash em ESP32 (esptool) e RP2040 (picotool) hardware-in-the-loop manual.
+
+---
+
+#### Sub-Fase 2G — Saída do React (era 2F, agora apenas confirmação) (0.5 semanas)
+
+Com a coexistência eliminada no início, esta sub-fase é apenas a **verificação final**:
+- Confirmar todos os 26 componentes + 7 stores migrados
+- Testes de integração end-to-end
+- Zero dependências React em runtime — já verificado desde o "React Tombstone"
+- CI verde em ubuntu/windows/macos
+
+---
+
+#### Sub-Fases Revistas — Tabela Resumo
+
+| Sub-Fase | Duração | Resultado-chave |
+|---|---|---|
+| **React Tombstone** | 0.5 sem | React eliminado de vez; Svelte instalado |
+| **2A** Setup + Stores | 2 sem | Stores Runes, componentes atómicos, `serial.rs` |
+| **2B** Editores | 1 sem | Monaco + ASLViewer WASM |
+| **2C** Painéis | 1 sem | 7 painéis + LibrariesPanel |
+| **2D** `flow/` no crate ⭐ | 1.5 sem | `flow_to_asl` em Rust, testado, exposto via WASM |
+| **2E** Canvas + Firmware | 2 sem + spike | SimulationCanvas, todos os nós, flash UART |
+| **2F** Transports + Compiler | 1 sem | USB, MODBUS, Ethernet, arduino-cli, picotool |
+| **2G** Verificação final | 0.5 sem | Zero React, CI verde 3 plataformas |
+| **Total** | **~9.5 semanas** | App Desktop funcional sem React |
+
 
 ---
 
