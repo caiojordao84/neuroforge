@@ -22,9 +22,13 @@ jobs:
 
       - name: Ensure tauri.conf.json exists
         run: |
-          mkdir -p apps/desktop/src-tauri
+          TAURI_CONF='{"productName":"neuroforge","version":"0.1.0","identifier":"com.neuroforge.dev"}'
+          mkdir -p apps/desktop/src-tauri apps/mobile/src-tauri
           if [ ! -f apps/desktop/src-tauri/tauri.conf.json ]; then
-            echo '{}' > apps/desktop/src-tauri/tauri.conf.json
+            echo "$TAURI_CONF" > apps/desktop/src-tauri/tauri.conf.json
+          fi
+          if [ ! -f apps/mobile/src-tauri/tauri.conf.json ]; then
+            echo "$TAURI_CONF" > apps/mobile/src-tauri/tauri.conf.json
           fi
         shell: bash
 
