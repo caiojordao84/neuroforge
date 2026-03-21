@@ -266,9 +266,9 @@ def main():
         let prog = PythonParser::parse(src).expect("parse falhou");
         let out = PythonGenerator::new().generate(&prog);
         assert!(
-            out.contains("utime.sleep_ms"),
+            out.code.contains("utime.sleep_ms"),
             "deve conter sleep_ms: {}",
-            out
+            out.code
         );
     }
 }

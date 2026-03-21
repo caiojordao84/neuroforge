@@ -332,8 +332,8 @@ impl Default for FbdGenerator {
 mod tests {
     use super::*;
     use crate::types::asl_types::{
-        AslFunction, AslMetadata, AslStatement, AslAssign, AslExpressionStmt,
-        AslTimerTon, AslCall, AslVarRef,
+        AslFunction, AslMetadata, AslStatement, AslAssign,
+        AslCall, AslVarRef,
     };
 
     fn prog_passthrough() -> AslProgram {

@@ -187,7 +187,7 @@ END_PROGRAM
 "#;
         let prog = StParser::parse(src).expect("parse falhou");
         let out  = StGenerator::new().generate(&prog);
-        assert!(out.contains("PROGRAM"), "deve conter PROGRAM: {}", out);
-        assert!(out.contains("IF"), "deve conter IF: {}", out);
+        assert!(out.code.contains("PROGRAM"), "deve conter PROGRAM: {}", out.code);
+        assert!(out.code.contains("IF"), "deve conter IF: {}", out.code);
     }
 }
