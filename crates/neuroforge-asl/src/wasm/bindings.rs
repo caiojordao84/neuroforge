@@ -12,9 +12,12 @@
 //! );
 //! ```
 
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 
 use wasm_bindgen::prelude::*;
+
+#[cfg(target_arch = "wasm32")]
+use crate::transpile::{transpile, transpile_with_map};
 
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
