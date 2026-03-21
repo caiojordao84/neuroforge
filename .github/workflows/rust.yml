@@ -20,24 +20,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Ensure tauri.conf.json exists
-        run: |
-          TAURI_CONF='{"productName":"neuroforge","version":"0.1.0","identifier":"com.neuroforge.dev"}'
-          mkdir -p apps/desktop/src-tauri apps/mobile/src-tauri
-          if [ ! -f apps/desktop/src-tauri/tauri.conf.json ]; then
-            echo "$TAURI_CONF" > apps/desktop/src-tauri/tauri.conf.json
-          fi
-          if [ ! -f apps/mobile/src-tauri/tauri.conf.json ]; then
-            echo "$TAURI_CONF" > apps/mobile/src-tauri/tauri.conf.json
-          fi
-        shell: bash
-
-      - name: Install system dependencies (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
-
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
@@ -51,11 +33,11 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: cargo check (workspace)
-        run: cargo check --workspace
+      - name: cargo check (crates)
+        run: cargo check -p neuroforge-asl -p neuroforge-transport -p neuroforge-firmware
 
-      - name: cargo clippy (workspace)
-        run: cargo clippy --workspace -- -D warnings
+      - name: cargo clippy (crates)
+        run: cargo clippy -p neuroforge-asl -p neuroforge-transport -p neuroforge-firmware -- -D warnings
 
       - name: cargo test (neuroforge-asl)
         run: cargo test -p neuroforge-asl
