@@ -17,6 +17,16 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Ensure tauri.conf.json exists
+        run: |
+          mkdir -p apps/desktop/src-tauri
+          if [ ! -f apps/desktop/src-tauri/tauri.conf.json ]; then
+            echo '{}' > apps/desktop/src-tauri/tauri.conf.json
+          fi
+        shell: bash
 
       - name: Install system dependencies (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
@@ -100,7 +110,7 @@ jobs:
           SIZE=$(wc -c < "$WASM_FILE")
           echo "WASM size: ${SIZE} bytes"
           if [ "$SIZE" -ge 2097152 ]; then
-            echo "WASM bundle excede 2 MB!"
+            echo "WASM bundle exceeds 2 MB!"
             exit 1
           fi
 
