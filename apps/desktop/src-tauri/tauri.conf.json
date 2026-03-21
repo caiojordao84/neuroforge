@@ -1,0 +1,20 @@
+{
+  "app": {
+    "windows": [
+      {
+        "title": "NeuroForge",
+        "width": 1400,
+        "height": 900
+      }
+    ]
+  },
+  "build": {
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../build"
+  },
+  "identifier": "com.neuroforge.desktop",
+  "bundle": {
+    "icon": []
+  },
+  "plugins": {}
+}

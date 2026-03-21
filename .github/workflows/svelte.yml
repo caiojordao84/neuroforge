@@ -1,0 +1,33 @@
+name: Svelte
+
+on:
+  push:
+    branches: [preRust]
+  pull_request:
+    branches: [preRust]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @neuroforge/shared svelte-check
+      - run: pnpm --filter @neuroforge/desktop svelte-check
+
+  build-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - run: cargo install wasm-pack
+      - run: pnpm build:wasm
