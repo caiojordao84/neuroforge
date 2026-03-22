@@ -3,9 +3,9 @@
   "version": "4.0.0",
   "private": true,
   "scripts": {
-    "dev:desktop": "pnpm --filter @neuroforge/desktop dev",
+    "dev:desktop": "pnpm --filter @neuroforge/desktop tauri dev",
     "dev:webapp":  "pnpm --filter @neuroforge/webapp dev",
-    "build:wasm":  "cd crates/neuroforge-asl && wasm-pack build --target web --out-dir ../../apps/webapp/src/lib/wasm",
+    "build:wasm":  "cd crates/neuroforge-asl && wasm-pack build --target web --out-dir ../../apps/shared/src/lib/wasm --no-default-features",
     "check:rust":  "cargo check --workspace",
     "test:rust":   "cargo test --workspace",
     "lint:rust":   "cargo clippy --workspace -- -D warnings"

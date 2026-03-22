@@ -102,5 +102,10 @@ neuroforge.code-workspace
 # Rust
 target/
 **/*.rs.bk
-Cargo.lock (if you want to track it in binary/app, but for library workspace it depends)
 # For now, let's just track Cargo.lock as it is a workspace and we want reproducible dev env for apps.
+
+# SvelteKit generated
+.svelte-kit/
+
+# WASM build output (gerado automaticamente)
+apps/shared/src/lib/wasm/

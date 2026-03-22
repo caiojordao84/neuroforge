@@ -9,6 +9,7 @@
     ]
   },
   "build": {
+    "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1421",
     "frontendDist": "../build"
   },

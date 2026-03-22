@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev":   "tauri android dev",
-    "build": "tauri android build"
+    "dev":   "vite",
+    "build": "vite build",
+    "tauri": "tauri"
   },
   "dependencies": {
     "@neuroforge/shared": "workspace:*"

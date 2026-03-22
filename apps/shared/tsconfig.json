@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "checkJs": true,
+    "isolatedModules": true,
+    "strict": true,
+    "noEmit": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.svelte", "src/**/*.js"],
+  "exclude": ["src/lib/wasm/**/*"]
+}

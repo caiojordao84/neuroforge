@@ -30,4 +30,8 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - run: cargo install wasm-pack
-      - run: pnpm build:wasm
+      - run: |
+          cd crates/neuroforge-asl
+          wasm-pack build --target web `
+            --out-dir ../../apps/shared/src/lib/wasm `
+            --no-default-features

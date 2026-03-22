@@ -14,7 +14,7 @@ const STORAGE_KEY = 'neuroforge-library-store';
 const genId = () => `lib_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
 class LibraryState {
-  libraries      = $state<Library[]>([]);
+  libraries       = $state<Library[]>([]);
   activeLibraryId = $state<string | null>(null);
 
   constructor() {
@@ -43,14 +43,14 @@ class LibraryState {
   }
 
   updateLibrary(id: string, updates: Partial<Library>) {
-    this.libraries = this.libraries.map(l =>
+    this.libraries = this.libraries.map((l: Library) =>
       l.id === id ? { ...l, ...updates, lastModified: Date.now() } : l
     );
     this.persist();
   }
 
   deleteLibrary(id: string) {
-    const newLibs = this.libraries.filter(l => l.id !== id);
+    const newLibs = this.libraries.filter((l: Library) => l.id !== id);
     this.libraries = newLibs;
     if (this.activeLibraryId === id)
       this.activeLibraryId = newLibs[0]?.id ?? null;
