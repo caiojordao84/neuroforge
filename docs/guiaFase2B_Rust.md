@@ -1,633 +1,346 @@
-Tenho tudo. Quadro completo confirmado. Escrevo o guia.
+# Guia Sub-Fase 2B — Editores de Código e ASL Viewer
 
-***
-
-# Guia Sub-Fase 2B — Editores de Código + ASL Viewer
-
-## Estado confirmado antes de começar
+## Estado confirmado antes de escrever
 
 | Item | Estado real |
 |---|---|
-| `@monaco-editor/loader ^1.4.0` | ✅ instalado em `apps/shared` |
-| `crates/neuroforge-asl/src/wasm/bindings.rs` | ✅ expõe `wasm_transpile`, `wasm_transpile_with_map`, `wasm_parse_to_asl`, `wasm_get_diagnostics`, `wasm_version`, `wasm_supported_langs` |
-| `wasm-bindgen = "0.2"` no crate | ✅ configurado |
-| `build:wasm` script na raiz | ⚠️ aponta para `apps/webapp/` — precisa de update |
-| `apps/desktop/package.json` | ⚠️ SvelteKit + Tauri 2, **falta adicionar** `@tauri-apps/api` |
-| `.gitignore` (raiz) | ⚠️ `.svelte-kit/` ainda não está no root gitignore |
-| `+page.svelte` | ✅ stub vazio, pronto para receber layout |
-| `tailwindcss ^4` com `@import "tailwindcss"` | ✅ configurado |
+| `CodeEditor.svelte` | ✅ **Já existe e está completo** — Monaco, tema `neuroforge-dark`, `langMap`, `$bindable`, `onMount`/`dispose`  |
+| `CodeEditorWithTabs.svelte` | ✅ **Já existe e está completo** — multi-model Monaco, tab bar, `switchTab`, `ensureModel`, `onCodeChange`  |
+| `ASLViewer.svelte` | ✅ **Já existe e está completo** — consome `asl.parseToAsl`, diagnósticos, lazy WASM init  |
+| `asl.svelte.ts` | ✅ **Já existe** — `AslState` com `init()`, `transpile()`, `parseToAsl()`, `getDiagnostics()`  |
+| `apps/shared/src/lib/wasm/` | ❌ **Não existe** — directório `lib/` ausente de `apps/shared/src/`  |
+| `apps/shared/src/state/index.ts` | ⚠️ **`asl` não exportado** — `asl.svelte.ts` existe mas precisa ser adicionado ao barrel  |
+| `apps/desktop/src-tauri/src/transport/serial.rs` | ✅ Existe — 4 commands Tauri  |
+| `.svelte-kit/` committed | ⚠️ Deve ser removido do git (ver nota no fim) |
+
+**Conclusão:** Os três componentes da 2B **já foram escritos** no mesmo commit `4d59dd5` — além do esperado. O que falta é a **ligação ao WASM real**: o bundle `neuroforge_asl.js` ainda não foi copiado para `apps/shared/src/lib/wasm/`, e o `asl` não está exportado no `index.ts`. 
 
 ***
 
-## Pré-requisitos antes da 2B
+## Tarefas da Sub-Fase 2B
 
-### 1. Corrigir `.gitignore` — adicionar `.svelte-kit/`
+### 1. Gerar o Bundle WASM para `apps/shared`
 
-Adicionar ao `.gitignore` na raiz:
+O `asl.svelte.ts` importa de `'../lib/wasm/neuroforge_asl.js'` — esse caminho aponta para `apps/shared/src/lib/wasm/`.  O script de build na raiz aponta para `apps/webapp/src/lib/wasm` — precisa de um script dedicado para `shared`.
 
-```
-# SvelteKit generated
-.svelte-kit/
-```
-
-### 2. Adicionar `@tauri-apps/api` ao desktop
-
-O `SerialMonitor.svelte` já usa `invoke` mas `@tauri-apps/api` não está no `package.json` do desktop. 
-
-```bash
-pnpm --filter @neuroforge/desktop add @tauri-apps/api
-```
-
-### 3. Script WASM para `apps/shared/`
-
-O script actual da raiz envia o output para `apps/webapp/` que já não existe.  Actualizar o `package.json` da raiz:
+**Adicionar ao `package.json` raiz** (junto ao script existente `build:wasm`): 
 
 ```json
-"build:wasm": "cd crates/neuroforge-asl && wasm-pack build --target web --out-dir ../../apps/shared/src/lib/wasm --no-default-features"
+"build:wasm:shared": "cd crates/neuroforge-asl && wasm-pack build --target web --out-dir ../../apps/shared/src/lib/wasm"
 ```
 
-> **Nota importante:** O flag `--no-default-features` é obrigatório porque o feature `native` inclui `tokio`, que não compila para `wasm32`. 
-
-Correr uma vez localmente para gerar o output antes de usar nos componentes:
-
+**Correr o build:**
 ```bash
-pnpm build:wasm
+# Windows (com wasi-sdk v25 já configurado de Fase 1)
+pnpm build:wasm:shared
+
+# Resultado esperado em apps/shared/src/lib/wasm/:
+# ├── neuroforge_asl.js
+# ├── neuroforge_asl_bg.wasm
+# ├── neuroforge_asl_bg.wasm.d.ts
+# └── neuroforge_asl.d.ts
 ```
 
-Isto gera em `apps/shared/src/lib/wasm/`:
-```
-neuroforge_asl.js          ← glue code JS
-neuroforge_asl_bg.wasm     ← binário WASM
-neuroforge_asl.d.ts        ← tipos TypeScript
-package.json               ← gerado pelo wasm-pack
+**Verificar tamanho:**
+```bash
+# Deve ser < 2 MB (validado na Fase 1)
+ls -lh apps/shared/src/lib/wasm/neuroforge_asl_bg.wasm
 ```
 
-Adicionar ao `.gitignore`:
-```
-# WASM build output (gerado automaticamente)
+**Adicionar ao `.gitignore`** (ficheiros gerados não devem ser commitados):
+```gitignore
+# WASM gerado — regenerado em build/CI
 apps/shared/src/lib/wasm/
+apps/webapp/src/lib/wasm/
+
+# SvelteKit generated files
+apps/desktop/.svelte-kit/
+apps/webapp/.svelte-kit/
+apps/mobile/.svelte-kit/
 ```
 
 ***
 
-## 1. Store WASM — `asl.svelte.ts`
+### 2. Adicionar `asl` ao barrel de exports
 
-O WASM precisa de ser inicializado uma única vez de forma assíncrona. Criar um store dedicado em `apps/shared/src/state/`:
+O `apps/shared/src/state/index.ts` exporta `serial`, `connection`, `library`, `ui`, `files` — mas não `asl`.  O `ASLViewer.svelte` importa `asl` directamente do ficheiro — funciona, mas deve ser adicionado ao barrel para consistência.
+
+**`apps/shared/src/state/index.ts`** — adicionar linha:
+```ts
+export { serial }     from './serial.svelte.ts';
+export { connection } from './connection.svelte.ts';
+export { library }    from './library.svelte.ts';
+export { ui }         from './ui.svelte.ts';
+export { files }      from './files.svelte.ts';
+export { asl }        from './asl.svelte.ts';   // ← NOVO
+```
+
+***
+
+### 3. Verificar os Tauri commands necessários para o ASL Viewer
+
+O `ASLViewer.svelte` usa **WASM directamente** (sem Tauri invoke) — é o padrão correcto para o `apps/shared`, que é partilhado com WebApp e Mobile.  Não são necessários novos commands Tauri para a 2B.
+
+O `asl.svelte.ts` inicializa o WASM com `import('../lib/wasm/neuroforge_asl.js')` — funciona em qualquer contexto browser (Tauri WebView incluído). 
+
+**Confirmar que o `vite.config.ts` do desktop inclui suporte a assets WASM:**
 
 ```ts
-// apps/shared/src/state/asl.svelte.ts
+// apps/desktop/vite.config.ts — verificar/adicionar optimizeDeps
+import { defineConfig } from 'vite';
+import { sveltekit } from '@sveltejs/kit/vite';
 
-type WasmModule = typeof import('../lib/wasm/neuroforge_asl.js');
+export default defineConfig({
+  plugins: [sveltekit()],
+  server: { port: 1420, strictPort: true },
+  envPrefix: ['VITE_', 'TAURI_'],
+  build: { target: 'esnext' },
 
-class AslState {
-  ready    = $state(false);
-  error    = $state<string | null>(null);
-  #mod: WasmModule | null = null;
+  // WASM precisa de ser excluído do optimizeDeps
+  optimizeDeps: {
+    exclude: ['@neuroforge/shared'],
+  },
 
-  async init() {
-    if (this.ready) return;
+  // Ficheiros .wasm devem ser servidos com tipo MIME correcto
+  assetsInclude: ['**/*.wasm'],
+});
+```
+
+***
+
+### 4. Verificar `CodeEditor.svelte` — Tokenizer Arduino
+
+O `CodeEditor.svelte` actual **define um tema** mas **não registou um tokenizer Arduino/C++ customizado**.  O `langMap` mapeia `arduino → 'cpp'` que funciona, mas o original React tinha um tokenizer específico.
+
+**Verificar se o tokenizer Arduino do original está documentado:**
+```bash
+# Confirmar se o ficheiro original tinha tokenizer custom
+# O CodeEditor.tsx original usava monaco.languages.setMonarchTokensProvider
+# Verificar crates/neuroforge-asl/src/parser/language_registry.rs
+# para ver se as keywords Arduino estão lá
+```
+
+Para a 2B, o Monaco com `language: 'cpp'` é suficiente para Arduino/C++. O tokenizer completo vai para a 2G (polish) se necessário.
+
+***
+
+### 5. `CodeEditorWithTabs.svelte` — `files.svelte.ts` integration
+
+O `CodeEditorWithTabs.svelte` expõe `onCodeChange(tabId, value)` mas **não integra com `files.svelte.ts`**.  Este stub de store precisa de ser expandido para a 2B para que o editor persista o código editado.
+
+**`apps/shared/src/state/files.svelte.ts`** — expandir do stub actual:
+
+```ts
+// apps/shared/src/state/files.svelte.ts
+
+export interface ProjectFile {
+  id:       string;
+  name:     string;
+  language: string;      // 'cpp' | 'python' | 'rust' | 'st'
+  content:  string;
+  modified: boolean;
+  path?:    string;      // caminho no filesystem (Desktop)
+}
+
+const STORAGE_KEY = 'neuroforge-files-store';
+const genId = () => `file_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+
+class FilesState {
+  files          = $state<ProjectFile[]>([]);
+  activeFileId   = $state<string | null>(null);
+
+  // Derived — ficheiro activo para o editor
+  activeFile = $derived(
+    this.files.find(f => f.id === this.activeFileId) ?? null
+  );
+
+  // Derived — tabs para CodeEditorWithTabs
+  editorTabs = $derived(
+    this.files.map(f => ({
+      id:       f.id,
+      label:    f.name,
+      value:    f.content,
+      language: f.language,
+      modified: f.modified,
+    }))
+  );
+
+  constructor() {
     try {
-      const mod = await import('../lib/wasm/neuroforge_asl.js');
-      await mod.default(); // chama init() do wasm-bindgen
-      this.#mod = mod;
-      this.ready = true;
-    } catch (e) {
-      this.error = String(e);
-    }
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        this.files        = parsed.files        ?? [];
+        this.activeFileId = parsed.activeFileId ?? null;
+      }
+      // Se não há ficheiros, criar um ficheiro de boas-vindas
+      if (this.files.length === 0) {
+        this.newFile('main.cpp', 'cpp',
+          '// NeuroForge — RP2040 / Arduino\nvoid setup() {\n  pinMode(13, OUTPUT);\n}\n\nvoid loop() {\n  digitalWrite(13, HIGH);\n  delay(500);\n  digitalWrite(13, LOW);\n  delay(500);\n}\n'
+        );
+      }
+    } catch {}
   }
 
-  version(): string {
-    return this.#mod?.wasm_version() ?? '—';
+  private persist() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      files: this.files, activeFileId: this.activeFileId,
+    }));
   }
 
-  supportedLangs(): string[] {
-    return (this.#mod?.wasm_supported_langs() ?? '').split(',').filter(Boolean);
+  newFile(name: string, language: string, content = ''): string {
+    const f: ProjectFile = { id: genId(), name, language, content, modified: false };
+    this.files = [...this.files, f];
+    this.activeFileId = f.id;
+    this.persist();
+    return f.id;
   }
 
-  transpile(source: string, fromLang: string, toLang: string): string {
-    if (!this.#mod) throw new Error('WASM não inicializado');
-    return this.#mod.wasm_transpile(source, fromLang, toLang);
+  updateContent(id: string, content: string) {
+    this.files = this.files.map(f =>
+      f.id === id ? { ...f, content, modified: true } : f
+    );
+    this.persist();
   }
 
-  transpileWithMap(source: string, fromLang: string, toLang: string): { output: string; source_map: [number, number][] } {
-    if (!this.#mod) throw new Error('WASM não inicializado');
-    return JSON.parse(this.#mod.wasm_transpile_with_map(source, fromLang, toLang));
+  saveFile(id: string) {
+    this.files = this.files.map(f =>
+      f.id === id ? { ...f, modified: false } : f
+    );
+    this.persist();
   }
 
-  parseToAsl(source: string, lang: string): unknown {
-    if (!this.#mod) throw new Error('WASM não inicializado');
-    return JSON.parse(this.#mod.wasm_parse_to_asl(source, lang));
+  closeFile(id: string) {
+    const remaining = this.files.filter(f => f.id !== id);
+    this.files = remaining;
+    if (this.activeFileId === id)
+      this.activeFileId = remaining.at(-1)?.id ?? null;
+    this.persist();
   }
 
-  getDiagnostics(source: string, lang: string): Array<{ severity: string; context: string; message: string }> {
-    if (!this.#mod) throw new Error('WASM não inicializado');
-    return JSON.parse(this.#mod.wasm_get_diagnostics(source, lang));
+  setActiveFile(id: string) {
+    this.activeFileId = id;
+    this.persist();
+  }
+
+  renameFile(id: string, name: string) {
+    this.files = this.files.map(f =>
+      f.id === id ? { ...f, name, modified: true } : f
+    );
+    this.persist();
   }
 }
 
-export const asl = new AslState();
-```
-
-Adicionar ao barrel `apps/shared/src/state/index.ts`:
-```ts
-export { asl } from './asl.svelte.ts';
+export const files = new FilesState();
 ```
 
 ***
 
-## 2. `CodeEditor.svelte`
+### 6. Integrar `CodeEditorWithTabs` com `files` + `asl`
 
-O editor Monaco via `@monaco-editor/loader` não usa React — é a API standalone.  Criar em `apps/shared/src/components/`:
-
-```svelte
-<!-- apps/shared/src/components/CodeEditor.svelte -->
-<script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
-  import loader from '@monaco-editor/loader';
-  import type * as Monaco from 'monaco-editor';
-
-  interface Props {
-    value?:        string;
-    language?:     string;    // 'cpp' | 'python' | 'rust' | 'plaintext'
-    theme?:        string;    // 'neuroforge-dark' (default)
-    readOnly?:     boolean;
-    height?:       string;    // CSS height, ex: '100%'
-    onChange?:     (value: string) => void;
-  }
-
-  let {
-    value    = $bindable(''),
-    language = 'cpp',
-    theme    = 'neuroforge-dark',
-    readOnly = false,
-    height   = '100%',
-    onChange,
-  }: Props = $props();
-
-  let container = $state<HTMLDivElement | undefined>();
-  let editor: Monaco.editor.IStandaloneCodeEditor | undefined;
-  let monaco: typeof Monaco | undefined;
-
-  // Mapeia nomes internos NeuroForge para IDs Monaco
-  const langMap: Record<string, string> = {
-    cpp: 'cpp', c: 'c', arduino: 'cpp',
-    rust: 'rust', python: 'python', micropython: 'python',
-    upython: 'python', st: 'plaintext', iec61131: 'plaintext',
-  };
-
-  onMount(async () => {
-    monaco = await loader.init();
-
-    // Tema escuro personalizado
-    monaco.editor.defineTheme('neuroforge-dark', {
-      base: 'vs-dark',
-      inherit: true,
-      rules: [
-        { token: 'comment',   foreground: '6A9955' },
-        { token: 'keyword',   foreground: '569CD6', fontStyle: 'bold' },
-        { token: 'string',    foreground: 'CE9178' },
-        { token: 'number',    foreground: 'B5CEA8' },
-        { token: 'type',      foreground: '4EC9B0' },
-        { token: 'function',  foreground: 'DCDCAA' },
-      ],
-      colors: {
-        'editor.background':           '#09090b',
-        'editor.foreground':           '#e4e4e7',
-        'editorLineNumber.foreground': '#3f3f46',
-        'editorCursor.foreground':     '#3b82f6',
-        'editor.selectionBackground':  '#1e3a5f',
-        'editor.lineHighlightBackground': '#18181b',
-      },
-    });
-
-    if (!container) return;
-
-    editor = monaco.editor.create(container, {
-      value,
-      language: langMap[language] ?? 'plaintext',
-      theme: 'neuroforge-dark',
-      readOnly,
-      fontSize: 13,
-      fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
-      fontLigatures: true,
-      lineNumbers: 'on',
-      minimap:          { enabled: false },
-      scrollBeyondLastLine: false,
-      wordWrap:         'off',
-      tabSize:          2,
-      insertSpaces:     true,
-      automaticLayout:  true,     // responde a resize do container
-      bracketPairColorization: { enabled: true },
-      renderWhitespace: 'none',
-      smoothScrolling:  true,
-      cursorBlinking:   'smooth',
-      padding:          { top: 8, bottom: 8 },
-    });
-
-    editor.onDidChangeModelContent(() => {
-      const v = editor!.getValue();
-      value = v;
-      onChange?.(v);
-    });
-  });
-
-  // Sincroniza `value` externo → editor (sem loop: só actualiza se diferente)
-  $effect(() => {
-    if (editor && editor.getValue() !== value) {
-      editor.setValue(value);
-    }
-  });
-
-  // Sincroniza `language` → modelo Monaco
-  $effect(() => {
-    if (editor && monaco) {
-      const model = editor.getModel();
-      if (model) monaco.editor.setModelLanguage(model, langMap[language] ?? 'plaintext');
-    }
-  });
-
-  onDestroy(() => {
-    editor?.dispose();
-  });
-</script>
-
-<div
-  bind:this={container}
-  style="height: {height}; width: 100%;"
-  class="overflow-hidden rounded"
-></div>
-```
-
-***
-
-## 3. `CodeEditorWithTabs.svelte`
-
-Gere múltiplos ficheiros com tabs — cada tab tem o seu próprio modelo Monaco para preservar histórico de undo/redo independente.
-
-```svelte
-<!-- apps/shared/src/components/CodeEditorWithTabs.svelte -->
-<script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
-  import loader from '@monaco-editor/loader';
-  import type * as Monaco from 'monaco-editor';
-
-  export interface EditorTab {
-    id:       string;
-    label:    string;
-    value:    string;
-    language: string;
-    modified?: boolean;
-  }
-
-  interface Props {
-    tabs:        EditorTab[];
-    activeTabId?: string;
-    readOnly?:   boolean;
-    height?:     string;
-    onTabChange?: (tabId: string) => void;
-    onCodeChange?: (tabId: string, value: string) => void;
-    onTabClose?:  (tabId: string) => void;
-  }
-
-  let {
-    tabs        = $bindable([]),
-    activeTabId = $bindable(''),
-    readOnly    = false,
-    height      = '100%',
-    onTabChange,
-    onCodeChange,
-    onTabClose,
-  }: Props = $props();
-
-  let container = $state<HTMLDivElement | undefined>();
-  let monaco: typeof Monaco | undefined;
-  let editor: Monaco.editor.IStandaloneCodeEditor | undefined;
-
-  // Mapa tabId → Monaco model
-  const models = new Map<string, Monaco.editor.ITextModel>();
-
-  const langMap: Record<string, string> = {
-    cpp: 'cpp', c: 'c', arduino: 'cpp',
-    rust: 'rust', python: 'python', micropython: 'python',
-    upython: 'python', st: 'plaintext',
-  };
-
-  function monacoLang(lang: string) { return langMap[lang] ?? 'plaintext'; }
-
-  // Garante que existe um model para cada tab
-  function ensureModel(tab: EditorTab): Monaco.editor.ITextModel {
-    if (!monaco) throw new Error('Monaco não inicializado');
-    let m = models.get(tab.id);
-    if (!m) {
-      const uri = monaco.Uri.parse(`neuroforge://tab/${tab.id}`);
-      m = monaco.editor.createModel(tab.value, monacoLang(tab.language), uri);
-      models.set(tab.id, m);
-    }
-    return m;
-  }
-
-  function switchTab(tabId: string) {
-    const tab = tabs.find(t => t.id === tabId);
-    if (!tab || !editor || !monaco) return;
-    activeTabId = tabId;
-    editor.setModel(ensureModel(tab));
-    onTabChange?.(tabId);
-  }
-
-  onMount(async () => {
-    monaco = await loader.init();
-
-    monaco.editor.defineTheme('neuroforge-dark', {
-      base: 'vs-dark', inherit: true, rules: [
-        { token: 'comment',  foreground: '6A9955' },
-        { token: 'keyword',  foreground: '569CD6', fontStyle: 'bold' },
-        { token: 'string',   foreground: 'CE9178' },
-        { token: 'number',   foreground: 'B5CEA8' },
-        { token: 'function', foreground: 'DCDCAA' },
-      ],
-      colors: {
-        'editor.background':              '#09090b',
-        'editor.foreground':              '#e4e4e7',
-        'editorLineNumber.foreground':    '#3f3f46',
-        'editorCursor.foreground':        '#3b82f6',
-        'editor.selectionBackground':     '#1e3a5f',
-        'editor.lineHighlightBackground': '#18181b',
-      },
-    });
-
-    if (!container) return;
-
-    editor = monaco.editor.create(container, {
-      model: null,
-      theme: 'neuroforge-dark', readOnly,
-      fontSize: 13,
-      fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-      fontLigatures: true,
-      minimap: { enabled: false },
-      automaticLayout: true,
-      scrollBeyondLastLine: false,
-      tabSize: 2, insertSpaces: true,
-      bracketPairColorization: { enabled: true },
-      padding: { top: 8, bottom: 8 },
-    });
-
-    editor.onDidChangeModelContent(() => {
-      const value = editor!.getValue();
-      // Marcar tab como modificada
-      tabs = tabs.map(t => t.id === activeTabId ? { ...t, value, modified: true } : t);
-      onCodeChange?.(activeTabId, value);
-    });
-
-    // Activar primeira tab
-    if (tabs.length > 0) {
-      if (!activeTabId) activeTabId = tabs[0].id;
-      switchTab(activeTabId);
-    }
-  });
-
-  // Reagir a tabs adicionadas/removidas externamente
-  $effect(() => {
-    if (!monaco) return;
-    // Criar models para tabs novas
-    tabs.forEach(t => ensureModel(t));
-    // Destruir models de tabs removidas
-    models.forEach((_, id) => {
-      if (!tabs.find(t => t.id === id)) {
-        models.get(id)?.dispose();
-        models.delete(id);
-      }
-    });
-  });
-
-  onDestroy(() => {
-    editor?.dispose();
-    models.forEach(m => m.dispose());
-    models.clear();
-  });
-</script>
-
-<div class="flex flex-col h-full" style="height: {height};">
-  <!-- Tab bar -->
-  <div class="flex items-center bg-zinc-900 border-b border-zinc-800 overflow-x-auto shrink-0">
-    {#each tabs as tab (tab.id)}
-      <button
-        class="flex items-center gap-1 px-4 py-2 text-sm border-r border-zinc-800 whitespace-nowrap
-               transition-colors
-               {activeTabId === tab.id
-                  ? 'bg-zinc-950 text-zinc-100 border-t-2 border-t-blue-500'
-                  : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}"
-        onclick={() => switchTab(tab.id)}
-      >
-        {tab.label}
-        {#if tab.modified}
-          <span class="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block"></span>
-        {/if}
-        {#if onTabClose}
-          <span
-            class="ml-1 text-zinc-500 hover:text-zinc-200 leading-none"
-            onclick={(e) => { e.stopPropagation(); onTabClose?.(tab.id); }}
-          >✕</span>
-        {/if}
-      </button>
-    {/each}
-  </div>
-
-  <!-- Editor -->
-  <div bind:this={container} class="flex-1 overflow-hidden"></div>
-</div>
-```
-
-***
-
-## 4. `ASLViewer.svelte`
-
-Consome `asl.parseToAsl()` do WASM para renderizar a árvore ASL IR em modo debug. É o componente que prova que o pipeline Rust→WASM→Svelte está funcional. 
-
-```svelte
-<!-- apps/shared/src/components/ASLViewer.svelte -->
-<script lang="ts">
-  import { asl } from '../state/asl.svelte.ts';
-
-  interface Props {
-    source:   string;
-    language: string;   // 'cpp' | 'rust' | 'python' | ...
-  }
-
-  let { source, language }: Props = $props();
-
-  // Estado derivado — recalcula sempre que source/language mudam
-  let aslTree    = $derived.by(() => {
-    if (!asl.ready || !source.trim()) return null;
-    try {
-      return asl.parseToAsl(source, language);
-    } catch (e) {
-      return { error: String(e) };
-    }
-  });
-
-  let diagnostics = $derived.by(() => {
-    if (!asl.ready || !source.trim()) return [];
-    try {
-      return asl.getDiagnostics(source, language);
-    } catch {
-      return [];
-    }
-  });
-
-  // Inicializar WASM quando o componente monta
-  $effect(() => { asl.init(); });
-
-  const severityClass: Record<string, string> = {
-    error:   'text-red-400',
-    warning: 'text-yellow-400',
-    info:    'text-blue-400',
-  };
-</script>
-
-<div class="flex flex-col h-full bg-zinc-950 text-zinc-100 font-mono text-xs">
-  <!-- Header -->
-  <div class="flex items-center justify-between px-3 py-2 bg-zinc-900 border-b border-zinc-800 shrink-0">
-    <span class="text-zinc-400 font-sans text-sm font-medium">ASL IR</span>
-    {#if asl.ready}
-      <span class="text-zinc-500 text-xs">v{asl.version()}</span>
-    {:else if asl.error}
-      <span class="text-red-400 text-xs">WASM erro: {asl.error}</span>
-    {:else}
-      <span class="text-zinc-500 text-xs animate-pulse">a carregar WASM…</span>
-    {/if}
-  </div>
-
-  <!-- Diagnósticos -->
-  {#if diagnostics.length > 0}
-    <div class="shrink-0 border-b border-zinc-800 max-h-28 overflow-y-auto">
-      {#each diagnostics as d}
-        <div class="px-3 py-1 flex gap-2 text-xs {severityClass[d.severity] ?? 'text-zinc-300'}">
-          <span class="uppercase font-bold w-14 shrink-0">{d.severity}</span>
-          <span class="text-zinc-400 shrink-0">{d.context}</span>
-          <span>{d.message}</span>
-        </div>
-      {/each}
-    </div>
-  {/if}
-
-  <!-- ASL tree JSON -->
-  <div class="flex-1 overflow-auto p-3">
-    {#if !asl.ready}
-      <p class="text-zinc-600 italic">WASM a inicializar…</p>
-    {:else if !source.trim()}
-      <p class="text-zinc-600 italic">Sem código fonte.</p>
-    {:else if aslTree && 'error' in (aslTree as object)}
-      <p class="text-red-400">Erro: {(aslTree as { error: string }).error}</p>
-    {:else}
-      <pre class="text-zinc-300 leading-relaxed whitespace-pre-wrap break-words">{JSON.stringify(aslTree, null, 2)}</pre>
-    {/if}
-  </div>
-</div>
-```
-
-***
-
-## 5. Actualizar `index.ts` dos componentes
-
-Criar `apps/shared/src/components/index.ts` — barrel de re-exports para facilitar imports no desktop:
-
-```ts
-// apps/shared/src/components/index.ts
-export { default as CodeEditor }         from './CodeEditor.svelte';
-export { default as CodeEditorWithTabs } from './CodeEditorWithTabs.svelte';
-export { default as ASLViewer }          from './ASLViewer.svelte';
-export { default as Terminal }           from './Terminal.svelte';
-export { default as SerialMonitor }      from './SerialMonitor.svelte';
-export { default as SerialTerminalPanel }from './SerialTerminalPanel.svelte';
-export { default as SimulationModeToggle}from './SimulationModeToggle.svelte';
-export { default as PropertiesPanel }    from './PropertiesPanel.svelte';
-export { default as TopToolbar }         from './TopToolbar.svelte';
-export { default as LeftSidebar }        from './LeftSidebar.svelte';
-export { default as FloatingWindow }     from './FloatingWindow.svelte';
-export { default as ComponentsLibrary }  from './ComponentsLibrary.svelte';
-```
-
-***
-
-## 6. Smoke test em `+page.svelte`
-
-Para validar que tudo funciona — montar um layout de teste que exercita os três componentes da 2B:
+Criar a página de teste em `apps/desktop/src/routes/+page.svelte` que junta o editor + ASL viewer, servindo como prova de funcionamento end-to-end da 2B:
 
 ```svelte
 <!-- apps/desktop/src/routes/+page.svelte -->
 <script lang="ts">
-  import '../app.css';
-  import { CodeEditorWithTabs, ASLViewer } from '@neuroforge/shared/src/components/index.ts';
-  import type { EditorTab } from '@neuroforge/shared/src/components/CodeEditorWithTabs.svelte';
+  import CodeEditorWithTabs from '@neuroforge/shared/src/components/CodeEditorWithTabs.svelte';
+  import ASLViewer          from '@neuroforge/shared/src/components/ASLViewer.svelte';
+  import { files }          from '@neuroforge/shared/src/state/files.svelte.ts';
+  import { asl }            from '@neuroforge/shared/src/state/asl.svelte.ts';
 
-  let tabs = $state<EditorTab[]>([
-    { id: 'main', label: 'main.ino', value: 'void setup() {\n  pinMode(13, OUTPUT);\n}\n\nvoid loop() {\n  digitalWrite(13, HIGH);\n  delay(1000);\n  digitalWrite(13, LOW);\n  delay(1000);\n}', language: 'cpp' },
-    { id: 'lib',  label: 'helper.h',  value: '// helper', language: 'cpp' },
-  ]);
+  // Inicializar WASM na montagem da página
+  $effect(() => { asl.init(); });
 
-  let activeTabId = $state('main');
-
-  // Source activo para o ASLViewer
-  let activeSource = $derived(tabs.find(t => t.id === activeTabId)?.value ?? '');
-  let activeLang   = $derived(tabs.find(t => t.id === activeTabId)?.language ?? 'cpp');
+  // Fonte activa para o ASLViewer (código do ficheiro activo)
+  let activeSource   = $derived(files.activeFile?.content ?? '');
+  let activeLanguage = $derived(files.activeFile?.language ?? 'cpp');
 </script>
 
-<div class="flex h-screen w-screen overflow-hidden">
-  <!-- Editor -->
-  <div class="flex-1 flex flex-col">
+<div class="flex h-screen w-full bg-zinc-950 text-zinc-100 overflow-hidden">
+  <!-- Editor de código (esquerda) -->
+  <div class="flex-1 flex flex-col min-w-0">
     <CodeEditorWithTabs
-      bind:tabs
-      bind:activeTabId
+      tabs={files.editorTabs}
+      activeTabId={files.activeFileId ?? ''}
       height="100%"
-      onCodeChange={(id, val) => {
-        tabs = tabs.map(t => t.id === id ? { ...t, value: val } : t);
-      }}
+      onTabChange={(id) => files.setActiveFile(id)}
+      onCodeChange={(id, value) => files.updateContent(id, value)}
+      onTabClose={(id) => files.closeFile(id)}
     />
   </div>
 
-  <!-- ASL Viewer (painel direito) -->
-  <div class="w-80 border-l border-zinc-800 shrink-0">
-    <ASLViewer source={activeSource} language={activeLang} />
+  <!-- ASL Viewer (direita — 320px fixo) -->
+  <div class="w-80 shrink-0 border-l border-zinc-800 flex flex-col">
+    <ASLViewer source={activeSource} language={activeLanguage} />
   </div>
 </div>
 ```
 
+**Nota sobre o alias `@neuroforge/shared`:** O `tsconfig.json` e `vite.config.ts` do Desktop precisam de mapear o package workspace. O pnpm já resolve automaticamente `@neuroforge/shared` via `workspace:*`. Confirmar que o alias está em `apps/desktop/tsconfig.json`:
+
+```json
+{
+  "extends": "./.svelte-kit/tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@neuroforge/shared/*": ["../shared/src/*"]
+    }
+  }
+}
+```
+
 ***
 
-## 7. CI `svelte.yml` — adicionar step WASM
+### 7. CI — Adicionar `build:wasm:shared` ao `svelte.yml`
 
 ```yaml
-  build-wasm:
+# .github/workflows/svelte.yml — adicionar job build-wasm-shared
+  build-wasm-shared:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo install wasm-pack --locked
-      - run: |
-          cd crates/neuroforge-asl
-          wasm-pack build --target web `
-            --out-dir ../../apps/shared/src/lib/wasm `
-            --no-default-features
+        with: { targets: wasm32-unknown-unknown }
+      - run: cargo install wasm-pack
+      - run: pnpm build:wasm:shared
+      - name: Check WASM size
+        run: |
+          SIZE=$(wc -c < apps/shared/src/lib/wasm/neuroforge_asl_bg.wasm)
+          [ "$SIZE" -lt 2097152 ] || (echo "WASM > 2 MB!" && exit 1)
+      - uses: pnpm/action-setup@v3
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @neuroforge/shared svelte-check
+      - run: pnpm --filter @neuroforge/desktop svelte-check
 ```
 
 ***
 
 ## Checklist de saída da Sub-Fase 2B
 
-- [ ] `.gitignore` corrigido — `.svelte-kit/` e `apps/shared/src/lib/wasm/` ignorados
-- [ ] `@tauri-apps/api` adicionado ao `apps/desktop/package.json`
-- [ ] `pnpm build:wasm` corre sem erros — output em `apps/shared/src/lib/wasm/`
-- [ ] `apps/shared/src/state/asl.svelte.ts` criado
-- [ ] `apps/shared/src/state/index.ts` actualizado com `asl`
-- [ ] `apps/shared/src/components/CodeEditor.svelte` criado
-- [ ] `apps/shared/src/components/CodeEditorWithTabs.svelte` criado
-- [ ] `apps/shared/src/components/ASLViewer.svelte` criado
-- [ ] `apps/shared/src/components/index.ts` barrel criado
-- [ ] `+page.svelte` atualizado com smoke test
+- [ ] `pnpm build:wasm:shared` corre sem erros e produz `apps/shared/src/lib/wasm/neuroforge_asl_bg.wasm`
+- [ ] `.gitignore` actualizado — `apps/shared/src/lib/wasm/` e `apps/desktop/.svelte-kit/` ignorados
+- [ ] `files.svelte.ts` expandido com `ProjectFile`, `editorTabs`, `updateContent`, `saveFile`, `closeFile`
+- [ ] `apps/shared/src/state/index.ts` exporta `asl`
+- [ ] `apps/desktop/src/routes/+page.svelte` mostra editor + ASL viewer lado a lado
+- [ ] `apps/desktop/tsconfig.json` tem path alias `@neuroforge/shared/*`
+- [ ] `apps/desktop/vite.config.ts` tem `assetsInclude: ['**/*.wasm']` e `optimizeDeps.exclude`
+- [ ] `package.json` raiz tem script `build:wasm:shared`
+- [ ] `tauri dev` abre janela com Monaco funcional (escrever código → ASL tree actualiza em tempo real)
+- [ ] `asl.ready === true` visível no header do ASLViewer (versão do crate)
 - [ ] `pnpm --filter @neuroforge/shared svelte-check` verde
 - [ ] `pnpm --filter @neuroforge/desktop svelte-check` verde
-- [ ] `pnpm dev:desktop` — janela abre, Monaco renderiza, ASLViewer mostra "a carregar WASM…" e depois o JSON do ASL IR
-- [ ] CI `build-wasm` verde
+- [ ] CI `svelte.yml` verde (incluindo `build-wasm-shared`)
+
+***
+
+## Nota Adicional — `.svelte-kit/` no Git
+
+O commit `4d59dd5` incluiu `apps/desktop/.svelte-kit/` — ficheiros gerados automaticamente pelo SvelteKit.  Devem ser removidos do tracking:
+
+```bash
+git rm -r --cached apps/desktop/.svelte-kit/
+# Depois commit com mensagem: "chore: untrack .svelte-kit generated files"
+```

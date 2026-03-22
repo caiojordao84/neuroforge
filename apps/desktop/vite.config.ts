@@ -33,4 +33,9 @@ export default defineConfig({
   },
   envPrefix: ['VITE_', 'TAURI_'],
   build: { target: 'esnext' },
+  // Recomendado na Sub-Fase 2B para WASM e monorepo
+  optimizeDeps: {
+    exclude: ['@neuroforge/shared'],
+  },
+  assetsInclude: ['**/*.wasm'],
 });
