@@ -17,13 +17,11 @@ pub fn transform_call(call: &CallNode, ctx: &TransformContext) -> Option<AslStat
             let pin = args.first().cloned().unwrap_or(AslExpr::int(0));
             let mode_arg = call.args.get(1);
             let is_output = match mode_arg {
-                Some(arg) => {
-                    if let crate::types::typed_nodes::ExprKind::StringLiteral(s) = &arg.kind {
-                        s == "OUTPUT"
-                    } else {
-                        false
-                    }
-                }
+                Some(arg) => match &arg.kind {
+                    crate::types::typed_nodes::ExprKind::StringLiteral(s) => s == "OUTPUT",
+                    crate::types::typed_nodes::ExprKind::Identifier(s) => s == "OUTPUT",
+                    _ => false,
+                },
                 None => true,
             };
             let mode = if is_output {
@@ -35,11 +33,24 @@ pub fn transform_call(call: &CallNode, ctx: &TransformContext) -> Option<AslStat
         }
         "digitalWrite" => {
             let pin = args.first().cloned().unwrap_or(AslExpr::int(0));
-            let value = args.get(1).cloned().unwrap_or(AslExpr::int(0));
-            Some(AslStatement::DigitalWrite(AslDigitalWrite {
-                pin,
-                value: DigitalValue::Expr(value),
-            }))
+            // Check if arg is HIGH/LOW/1/0
+            let value_arg = call.args.get(1);
+            let value = match value_arg {
+                Some(arg) => match &arg.kind {
+                    crate::types::typed_nodes::ExprKind::Identifier(s) => {
+                        if s == "HIGH" { DigitalValue::High }
+                        else if s == "LOW" { DigitalValue::Low }
+                        else { DigitalValue::Expr(args.get(1).cloned().unwrap_or(AslExpr::int(0))) }
+                    },
+                    crate::types::typed_nodes::ExprKind::IntLiteral(n) => {
+                        if *n > 0 { DigitalValue::High }
+                        else { DigitalValue::Low }
+                    },
+                    _ => DigitalValue::Expr(args.get(1).cloned().unwrap_or(AslExpr::int(0))),
+                },
+                None => DigitalValue::Low,
+            };
+            Some(AslStatement::DigitalWrite(AslDigitalWrite { pin, value }))
         }
         "analogWrite" => {
             let pin = args.first().cloned().unwrap_or(AslExpr::int(0));

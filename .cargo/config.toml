@@ -1,0 +1,4 @@
+[env]
+CC_wasm32_unknown_unknown = "C:/wasi-sdk/bin/clang.exe"
+AR_wasm32_unknown_unknown = "C:/wasi-sdk/bin/llvm-ar.exe"
+CFLAGS_wasm32_unknown_unknown = "--sysroot=C:/wasi-sdk/share/wasi-sysroot -fPIC"

@@ -162,21 +162,22 @@ fn parse_to_asl_program(
     target: &crate::executor::TargetLanguage,
 ) -> Result<crate::types::asl_types::AslProgram, String> {
     use crate::executor::TargetLanguage::*;
-    
-    
+    use crate::transforms::code_to_asl::ast_to_asl;
+    use crate::transforms::context::Language;
+    use crate::types::nodes_to_typed::nodes_to_typed;
 
     match target {
         C | Cpp | Arduino => {
-            let _prog = crate::plugins::c::c_parser::CParser::parse(source)
+            let prog = crate::plugins::c::c_parser::CParser::parse(source)
                 .map_err(|e| format!("CParser: {e}"))?;
-            // ast_to_asl requer typed_nodes::ProgramNode, que os parsers C/Rust ainda nao produzem (apenas nodes::ProgramNode).
-            // Devolve programa vazio para passar check/compilar, a validar se for implementado.
-            Ok(crate::types::asl_types::AslProgram::default())
+            let typed = nodes_to_typed(&prog);
+            Ok(ast_to_asl(&typed, Language::Cpp))
         }
         Rust => {
-            let _prog = crate::plugins::rust_std::rust_parser::RustParser::parse(source)
+            let prog = crate::plugins::rust_std::rust_parser::RustParser::parse(source)
                 .map_err(|e| format!("RustParser: {e}"))?;
-            Ok(crate::types::asl_types::AslProgram::default())
+            let typed = nodes_to_typed(&prog);
+            Ok(ast_to_asl(&typed, Language::Rust))
         }
         Python | MicroPython => {
             // PythonParser::parse() já devolve AslProgram

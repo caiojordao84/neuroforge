@@ -1978,22 +1978,21 @@ Antes de qualquer linha Svelte, o React é eliminado de uma só vez. Isto é pos
 
 ---
 
-#### Sub-Fase 2A — Setup + Stores + Componentes Atómicos (2 semanas)
-
-Com React eliminado, o foco é criar a fundação Svelte funcional.
+**Estado:** ✅ Concluída
 
 **Tarefas:**
-- Criar `apps/shared/src/state/` com os stores Svelte 5 Runes:
-  - `serial.svelte.ts` (de `useSerialStore`)
-  - `library.svelte.ts` (de `useLibraryStore`)
-  - `connection.svelte.ts` (de `useConnectionStore`)
-  - `files.svelte.ts`, `ui.svelte.ts`
-- Migrar componentes atómicos sem dependências de SvelteFlow:
-  - `Terminal.svelte`, `SerialMonitor.svelte`, `SerialTerminalPanel.svelte`
-  - `SimulationModeToggle.svelte`, `PropertiesPanel.svelte`
-  - `TopToolbar.svelte`, `LeftSidebar.svelte`, `FloatingWindow.svelte`, `ComponentsLibrary.svelte`
-- Implementar `transport/serial.rs` no Tauri backend + Tauri commands `serial_open`, `serial_write`, `serial_list_ports`
-- Integrar WASM do crate `neuroforge-asl` (`wasm-bindgen`) na app
+- [x] Criar `apps/shared/src/state/` com os stores Svelte 5 Runes:
+  - [x] `serial.svelte.ts` (de `useSerialStore`)
+  - [x] `library.svelte.ts` (de `useLibraryStore`)
+  - [x] `connection.svelte.ts` (de `useConnectionStore`)
+  - [x] `files.svelte.ts`, `ui.svelte.ts`
+- [x] Migrar componentes atómicos sem dependências de SvelteFlow:
+  - [x] `Terminal.svelte`, `SerialMonitor.svelte`, `SerialTerminalPanel.svelte`
+  - [x] `SimulationModeToggle.svelte`, `PropertiesPanel.svelte`
+  - [x] `TopToolbar.svelte`, `LeftSidebar.svelte`, `FloatingWindow.svelte`, `ComponentsLibrary.svelte`
+- [x] Implementar `transport/serial.rs` no Tauri backend + Tauri commands `serial_open`, `serial_write`, `serial_list_ports`
+- [x] Integrar WASM do crate `neuroforge-asl` (`wasm-bindgen`) na app
+
 
 **Critério de saída:** `npm run dev` funciona. Terminal e Serial Monitor operacionais via Tauri invoke.
 
@@ -2001,12 +2000,17 @@ Com React eliminado, o foco é criar a fundação Svelte funcional.
 
 #### Sub-Fase 2B — Editores de Código e ASL Viewer (1 semana)
 
-**Tarefas:**
-- `CodeEditor.svelte` — Monaco standalone (`@monaco-editor/loader`), tokenizer Arduino/C++/Python/Rust preservado
-- `CodeEditorWithTabs.svelte`
-- `ASLViewer.svelte` — consome crate Rust via WASM
+**Estado:** ✅ Concluída
 
-**Critério de saída:** Editor de código abre, edita, e o ASLViewer renderiza o `AslProgram` em JSON.
+**Tarefas:**
+- [x] `CodeEditor.svelte` — Monaco standalone (`@monaco-editor/loader`), activação Svelte 5 via `$effect` para montagem estável no DOM
+- [x] `CodeEditorWithTabs.svelte` — Implementação de seletor de linguagem interativo (dropdown)
+- [x] **Workspace Adaptation**: Extensões de ficheiro e boilerplates adaptativos (ex: `main.ino` → `main.rs`, `helper.h` → `helper.py`)
+- [x] `ASLViewer.svelte` — consome crate Rust via WASM (`bindings.rs`)
+- [x] **Rust ASL Bridge**: Implementação de `nodes_to_typed.rs` para suporte a C/Cpp/Rust/Arduino
+
+**Critério de saída:** Editor de código abre, permite mudança dinâmica de linguagem de workspace, e o ASLViewer renderiza o IR tipado em tempo real.
+
 
 ---
 
@@ -2109,8 +2113,8 @@ Com a coexistência eliminada no início, esta sub-fase é apenas a **verificaç
 | Sub-Fase | Duração | Resultado-chave |
 |---|---|---|
 | **React Tombstone** | 0.5 sem | React eliminado de vez; Svelte instalado |
-| **2A** Setup + Stores | 2 sem | Stores Runes, componentes atómicos, `serial.rs` |
-| **2B** Editores | 1 sem | Monaco + ASLViewer WASM |
+| **2A** Setup + Stores | 2 sem | ✅ Stores Runes, componentes atómicos, `serial.rs` |
+| **2B** Editores | 1 sem | ✅ Monaco + ASLViewer WASM Bridge + Workspace Adaptation |
 | **2C** Painéis | 1 sem | 7 painéis + LibrariesPanel |
 | **2D** `flow/` no crate ⭐ | 1.5 sem | `flow_to_asl` em Rust, testado, exposto via WASM |
 | **2E** Canvas + Firmware | 2 sem + spike | SimulationCanvas, todos os nós, flash UART |
