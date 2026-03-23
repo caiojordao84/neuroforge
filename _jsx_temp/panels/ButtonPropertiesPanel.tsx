@@ -18,7 +18,7 @@ interface ButtonNodeData {
   id?: string;
   name?: string;
   label?: string;
-  buttonType?: ButtonType;
+  type?: ButtonType;
   connectedPin?: number | null;
   pullResistor?: PullResistor;
   debounceTime?: number;
@@ -109,7 +109,7 @@ export const ButtonPropertiesPanel: React.FC = () => {
       id:           d.id           ?? selectedNode.id,
       name:         d.name         ?? d.label ?? 'BTN',
       label:        d.label,
-      buttonType:   d.buttonType   ?? 'momentary',
+      type:         d.type         ?? (d as any).buttonType ?? 'momentary',
       connectedPin,
       pullResistor: d.pullResistor ?? 'NONE',
       debounceTime: d.debounceTime ?? 50,
@@ -138,7 +138,7 @@ export const ButtonPropertiesPanel: React.FC = () => {
                 id:           localData.id           ?? selectedNode.id,
                 name:         localData.name         ?? 'BTN',
                 label:        localData.name         ?? 'BTN',
-                buttonType:   localData.buttonType   ?? 'momentary',
+                type:         localData.type         ?? 'momentary',
                 connectedPin: localData.connectedPin ?? null,
                 pullResistor: localData.pullResistor ?? 'NONE',
                 debounceTime: localData.debounceTime ?? 50,
@@ -160,7 +160,7 @@ export const ButtonPropertiesPanel: React.FC = () => {
       id:           d.id           ?? selectedNode.id,
       name:         d.name         ?? d.label ?? 'BTN',
       label:        d.label,
-      buttonType:   d.buttonType   ?? 'momentary',
+      type:         d.type         ?? (d as any).buttonType ?? 'momentary',
       connectedPin,
       pullResistor: d.pullResistor ?? 'NONE',
       debounceTime: d.debounceTime ?? 50,
@@ -172,7 +172,7 @@ export const ButtonPropertiesPanel: React.FC = () => {
 
   // Dados derivados
   const pull       = localData.pullResistor ?? 'NONE';
-  const btnType    = localData.buttonType   ?? 'momentary';
+  const btnType    = localData.type         ?? 'momentary';
   const isFloating = pull === 'NONE';
   const logicDesc  = useMemo(() => getLogicDescription(pull, btnType), [pull, btnType]);
   const pullInfo   = pullResistorInfo[pull];
@@ -260,7 +260,7 @@ export const ButtonPropertiesPanel: React.FC = () => {
             {(['momentary', 'toggle'] as ButtonType[]).map((t) => (
               <button
                 key={t}
-                onClick={() => handleChange('buttonType', t)}
+                onClick={() => handleChange('type', t)}
                 className={cn(
                   'flex-1 flex items-center justify-center gap-1.5 h-9 rounded border text-xs font-medium transition-all',
                   btnType === t
