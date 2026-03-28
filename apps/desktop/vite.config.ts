@@ -7,6 +7,14 @@ import { fileURLToPath } from 'url';
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@neuroforge/shared/components': resolve(__dirname, '../shared/src/components'),
+      '@neuroforge/shared/state': resolve(__dirname, '../shared/src/state'),
+      '@neuroforge/shared/styles': resolve(__dirname, '../shared/src/styles'),
+      '@neuroforge/shared': resolve(__dirname, '../shared/src')
+    }
+  },
   plugins: [
     sveltekit(),
     tailwindcss(),

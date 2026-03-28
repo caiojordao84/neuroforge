@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+@source "../components/**/*.svelte";
+@source "../../../apps/webapp/src/**/*.svelte";
+@source "../../../apps/desktop/src/**/*.svelte";
+
+@theme {
+  --color-surface-container: #1f1e2e;
+  --color-primary-fixed-dim: #ecc300;
+  --color-primary-container: #ffd300;
+  --color-surface-container-low: #1b1a2a;
+  --color-surface-container-lowest: #0d0c1b;
+  --color-on-surface: #e4e0f6;
+  --color-on-surface-variant: #d0c6ab;
+  --color-outline-variant: #4d4632;
+  --color-background: #0b0a19;
+  
+  --font-headline: "Space Grotesk", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-label: "Inter", sans-serif;
+  --font-mono: "Roboto Mono", monospace;
+  --font-industrial: "Roboto Condensed", sans-serif;
+  
+  --radius-default: 0.125rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.5rem;
+}
+
+:root {
+  /* --- Signature Glass --- */
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-blur: blur(16px);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-background);
+  color: var(--color-on-surface);
+  font-family: var(--font-body);
+  height: 100%;
+  width: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* --- Utility Classes --- */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 211, 0, 0.2);
+  border-radius: 2px;
+}

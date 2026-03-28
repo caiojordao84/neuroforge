@@ -1,10 +1,16 @@
 <script lang="ts">
   import '../app.css';
-  import type { Snippet } from 'svelte';
+  import { onMount } from 'svelte';
+  import { asl } from '@neuroforge/shared/state/asl.svelte.ts';
 
-  let { children }: { children: Snippet } = $props();
+  let { children } = $props();
+
+  onMount(() => {
+    // Inicializa o motor WASM ASL no desktop (Tauri)
+    asl.init().then(() => {
+      console.log('[NeuroForge Desktop] Motor ASL Ready');
+    });
+  });
 </script>
 
-<div class="h-screen w-screen overflow-hidden">
-  {@render children()}
-</div>
+{@render children()}

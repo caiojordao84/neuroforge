@@ -17,21 +17,21 @@ O **ASL (Abstract Syntax Language)** — a representação intermédia universal
 
 ### Decisões Estratégicas Definitivas
 
-| Decisão                           | Justificação                                                                              |
-| --------------------------------- | ----------------------------------------------------------------------------------------- |
-| ❌ QEMU eliminado                  | Comunicação directa com hardware real via Rust/serial/USB sem emulação                    |
-| ❌ Blockly eliminado               | Substituído pelo **NeuroForge Flow Editor** baseado em SvelteFlow + nós ASL proprietários |
-| ✅ ASL como núcleo absoluto        | IR universal entre todas as linguagens, plataformas e modos de edição                     |
-| ✅ Tauri 2 para Desktop + Mobile   | Executável nativo cross-platform com acesso directo a hardware via Rust                   |
-| ✅ SvelteKit + Svelte 5            | UI partilhada, bundle pequeno, Runes eliminam Zustand, SSR/PWA para WebApp                |
-| ✅ SvelteFlow (@xyflow/svelte 1.x) | Substituto directo de @xyflow/react para o editor de simulação e o Flow Editor            |
-| ✅ tree-sitter Rust nativo         | Substituição do web-tree-sitter WASM por parsing nativo de alta performance               |
-| ✅ Rust Embassy/HAL                | Nova linguagem alvo para MCUs: async/await nativo em hardware                             |
-| ✅ IEC 61131-3 ST + Ladder         | Linguagens obrigatórias para suporte real a PLCs industriais                              |
-| ✅ NeuroForge Ladder Editor        | Editor visual de Ladder Diagram integrado com o ASL, construído em SVG Svelte             |
-| ✅ Workspace Cargo + pnpm monorepo | Estrutura completa com `Cargo.toml` raiz e `pnpm-workspace.yaml`                          |
-| ✅ Schema `.nfv` versionado        | Formato de ficheiro com semver + migração automática de schema                            |
-| ✅ CI/CD sem hardware físico       | Virtual serial ports + fake MODBUS server + GitHub Actions multi-plataforma               |
+| Decisão | Justificação |
+|---|---|
+| ❌ QEMU eliminado | Comunicação directa com hardware real via Rust/serial/USB sem emulação |
+| ❌ Blockly eliminado | Substituído pelo **NeuroForge Flow Editor** baseado em SvelteFlow + nós ASL proprietários |
+| ✅ ASL como núcleo absoluto | IR universal entre todas as linguagens, plataformas e modos de edição |
+| ✅ Tauri 2 para Desktop + Mobile | Executável nativo cross-platform com acesso directo a hardware via Rust |
+| ✅ SvelteKit + Svelte 5 | UI partilhada, bundle pequeno, Runes eliminam Zustand, SSR/PWA para WebApp |
+| ✅ SvelteFlow (@xyflow/svelte 1.x) | Substituto directo de @xyflow/react para o editor de simulação e o Flow Editor |
+| ✅ tree-sitter Rust nativo | Substituição do web-tree-sitter WASM por parsing nativo de alta performance |
+| ✅ Rust Embassy/HAL | Nova linguagem alvo para MCUs: async/await nativo em hardware |
+| ✅ IEC 61131-3 ST + Ladder | Linguagens obrigatórias para suporte real a PLCs industriais |
+| ✅ NeuroForge Ladder Editor | Editor visual de Ladder Diagram integrado com o ASL, construído em SVG Svelte |
+| ✅ Workspace Cargo + pnpm monorepo | Estrutura completa com `Cargo.toml` raiz e `pnpm-workspace.yaml` |
+| ✅ Schema `.nfv` versionado | Formato de ficheiro com semver + migração automática de schema |
+| ✅ CI/CD sem hardware físico | Virtual serial ports + fake MODBUS server + GitHub Actions multi-plataforma |
 
 ---
 
@@ -64,32 +64,32 @@ Usa `@xyflow/react` para o canvas de simulação. Os nós custom (`LEDNode`, `MC
 
 O motor ASL em TypeScript já implementa um conjunto rico de tipos:
 
-| Categoria              | Tipos ASL                                                                                             | Estado                                                       |
-| ---------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| **Controlo de fluxo**  | `if`, `while`, `for`, `doWhile`, `forIn`, `switch`, `break`, `continue`                               | ✅ Completo                                                   |
-| **Hardware (GPIO)**    | `pinMode`, `digitalWrite`, `analogWrite`, `read`                                                      | ✅ Completo                                                   |
-| **Serial / UART**      | `serialBegin`, `print`, `uartWrite`, `uartRead`                                                       | ✅ Completo                                                   |
-| **I2C**                | `i2cWrite`, `i2cRead`                                                                                 | ⚠️ Parcial — falta `i2cBegin`, `i2cScan`                      |
-| **SPI**                | `spiTransfer`                                                                                         | ⚠️ Parcial — falta `spiBegin`, `spiConfig`, `spiTransferFull` |
-| **PWM**                | `pwmInit`, `pwmSetDuty`, `pwmSetFreq`, `pwmStop`                                                      | ✅ Completo                                                   |
-| **IEC 61131-3 (PLCs)** | `timerTON`, `timerTOF`, `timerTP`, `counterCTU`, `counterCTD`, `latchSR`, `latchRS`, `trigR`, `trigF` | ✅ Completo (Fase 1)                                          |
-| **PLC Languages**      | ST, IL, LD, FBD, SFC                                                                                  | ✅ Migrados para Rust (Fase 1, commit cf6c54e)                |
-| **Servo**              | `servoAttach`, `servoWrite`, `servoDetach`                                                            | ✅ Completo                                                   |
-| **RGB**                | `rgbSet`                                                                                              | ✅ Completo                                                   |
+| Categoria | Tipos ASL | Estado |
+|---|---|---|
+| **Controlo de fluxo** | `if`, `while`, `for`, `doWhile`, `forIn`, `switch`, `break`, `continue` | ✅ Completo |
+| **Hardware (GPIO)** | `pinMode`, `digitalWrite`, `analogWrite`, `read` | ✅ Completo |
+| **Serial / UART** | `serialBegin`, `print`, `uartWrite`, `uartRead` | ✅ Completo |
+| **I2C** | `i2cWrite`, `i2cRead` | ⚠️ Parcial — falta `i2cBegin`, `i2cScan` |
+| **SPI** | `spiTransfer` | ⚠️ Parcial — falta `spiBegin`, `spiConfig`, `spiTransferFull` |
+| **PWM** | `pwmInit`, `pwmSetDuty`, `pwmSetFreq`, `pwmStop` | ✅ Completo |
+| **IEC 61131-3 (PLCs)** | `timerTON`, `timerTOF`, `timerTP`, `counterCTU`, `counterCTD`, `latchSR`, `latchRS`, `trigR`, `trigF` | ✅ Completo (Fase 1) |
+| **PLC Languages** | ST, IL, LD, FBD, SFC | ✅ Migrados para Rust (Fase 1, commit cf6c54e) |
+| **Servo** | `servoAttach`, `servoWrite`, `servoDetach` | ✅ Completo |
+| **RGB** | `rgbSet` | ✅ Completo |
 
 **Protocolos físicos a expandir (Fase 3+):**
 
-| Protocolo   | Tipos a adicionar                                                             | Referência                                       |
-| ----------- | ----------------------------------------------------------------------------- | ------------------------------------------------ |
-| RS485       | `rs485Begin`, `rs485Write`, `rs485Read`                                       | `embedded-hal` + `serialport`                    |
-| CAN Bus     | `canBegin`, `canSend`, `canReceive`                                           | `embedded-can` crate                             |
-| 1-Wire      | `oneWireBegin`, `oneWireSearch`, `oneWireRead`, `oneWireWrite`                | `embedded-onewire` crate                         |
-| LIN Bus     | `linBegin`, `linSend`, `linRead`                                              | UART com timing específico                       |
-| IR          | `irSend`, `irRead`                                                            | `infrared` crate (NEC/RC5/RC6)                   |
-| Ethernet    | `ethernetBegin`, `tcpConnect`, `tcpWrite`, `tcpRead`, `udpSend`, `udpReceive` | `smoltcp` (MCU)                                  |
-| USB Device  | `usbBegin`, `usbWrite`, `usbRead`                                             | `usb-device` + `usbd-serial`                     |
-| I2S (Áudio) | `i2sBegin`, `i2sWrite`, `i2sRead`                                             | `i2s` crate                                      |
-| BLE         | `bleBegin`, `bleScan`, `bleConnect`, `bleWrite`, `bleRead`                    | `btleplug` (Desktop) / `embassy-bluetooth` (MCU) |
+| Protocolo | Tipos a adicionar | Referência |
+|---|---|---|
+| RS485 | `rs485Begin`, `rs485Write`, `rs485Read` | `embedded-hal` + `serialport` |
+| CAN Bus | `canBegin`, `canSend`, `canReceive` | `embedded-can` crate |
+| 1-Wire | `oneWireBegin`, `oneWireSearch`, `oneWireRead`, `oneWireWrite` | `embedded-onewire` crate |
+| LIN Bus | `linBegin`, `linSend`, `linRead` | UART com timing específico |
+| IR | `irSend`, `irRead` | `infrared` crate (NEC/RC5/RC6) |
+| Ethernet | `ethernetBegin`, `tcpConnect`, `tcpWrite`, `tcpRead`, `udpSend`, `udpReceive` | `smoltcp` (MCU) |
+| USB Device | `usbBegin`, `usbWrite`, `usbRead` | `usb-device` + `usbd-serial` |
+| I2S (Áudio) | `i2sBegin`, `i2sWrite`, `i2sRead` | `i2s` crate |
+| BLE | `bleBegin`, `bleScan`, `bleConnect`, `bleWrite`, `bleRead` | `btleplug` (Desktop) / `embassy-bluetooth` (MCU) |
 
 **Os dois pipelines do motor ASL — Simulação vs Transpilação:**
 
@@ -140,46 +140,46 @@ O motor ASL opera em dois modos completamente distintos. Esta separação é **c
 
 ### 1.2 O Que é Eliminado e Porquê
 
-| Ficheiro/Módulo                      | Razão da Eliminação                                                               |
-| ------------------------------------ | --------------------------------------------------------------------------------- |
-| `server/` completo (Node.js)         | Toda a lógica de hardware migra para Rust (Tauri)                                 |
-| `src/services/QEMUApiClient.ts`      | QEMU eliminado                                                                    |
-| `src/services/QEMUWebSocket.ts`      | QEMU eliminado                                                                    |
-| `src/stores/useQEMUStore.ts`         | QEMU eliminado *(caminho corrigido — stores estão em `src/stores/`, não na raiz)* |
-| `src/engine/QEMURunner.ts`           | QEMU eliminado                                                                    |
-| `src/engine/QEMUSimulationEngine.ts` | QEMU eliminado                                                                    |
-| `src/engine/blockly/` (todo)         | Blockly eliminado — substituído por NeuroForge Flow Editor                        |
-| `src/components/BlocklyEditor.tsx`   | Blockly eliminado                                                                 |
-| `src/engine/asl/blocklyToASL.ts`     | Cola Blockly→ASL — oculto em `asl/`, eliminar com o resto do Blockly              |
-| `src/engine/Transpiler.ts`           | Stub vazio (~2KB) — nunca implementado, eliminar                                  |
-| `src/engine/example.ts`              | Demo QEMU (~513B) — eliminar com QEMU                                             |
-| `fixes.md` (35KB na raiz)            | Ficheiro de debug temporário — arquivar em `docs/legacy/`                         |
-| `poc/` (directório raiz)             | Código de prova de conceito — arquivar em `docs/legacy/poc/`                      |
-| `socket.io-client`                   | Substituído por invoke/listen Tauri                                               |
-| `web-tree-sitter` WASM               | Substituído por tree-sitter Rust nativo via WASM compilado do crate               |
+| Ficheiro/Módulo | Razão da Eliminação |
+|---|---|
+| `server/` completo (Node.js) | Toda a lógica de hardware migra para Rust (Tauri) |
+| `src/services/QEMUApiClient.ts` | QEMU eliminado |
+| `src/services/QEMUWebSocket.ts` | QEMU eliminado |
+| `src/stores/useQEMUStore.ts` | QEMU eliminado *(caminho corrigido — stores estão em `src/stores/`, não na raiz)* |
+| `src/engine/QEMURunner.ts` | QEMU eliminado |
+| `src/engine/QEMUSimulationEngine.ts` | QEMU eliminado |
+| `src/engine/blockly/` (todo) | Blockly eliminado — substituído por NeuroForge Flow Editor |
+| `src/components/BlocklyEditor.tsx` | Blockly eliminado |
+| `src/engine/asl/blocklyToASL.ts` | Cola Blockly→ASL — oculto em `asl/`, eliminar com o resto do Blockly |
+| `src/engine/Transpiler.ts` | Stub vazio (~2KB) — nunca implementado, eliminar |
+| `src/engine/example.ts` | Demo QEMU (~513B) — eliminar com QEMU |
+| `fixes.md` (35KB na raiz) | Ficheiro de debug temporário — arquivar em `docs/legacy/` |
+| `poc/` (directório raiz) | Código de prova de conceito — arquivar em `docs/legacy/poc/` |
+| `socket.io-client` | Substituído por invoke/listen Tauri |
+| `web-tree-sitter` WASM | Substituído por tree-sitter Rust nativo via WASM compilado do crate |
 
 ### 1.3 O Que é Preservado e Migrado
 
-| Componente React Actual                           | Destino Svelte 5                                                         | Notas                                        |
-| ------------------------------------------------- | ------------------------------------------------------------------------ | -------------------------------------------- |
-| `LEDNode.tsx`                                     | `LEDNode.svelte`                                                         | Handle xyflow → SvelteFlow Handle            |
-| `MCUNode.tsx` (SVG + pinos)                       | `MCUNode.svelte`                                                         | SVG + pinos preservados; Handle → SvelteFlow |
-| `ButtonNode.tsx`                                  | `ButtonNode.svelte`                                                      |                                              |
-| `ServoNode.tsx`                                   | `ServoNode.svelte`                                                       |                                              |
-| `RGBLEDNode.tsx`                                  | `RGBLEDNode.svelte`                                                      |                                              |
-| `PotentiometerNode.tsx`                           | `PotentiometerNode.svelte`                                               |                                              |
-| `ManhattanEdge.tsx`                               | `ManhattanEdge.svelte`                                                   |                                              |
-| `FlowEditor.tsx`                                  | `SimulationCanvas.svelte`                                                | @xyflow/react → @xyflow/svelte 1.x           |
-| `SimulationEngine.ts`                             | `simulation_engine.rs` (Tauri) + `SimulationEngine.ts` mantido no WebApp |                                              |
-| `ASLViewer.tsx`                                   | `ASLViewer.svelte`                                                       | Integra com crate Rust via WASM              |
-| `CodeEditor.tsx`                                  | `CodeEditor.svelte`                                                      | Monaco standalone (@monaco-editor/loader)    |
-| `SerialTerminalPanel.tsx`                         | `SerialTerminalPanel.svelte`                                             | Tauri events                                 |
-| `TopToolbar.tsx`, `LeftSidebar.tsx`               | equivalentes Svelte                                                      |                                              |
-| 7 painéis de propriedades                         | 7 `.svelte` equivalentes                                                 |                                              |
-| Stores Zustand (7)                                | Svelte 5 Runes classes                                                   | Ver secção 4.3                               |
-| `src/components/boards/` (SVGs + JSON)            | Preservados intactos                                                     | Assets independentes de framework            |
-| `src/engine/asl/` (todo, excl. `blocklyToASL.ts`) | Crate `neuroforge-asl` Rust + WASM                                       | Migração por fases com testes de paridade    |
-| `src/lib/ledCalculations.ts`                      | `led_calculations.rs`                                                    |                                              |
+| Componente React Actual | Destino Svelte 5 | Notas |
+|---|---|---|
+| `LEDNode.tsx` | `LEDNode.svelte` | Handle xyflow → SvelteFlow Handle |
+| `MCUNode.tsx` (SVG + pinos) | `MCUNode.svelte` | SVG + pinos preservados; Handle → SvelteFlow |
+| `ButtonNode.tsx` | `ButtonNode.svelte` | |
+| `ServoNode.tsx` | `ServoNode.svelte` | |
+| `RGBLEDNode.tsx` | `RGBLEDNode.svelte` | |
+| `PotentiometerNode.tsx` | `PotentiometerNode.svelte` | |
+| `ManhattanEdge.tsx` | `ManhattanEdge.svelte` | |
+| `FlowEditor.tsx` | `SimulationCanvas.svelte` | @xyflow/react → @xyflow/svelte 1.x |
+| `SimulationEngine.ts` | `simulation_engine.rs` (Tauri) + `SimulationEngine.ts` mantido no WebApp | |
+| `ASLViewer.tsx` | `ASLViewer.svelte` | Integra com crate Rust via WASM |
+| `CodeEditor.tsx` | `CodeEditor.svelte` | Monaco standalone (@monaco-editor/loader) |
+| `SerialTerminalPanel.tsx` | `SerialTerminalPanel.svelte` | Tauri events |
+| `TopToolbar.tsx`, `LeftSidebar.tsx` | equivalentes Svelte | |
+| 7 painéis de propriedades | 7 `.svelte` equivalentes | |
+| Stores Zustand (7) | Svelte 5 Runes classes | Ver secção 4.3 |
+| `src/components/boards/` (SVGs + JSON) | Preservados intactos | Assets independentes de framework |
+| `src/engine/asl/` (todo, excl. `blocklyToASL.ts`) | Crate `neuroforge-asl` Rust + WASM | Migração por fases com testes de paridade |
+| `src/lib/ledCalculations.ts` | `led_calculations.rs` | |
 
 ---
 
@@ -191,11 +191,11 @@ A análise directa da branch `preRust` revelou ficheiros relevantes que não est
 
 Este directório implementa a pipeline de conversão do Flow Editor para AST. É código activo, não experimental:
 
-| Ficheiro TypeScript | Função                                                                                                                                                                                                                                                                                                 | Destino Rust        |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- |
-| `CfgBuilder.ts`     | Constrói Control Flow Graph a partir dos nós/arestas do FlowEditor. Detecta ciclos, nós mortos, padrões WHILE\_LOOP/FOR\_LOOP/INFINITE\_LOOP                                                                                                                                                           | `cfg_builder.rs`    |
-| `FlowToAst.ts`      | Converte CFG → `ProgramNode`. Duas estratégias: estruturada (if/while) ou máquina de estados (para fluxos complexos com nó `state`). Trata nós Ladder: `ladder_timer`, `ladder_counter`, `ladder_latch`, `ladder_trig`, `ladder_math`, `ladder_coil`. É a função `flow_to_asl()` referenciada no plano | `flow_to_ast.rs`    |
-| `FlowValidator.ts`  | Valida o grafo antes da geração — Start/End em falta, IDs duplicados em blocos com estado                                                                                                                                                                                                              | `flow_validator.rs` |
+| Ficheiro TypeScript | Função | Destino Rust |
+|---|---|---|
+| `CfgBuilder.ts` | Constrói Control Flow Graph a partir dos nós/arestas do FlowEditor. Detecta ciclos, nós mortos, padrões WHILE\_LOOP/FOR\_LOOP/INFINITE\_LOOP | `cfg_builder.rs` |
+| `FlowToAst.ts` | Converte CFG → `ProgramNode`. Duas estratégias: estruturada (if/while) ou máquina de estados (para fluxos complexos com nó `state`). Trata nós Ladder: `ladder_timer`, `ladder_counter`, `ladder_latch`, `ladder_trig`, `ladder_math`, `ladder_coil`. É a função `flow_to_asl()` referenciada no plano | `flow_to_ast.rs` |
+| `FlowValidator.ts` | Valida o grafo antes da geração — Start/End em falta, IDs duplicados em blocos com estado | `flow_validator.rs` |
 
 **Pipeline completa actualizada:**
 
@@ -219,33 +219,33 @@ Código fonte / .nfv / .nfladder
 
 **Atenção:** Este ficheiro **não** é um parser para o crate Rust. É um **runtime interpretativo** que executa código C++/Python e chama `simulationEngine.setPin()` e `simulationEngine.emit()` directamente. É uma responsabilidade completamente separada do `neuroforge-asl`.
 
-| Plataforma         | Destino                                                                     |
-| ------------------ | --------------------------------------------------------------------------- |
-| Desktop (Tauri)    | `simulation_executor.rs` — runtime Rust que substitui a interpretação em TS |
-| WebApp (SvelteKit) | Manter como `CodeParser.ts` (TS) — sem acesso a Tauri invoke                |
+| Plataforma | Destino |
+|---|---|
+| Desktop (Tauri) | `simulation_executor.rs` — runtime Rust que substitui a interpretação em TS |
+| WebApp (SvelteKit) | Manter como `CodeParser.ts` (TS) — sem acesso a Tauri invoke |
 
 #### Inventário Completo de Ficheiros Anteriormente Não Mapeados (actualizado v4.2)
 
-| Ficheiro                                     | Estado                                                                                                                                   | Acção                                                                  |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `src/engine/asl/flowToASL.ts`                | **Entry point público de simulação de flow** — chama FlowToAst + normalizeAST + astToASL                                                 | Migrar → `flow/flow_to_asl.rs` (Fase 1)                                |
-| `src/engine/asl/transpile.ts`                | **Entry point público de transpilação** — expoe `transpileCode()` e `transpileAST()`                                                     | Migrar → `transpile.rs` (Fase 1)                                       |
-| `src/engine/asl/transforms/context.ts`       | **`TransformContext`** — dependência directa de todos os transforms (globalsMap, language, structDefs, servoInstances, rgbPins, pwmPins) | Migrar → `transforms/context.rs` (Fase 1, antes dos outros transforms) |
-| `src/engine/asl/transforms/postfixUtils.ts`  | Extrai side-effects `i++`/`i--` — dependência do statementRegistry                                                                       | Migrar → `transforms/postfix_utils.rs` (Fase 1)                        |
-| `src/engine/asl/transforms/index.ts`         | Re-exporta todos os transforms                                                                                                           | Migrar → `transforms/mod.rs` (Fase 1)                                  |
-| `src/engine/asl/helpers/typeUtils.ts`        | Mapeia tipos C++/Python/Rust → `ASLType`                                                                                                 | Migrar → `helpers/type_utils.rs` (Fase 1)                              |
-| `src/engine/asl/helpers/arrayUtils.ts`       | Utilitários de arrays para transforms                                                                                                    | Migrar → `helpers/array_utils.rs` (Fase 1)                             |
-| `src/engine/asl/plugins/core/ShimManager.ts` | Gestor de shims partilhado por todos os plugins (registo, dependências, deduplication)                                                   | Migrar → `plugins/core/shim_manager.rs` (Fase 1, antes dos plugins)    |
-| `src/engine/asl/LanguageRegistry.ts`         | Registry de linguagens suportadas com metadata (extension, monacoLanguage, isASLSupported)                                               | Migrar → `language_registry.rs` (já no plano — confirmar inclusão)     |
-| `src/engine/flow/CfgBuilder.ts`              | Produção activa                                                                                                                          | Migrar → `flow/cfg_builder.rs` (Fase 1)                                |
-| `src/engine/flow/FlowToAst.ts`               | Produção activa (49KB)                                                                                                                   | Migrar → `flow/flow_to_ast.rs` (Fase 1)                                |
-| `src/engine/flow/FlowValidator.ts`           | Produção activa                                                                                                                          | Migrar → `flow/flow_validator.rs` (Fase 1)                             |
-| `src/engine/CodeParser.ts`                   | Runtime de simulação                                                                                                                     | Migrar → `simulation_executor.rs` (Desktop); manter TS (WebApp)        |
-| `src/engine/asl/blocklyToASL.ts`             | Cola Blockly (padrão idêntico ao flowToASL.ts mas para Blockly)                                                                          | Eliminar (Fase 0)                                                      |
-| `src/engine/Transpiler.ts`                   | Stub vazio (distinto do `transpile.ts` activo em `engine/asl/`)                                                                          | Eliminar (Fase 0)                                                      |
-| `src/engine/example.ts`                      | Demo QEMU                                                                                                                                | Eliminar (Fase 0)                                                      |
-| `fixes.md` (35KB)                            | Debug temporário                                                                                                                         | Arquivar em `docs/legacy/` (Fase 0)                                    |
-| `poc/`                                       | Prova de conceito                                                                                                                        | Arquivar em `docs/legacy/poc/` (Fase 0)                                |
+| Ficheiro | Estado | Acção |
+|---|---|---|
+| `src/engine/asl/flowToASL.ts` | **Entry point público de simulação de flow** — chama FlowToAst + normalizeAST + astToASL | Migrar → `flow/flow_to_asl.rs` (Fase 1) |
+| `src/engine/asl/transpile.ts` | **Entry point público de transpilação** — expoe `transpileCode()` e `transpileAST()` | Migrar → `transpile.rs` (Fase 1) |
+| `src/engine/asl/transforms/context.ts` | **`TransformContext`** — dependência directa de todos os transforms (globalsMap, language, structDefs, servoInstances, rgbPins, pwmPins) | Migrar → `transforms/context.rs` (Fase 1, antes dos outros transforms) |
+| `src/engine/asl/transforms/postfixUtils.ts` | Extrai side-effects `i++`/`i--` — dependência do statementRegistry | Migrar → `transforms/postfix_utils.rs` (Fase 1) |
+| `src/engine/asl/transforms/index.ts` | Re-exporta todos os transforms | Migrar → `transforms/mod.rs` (Fase 1) |
+| `src/engine/asl/helpers/typeUtils.ts` | Mapeia tipos C++/Python/Rust → `ASLType` | Migrar → `helpers/type_utils.rs` (Fase 1) |
+| `src/engine/asl/helpers/arrayUtils.ts` | Utilitários de arrays para transforms | Migrar → `helpers/array_utils.rs` (Fase 1) |
+| `src/engine/asl/plugins/core/ShimManager.ts` | Gestor de shims partilhado por todos os plugins (registo, dependências, deduplication) | Migrar → `plugins/core/shim_manager.rs` (Fase 1, antes dos plugins) |
+| `src/engine/asl/LanguageRegistry.ts` | Registry de linguagens suportadas com metadata (extension, monacoLanguage, isASLSupported) | Migrar → `language_registry.rs` (já no plano — confirmar inclusão) |
+| `src/engine/flow/CfgBuilder.ts` | Produção activa | Migrar → `flow/cfg_builder.rs` (Fase 1) |
+| `src/engine/flow/FlowToAst.ts` | Produção activa (49KB) | Migrar → `flow/flow_to_ast.rs` (Fase 1) |
+| `src/engine/flow/FlowValidator.ts` | Produção activa | Migrar → `flow/flow_validator.rs` (Fase 1) |
+| `src/engine/CodeParser.ts` | Runtime de simulação | Migrar → `simulation_executor.rs` (Desktop); manter TS (WebApp) |
+| `src/engine/asl/blocklyToASL.ts` | Cola Blockly (padrão idêntico ao flowToASL.ts mas para Blockly) | Eliminar (Fase 0) |
+| `src/engine/Transpiler.ts` | Stub vazio (distinto do `transpile.ts` activo em `engine/asl/`) | Eliminar (Fase 0) |
+| `src/engine/example.ts` | Demo QEMU | Eliminar (Fase 0) |
+| `fixes.md` (35KB) | Debug temporário | Arquivar em `docs/legacy/` (Fase 0) |
+| `poc/` | Prova de conceito | Arquivar em `docs/legacy/poc/` (Fase 0) |
 
 ---
 
@@ -581,13 +581,13 @@ pub struct AslProgram {
 
 **Inventário de versões planeadas:**
 
-| Versão ASL | Novos Tipos                                                             | Fase               |
-| ---------- | ----------------------------------------------------------------------- | ------------------ |
-| 4.0.0      | Versão base (tipos actuais migrados)                                    | ✅ Fase 1           |
-| 4.3.0      | ST + IL + LD + FBD + SFC + PLCopen XML + todos os tipos PLC IEC 61131-3 | ✅ Fase 1           |
-| 4.4.0      | RS485, CAN Bus, 1-Wire, LIN Bus, IR, Ethernet TCP/UDP (smoltcp)         | Planeada: Fase 3   |
-| 4.5.0      | USB Device (HID/CDC), I2S (Áudio), BLE                                  | Planeada: Fase 4   |
-| 4.6.0      | ZigBee, NTSC/PAL                                                        | Planeada: Fase 5/6 |
+| Versão ASL | Novos Tipos | Fase |
+|---|---|---|
+| 4.0.0 | Versão base (tipos actuais migrados) | ✅ Fase 1 |
+| 4.3.0 | ST + IL + LD + FBD + SFC + PLCopen XML + todos os tipos PLC IEC 61131-3 | ✅ Fase 1 |
+| 4.4.0 | RS485, CAN Bus, 1-Wire, LIN Bus, IR, Ethernet TCP/UDP (smoltcp) | Planeada: Fase 3 |
+| 4.5.0 | USB Device (HID/CDC), I2S (Áudio), BLE | Planeada: Fase 4 |
+| 4.6.0 | ZigBee, NTSC/PAL | Planeada: Fase 5/6 |
 
 ---
 
@@ -755,24 +755,24 @@ pub struct AslLatchSR { pub tag: String, pub set: AslExpr, pub reset: AslExpr, p
 
 #### Linguagens para MCUs
 
-| Linguagem                    | Estado Actual        | Estado Alvo        | Notas                                      |
-| ---------------------------- | -------------------- | ------------------ | ------------------------------------------ |
-| C/C++ Arduino                | ✅ Parser + Generator | ✅ Migrar para Rust | Shims: servo, LCD, keypad, EEPROM          |
-| MicroPython                  | ✅ Parser + Generator | ✅ Migrar para Rust | Shims: machine.Pin, time.sleep_ms          |
-| Rust `no_std` / embedded-hal | ✅ Parser + Generator | ✅ Migrar para Rust | Gerador: embedded-hal traits               |
-| **Rust Embassy**             | ❌ Não existe         | 🆕 Fase 3           | async/await nativo; RP2040/STM32/nRF/ESP32 |
-| CircuitPython                | ❌ Não existe         | Fase 4             | Adafruit boards                            |
-| Arduino Wiring (AVR puro)    | ❌ Não existe         | Fase 4             | Acesso directo a registos                  |
+| Linguagem | Estado Actual | Estado Alvo | Notas |
+|---|---|---|---|
+| C/C++ Arduino | ✅ Parser + Generator | ✅ Migrar para Rust | Shims: servo, LCD, keypad, EEPROM |
+| MicroPython | ✅ Parser + Generator | ✅ Migrar para Rust | Shims: machine.Pin, time.sleep_ms |
+| Rust `no_std` / embedded-hal | ✅ Parser + Generator | ✅ Migrar para Rust | Gerador: embedded-hal traits |
+| **Rust Embassy** | ❌ Não existe | 🆕 Fase 3 | async/await nativo; RP2040/STM32/nRF/ESP32 |
+| CircuitPython | ❌ Não existe | Fase 4 | Adafruit boards |
+| Arduino Wiring (AVR puro) | ❌ Não existe | Fase 4 | Acesso directo a registos |
 
 #### Linguagens para PLCs (IEC 61131-3)
 
-| Linguagem                           | Estado Actual           | Estado Alvo         | Notas                                                         |
-| ----------------------------------- | ----------------------- | ------------------- | ------------------------------------------------------------- |
-| **Structured Text (ST)**            | ✅ Implementado (Fase 1) | ✅ Migrado para Rust | iec61131 crate; st_parser.rs expandido (commit cf6c54e)       |
-| **Ladder Diagram (LD)**             | ✅ Implementado (Fase 1) | ✅ Migrado para Rust | ld/parser.rs + ld/generator.rs; PLCopen XML via plcopen crate |
-| **Function Block Diagram (FBD)**    | ✅ Implementado (Fase 1) | ✅ Migrado para Rust | fbd/parser.rs + fbd/generator.rs                              |
-| **Instruction List (IL)**           | ✅ Implementado (Fase 1) | ✅ Migrado para Rust | grammar.pest + il/parser.rs + il/generator.rs                 |
-| **Sequential Function Chart (SFC)** | ✅ Implementado (Fase 1) | ✅ Migrado para Rust | sfc/parser.rs + sfc/generator.rs; ASL versão 4.3.0            |
+| Linguagem | Estado Actual | Estado Alvo | Notas |
+|---|---|---|---|
+| **Structured Text (ST)** | ✅ Implementado (Fase 1) | ✅ Migrado para Rust | iec61131 crate; st_parser.rs expandido (commit cf6c54e) |
+| **Ladder Diagram (LD)** | ✅ Implementado (Fase 1) | ✅ Migrado para Rust | ld/parser.rs + ld/generator.rs; PLCopen XML via plcopen crate |
+| **Function Block Diagram (FBD)** | ✅ Implementado (Fase 1) | ✅ Migrado para Rust | fbd/parser.rs + fbd/generator.rs |
+| **Instruction List (IL)** | ✅ Implementado (Fase 1) | ✅ Migrado para Rust | grammar.pest + il/parser.rs + il/generator.rs |
+| **Sequential Function Chart (SFC)** | ✅ Implementado (Fase 1) | ✅ Migrado para Rust | sfc/parser.rs + sfc/generator.rs; ASL versão 4.3.0 |
 
 ---
 
@@ -784,9 +784,9 @@ compatível com WASM. No Windows, o toolchain MSVC não é compatível — é ob
 
 **Setup validado em produção (Fase 1D):**
 
-| Variável                        | Valor                                                             |
-| ------------------------------- | ----------------------------------------------------------------- |
-| `CC_wasm32_unknown_unknown`     | `C:\wasi-sdk\bin\clang.exe`                                       |
+| Variável | Valor |
+|---|---|
+| `CC_wasm32_unknown_unknown` | `C:\wasi-sdk\bin\clang.exe` |
 | `CFLAGS_wasm32_unknown_unknown` | `--target=wasm32-wasip1 --sysroot=C:\wasi-sdk\share\wasi-sysroot` |
 
 **Instalação:**
@@ -918,31 +918,31 @@ pub struct AslBleRead      { pub char_uuid: String, pub result: String }
 
 Estes protocolos correm sobre os físicos já existentes ou em implementação. São tratados como **shims de geração de código** no `ShimManager`, não como novos tipos ASL base.
 
-| Protocolo                        | Corre sobre       | Estratégia Rust                                                        | Crate                          |
-| -------------------------------- | ----------------- | ---------------------------------------------------------------------- | ------------------------------ |
-| **Modbus RTU**                   | RS485             | `tokio-modbus` (já no plano)                                           | `tokio-modbus = "0.5"`         |
-| **Modbus ASCII**                 | UART              | `tokio-modbus`                                                         | já incluído                    |
-| **Modbus TCP**                   | Ethernet          | `tokio-modbus`                                                         | já incluído                    |
-| **DMX512**                       | RS485             | Shim sobre `AslRs485Write`                                             | `dmx` crate ou impl manual     |
-| **MIDI**                         | UART a 31.25 kbps | Shim sobre `AslUartWrite/Read`                                         | `midi-types` crate             |
-| **Firmata**                      | Serial (UART)     | Shim sobre `serialBegin`/`uartWrite`                                   | `firmata` crate                |
-| **rosserial**                    | Serial (UART)     | Shim sobre `serialBegin`/`uartWrite`                                   | impl manual                    |
-| **S.N.A.P / YASP / LOP / ICSC**  | Serial (UART)     | Shims sobre UART existente                                             | impl manual                    |
-| **netstring / JSON-over-serial** | Serial (UART)     | Shim + `serde_json`                                                    | `serde_json` (já no workspace) |
-| **IP over Serial (SLIP/PPP)**    | Serial (UART)     | Shim                                                                   | `smoltcp` crate                |
-| **DeviceNet**                    | CAN               | Shim sobre `AslCanSend/Receive`                                        | impl manual                    |
-| **NMEA 2000**                    | CAN               | Shim sobre `AslCanSend/Receive`                                        | `nmea` crate                   |
-| **IEEE 1451 (TEDS)**             | I2C/SPI           | Shim que gera código de inicialização de TEDS sobre `AslI2cWrite/Read` | impl manual                    |
+| Protocolo | Corre sobre | Estratégia Rust | Crate |
+|---|---|---|---|
+| **Modbus RTU** | RS485 | `tokio-modbus` (já no plano) | `tokio-modbus = "0.5"` |
+| **Modbus ASCII** | UART | `tokio-modbus` | já incluído |
+| **Modbus TCP** | Ethernet | `tokio-modbus` | já incluído |
+| **DMX512** | RS485 | Shim sobre `AslRs485Write` | `dmx` crate ou impl manual |
+| **MIDI** | UART a 31.25 kbps | Shim sobre `AslUartWrite/Read` | `midi-types` crate |
+| **Firmata** | Serial (UART) | Shim sobre `serialBegin`/`uartWrite` | `firmata` crate |
+| **rosserial** | Serial (UART) | Shim sobre `serialBegin`/`uartWrite` | impl manual |
+| **S.N.A.P / YASP / LOP / ICSC** | Serial (UART) | Shims sobre UART existente | impl manual |
+| **netstring / JSON-over-serial** | Serial (UART) | Shim + `serde_json` | `serde_json` (já no workspace) |
+| **IP over Serial (SLIP/PPP)** | Serial (UART) | Shim | `smoltcp` crate |
+| **DeviceNet** | CAN | Shim sobre `AslCanSend/Receive` | impl manual |
+| **NMEA 2000** | CAN | Shim sobre `AslCanSend/Receive` | `nmea` crate |
+| **IEEE 1451 (TEDS)** | I2C/SPI | Shim que gera código de inicialização de TEDS sobre `AslI2cWrite/Read` | impl manual |
 
 #### 5.6.3 Prioridades por Fase
 
-| Fase                  | Protocolos a Adicionar                                    | ASL Version     |
-| --------------------- | --------------------------------------------------------- | --------------- |
-| **Fase 3**            | RS485, CAN Bus, 1-Wire, LIN, IR, Ethernet TCP/UDP         | `4.4.0`         |
-| **Fase 3**            | Shims: Modbus RTU/TCP (já parcial), DMX512, MIDI, Firmata | shims, sem bump |
-| **Fase 4**            | USB Device (HID/CDC), I2S, BLE                            | `4.5.0`         |
-| **Fase 5**            | ZigBee, NTSC/PAL                                          | `4.6.0`         |
-| **Fora de scope ASL** | JTAG (→ `probe-rs` firmware), Myrinet, InfiniBand, AoE    | —               |
+| Fase | Protocolos a Adicionar | ASL Version |
+|---|---|---|
+| **Fase 3** | RS485, CAN Bus, 1-Wire, LIN, IR, Ethernet TCP/UDP | `4.4.0` |
+| **Fase 3** | Shims: Modbus RTU/TCP (já parcial), DMX512, MIDI, Firmata | shims, sem bump |
+| **Fase 4** | USB Device (HID/CDC), I2S, BLE | `4.5.0` |
+| **Fase 5** | ZigBee, NTSC/PAL | `4.6.0` |
+| **Fora de scope ASL** | JTAG (→ `probe-rs` firmware), Myrinet, InfiniBand, AoE | — |
 
 ## 6. Saída do React/JavaScript — Plano Detalhado
 
@@ -954,44 +954,44 @@ Estes protocolos correm sobre os físicos já existentes ou em implementação. 
 
 #### Mapeamento de Componentes
 
-| Componente React (preRust)                      | Svelte 5                              | Dependência Crítica                | Fase |
-| ----------------------------------------------- | ------------------------------------- | ---------------------------------- | ---- |
-| `Terminal.tsx` (4 KB)                           | `Terminal.svelte`                     | Nenhuma                            | 2A   |
-| `SimulationModeToggle.tsx` (3 KB)               | `SimulationModeToggle.svelte`         | Nenhuma                            | 2A   |
-| `PropertiesPanel.tsx` (2 KB)                    | `PropertiesPanel.svelte`              | Nenhuma                            | 2A   |
-| `SerialMonitor.tsx` (6 KB)                      | `SerialMonitor.svelte`                | serialStore                        | 2A   |
-| `SerialTerminalPanel.tsx` (8 KB)                | `SerialTerminalPanel.svelte`          | Tauri serial event                 | 2A   |
-| `TopToolbar.tsx` (6 KB)                         | `TopToolbar.svelte`                   | uiStore                            | 2B   |
-| `LeftSidebar.tsx` (5 KB)                        | `LeftSidebar.svelte`                  | fileStore                          | 2B   |
-| `ComponentsLibrary.tsx` (5 KB)                  | `ComponentsLibrary.svelte`            | libraryStore                       | 2B   |
-| `FloatingWindow.tsx` (12 KB)                    | `FloatingWindow.svelte`               | uiStore — base de todos os painéis | 2B   |
-| `LEDPropertiesPanel.tsx` (26 KB)                | `LEDPropertiesPanel.svelte`           | simulationStore                    | 2C   |
-| `MCUPropertiesPanel.tsx` (13 KB)                | `MCUPropertiesPanel.svelte`           | simulationStore                    | 2C   |
-| `ButtonPropertiesPanel.tsx` (12 KB)             | `ButtonPropertiesPanel.svelte`        | simulationStore                    | 2C   |
-| `ServoPropertiesPanel.tsx` (11 KB)              | `ServoPropertiesPanel.svelte`         | simulationStore                    | 2C   |
-| `RGBLEDPropertiesPanel.tsx` (11 KB)             | `RGBLEDPropertiesPanel.svelte`        | simulationStore                    | 2C   |
-| `PotentiometerPropertiesPanel.tsx` (9 KB)       | `PotentiometerPropertiesPanel.svelte` | simulationStore                    | 2C   |
-| `LibrariesPanel.tsx` (12 KB)                    | `LibrariesPanel.svelte`               | libraryStore                       | 2C   |
-| `ASLViewer.tsx` (5 KB)                          | `ASLViewer.svelte`                    | neuroforge-asl WASM                | 2D   |
-| `CodeEditor.tsx` (9 KB)                         | `CodeEditor.svelte`                   | Monaco standalone                  | 2D   |
-| `CodeEditorWithTabs.tsx` (21 KB)                | `CodeEditorWithTabs.svelte`           | Monaco standalone                  | 2D   |
-| `CanvasArea.tsx` (13 KB)                        | `CanvasArea.svelte`                   | SimulationCanvas                   | 2E   |
-| **Nós de simulação** (6 nós)                    | **nós SvelteFlow**                    | @xyflow/svelte 1.x                 | 2E   |
-| **ManhattanEdge.tsx**                           | `ManhattanEdge.svelte`                | @xyflow/svelte 1.x                 | 2E   |
-| `FlowEditor.tsx` (41 KB) → **SimulationCanvas** | `SimulationCanvas.svelte`             | @xyflow/svelte 1.x                 | 2E   |
-| `BlocklyEditor.tsx`                             | **ELIMINADO**                         | Substituído por FlowEditor Svelte  | 2A   |
+| Componente React (preRust) | Svelte 5 | Dependência Crítica | Fase |
+|---|---|---|---|
+| `Terminal.tsx` (4 KB) | `Terminal.svelte` | Nenhuma | 2A |
+| `SimulationModeToggle.tsx` (3 KB) | `SimulationModeToggle.svelte` | Nenhuma | 2A |
+| `PropertiesPanel.tsx` (2 KB) | `PropertiesPanel.svelte` | Nenhuma | 2A |
+| `SerialMonitor.tsx` (6 KB) | `SerialMonitor.svelte` | serialStore | 2A |
+| `SerialTerminalPanel.tsx` (8 KB) | `SerialTerminalPanel.svelte` | Tauri serial event | 2A |
+| `TopToolbar.tsx` (6 KB) | `TopToolbar.svelte` | uiStore | 2B |
+| `LeftSidebar.tsx` (5 KB) | `LeftSidebar.svelte` | fileStore | 2B |
+| `ComponentsLibrary.tsx` (5 KB) | `ComponentsLibrary.svelte` | libraryStore | 2B |
+| `FloatingWindow.tsx` (12 KB) | `FloatingWindow.svelte` | uiStore — base de todos os painéis | 2B |
+| `LEDPropertiesPanel.tsx` (26 KB) | `LEDPropertiesPanel.svelte` | simulationStore | 2C |
+| `MCUPropertiesPanel.tsx` (13 KB) | `MCUPropertiesPanel.svelte` | simulationStore | 2C |
+| `ButtonPropertiesPanel.tsx` (12 KB) | `ButtonPropertiesPanel.svelte` | simulationStore | 2C |
+| `ServoPropertiesPanel.tsx` (11 KB) | `ServoPropertiesPanel.svelte` | simulationStore | 2C |
+| `RGBLEDPropertiesPanel.tsx` (11 KB) | `RGBLEDPropertiesPanel.svelte` | simulationStore | 2C |
+| `PotentiometerPropertiesPanel.tsx` (9 KB) | `PotentiometerPropertiesPanel.svelte` | simulationStore | 2C |
+| `LibrariesPanel.tsx` (12 KB) | `LibrariesPanel.svelte` | libraryStore | 2C |
+| `ASLViewer.tsx` (5 KB) | `ASLViewer.svelte` | neuroforge-asl WASM | 2D |
+| `CodeEditor.tsx` (9 KB) | `CodeEditor.svelte` | Monaco standalone | 2D |
+| `CodeEditorWithTabs.tsx` (21 KB) | `CodeEditorWithTabs.svelte` | Monaco standalone | 2D |
+| `CanvasArea.tsx` (13 KB) | `CanvasArea.svelte` | SimulationCanvas | 2E |
+| **Nós de simulação** (6 nós) | **nós SvelteFlow** | @xyflow/svelte 1.x | 2E |
+| **ManhattanEdge.tsx** | `ManhattanEdge.svelte` | @xyflow/svelte 1.x | 2E |
+| `FlowEditor.tsx` (41 KB) → **SimulationCanvas** | `SimulationCanvas.svelte` | @xyflow/svelte 1.x | 2E |
+| `BlocklyEditor.tsx` | **ELIMINADO** | Substituído por FlowEditor Svelte | 2A |
 
 #### Mapeamento de Stores Zustand → Svelte 5 Runes
 
-| Store Zustand (preRust)           | Svelte 5 Runes         | Fase | Notas                      |
-| --------------------------------- | ---------------------- | ---- | -------------------------- |
-| `useSerialStore.ts` (2.8 KB)      | `serial.svelte.ts`     | 2A   | Primeiro a migrar          |
-| `useLibraryStore.ts` (3.7 KB)     | `library.svelte.ts`    | 2A   | Independente               |
-| `useConnectionStore.ts` (4 KB)    | `connection.svelte.ts` | 2A   | Independente               |
-| `useFileStore.ts` (5 KB)          | `files.svelte.ts`      | 2B   | Independente               |
-| `useUIStore.ts` (9.3 KB)          | `ui.svelte.ts`         | 2B   | Após componentes de layout |
-| `useSimulationStore.ts` (12.6 KB) | `simulation.svelte.ts` | 2E   | **Spike dedicado antes**   |
-| `useQEMUStore.ts` (2 KB)          | **ELIMINADO**          | 2A   | QEMU eliminado             |
+| Store Zustand (preRust) | Svelte 5 Runes | Fase | Notas |
+|---|---|---|---|
+| `useSerialStore.ts` (2.8 KB) | `serial.svelte.ts` | 2A | Primeiro a migrar |
+| `useLibraryStore.ts` (3.7 KB) | `library.svelte.ts` | 2A | Independente |
+| `useConnectionStore.ts` (4 KB) | `connection.svelte.ts` | 2A | Independente |
+| `useFileStore.ts` (5 KB) | `files.svelte.ts` | 2B | Independente |
+| `useUIStore.ts` (9.3 KB) | `ui.svelte.ts` | 2B | Após componentes de layout |
+| `useSimulationStore.ts` (12.6 KB) | `simulation.svelte.ts` | 2E | **Spike dedicado antes** |
+| `useQEMUStore.ts` (2 KB) | **ELIMINADO** | 2A | QEMU eliminado |
 
 **Exemplo de migração de store:**
 
@@ -1044,24 +1044,24 @@ export const serial = new SerialState();
 
 #### Mapeamento de Dependências React → Svelte
 
-| Dependência React (preRust) | Equivalente Svelte 5                   | Notas                               |
-| --------------------------- | -------------------------------------- | ----------------------------------- |
-| `@xyflow/react`             | `@xyflow/svelte` 1.x                   | Migração directa, API idêntica      |
-| `zustand`                   | Svelte 5 Runes (`$state`, `$derived`)  | Nativo, sem biblioteca              |
-| `@radix-ui/*` (26 pacotes)  | `shadcn-svelte` (bits-ui)              | `npx shadcn-svelte@latest init`     |
-| `@monaco-editor/react`      | `@monaco-editor/loader` standalone     | Framework-agnostic                  |
-| `framer-motion`             | `svelte/transition` + `svelte/animate` | Nativo Svelte                       |
-| `react-hook-form`           | `superforms` + `zod`                   |                                     |
-| `recharts`                  | `layerchart`                           |                                     |
-| `embla-carousel-react`      | `embla-carousel` (standalone)          |                                     |
-| `cmdk`                      | `cmdk-sv`                              |                                     |
-| `next-themes`               | `svelte-persisted-store`               |                                     |
-| `vaul`                      | `vaul-svelte`                          |                                     |
-| `socket.io-client`          | **ELIMINADO**                          | Substituído por invoke/listen Tauri |
-| `web-tree-sitter`           | **ELIMINADO**                          | Substituído por WASM do crate Rust  |
-| `react`, `react-dom`        | **ELIMINADO** (após Fase 2F)           |                                     |
-| `@vitejs/plugin-react`      | **ELIMINADO**                          |                                     |
-| `blockly`                   | **ELIMINADO**                          |                                     |
+| Dependência React (preRust) | Equivalente Svelte 5 | Notas |
+|---|---|---|
+| `@xyflow/react` | `@xyflow/svelte` 1.x | Migração directa, API idêntica |
+| `zustand` | Svelte 5 Runes (`$state`, `$derived`) | Nativo, sem biblioteca |
+| `@radix-ui/*` (26 pacotes) | `shadcn-svelte` (bits-ui) | `npx shadcn-svelte@latest init` |
+| `@monaco-editor/react` | `@monaco-editor/loader` standalone | Framework-agnostic |
+| `framer-motion` | `svelte/transition` + `svelte/animate` | Nativo Svelte |
+| `react-hook-form` | `superforms` + `zod` | |
+| `recharts` | `layerchart` | |
+| `embla-carousel-react` | `embla-carousel` (standalone) | |
+| `cmdk` | `cmdk-sv` | |
+| `next-themes` | `svelte-persisted-store` | |
+| `vaul` | `vaul-svelte` | |
+| `socket.io-client` | **ELIMINADO** | Substituído por invoke/listen Tauri |
+| `web-tree-sitter` | **ELIMINADO** | Substituído por WASM do crate Rust |
+| `react`, `react-dom` | **ELIMINADO** (após Fase 2F) | |
+| `@vitejs/plugin-react` | **ELIMINADO** | |
+| `blockly` | **ELIMINADO** | |
 
 #### Sequência de Remoção do React
 
@@ -1127,63 +1127,63 @@ Este é o editor visual **de programação** (não o canvas de simulação). Con
 
 ### 7.1 Conceito e Diferença do Canvas de Simulação
 
-| Canvas de Simulação (`SimulationCanvas`)             | Flow Editor (`FlowEditor`)                                 |
-| ---------------------------------------------------- | ---------------------------------------------------------- |
+| Canvas de Simulação (`SimulationCanvas`) | Flow Editor (`FlowEditor`) |
+|---|---|
 | Representa o **circuito físico** (LEDs, MCU, botões) | Representa o **programa lógico** (if, while, digitalWrite) |
-| Nós = componentes electrónicos                       | Nós = operações ASL                                        |
-| Arestas = fios eléctricos                            | Arestas = fluxo de execução e dados                        |
-| Resultado: visualização da simulação                 | Resultado: `AslProgram` para compilação/flash              |
-| Usa pinos como handles                               | Usa entradas/saídas de dados como handles                  |
+| Nós = componentes electrónicos | Nós = operações ASL |
+| Arestas = fios eléctricos | Arestas = fluxo de execução e dados |
+| Resultado: visualização da simulação | Resultado: `AslProgram` para compilação/flash |
+| Usa pinos como handles | Usa entradas/saídas de dados como handles |
 
 ### 7.2 Tipos de Nós do Flow Editor
 
 #### Nós de Controlo de Fluxo
 
-| Nó Svelte             | ASL Node                       | Handles                                    | Visual               |
-| --------------------- | ------------------------------ | ------------------------------------------ | -------------------- |
-| `StartNode.svelte`    | `AslTask { name: "main" }`     | exec_out                                   | Oval verde "START"   |
-| `EndNode.svelte`      | —                              | exec_in                                    | Oval vermelho "END"  |
-| `LoopNode.svelte`     | `AslWhile { condition: true }` | exec_in, exec_out, body_out                | Caixa laranja "LOOP" |
-| `IfNode.svelte`       | `AslIf`                        | exec_in, condition, then_out, else_out     | Diamante azul "IF"   |
-| `WhileNode.svelte`    | `AslWhile`                     | exec_in, condition, body_out, exit_out     | Caixa "WHILE"        |
-| `ForNode.svelte`      | `AslFor`                       | exec_in, init, condition, update, body_out | Caixa "FOR"          |
-| `DelayNode.svelte`    | `AslDelay`                     | exec_in, exec_out, ms_in                   | Caixa com relógio    |
-| `FunctionNode.svelte` | `AslFunction`                  | exec_in, params, return_out                | Caixa com fn()       |
+| Nó Svelte | ASL Node | Handles | Visual |
+|---|---|---|---|
+| `StartNode.svelte` | `AslTask { name: "main" }` | exec_out | Oval verde "START" |
+| `EndNode.svelte` | — | exec_in | Oval vermelho "END" |
+| `LoopNode.svelte` | `AslWhile { condition: true }` | exec_in, exec_out, body_out | Caixa laranja "LOOP" |
+| `IfNode.svelte` | `AslIf` | exec_in, condition, then_out, else_out | Diamante azul "IF" |
+| `WhileNode.svelte` | `AslWhile` | exec_in, condition, body_out, exit_out | Caixa "WHILE" |
+| `ForNode.svelte` | `AslFor` | exec_in, init, condition, update, body_out | Caixa "FOR" |
+| `DelayNode.svelte` | `AslDelay` | exec_in, exec_out, ms_in | Caixa com relógio |
+| `FunctionNode.svelte` | `AslFunction` | exec_in, params, return_out | Caixa com fn() |
 
 #### Nós de Hardware (MCU)
 
-| Nó Svelte                 | ASL Node                    | Handles                               | Visual        |
-| ------------------------- | --------------------------- | ------------------------------------- | ------------- |
-| `DigitalWriteNode.svelte` | `AslDigitalWrite`           | exec_in, exec_out, pin_in, value_in   | LED mini      |
-| `DigitalReadNode.svelte`  | `AslRead { mode: DIGITAL }` | exec_in, exec_out, pin_in, result_out | Pin icon      |
-| `AnalogWriteNode.svelte`  | `AslAnalogWrite`            | exec_in, exec_out, pin_in, value_in   | PWM icon      |
-| `AnalogReadNode.svelte`   | `AslRead { mode: ANALOG }`  | exec_in, exec_out, pin_in, result_out | ADC icon      |
-| `PinModeNode.svelte`      | `AslPinMode`                | exec_in, exec_out, pin_in, mode_in    | Config icon   |
-| `SerialPrintNode.svelte`  | `AslPrint`                  | exec_in, exec_out, value_in           | Terminal icon |
-| `SerialBeginNode.svelte`  | `AslSerialBegin`            | exec_in, exec_out, baud_in            | UART icon     |
-| `ServoWriteNode.svelte`   | `AslServoWrite`             | exec_in, exec_out, pin_in, angle_in   | Servo icon    |
-| `RGBSetNode.svelte`       | `AslRGBSet`                 | exec_in, exec_out, r_in, g_in, b_in   | RGB icon      |
+| Nó Svelte | ASL Node | Handles | Visual |
+|---|---|---|---|
+| `DigitalWriteNode.svelte` | `AslDigitalWrite` | exec_in, exec_out, pin_in, value_in | LED mini |
+| `DigitalReadNode.svelte` | `AslRead { mode: DIGITAL }` | exec_in, exec_out, pin_in, result_out | Pin icon |
+| `AnalogWriteNode.svelte` | `AslAnalogWrite` | exec_in, exec_out, pin_in, value_in | PWM icon |
+| `AnalogReadNode.svelte` | `AslRead { mode: ANALOG }` | exec_in, exec_out, pin_in, result_out | ADC icon |
+| `PinModeNode.svelte` | `AslPinMode` | exec_in, exec_out, pin_in, mode_in | Config icon |
+| `SerialPrintNode.svelte` | `AslPrint` | exec_in, exec_out, value_in | Terminal icon |
+| `SerialBeginNode.svelte` | `AslSerialBegin` | exec_in, exec_out, baud_in | UART icon |
+| `ServoWriteNode.svelte` | `AslServoWrite` | exec_in, exec_out, pin_in, angle_in | Servo icon |
+| `RGBSetNode.svelte` | `AslRGBSet` | exec_in, exec_out, r_in, g_in, b_in | RGB icon |
 
 #### Nós de Variáveis e Expressões
 
-| Nó Svelte             | ASL Node           | Handles                       | Visual          |
-| --------------------- | ------------------ | ----------------------------- | --------------- |
-| `ConstantNode.svelte` | `AslExpr::Literal` | value_out                     | Badge com valor |
-| `VariableNode.svelte` | `AslExpr::Var`     | value_out, value_in (assign)  | Badge com nome  |
-| `MathNode.svelte`     | `AslExpr::BinOp`   | left_in, right_in, result_out | +/-/×/÷         |
-| `CompareNode.svelte`  | `AslExpr::Compare` | left_in, right_in, result_out | >/</==          |
-| `LogicNode.svelte`    | `AslExpr::BoolOp`  | a_in, b_in, result_out        | AND/OR/NOT      |
+| Nó Svelte | ASL Node | Handles | Visual |
+|---|---|---|---|
+| `ConstantNode.svelte` | `AslExpr::Literal` | value_out | Badge com valor |
+| `VariableNode.svelte` | `AslExpr::Var` | value_out, value_in (assign) | Badge com nome |
+| `MathNode.svelte` | `AslExpr::BinOp` | left_in, right_in, result_out | +/-/×/÷ |
+| `CompareNode.svelte` | `AslExpr::Compare` | left_in, right_in, result_out | >/</== |
+| `LogicNode.svelte` | `AslExpr::BoolOp` | a_in, b_in, result_out | AND/OR/NOT |
 
 #### Nós PLC (IEC 61131-3)
 
-| Nó Svelte                | ASL Node                | Handles                                       |
-| ------------------------ | ----------------------- | --------------------------------------------- |
-| `TimerTONNode.svelte`    | `AslTimerTON`           | exec_in, in_bit, preset, q_out, et_out        |
-| `TimerTOFNode.svelte`    | `AslTimerTOF`           | exec_in, in_bit, preset, q_out, et_out        |
-| `CounterCTUNode.svelte`  | `AslCounterCTU`         | cu, r, pv, q_out, cv_out                      |
-| `LatchSRNode.svelte`     | `AslLatchSR`            | s_in, r_in, q_out                             |
-| `ModbusReadNode.svelte`  | `AslUartRead` (MODBUS)  | exec_in, exec_out, addr_in, reg_in, value_out |
-| `ModbusWriteNode.svelte` | `AslUartWrite` (MODBUS) | exec_in, exec_out, addr_in, reg_in, value_in  |
+| Nó Svelte | ASL Node | Handles |
+|---|---|---|
+| `TimerTONNode.svelte` | `AslTimerTON` | exec_in, in_bit, preset, q_out, et_out |
+| `TimerTOFNode.svelte` | `AslTimerTOF` | exec_in, in_bit, preset, q_out, et_out |
+| `CounterCTUNode.svelte` | `AslCounterCTU` | cu, r, pv, q_out, cv_out |
+| `LatchSRNode.svelte` | `AslLatchSR` | s_in, r_in, q_out |
+| `ModbusReadNode.svelte` | `AslUartRead` (MODBUS) | exec_in, exec_out, addr_in, reg_in, value_out |
+| `ModbusWriteNode.svelte` | `AslUartWrite` (MODBUS) | exec_in, exec_out, addr_in, reg_in, value_in |
 
 ### 7.3 Pipeline Flow Editor → Firmware (completa)
 
@@ -1484,20 +1484,20 @@ pub async fn diagnose_modbus_baud(last_baud: u32) -> DiagnosticResult {
 
 ### 10.3 Protocolos de Flash Suportados
 
-| Protocolo           | Toolchain/Crate         | MCU Alvo           | PLC Alvo      | Desktop | Mobile    |
-| ------------------- | ----------------------- | ------------------ | ------------- | ------- | --------- |
-| UART (avrdude)      | avrdude subprocess      | Arduino AVR        | —             | ✅       | Bridge    |
-| UART (esptool)      | esptool-rs / subprocess | ESP32, ESP8266     | —             | ✅       | Bridge    |
-| USB DFU             | dfu-util subprocess     | STM32, nRF, etc.   | —             | ✅       | ❌         |
-| USB HID (picotool)  | picotool subprocess     | RP2040             | —             | ✅       | ❌         |
-| USB OTG (Android)   | Android USB Host API    | Arduino, ESP32     | —             | ❌       | ✅ Android |
-| probe-rs (SWD/JTAG) | probe-rs crate `0.24`   | STM32, nRF, RP2040 | —             | ✅       | ❌         |
-| Wi-Fi OTA (ESP-IDF) | reqwest HTTP PUT        | ESP32              | —             | ✅       | ✅         |
-| Wi-Fi OTA (Arduino) | reqwest UDP             | Arduino OTA        | —             | ✅       | ✅         |
-| MODBUS TCP/RTU      | tokio-modbus            | —                  | Todos         | ✅       | ✅ (TCP)   |
-| Ethernet/S7         | s7-rs                   | —                  | Siemens S7    | ✅       | ✅ (TCP)   |
-| Ethernet/IP         | eip-rs                  | —                  | Allen-Bradley | ✅       | ✅ (TCP)   |
-| RS485               | serialport              | —                  | PLCs RS485    | ✅       | Bridge    |
+| Protocolo | Toolchain/Crate | MCU Alvo | PLC Alvo | Desktop | Mobile |
+|---|---|---|---|---|---|
+| UART (avrdude) | avrdude subprocess | Arduino AVR | — | ✅ | Bridge |
+| UART (esptool) | esptool-rs / subprocess | ESP32, ESP8266 | — | ✅ | Bridge |
+| USB DFU | dfu-util subprocess | STM32, nRF, etc. | — | ✅ | ❌ |
+| USB HID (picotool) | picotool subprocess | RP2040 | — | ✅ | ❌ |
+| USB OTG (Android) | Android USB Host API | Arduino, ESP32 | — | ❌ | ✅ Android |
+| probe-rs (SWD/JTAG) | probe-rs crate `0.24` | STM32, nRF, RP2040 | — | ✅ | ❌ |
+| Wi-Fi OTA (ESP-IDF) | reqwest HTTP PUT | ESP32 | — | ✅ | ✅ |
+| Wi-Fi OTA (Arduino) | reqwest UDP | Arduino OTA | — | ✅ | ✅ |
+| MODBUS TCP/RTU | tokio-modbus | — | Todos | ✅ | ✅ (TCP) |
+| Ethernet/S7 | s7-rs | — | Siemens S7 | ✅ | ✅ (TCP) |
+| Ethernet/IP | eip-rs | — | Allen-Bradley | ✅ | ✅ (TCP) |
+| RS485 | serialport | — | PLCs RS485 | ✅ | Bridge |
 
 **Invocação do `picotool` em `firmware/compiler.rs`:**
 
@@ -2031,13 +2031,13 @@ Esta é a sub-fase que **não existia** no plano original. Sem ela, a 2E não te
 
 **Tarefas (crate `neuroforge-asl/src/flow/`):**
 
-| Ficheiro Rust            | Origem TS             | Responsabilidade                                                              |
-| ------------------------ | --------------------- | ----------------------------------------------------------------------------- |
-| `flow/flow_validator.rs` | `FlowValidator.ts`    | Valida grafo: Start/End presentes, IDs únicos em blocos com estado            |
-| `flow/cfg_builder.rs`    | `CfgBuilder.ts`       | Constrói CFG, detecta ciclos, `WHILE_LOOP`, `FOR_LOOP`, `INFINITE_LOOP`       |
-| `flow/flow_to_ast.rs`    | `FlowToAst.ts` (49KB) | CFG → `ProgramNode`, estratégia estruturada ou máquina de estados; nós Ladder |
-| `flow/flow_to_asl.rs`    | `flowToASL.ts`        | Entry point público: `flow_to_asl(nodes, edges) -> AslProgram`                |
-| `flow/mod.rs`            | —                     | `pub use` de todos os módulos; feature-flagged identicamente ao WASM          |
+| Ficheiro Rust | Origem TS | Responsabilidade |
+|---|---|---|
+| `flow/flow_validator.rs` | `FlowValidator.ts` | Valida grafo: Start/End presentes, IDs únicos em blocos com estado |
+| `flow/cfg_builder.rs` | `CfgBuilder.ts` | Constrói CFG, detecta ciclos, `WHILE_LOOP`, `FOR_LOOP`, `INFINITE_LOOP` |
+| `flow/flow_to_ast.rs` | `FlowToAst.ts` (49KB) | CFG → `ProgramNode`, estratégia estruturada ou máquina de estados; nós Ladder |
+| `flow/flow_to_asl.rs` | `flowToASL.ts` | Entry point público: `flow_to_asl(nodes, edges) -> AslProgram` |
+| `flow/mod.rs` | — | `pub use` de todos os módulos; feature-flagged identicamente ao WASM |
 
 **Inputs/Outputs:**
 ```rust
@@ -2110,17 +2110,17 @@ Com a coexistência eliminada no início, esta sub-fase é apenas a **verificaç
 
 #### Sub-Fases Revistas — Tabela Resumo
 
-| Sub-Fase                     | Duração          | Resultado-chave                                         |
-| ---------------------------- | ---------------- | ------------------------------------------------------- |
-| **React Tombstone**          | 0.5 sem          | React eliminado de vez; Svelte instalado                |
-| **2A** Setup + Stores        | 2 sem            | ✅ Stores Runes, componentes atómicos, `serial.rs`       |
-| **2B** Editores              | 1 sem            | ✅ Monaco + ASLViewer WASM Bridge + Workspace Adaptation |
-| **2C** Painéis               | 1 sem            | 7 painéis + LibrariesPanel                              |
-| **2D** `flow/` no crate ⭐    | 1.5 sem          | `flow_to_asl` em Rust, testado, exposto via WASM        |
-| **2E** Canvas + Firmware     | 2 sem + spike    | SimulationCanvas, todos os nós, flash UART              |
-| **2F** Transports + Compiler | 1 sem            | USB, MODBUS, Ethernet, arduino-cli, picotool            |
-| **2G** Verificação final     | 0.5 sem          | Zero React, CI verde 3 plataformas                      |
-| **Total**                    | **~9.5 semanas** | App Desktop funcional sem React                         |
+| Sub-Fase | Duração | Resultado-chave |
+|---|---|---|
+| **React Tombstone** | 0.5 sem | React eliminado de vez; Svelte instalado |
+| **2A** Setup + Stores | 2 sem | ✅ Stores Runes, componentes atómicos, `serial.rs` |
+| **2B** Editores | 1 sem | ✅ Monaco + ASLViewer WASM Bridge + Workspace Adaptation |
+| **2C** Painéis | 1 sem | 7 painéis + LibrariesPanel |
+| **2D** `flow/` no crate ⭐ | 1.5 sem | `flow_to_asl` em Rust, testado, exposto via WASM |
+| **2E** Canvas + Firmware | 2 sem + spike | SimulationCanvas, todos os nós, flash UART |
+| **2F** Transports + Compiler | 1 sem | USB, MODBUS, Ethernet, arduino-cli, picotool |
+| **2G** Verificação final | 0.5 sem | Zero React, CI verde 3 plataformas |
+| **Total** | **~9.5 semanas** | App Desktop funcional sem React |
 
 
 ---
@@ -2202,23 +2202,23 @@ Com a coexistência eliminada no início, esta sub-fase é apenas a **verificaç
 
 ## 15. Métricas de Sucesso
 
-| Métrica                                     | Target                                   | Actual                              |
-| ------------------------------------------- | ---------------------------------------- | ----------------------------------- |
-| Bundle WASM (`neuroforge-asl`)              | < 2 MB                                   | ✅ Atingido (Fase 1D)                |
-| Startup Desktop                             | < 2 segundos                             | —                                   |
-| Parsing ASL (10.000 linhas)                 | < 100 ms                                 | —                                   |
-| Flash firmware 100 KB (UART 115200)         | < 15 s                                   | —                                   |
-| Cobertura de testes Rust (crate ASL)        | > 85%                                    | —                                   |
-| Cobertura de `code_to_asl.rs`               | > 90%                                    | —                                   |
-| Testes de roundtrip por linguagem           | 100% pass                                | ✅ 40/40 (Fase 1)                    |
-| Dependências Node.js em runtime             | **Zero**                                 | —                                   |
-| Dependências React em runtime (pós Fase 2F) | **Zero**                                 | —                                   |
-| Linguagens MCU suportadas (Fase 3)          | C/C++, Python, Rust no_std, Rust Embassy | —                                   |
-| Linguagens PLC suportadas                   | ST, Ladder                               | ✅ ST + IL + LD + FBD + SFC (Fase 1) |
-| Protocolos de flash (Fase 2)                | UART, USB, WiFi OTA, MODBUS, probe-rs    | —                                   |
-| CI verde sem hardware físico                | ubuntu + windows + macos                 | ✅ Atingido (rust.yml)               |
-| Schema `.nfv` com migração automática       | ✅ Fase 1                                 | ✅ Implementado                      |
-| Bridge com autenticação token               | ✅ Fase 4                                 | —                                   |
+| Métrica | Target | Actual |
+|---|---|---|
+| Bundle WASM (`neuroforge-asl`) | < 2 MB | ✅ Atingido (Fase 1D) |
+| Startup Desktop | < 2 segundos | — |
+| Parsing ASL (10.000 linhas) | < 100 ms | — |
+| Flash firmware 100 KB (UART 115200) | < 15 s | — |
+| Cobertura de testes Rust (crate ASL) | > 85% | — |
+| Cobertura de `code_to_asl.rs` | > 90% | — |
+| Testes de roundtrip por linguagem | 100% pass | ✅ 40/40 (Fase 1) |
+| Dependências Node.js em runtime | **Zero** | — |
+| Dependências React em runtime (pós Fase 2F) | **Zero** | — |
+| Linguagens MCU suportadas (Fase 3) | C/C++, Python, Rust no_std, Rust Embassy | — |
+| Linguagens PLC suportadas | ST, Ladder | ✅ ST + IL + LD + FBD + SFC (Fase 1) |
+| Protocolos de flash (Fase 2) | UART, USB, WiFi OTA, MODBUS, probe-rs | — |
+| CI verde sem hardware físico | ubuntu + windows + macos | ✅ Atingido (rust.yml) |
+| Schema `.nfv` com migração automática | ✅ Fase 1 | ✅ Implementado |
+| Bridge com autenticação token | ✅ Fase 4 | — |
 
 ---
 
@@ -2364,16 +2364,16 @@ roxmltree = "0.19"
 
 ## Apêndice B — Ferramentas Externas (Bundled no Desktop)
 
-| Ferramenta                   | Versão   | Uso                                         | Invocação em Rust                             |
-| ---------------------------- | -------- | ------------------------------------------- | --------------------------------------------- |
-| `arduino-cli`                | ≥ 1.0    | Compilar + flash Arduino/AVR                | subprocess via `tokio::process::Command`      |
-| `esptool.py` (ou esptool-rs) | ≥ 4.0    | Flash ESP32/ESP8266 via UART                | subprocess                                    |
-| `avrdude`                    | ≥ 7.0    | Flash AVR via UART/ISP                      | subprocess                                    |
-| `dfu-util`                   | ≥ 0.11   | Flash via DFU USB                           | subprocess                                    |
-| `picotool`                   | ≥ 2.0    | Flash RP2040 via USB HID                    | subprocess (ver secção 10.3)                  |
-| `probe-rs`                   | ≥ 0.24   | Flash + debug STM32/nRF/RP2040 via SWD/JTAG | crate nativo **E** subprocess (`cargo embed`) |
-| `cargo` + `rustup`           | Stable   | Compilar firmware Rust/Embassy              | subprocess                                    |
-| `socat`                      | qualquer | Virtual serial port em CI (Linux/macOS)     | invocado por test harness                     |
+| Ferramenta | Versão | Uso | Invocação em Rust |
+|---|---|---|---|
+| `arduino-cli` | ≥ 1.0 | Compilar + flash Arduino/AVR | subprocess via `tokio::process::Command` |
+| `esptool.py` (ou esptool-rs) | ≥ 4.0 | Flash ESP32/ESP8266 via UART | subprocess |
+| `avrdude` | ≥ 7.0 | Flash AVR via UART/ISP | subprocess |
+| `dfu-util` | ≥ 0.11 | Flash via DFU USB | subprocess |
+| `picotool` | ≥ 2.0 | Flash RP2040 via USB HID | subprocess (ver secção 10.3) |
+| `probe-rs` | ≥ 0.24 | Flash + debug STM32/nRF/RP2040 via SWD/JTAG | crate nativo **E** subprocess (`cargo embed`) |
+| `cargo` + `rustup` | Stable | Compilar firmware Rust/Embassy | subprocess |
+| `socat` | qualquer | Virtual serial port em CI (Linux/macOS) | invocado por test harness |
 
 ---
 
@@ -2381,58 +2381,58 @@ roxmltree = "0.19"
 
 ### Camada Física
 
-| Protocolo     | Camada | Velocidade       | Distância | Tipos ASL                                                      | Fase        | Estado     |
-| ------------- | ------ | ---------------- | --------- | -------------------------------------------------------------- | ----------- | ---------- |
-| UART / Serial | Físico | 300–115200 bps   | < 15 m    | `serialBegin`, `print`, `uartWrite`, `uartRead`                | ✅ 1         | ✅ Completo |
-| RS485         | Físico | 100 kbps–10 Mbps | < 1200 m  | `rs485Begin`, `rs485Write`, `rs485Read`                        | Planeada: 3 | ❌ Planeado |
-| RS232         | Físico | 300–115200 bps   | < 15 m    | partilha UART                                                  | ✅ 1         | ✅ Completo |
-| SPI           | Físico | 100 kHz–50 MHz   | < 1 m     | `spiTransfer`                                                  | ✅ 1         | ⚠️ Parcial  |
-| I2C           | Físico | 100 kHz–5 MHz    | < 1 m     | `i2cWrite`, `i2cRead`                                          | ✅ 1         | ⚠️ Parcial  |
-| CAN Bus       | Físico | 125 kbps–1 Mbps  | < 40 m    | `canBegin`, `canSend`, `canReceive`                            | Planeada: 3 | ❌ Planeado |
-| LIN Bus       | Físico | 1–20 kbps        | < 40 m    | `linBegin`, `linSend`, `linRead`                               | Planeada: 3 | ❌ Planeado |
-| 1-Wire        | Físico | 15 kbps          | < 300 m   | `oneWireBegin`, `oneWireSearch`, `oneWireRead`, `oneWireWrite` | Planeada: 3 | ❌ Planeado |
-| I2S (Áudio)   | Físico | variável         | < 0.5 m   | `i2sBegin`, `i2sWrite`, `i2sRead`                              | Planeada: 4 | ❌ Planeado |
-| USB Device    | Físico | 1.5–480 Mbps     | < 5 m     | `usbBegin`, `usbWrite`, `usbRead`                              | Planeada: 4 | ❌ Planeado |
-| Ethernet      | Físico | 10–1000 Mbps     | < 100 m   | `ethernetBegin`, `tcpConnect`, `udpSend`                       | Planeada: 3 | ❌ Planeado |
+| Protocolo | Camada | Velocidade | Distância | Tipos ASL | Fase | Estado |
+|---|---|---|---|---|---|---|
+| UART / Serial | Físico | 300–115200 bps | < 15 m | `serialBegin`, `print`, `uartWrite`, `uartRead` | ✅ 1 | ✅ Completo |
+| RS485 | Físico | 100 kbps–10 Mbps | < 1200 m | `rs485Begin`, `rs485Write`, `rs485Read` | Planeada: 3 | ❌ Planeado |
+| RS232 | Físico | 300–115200 bps | < 15 m | partilha UART | ✅ 1 | ✅ Completo |
+| SPI | Físico | 100 kHz–50 MHz | < 1 m | `spiTransfer` | ✅ 1 | ⚠️ Parcial |
+| I2C | Físico | 100 kHz–5 MHz | < 1 m | `i2cWrite`, `i2cRead` | ✅ 1 | ⚠️ Parcial |
+| CAN Bus | Físico | 125 kbps–1 Mbps | < 40 m | `canBegin`, `canSend`, `canReceive` | Planeada: 3 | ❌ Planeado |
+| LIN Bus | Físico | 1–20 kbps | < 40 m | `linBegin`, `linSend`, `linRead` | Planeada: 3 | ❌ Planeado |
+| 1-Wire | Físico | 15 kbps | < 300 m | `oneWireBegin`, `oneWireSearch`, `oneWireRead`, `oneWireWrite` | Planeada: 3 | ❌ Planeado |
+| I2S (Áudio) | Físico | variável | < 0.5 m | `i2sBegin`, `i2sWrite`, `i2sRead` | Planeada: 4 | ❌ Planeado |
+| USB Device | Físico | 1.5–480 Mbps | < 5 m | `usbBegin`, `usbWrite`, `usbRead` | Planeada: 4 | ❌ Planeado |
+| Ethernet | Físico | 10–1000 Mbps | < 100 m | `ethernetBegin`, `tcpConnect`, `udpSend` | Planeada: 3 | ❌ Planeado |
 
 ### Camada de Aplicação sobre Físicos Existentes (Shims)
 
-| Protocolo        | Corre sobre | Tipos ASL                    | Fase        | Estado     |
-| ---------------- | ----------- | ---------------------------- | ----------- | ---------- |
-| Modbus RTU       | RS485       | shim (não precisa tipo novo) | Planeada: 3 | ⚠️ Parcial  |
-| Modbus TCP       | Ethernet    | shim                         | Planeada: 3 | ⚠️ Parcial  |
-| DMX512           | RS485       | shim sobre `rs485Write`      | Planeada: 3 | ❌ Planeado |
-| MIDI             | UART        | shim sobre `uartWrite/Read`  | Planeada: 3 | ❌ Planeado |
-| Firmata          | Serial      | shim                         | Planeada: 3 | ❌ Planeado |
-| DeviceNet        | CAN Bus     | shim sobre `canSend/Receive` | Planeada: 3 | ❌ Planeado |
-| NMEA 2000        | CAN Bus     | shim sobre `canSend/Receive` | Planeada: 3 | ❌ Planeado |
-| JSON-over-serial | UART        | shim + `serde_json`          | Planeada: 3 | ❌ Planeado |
+| Protocolo | Corre sobre | Tipos ASL | Fase | Estado |
+|---|---|---|---|---|
+| Modbus RTU | RS485 | shim (não precisa tipo novo) | Planeada: 3 | ⚠️ Parcial |
+| Modbus TCP | Ethernet | shim | Planeada: 3 | ⚠️ Parcial |
+| DMX512 | RS485 | shim sobre `rs485Write` | Planeada: 3 | ❌ Planeado |
+| MIDI | UART | shim sobre `uartWrite/Read` | Planeada: 3 | ❌ Planeado |
+| Firmata | Serial | shim | Planeada: 3 | ❌ Planeado |
+| DeviceNet | CAN Bus | shim sobre `canSend/Receive` | Planeada: 3 | ❌ Planeado |
+| NMEA 2000 | CAN Bus | shim sobre `canSend/Receive` | Planeada: 3 | ❌ Planeado |
+| JSON-over-serial | UART | shim + `serde_json` | Planeada: 3 | ❌ Planeado |
 
 ### Wireless / Alta-Performance
 
-| Protocolo          | Camada   | Tipos ASL                                                  | Fase        | Estado     |
-| ------------------ | -------- | ---------------------------------------------------------- | ----------- | ---------- |
-| IR (InfraRed)      | Wireless | `irSend`, `irRead`                                         | Planeada: 3 | ❌ Planeado |
+| Protocolo | Camada | Tipos ASL | Fase | Estado |
+|---|---|---|---|---|
+| IR (InfraRed) | Wireless | `irSend`, `irRead` | Planeada: 3 | ❌ Planeado |
 | BLE (Bluetooth LE) | Wireless | `bleBegin`, `bleScan`, `bleConnect`, `bleWrite`, `bleRead` | Planeada: 4 | ❌ Planeado |
-| ZigBee             | Wireless | `zigbeeBegin`, `zigbeeSend`, `zigbeeRead`                  | Planeada: 5 | ❌ Planeado |
-| Wi-Fi OTA          | Wireless | shim sobre UART/TCP                                        | ✅ 1         | ✅ Completo |
-| BLE Desktop        | Wireless | `btleplug`                                                 | Planeada: 4 | ❌ Planeado |
+| ZigBee | Wireless | `zigbeeBegin`, `zigbeeSend`, `zigbeeRead` | Planeada: 5 | ❌ Planeado |
+| Wi-Fi OTA | Wireless | shim sobre UART/TCP | ✅ 1 | ✅ Completo |
+| BLE Desktop | Wireless | `btleplug` | Planeada: 4 | ❌ Planeado |
 
 ### Camada de Aplicação IEEE / Industriais
 
-| Protocolo             | Corre sobre | Estratégia                                                             | Fase        |
-| --------------------- | ----------- | ---------------------------------------------------------------------- | ----------- |
-| IEEE 1451 (TEDS)      | I2C/SPI     | Shim que gera código de inicialização de TEDS sobre `AslI2cWrite/Read` | Planeada: 4 |
-| Tiny Embedded Network | UART        | Shim minimalista orientado a bytes                                     | Planeada: 3 |
-| NTSC/PAL              | GPIO/PWM    | shim sobre `pwmInit` + timing                                          | Planeada: 5 |
+| Protocolo | Corre sobre | Estratégia | Fase |
+|---|---|---|---|
+| IEEE 1451 (TEDS) | I2C/SPI | Shim que gera código de inicialização de TEDS sobre `AslI2cWrite/Read` | Planeada: 4 |
+| Tiny Embedded Network | UART | Shim minimalista orientado a bytes | Planeada: 3 |
+| NTSC/PAL | GPIO/PWM | shim sobre `pwmInit` + timing | Planeada: 5 |
 
 ### Fora de Scope
 
-| Tecnologia              | Razão                                                                   |
-| ----------------------- | ----------------------------------------------------------------------- |
-| JTAG                    | Não é protocolo de aplicação — ferramenta de debug/flash (→ `probe-rs`) |
-| Myrinet / InfiniBand    | Fora do scope de MCUs/PLCs                                              |
-| AoE (ATA over Ethernet) | Fora do scope de MCUs/PLCs                                              |
+| Tecnologia | Razão |
+|---|---|
+| JTAG | Não é protocolo de aplicação — ferramenta de debug/flash (→ `probe-rs`) |
+| Myrinet / InfiniBand | Fora do scope de MCUs/PLCs |
+| AoE (ATA over Ethernet) | Fora do scope de MCUs/PLCs |
 
 ---
 

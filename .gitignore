@@ -109,3 +109,6 @@ target/
 
 # WASM build output (gerado automaticamente)
 apps/shared/src/lib/wasm/
+
+# Agent
+.agent/
