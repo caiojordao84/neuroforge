@@ -1,9 +1,10 @@
-//! code_to_asl.rs — Pipeline 1: ProgramNode → AslProgram (IR de simulação)
+//! code_to_asl.rs — Pipeline 1: ProgramNode → AslProgram (Universal Omni-directional IR)
 //! Entry point público: fn ast_to_asl(program: &ProgramNode, language: Language) -> AslProgram
 //! Migrado de: src/engine/asl/codeToASL.ts (função astToASL)
 //!
-//! REGRA DE OURO: AslProgram é estritamente o IR de SIMULAÇÃO.
-//! Nunca é usado na transpilação (Pipeline 2 usa ProgramNode directamente).
+//! REGRA DE OURO DA ARQUITETURA NEUROFORGE:
+//! AslProgram (ASL v4 JSON Tree) é a representação intermediária (IR) *universal* e *omnidirecional*.
+//! Ele serve tanto para SIMULAÇÃO quanto como pivô principal para a TRANSCOMPILAÇÃO cruzada entre qualquer linguagem.
 
 use crate::transforms::context::{Language, TransformContext};
 use crate::transforms::statement_registry::program_to_asl;

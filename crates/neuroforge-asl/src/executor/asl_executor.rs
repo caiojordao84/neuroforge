@@ -1,10 +1,8 @@
 //! AslExecutor — despacho central parse → generate para todas as linguagens suportadas.
 //!
-//! Linguagens activas (Fase 1C):
-//!   C / C++ / Arduino  → CParser (tree-sitter)  + CGenerator     (BaseNode)
-//!   Rust               → RustParser (tree-sitter) + RustGenerator (BaseNode)
-//!   Python/MicroPython → PythonParser (tree-sitter) + PythonGenerator (AslProgram)
-//!   ST (IEC 61131-3)   → StParser (iec61131)    + StGenerator    (AslProgram)
+//! Linguagens activas (Fase 1C) - Arquitetura Omni-direcional:
+//! Todas as linguagens são parseadas para um AslProgram (JSON Tree)
+//! e geradas DE UM AslProgram unicamente.
 //!
 //! Stubs Fase 2 PLC:
 //!   IL, LD, FBD, SFC   → todo!()
@@ -19,6 +17,11 @@ use crate::plugins::plc::st_parser::StParser;
 use crate::plugins::plc::st_generator::StGenerator;
 use crate::plugins::c::c_parser::CParser;
 use crate::plugins::rust_std::rust_parser::RustParser;
+
+use crate::types::asl_types::AslProgram;
+use crate::transforms::context::Language;
+use crate::types::nodes_to_typed::nodes_to_typed;
+use crate::transforms::code_to_asl::ast_to_asl;
 
 /// Linguagem / plataforma alvo.
 #[derive(Debug, Clone, PartialEq)]
@@ -89,57 +92,64 @@ impl TranspileOutput {
 pub struct AslExecutor;
 
 impl AslExecutor {
-    /// Transpila `source` para a linguagem `target`.
-    /// Devolve `TranspileOutput` ou mensagem de erro.
+    /// Transpila `source` para a linguagem `target` (Arquitetura NeuroForge Omni-direcional).
+    /// Se `source` for um ASL JSON Tree válido, ele transcompila diretamente a partir do JSON (bypass de parser local).
+    /// Caso contrário, utiliza o parser para gerar a AST Universal (AslProgram) primeiro.
     pub fn run(source: &str, target: &TargetLanguage) -> Result<TranspileOutput, String> {
+        let trimmed_source = source.trim();
+        
+        let program = if trimmed_source.starts_with('{') && trimmed_source.contains("\"aslVersion\"") {
+            // Se já recebemos a ASL Tree diretamente (SFC/Blockly Editor Frontend payload)
+            serde_json::from_str::<AslProgram>(trimmed_source)
+                .map_err(|e| format!("Erro ao fazer parse do ASL JSON: {}", e))?
+        } else {
+            // Fallback (ex: recebemos código fonte C++ para compilar para Rust)
+            // Usa os novos pipes de transformação Universal
+            match target {
+                TargetLanguage::C | TargetLanguage::Cpp | TargetLanguage::Arduino => {
+                    let prog = CParser::parse(source).map_err(|e| format!("CParser: {e}"))?;
+                    let typed = nodes_to_typed(&prog);
+                    ast_to_asl(&typed, Language::Cpp)
+                }
+                TargetLanguage::Rust => {
+                    let prog = RustParser::parse(source).map_err(|e| format!("RustParser: {e}"))?;
+                    let typed = nodes_to_typed(&prog);
+                    ast_to_asl(&typed, Language::Rust)
+                }
+                TargetLanguage::Python | TargetLanguage::MicroPython => {
+                    PythonParser::parse(source).map_err(|e| format!("PythonParser: {e}"))?
+                }
+                TargetLanguage::St => {
+                    StParser::parse(source).map_err(|e| format!("StParser: {e}"))?
+                }
+                TargetLanguage::Il | TargetLanguage::Ld | TargetLanguage::Fbd | TargetLanguage::Sfc => {
+                    return Err(format!("O Parsing direto para {:?} não é suportado até a Fase 2", target));
+                }
+            }
+        };
+
+        // Geração é feita baseada na IR Omni-direcional unicamente (AslProgram)
         match target {
-            // ── C / C++ / Arduino ────────────────────────────────────────────
             TargetLanguage::C | TargetLanguage::Cpp | TargetLanguage::Arduino => {
-                let prog = CParser::parse(source)
-                    .map_err(|e| format!("CParser: {e}"))?;
-                let root = prog.to_legacy_root();
-                let out  = CGenerator::new().generate(&root);
+                let out = CGenerator::new().generate(&program);
                 Ok(TranspileOutput::from_generator_output(out))
             }
-
-            // ── Rust ─────────────────────────────────────────────────────────
             TargetLanguage::Rust => {
-                let prog = RustParser::parse(source)
-                    .map_err(|e| format!("RustParser: {e}"))?;
-                let root = prog.to_legacy_root();
-                let out  = RustGenerator::new().generate(&root);
+                let out = RustGenerator::new().generate(&program);
                 Ok(TranspileOutput::from_generator_output(out))
             }
-
-            // ── Python / MicroPython ─────────────────────────────────────────
             TargetLanguage::Python | TargetLanguage::MicroPython => {
-                let prog = PythonParser::parse(source)
-                    .map_err(|e| format!("PythonParser: {e}"))?;
-                let out = PythonGenerator::new().generate(&prog);
+                let out = PythonGenerator::new().generate(&program);
                 Ok(TranspileOutput::from_generator_output(out))
             }
-
-            // ── Structured Text ──────────────────────────────────────────────
             TargetLanguage::St => {
-                let prog = StParser::parse(source)
-                    .map_err(|e| format!("StParser: {e}"))?;
-                let out = StGenerator::new().generate(&prog);
+                let out = StGenerator::new().generate(&program);
                 Ok(TranspileOutput::from_generator_output(out))
             }
-
-            // ── Stubs Fase 2 PLC ─────────────────────────────────────────────
-            TargetLanguage::Il => {
-                Err("IL (Instruction List) ainda não implementado — previsto na Fase 2 PLC".to_string())
-            }
-            TargetLanguage::Ld => {
-                Err("LD (Ladder Diagram) ainda não implementado — previsto na Fase 2 PLC".to_string())
-            }
-            TargetLanguage::Fbd => {
-                Err("FBD (Function Block Diagram) ainda não implementado — previsto na Fase 2 PLC".to_string())
-            }
-            TargetLanguage::Sfc => {
-                Err("SFC (Sequential Function Chart) ainda não implementado — previsto na Fase 2 PLC".to_string())
-            }
+            TargetLanguage::Il => Err("IL (Instruction List) ainda não implementado — Fase 2 PLC".to_string()),
+            TargetLanguage::Ld => Err("LD (Ladder Diagram) ainda não implementado — Fase 2 PLC".to_string()),
+            TargetLanguage::Fbd => Err("FBD (Function Block Diagram) ainda não implementado — Fase 2 PLC".to_string()),
+            TargetLanguage::Sfc => Err("SFC (Sequential Function Chart) ainda não implementado — Fase 2 PLC".to_string()),
         }
     }
 }

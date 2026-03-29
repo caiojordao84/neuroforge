@@ -10,6 +10,7 @@
 use crate::executor::{AslExecutor, TargetLanguage};
 
 /// Transpila `source` para a linguagem indicada por `lang` (case-insensitive).
+/// O workflow passa sempre pela criação de uma AST unificada e omnidirecional (`AslProgram` - ASL JSON Tree).
 ///
 /// Linguagens suportadas: `c`, `c++`, `cpp`, `arduino`, `rust`,
 /// `python`, `py`, `micropython`, `upython`, `st`, `iec61131`, `plc`.
