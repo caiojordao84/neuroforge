@@ -1,0 +1,28 @@
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   D:\Documents\NeuroForge\neuroforge\apps\desktop\src-tauri\Cargo.toml
+workspace: D:\Documents\NeuroForge\neuroforge\Cargo.toml
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   D:\Documents\NeuroForge\neuroforge\apps\mobile\src-tauri\Cargo.toml
+workspace: D:\Documents\NeuroForge\neuroforge\Cargo.toml
+    Checking neuroforge-asl v4.0.0 (D:\Documents\NeuroForge\neuroforge\crates\neuroforge-asl)
+error[E0308]: `match` arms have incompatible types
+   --> crates\neuroforge-asl\src\plugins\plc\st_generator.rs:181:71
+    |
+178 |                   let v = match &d.value {
+    |  _________________________-
+179 | |                     crate::types::asl_types::DigitalValue::High => "TRUE",
+    | |                                                                    ------ this is found to be of type `&str`
+180 | |                     crate::types::asl_types::DigitalValue::Low => "FALSE",
+    | |                                                                   ------- this is found to be of type `&str`
+181 | |                     crate::types::asl_types::DigitalValue::Expr(e) => self.gen_expr(e),
+    | |                                                                       ^^^^^^^^^^^^^^^^ expected `&str`, found `String`
+182 | |                 };
+    | |_________________- `match` arms have incompatible types
+    |
+help: consider borrowing here
+    |
+181 |                     crate::types::asl_types::DigitalValue::Expr(e) => &self.gen_expr(e),
+    |                                                                       +
+
+For more information about this error, try `rustc --explain E0308`.
+error: could not compile `neuroforge-asl` (lib) due to 1 previous error

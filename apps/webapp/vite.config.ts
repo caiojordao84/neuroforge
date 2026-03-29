@@ -15,7 +15,15 @@ export default defineConfig({
   },
   plugins: [
     tailwindcss(),
-    sveltekit()
+    sveltekit(),
+    {
+      name: 'wasm-env-shim',
+      resolveId(source) {
+        if (source === 'env') {
+          return resolve(__dirname, '../shared/src/lib/wasm/env.js');
+        }
+      }
+    }
   ],
   server: {
     fs: {

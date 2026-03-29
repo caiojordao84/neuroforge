@@ -23,8 +23,11 @@
   }: Props = $props();
 
   let container = $state<HTMLDivElement | undefined>();
-  let editor: Monaco.editor.IStandaloneCodeEditor | undefined;
-  let monaco: typeof Monaco | undefined;
+  let editorInstance = $state<Monaco.editor.IStandaloneCodeEditor | undefined>();
+  let monacoRef = $state<typeof Monaco | undefined>();
+
+  // Guard against setValue → onDidChangeModelContent → setValue loop
+  let settingValue = false;
 
   // Mapeia nomes internos NeuroForge para IDs Monaco
   const langMap: Record<string, string> = {
@@ -38,10 +41,11 @@
 
     const init = async () => {
       if (!browser) return;
-      monaco = await loader.init();
+      const m = await loader.init();
+      monacoRef = m;
 
       // Tema escuro personalizado
-      monaco.editor.defineTheme('neuroforge-dark', {
+      m.editor.defineTheme('neuroforge-dark', {
         base: 'vs-dark',
         inherit: true,
         rules: [
@@ -64,7 +68,7 @@
 
       if (!container) return;
 
-      internalEditor = monaco.editor.create(container, {
+      internalEditor = m.editor.create(container, {
         value,
         language: langMap[language] ?? 'plaintext',
         theme: 'neuroforge-dark',
@@ -85,9 +89,12 @@
         cursorBlinking:   'smooth',
         padding:          { top: 8, bottom: 8 },
       });
-      editor = internalEditor;
+
+      // Set the reactive ref AFTER editor is created
+      editorInstance = internalEditor;
 
       internalEditor.onDidChangeModelContent(() => {
+        if (settingValue) return; // skip if we're setting value programmatically
         const v = internalEditor!.getValue();
         if (value !== v) {
           value = v;
@@ -102,6 +109,31 @@
       internalEditor?.dispose();
     };
   });
+
+  // Sync external value changes → Monaco editor
+  $effect(() => {
+    const ed = editorInstance;
+    const v = value;
+    if (ed && v !== ed.getValue()) {
+      settingValue = true;
+      ed.setValue(v);
+      settingValue = false;
+    }
+  });
+
+  // Sync language changes → Monaco editor model
+  $effect(() => {
+    const ed = editorInstance;
+    const m = monacoRef;
+    const lang = language; // track language prop
+    if (ed && m) {
+      const monacoLang = langMap[lang] ?? 'plaintext';
+      const model = ed.getModel();
+      if (model) {
+        m.editor.setModelLanguage(model, monacoLang);
+      }
+    }
+  });
 </script>
 
 <div
@@ -109,3 +141,4 @@
   style="height: {height}; width: 100%;"
   class="overflow-hidden rounded"
 ></div>
+

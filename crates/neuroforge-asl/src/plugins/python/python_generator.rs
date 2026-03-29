@@ -63,6 +63,19 @@ impl AslGenerator for PythonGenerator {
             out.push_str(&self.gen_function(func, 0));
             out.push_str("\n\n");
         }
+
+        // Tasks — Arduino-style setup/loop goes here as the "main" task
+        for task in &program.tasks {
+            if !task.body.is_empty() {
+                out.push_str(&format!("# --- Task: {} ---\n", task.name));
+                for stmt in &task.body {
+                    out.push_str(&self.gen_stmt(stmt, 0));
+                    out.push('\n');
+                }
+                out.push('\n');
+            }
+        }
+
         GeneratorOutput::new(out)
     }
 }
@@ -211,13 +224,22 @@ impl PythonGenerator {
                         "machine.Pin.IN, machine.Pin.PULL_UP"
                     }
                 };
+                let pin_name = self.gen_expr(&p.pin);
                 format!(
-                    "{}{} = machine.Pin({}, {})",
+                    "{}pin_{} = machine.Pin({}, {})",
                     ind,
-                    self.gen_expr(&p.pin),
-                    self.gen_expr(&p.pin),
+                    pin_name,
+                    pin_name,
                     mode
                 )
+            }
+            AslStatement::DigitalWrite(d) => {
+                let val = match &d.value {
+                    crate::types::asl_types::DigitalValue::High => "1".to_string(),
+                    crate::types::asl_types::DigitalValue::Low => "0".to_string(),
+                    crate::types::asl_types::DigitalValue::Expr(e) => self.gen_expr(e),
+                };
+                format!("{}pin_{}.value({})", ind, self.gen_expr(&d.pin), val)
             }
             AslStatement::SerialBegin(s) => format!(
                 "{}uart = machine.UART(0, baudrate={})",

@@ -26,7 +26,10 @@
   </div>
   
   <div class="flex items-center gap-3">
-    <button class="px-3 py-1.5 flex items-center gap-2 border border-white/10 hover:bg-white/5 transition-colors rounded text-xs font-medium uppercase text-on-surface-variant">
+    <button 
+      class="px-3 py-1.5 flex items-center gap-2 border border-white/10 hover:bg-white/5 transition-colors rounded text-xs font-medium uppercase {ideState.isCodePanelOpen ? 'text-primary-container bg-primary-container/10' : 'text-on-surface-variant'}"
+      onclick={() => ideState.toggleCodePanel()}
+    >
       <span class="material-symbols-outlined text-xs">code</span> Code Editor
     </button>
     

@@ -43,6 +43,13 @@ class AslState {
     return JSON.parse(this.#mod.wasm_parse_to_asl(source, lang));
   }
 
+  /** Cross-language transpilation: parses with fromLang parser, generates with toLang generator */
+  crossTranspile(source: string, fromLang: string, toLang: string): string {
+    if (!this.#mod) throw new Error('WASM não inicializado');
+    // @ts-ignore
+    return this.#mod.wasm_cross_transpile(source, fromLang, toLang);
+  }
+
   getDiagnostics(source: string, lang: string): Array<{ severity: string; context: string; message: string }> {
     if (!this.#mod) throw new Error('WASM não inicializado');
     // @ts-ignore
