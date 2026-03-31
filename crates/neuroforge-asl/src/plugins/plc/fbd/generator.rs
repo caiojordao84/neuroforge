@@ -358,6 +358,7 @@ mod tests {
                     ],
                 },
             ],
+            ..Default::default()
         }
     }
 
@@ -388,6 +389,7 @@ mod tests {
                     ],
                 },
             ],
+            ..Default::default()
         }
     }
 
@@ -414,6 +416,7 @@ mod tests {
                     ],
                 },
             ],
+            ..Default::default()
         }
     }
 

@@ -80,15 +80,22 @@ impl<'src> RustVisitor<'src> {
     fn visit_source_file(&mut self, root: Node) -> Result<ProgramNode, RustParseError> {
         let mut functions = vec![];
         let mut globals: Vec<BaseNode> = vec![];
-        let mut cursor = root.walk();
-        for child in root.children(&mut cursor) {
+        let cursor = &mut root.walk();
+        for child in root.children(cursor) {
             match child.kind() {
                 "function_item" => functions.push(self.visit_function(child)),
                 "const_item" | "static_item" | "let_declaration" => globals.push(self.visit_let(child)),
                 _ => {}
             }
         }
-        Ok(ProgramNode { node_type: NodeType::Program, functions, globals, imports: vec![] })
+        Ok(ProgramNode { 
+            node_type: NodeType::Program, 
+            functions, 
+            globals, 
+            setup_body: vec![], 
+            loop_body: vec![], 
+            has_loop: false 
+        })
     }
 
     fn visit_function(&mut self, node: Node) -> FunctionNode {

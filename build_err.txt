@@ -1,0 +1,22 @@
+﻿cargo : warning: profiles for the non root package will be 
+ignored, specify profiles at the workspace root:
+At line:1 char:1
++ cargo check -p neuroforge-asl --color never 2>&1 | Out-File 
+-Encoding ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: profil...wor 
+   kspace root::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+package:   D:\Documents\NeuroForge\neuroforge\apps\desktop\src-taur
+i\Cargo.toml
+workspace: D:\Documents\NeuroForge\neuroforge\Cargo.toml
+warning: profiles for the non root package will be ignored, 
+specify profiles at the workspace root:
+package:   
+D:\Documents\NeuroForge\neuroforge\apps\mobile\src-tauri\Cargo.toml
+workspace: D:\Documents\NeuroForge\neuroforge\Cargo.toml
+    Checking neuroforge-asl v4.0.0 
+(D:\Documents\NeuroForge\neuroforge\crates\neuroforge-asl)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 
+1.58s

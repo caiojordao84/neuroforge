@@ -13,13 +13,13 @@ pub fn transform_call(call: &CallNode, ctx: &TransformContext) -> Option<AslStat
 
     match call.name.as_str() {
         // ── GPIO ─────────────────────────────────────────────────────────────
-        "pinMode" => {
+        "pinMode" | "machine.Pin" => {
             let pin = args.first().cloned().unwrap_or(AslExpr::int(0));
             let mode_arg = call.args.get(1);
             let is_output = match mode_arg {
                 Some(arg) => match &arg.kind {
-                    crate::types::typed_nodes::ExprKind::StringLiteral(s) => s == "OUTPUT",
-                    crate::types::typed_nodes::ExprKind::Identifier(s) => s == "OUTPUT",
+                    crate::types::typed_nodes::ExprKind::StringLiteral(s) => s == "OUTPUT" || s == "Pin.OUT",
+                    crate::types::typed_nodes::ExprKind::Identifier(s) => s == "OUTPUT" || s == "OUT" || s == "Pin.OUT",
                     _ => false,
                 },
                 None => true,
@@ -31,35 +31,45 @@ pub fn transform_call(call: &CallNode, ctx: &TransformContext) -> Option<AslStat
             };
             Some(AslStatement::PinMode(AslPinMode { pin, mode }))
         }
-        "digitalWrite" => {
+        "digitalWrite" | "Pin.value" | "Pin.on" | "Pin.off" => {
             let pin = args.first().cloned().unwrap_or(AslExpr::int(0));
-            // Check if arg is HIGH/LOW/1/0
-            let value_arg = call.args.get(1);
-            let value = match value_arg {
-                Some(arg) => match &arg.kind {
-                    crate::types::typed_nodes::ExprKind::Identifier(s) => {
-                        if s == "HIGH" { DigitalValue::High }
-                        else if s == "LOW" { DigitalValue::Low }
-                        else { DigitalValue::Expr(args.get(1).cloned().unwrap_or(AslExpr::int(0))) }
-                    },
-                    crate::types::typed_nodes::ExprKind::IntLiteral(n) => {
-                        if *n > 0 { DigitalValue::High }
-                        else { DigitalValue::Low }
-                    },
-                    _ => DigitalValue::Expr(args.get(1).cloned().unwrap_or(AslExpr::int(0))),
-                },
-                None => DigitalValue::Low,
+            // Check if arg is HIGH/LOW/1/0/True/False
+            let value = match call.name.as_str() {
+                "Pin.on" => DigitalValue::High,
+                "Pin.off" => DigitalValue::Low,
+                _ => {
+                    let value_arg = call.args.get(1);
+                    match value_arg {
+                        Some(arg) => match &arg.kind {
+                            crate::types::typed_nodes::ExprKind::Identifier(s) => {
+                                if s == "HIGH" || s == "True" { DigitalValue::High }
+                                else if s == "LOW" || s == "False" { DigitalValue::Low }
+                                else { DigitalValue::Expr(args.get(1).cloned().unwrap_or(AslExpr::int(0))) }
+                            },
+                            crate::types::typed_nodes::ExprKind::IntLiteral(n) => {
+                                if *n > 0 { DigitalValue::High }
+                                else { DigitalValue::Low }
+                            },
+                            crate::types::typed_nodes::ExprKind::BoolLiteral(b) => {
+                                if *b { DigitalValue::High }
+                                else { DigitalValue::Low }
+                            },
+                            _ => DigitalValue::Expr(args.get(1).cloned().unwrap_or(AslExpr::int(0))),
+                        },
+                        None => DigitalValue::Low,
+                    }
+                }
             };
             Some(AslStatement::DigitalWrite(AslDigitalWrite { pin, value }))
         }
-        "analogWrite" => {
+        "analogWrite" | "PWM.duty_u16" => {
             let pin = args.first().cloned().unwrap_or(AslExpr::int(0));
             let value = args.get(1).cloned().unwrap_or(AslExpr::int(0));
             Some(AslStatement::AnalogWrite(AslAnalogWrite { pin, value }))
         }
-        "digitalRead" | "analogRead" => {
+        "digitalRead" | "analogRead" | "Pin.read" | "ADC.read_u16" => {
             let pin = args.first().cloned().unwrap_or(AslExpr::int(0));
-            let mode = if call.name == "analogRead" {
+            let mode = if call.name == "analogRead" || call.name == "ADC.read_u16" {
                 ReadMode::Analog
             } else {
                 ReadMode::Digital
@@ -73,13 +83,13 @@ pub fn transform_call(call: &CallNode, ctx: &TransformContext) -> Option<AslStat
         }
 
         // ── Serial ───────────────────────────────────────────────────────────
-        "Serial.begin" | "serialBegin" => {
+        "Serial.begin" | "serialBegin" | "machine.UART" => {
             let baud = args.first().cloned().unwrap_or(AslExpr::int(9600));
             Some(AslStatement::SerialBegin(AslSerialBegin { baud }))
         }
-        "Serial.print" | "Serial.println" | "print" => {
+        "Serial.print" | "Serial.println" | "print" | "UART.write" => {
             let value = args.first().cloned().unwrap_or(AslExpr::str_val(""));
-            let newline = call.name.ends_with("println");
+            let newline = call.name.ends_with("println") || call.name == "print";
             Some(AslStatement::Print(AslPrint {
                 args: vec![value],
                 newline,
@@ -87,13 +97,24 @@ pub fn transform_call(call: &CallNode, ctx: &TransformContext) -> Option<AslStat
         }
 
         // ── Timing ───────────────────────────────────────────────────────────
-        "delay" => {
+        "delay" | "utime.sleep_ms" | "time.sleep_ms" => {
             let ms = args.first().cloned().unwrap_or(AslExpr::int(0));
             Some(AslStatement::Delay(AslDelay { milliseconds: ms }))
         }
-        "delayMicroseconds" => {
+        "delayMicroseconds" | "utime.sleep_us" | "time.sleep_us" => {
             let us = args.first().cloned().unwrap_or(AslExpr::int(0));
             Some(AslStatement::Delay(AslDelay { milliseconds: us }))
+        }
+        "utime.sleep" | "time.sleep" => {
+             let ms = match args.first() {
+                Some(AslExpr::Literal(l)) => {
+                    let sec = l.value.as_f64().unwrap_or(0.0);
+                    AslExpr::int((sec * 1000.0) as i64)
+                }
+                Some(other) => other.clone(),
+                None => AslExpr::int(0),
+            };
+            Some(AslStatement::Delay(AslDelay { milliseconds: ms }))
         }
 
         // ── Servo ────────────────────────────────────────────────────────────
@@ -173,17 +194,19 @@ pub fn transform_call(call: &CallNode, ctx: &TransformContext) -> Option<AslStat
 
         // ── RGB ──────────────────────────────────────────────────────────────
         "rgbSet" => {
-            let pin = args.first().cloned().unwrap_or(AslExpr::int(0));
-            let r = args.get(1).cloned().unwrap_or(AslExpr::int(0));
-            let g = args.get(2).cloned().unwrap_or(AslExpr::int(0));
-            let _b = args.get(3).cloned().unwrap_or(AslExpr::int(0));
+            let pin_r = args.first().cloned().unwrap_or(AslExpr::int(0));
+            let pin_g = args.get(1).cloned().unwrap_or(AslExpr::int(0));
+            let pin_b = args.get(2).cloned().unwrap_or(AslExpr::int(0));
+            let r = args.get(3).cloned().unwrap_or(AslExpr::int(0));
+            let g = args.get(4).cloned().unwrap_or(AslExpr::int(0));
+            let b = args.get(5).cloned().unwrap_or(AslExpr::int(0));
             Some(AslStatement::RgbSet(AslRgbSet {
-                pin_r: pin,
-                pin_g: r,
-                pin_b: g,
-                r: AslExpr::int(0),
-                g: AslExpr::int(0),
-                b: AslExpr::int(0),
+                pin_r,
+                pin_g,
+                pin_b,
+                r,
+                g,
+                b,
             }))
         }
 

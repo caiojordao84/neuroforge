@@ -19,10 +19,11 @@
 //!     else                → AslStatement::Expr
 
 use crate::types::asl_types::{
-    AslAssign, AslDelay, AslExpr, AslExpressionStmt, AslForIn, AslFunction, AslI2cRead,
-    AslI2cWrite, AslIf, AslMetadata, AslParam, AslPinMode, AslPrint, AslProgram, AslReturn,
-    AslSpiTransfer, AslStatement, AslUartWrite, AslWhile, PinModeKind,
+    AslAssign, AslDelay, AslDigitalWrite, AslExpr, AslExpressionStmt, AslForIn, AslFunction, AslIf,
+    AslMetadata, AslParam, AslPinMode, AslPrint, AslProgram, AslReturn, AslStatement, AslWhile,
+    DigitalValue, PinModeKind,
 };
+use std::collections::HashMap;
 use tree_sitter::{Node, Parser, Tree};
 
 #[derive(Debug, thiserror::Error)]
@@ -59,13 +60,18 @@ impl PythonParser {
     }
 }
 
+
 struct PythonVisitor<'src> {
     source: &'src str,
+    pin_map: HashMap<String, i64>,
 }
 
 impl<'src> PythonVisitor<'src> {
     fn new(source: &'src str) -> Self {
-        Self { source }
+        Self {
+            source,
+            pin_map: HashMap::new(),
+        }
     }
 
     fn text(&self, node: Node) -> &str {
@@ -74,8 +80,8 @@ impl<'src> PythonVisitor<'src> {
 
     fn visit_module(&mut self, root: Node) -> AslProgram {
         let mut functions = vec![];
-        let tasks = vec![];
         let mut globals = vec![];
+        let mut main_body = vec![];
 
         let mut cursor = root.walk();
         for child in root.children(&mut cursor) {
@@ -84,21 +90,31 @@ impl<'src> PythonVisitor<'src> {
                 "import_statement" | "import_from_statement" | "comment" => {}
                 _ => {
                     for stmt in self.visit_statement(child) {
-                        if let AslStatement::Declare(d) = stmt {
+                        if let AslStatement::Declare(d) = &stmt {
                             globals.push(crate::types::asl_types::AslGlobalVar {
-                                name: d.name,
-                                r#type: d.r#type,
-                                initial_value: d.value.map(|e| match e {
-                                    AslExpr::Literal(l) => l.value,
+                                name: d.name.clone(),
+                                r#type: d.r#type.clone(),
+                                initial_value: d.value.as_ref().map(|e| match e {
+                                    AslExpr::Literal(l) => l.value.clone(),
                                     _ => serde_json::Value::Null,
                                 }),
                                 struct_type: None,
                                 comments: None,
                             })
+                        } else {
+                            main_body.push(stmt);
                         }
                     }
                 }
             }
+        }
+
+        let mut tasks = vec![];
+        if !main_body.is_empty() {
+            tasks.push(crate::types::asl_types::AslTask {
+                name: "main".to_string(),
+                body: main_body,
+            });
         }
 
         AslProgram {
@@ -113,6 +129,7 @@ impl<'src> PythonVisitor<'src> {
             globals,
             functions,
             tasks,
+            ..Default::default()
         }
     }
 
@@ -216,65 +233,109 @@ impl<'src> PythonVisitor<'src> {
     }
 
     fn visit_call(&mut self, node: Node) -> AslStatement {
-        let func_text = node
-            .child_by_field_name("function")
-            .map(|f| self.text(f).to_string())
-            .unwrap_or_default();
+        let func_node = node.child_by_field_name("function").unwrap();
+        let func_text = self.text(func_node).to_string();
 
-        let raw_args: Vec<String> = node
-            .child_by_field_name("arguments")
-            .map(|a| {
-                let mut cursor = a.walk();
-                a.children(&mut cursor)
-                    .filter(|c| !matches!(c.kind(), "," | "(" | ")") && c.is_named())
-                    .map(|c| self.text(c).to_string())
-                    .collect()
-            })
-            .unwrap_or_default();
+        let args_node = node.child_by_field_name("arguments").unwrap();
+        let mut cursor = args_node.walk();
+        let args: Vec<AslExpr> = args_node.children(&mut cursor)
+            .filter(|c| c.is_named())
+            .map(|c| self.visit_expr(c))
+            .collect();
 
-        let arg = |idx: usize| -> AslExpr {
-            raw_args
-                .get(idx)
-                .map(|s| AslExpr::var(s))
-                .unwrap_or_else(|| AslExpr::int(0))
-        };
+        // Handle method calls: p.on(), p.off(), p.value(x)
+        if func_node.kind() == "attribute" {
+            let object_node = func_node.child_by_field_name("object").unwrap();
+            let method_node = func_node.child_by_field_name("attribute").unwrap();
+            let object_name = self.text(object_node);
+            let method_name = self.text(method_node);
+
+            if let Some(&pin_num) = self.pin_map.get(object_name) {
+                match method_name {
+                    "on" => return AslStatement::DigitalWrite(AslDigitalWrite {
+                        pin: AslExpr::int(pin_num),
+                        value: DigitalValue::High,
+                    }),
+                    "off" => return AslStatement::DigitalWrite(AslDigitalWrite {
+                        pin: AslExpr::int(pin_num),
+                        value: DigitalValue::Low,
+                    }),
+                    "value" => {
+                        let val = args.first().cloned().unwrap_or(AslExpr::int(0));
+                        return AslStatement::DigitalWrite(AslDigitalWrite {
+                            pin: AslExpr::int(pin_num),
+                            value: match val {
+                                AslExpr::Literal(ref l) if l.value.as_i64() == Some(1) => DigitalValue::High,
+                                AslExpr::Literal(ref l) if l.value.as_i64() == Some(0) => DigitalValue::Low,
+                                _ => DigitalValue::Expr(val),
+                            },
+                        });
+                    }
+                    _ => {}
+                }
+            }
+        }
 
         match func_text.as_str() {
-            "machine.Pin" => AslStatement::PinMode(AslPinMode {
-                pin: arg(0),
-                mode: PinModeKind::Output,
+            "machine.Pin" | "Pin" => {
+                let pin = args.first().cloned().unwrap_or(AslExpr::int(0));
+                // Actually look at the 2nd argument
+                let is_output = if args.len() > 1 {
+                    let second_arg_text = args_node.named_child(1).map(|c| self.text(c)).unwrap_or("");
+                    second_arg_text.contains("OUT") || second_arg_text == "1"
+                } else {
+                    true
+                };
+                AslStatement::PinMode(AslPinMode {
+                    pin,
+                    mode: if is_output { PinModeKind::Output } else { PinModeKind::Input },
+                })
+            }
+            "utime.sleep_ms" | "time.sleep_ms" | "sleep_ms" => AslStatement::Delay(AslDelay {
+                milliseconds: args.first().cloned().unwrap_or(AslExpr::int(0)),
             }),
-            f if f == "utime.sleep_ms" || f == "time.sleep_ms" => AslStatement::Delay(AslDelay {
-                milliseconds: arg(0),
-            }),
+            "utime.sleep" | "time.sleep" | "sleep" => {
+                let ms = match args.first() {
+                    Some(AslExpr::Literal(l)) => {
+                        let sec = l.value.as_f64().unwrap_or(0.0);
+                        AslExpr::int((sec * 1000.0) as i64)
+                    }
+                    Some(other) => other.clone(),
+                    None => AslExpr::int(0),
+                };
+                AslStatement::Delay(AslDelay { milliseconds: ms })
+            }
             "print" => AslStatement::Print(AslPrint {
-                args: raw_args.iter().map(|s| AslExpr::var(s)).collect(),
+                args,
                 newline: true,
             }),
-            "uart.write" => AslStatement::UartWrite(AslUartWrite {
-                port: AslExpr::int(0),
-                data: arg(0),
-            }),
-            "i2c.writeto" => AslStatement::I2cWrite(AslI2cWrite {
-                bus: AslExpr::int(0),
-                address: arg(0),
-                data: arg(1),
-            }),
-            "i2c.readfrom" => AslStatement::I2cRead(AslI2cRead {
-                bus: AslExpr::int(0),
-                address: arg(0),
-                length: arg(1),
-                target: "_buf".to_string(),
-            }),
-            "spi.write" => AslStatement::SpiTransfer(AslSpiTransfer {
-                bus: AslExpr::int(0),
-                cs_pin: AslExpr::int(0),
-                tx_data: arg(0),
-                target: None,
-            }),
             _ => AslStatement::Expr(AslExpressionStmt {
-                expr: AslExpr::var(&func_text),
+                expr: AslExpr::Call(Box::new(crate::types::asl_types::AslCall {
+                    callee: func_text,
+                    args,
+                })),
             }),
+        }
+    }
+
+    fn visit_expr(&mut self, node: Node) -> AslExpr {
+        match node.kind() {
+            "integer" => AslExpr::int(self.text(node).parse().unwrap_or(0)),
+            "float" => AslExpr::float(self.text(node).parse().unwrap_or(0.0)),
+            "string" => AslExpr::str_val(self.text(node).trim_matches('"').trim_matches('\'')),
+            "true" | "True" => AslExpr::bool_val(true),
+            "false" | "False" => AslExpr::bool_val(false),
+            "identifier" | "attribute" => AslExpr::var(self.text(node)),
+            "call" => {
+                 // Simplificação: se for uma chamada dentro de expressão, mantemos como Call
+                 let stmt = self.visit_call(node);
+                 if let AslStatement::Expr(e) = stmt {
+                     e.expr
+                 } else {
+                     AslExpr::int(0) // Fallback para statements em posição de expressão
+                 }
+            }
+            _ => AslExpr::var(self.text(node)),
         }
     }
 
@@ -283,10 +344,50 @@ impl<'src> PythonVisitor<'src> {
             .child_by_field_name("left")
             .map(|n| self.text(n).to_string())
             .unwrap_or_default();
-        let value = node
-            .child_by_field_name("right")
-            .map(|n| AslExpr::var(self.text(n)))
+        
+        let right = node.child_by_field_name("right");
+        if let Some(r) = right {
+            if r.kind() == "call" {
+                let func_node = r.child_by_field_name("function");
+                if let Some(f) = func_node {
+                    let func_text = self.text(f);
+                    if func_text == "machine.Pin" || func_text == "Pin" {
+                        let arg_node = r.child_by_field_name("arguments");
+                        if let Some(args_node) = arg_node {
+                            // Extrair o primeiro argumento (pin number)
+                            let mut cursor = args_node.walk();
+                            let first_arg_node = args_node.children(&mut cursor).find(|c| c.is_named());
+                            
+                            if let Some(arg_node) = first_arg_node {
+                                let arg_expr = self.visit_expr(arg_node);
+                                if let AslExpr::Literal(l) = arg_expr {
+                                    if let Some(pin_num) = l.value.as_i64() {
+                                        self.pin_map.insert(target.clone(), pin_num);
+                                        // Também resolvemos o mode
+                                        let is_output = self.text(args_node).contains("OUT");
+                                        return AslStatement::PinMode(AslPinMode {
+                                            pin: AslExpr::int(pin_num),
+                                            mode: if is_output { PinModeKind::Output } else { PinModeKind::Input },
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let value = right
+            .map(|n| {
+                let s = self.text(n);
+                if let Ok(v) = s.parse::<i64>() { AslExpr::int(v) }
+                else if let Ok(v) = s.parse::<f64>() { AslExpr::float(v) }
+                else if s == "True" || s == "False" { AslExpr::bool_val(s == "True") }
+                else { AslExpr::var(s) }
+            })
             .unwrap_or_else(|| AslExpr::int(0));
+        
         AslStatement::Assign(AslAssign { target, value })
     }
 

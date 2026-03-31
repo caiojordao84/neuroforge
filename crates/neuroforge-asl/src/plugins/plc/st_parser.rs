@@ -73,6 +73,7 @@ impl StVisitor {
             globals: vec![],
             functions,
             tasks: vec![],
+            ..Default::default()
         }
     }
 

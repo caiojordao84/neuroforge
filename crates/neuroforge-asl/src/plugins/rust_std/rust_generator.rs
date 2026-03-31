@@ -265,9 +265,46 @@ impl AslGenerator for RustGenerator {
         self.scan_for_shims(program);
 
         // Detect se é um sketch estilo Arduino
-        let setup = program.functions.iter().find(|f| f.name == "setup");
-        let loop_ = program.functions.iter().find(|f| f.name == "loop");
-        let main_fn = program.functions.iter().find(|f| f.name == "main");
+        let has_setup_body = !program.setup_body.is_empty();
+        let has_loop_body = !program.loop_body.is_empty();
+
+        let setup = if has_setup_body {
+            Some(AslFunction {
+                name: "setup".to_string(),
+                params: vec![],
+                body: program.setup_body.clone(),
+                return_type: None,
+            })
+        } else {
+            program.functions.iter().find(|f| f.name == "setup").cloned()
+                .or_else(|| program.tasks.iter().find(|t| t.name == "setup").map(|t| AslFunction {
+                    name: "setup".to_string(),
+                    params: vec![],
+                    body: t.body.clone(),
+                    return_type: None,
+                }))
+        };
+        
+        let loop_ = if has_loop_body {
+            Some(AslFunction {
+                name: "loop".to_string(),
+                params: vec![],
+                body: program.loop_body.clone(),
+                return_type: None,
+            })
+        } else {
+            program.functions.iter().find(|f| f.name == "loop").cloned()
+                .or_else(|| program.tasks.iter().find(|t| t.name == "loop").map(|t| AslFunction {
+                    name: "loop".to_string(),
+                    params: vec![],
+                    body: t.body.clone(),
+                    return_type: None,
+                }))
+        };
+
+        let main_task_body = program.tasks.iter().find(|t| t.name == "main").map(|t| t.body.clone());
+        let main_fn = program.functions.iter().find(|f| f.name == "main").cloned();
+        
         let is_embassy = setup.is_some() || loop_.is_some();
 
         if is_embassy {
@@ -354,6 +391,12 @@ impl AslGenerator for RustGenerator {
         } else if let Some(mf) = main_fn {
             self.add_ln(&mut lines, "fn main() {");
             for stmt in &mf.body {
+                self.gen_stmt(stmt, &mut lines, "    ");
+            }
+            self.add_ln(&mut lines, "}");
+        } else if let Some(mtb) = main_task_body {
+            self.add_ln(&mut lines, "fn main() {");
+            for stmt in &mtb {
                 self.gen_stmt(stmt, &mut lines, "    ");
             }
             self.add_ln(&mut lines, "}");

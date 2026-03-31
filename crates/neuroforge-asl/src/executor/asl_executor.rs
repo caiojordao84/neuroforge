@@ -209,16 +209,16 @@ fn main() {
     #[test]
     fn e2e_python_blink() {
         let src = r#"
-import machine
-import utime
+from machine import Pin
+from time import sleep_ms
 
 def main():
     while True:
-        utime.sleep_ms(500)
+        sleep_ms(500)
 "#;
         let out = AslExecutor::run(src, &TargetLanguage::Python).expect("falhou Python blink");
-        assert!(out.code.contains("utime.sleep_ms"),
-            "código Python deve ter sleep_ms: {}", out.code);
+        assert!(out.code.contains("from time import sleep_ms"),
+            "código Python deve ter from time import sleep_ms: {}", out.code);
     }
 
     #[test]

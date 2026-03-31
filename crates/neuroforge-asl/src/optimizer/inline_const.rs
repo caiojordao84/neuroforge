@@ -113,7 +113,12 @@ mod tests {
         p.functions.push(AslFunction {
             name: "test".to_string(), params: vec![], return_type: None, body,
         });
-        p
+        AslProgram {
+            functions: vec![AslFunction {
+                name: "test".to_string(), params: vec![], return_type: None, body,
+            }],
+            ..Default::default()
+        }
     }
 
     #[test]

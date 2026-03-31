@@ -59,6 +59,8 @@ pub struct AslProgram {
     pub globals: Vec<AslGlobalVar>,
     pub functions: Vec<AslFunction>,
     pub tasks: Vec<AslTask>,
+    pub setup_body: Vec<AslStatement>,
+    pub loop_body: Vec<AslStatement>,
 }
 
 impl Default for AslProgram {
@@ -75,6 +77,8 @@ impl Default for AslProgram {
             globals: vec![],
             functions: vec![],
             tasks: vec![],
+            setup_body: vec![],
+            loop_body: vec![],
         }
     }
 }

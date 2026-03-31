@@ -77,7 +77,7 @@ pub struct BaseNode {
 }
 
 impl BaseNode {
-    fn new(node_type: NodeType) -> Self {
+    pub fn new(node_type: NodeType) -> Self {
         Self { node_type, attributes: HashMap::new(), children: vec![] }
     }
 
@@ -260,7 +260,9 @@ pub struct ProgramNode {
     pub node_type: NodeType,
     pub functions: Vec<FunctionNode>,
     pub globals: Vec<BaseNode>,
-    pub imports: Vec<String>,
+    pub setup_body: Vec<BaseNode>,
+    pub loop_body: Vec<BaseNode>,
+    pub has_loop: bool,
 }
 
 impl ProgramNode {

@@ -332,6 +332,7 @@ mod tests {
                     value:  and(var("A"), var("B")),
                 })],
             }],
+            ..Default::default()
         }
     }
 
@@ -348,6 +349,7 @@ mod tests {
                     value:  or(var("A"), var("B")),
                 })],
             }],
+            ..Default::default()
         }
     }
 
@@ -364,6 +366,7 @@ mod tests {
                     value:  not(var("Stop")),
                 })],
             }],
+            ..Default::default()
         }
     }
 

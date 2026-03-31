@@ -317,16 +317,31 @@ impl AslGenerator for CGenerator {
             }
         } else {
             // Se for um bloco puro (ou ASL Task-based), gera um setup/loop padrão para Arduino
-            self.add_ln(&mut lines, "void setup() {");
-            for task in &program.tasks {
-                for stmt in &task.body {
-                    self.gen_stmt(stmt, &mut lines, "  ");
+            let mut setup_body = program.setup_body.clone();
+            let mut loop_body = program.loop_body.clone();
+
+            // Fallback para tasks se as bodies novas estiverem vazias
+            if setup_body.is_empty() && loop_body.is_empty() {
+                for task in &program.tasks {
+                    if task.name == "setup" || task.name == "main" {
+                        setup_body.extend(task.body.clone());
+                    } else if task.name == "loop" {
+                        loop_body.extend(task.body.clone());
+                    }
                 }
+            }
+
+            self.add_ln(&mut lines, "void setup() {");
+            for stmt in &setup_body {
+                self.gen_stmt(stmt, &mut lines, "  ");
             }
             self.add_ln(&mut lines, "}");
             self.add_ln(&mut lines, "");
 
             self.add_ln(&mut lines, "void loop() {");
+            for stmt in &loop_body {
+                self.gen_stmt(stmt, &mut lines, "  ");
+            }
             self.add_ln(&mut lines, "}");
             self.add_ln(&mut lines, "");
         }

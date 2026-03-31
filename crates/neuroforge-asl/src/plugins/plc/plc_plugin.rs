@@ -104,6 +104,7 @@ mod tests {
                     })),
                 })],
             }],
+            ..Default::default()
         }
     }
 

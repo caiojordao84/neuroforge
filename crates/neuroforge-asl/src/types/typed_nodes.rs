@@ -3,12 +3,13 @@
 pub struct ProgramNode {
     pub globals: Vec<VarDeclNode>,
     pub functions: Vec<FunctionNode>,
-    pub body: Vec<StatementNode>,
+    pub setup_body: Vec<StatementNode>,
+    pub loop_body: Vec<StatementNode>,
     pub has_loop: bool,
 }
 impl ProgramNode {
     pub fn empty() -> Self {
-        Self { globals: vec![], functions: vec![], body: vec![], has_loop: false }
+        Self { globals: vec![], functions: vec![], setup_body: vec![], loop_body: vec![], has_loop: false }
     }
 }
 
@@ -59,12 +60,12 @@ pub struct BlockNode {
 
 #[derive(Debug, Clone)]
 pub enum BlockKind {
-    If { condition: ExprNode, then_body: Vec<BlockNode>, else_body: Option<Vec<BlockNode>> },
-    While { condition: ExprNode, body: Vec<BlockNode> },
-    DoWhile { condition: ExprNode, body: Vec<BlockNode> },
-    For { init: Option<ExprNode>, condition: Option<ExprNode>, update: Option<ExprNode>, body: Vec<BlockNode> },
-    ForIn { variable: String, iterable: ExprNode, body: Vec<BlockNode> },
-    Switch { discriminant: ExprNode, cases: Vec<SwitchCase>, default: Option<Vec<BlockNode>> },
+    If { condition: ExprNode, then_body: Vec<StatementNode>, else_body: Option<Vec<StatementNode>> },
+    While { condition: ExprNode, body: Vec<StatementNode> },
+    DoWhile { condition: ExprNode, body: Vec<StatementNode> },
+    For { init: Option<ExprNode>, condition: Option<ExprNode>, update: Option<ExprNode>, body: Vec<StatementNode> },
+    ForIn { variable: String, iterable: ExprNode, body: Vec<StatementNode> },
+    Switch { discriminant: ExprNode, cases: Vec<SwitchCase>, default: Option<Vec<StatementNode>> },
     Break,
     Continue,
     Return(Option<ExprNode>),
@@ -73,7 +74,7 @@ pub enum BlockKind {
 #[derive(Debug, Clone)]
 pub struct SwitchCase {
     pub value: ExprNode,
-    pub body: Vec<BlockNode>,
+    pub body: Vec<StatementNode>,
 }
 
 #[derive(Debug, Clone)]

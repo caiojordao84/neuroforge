@@ -82,9 +82,9 @@ impl StGenerator {
         if body.len() != 5 { return None; }
         
         let p_mode = match &body[0] { AslStatement::PinMode(p) => p, _ => return None };
-        let dw1 = match &body[1] { AslStatement::DigitalWrite(d) => d, _ => return None };
+        let _dw1 = match &body[1] { AslStatement::DigitalWrite(d) => d, _ => return None };
         let d1 = match &body[2] { AslStatement::Delay(d) => d, _ => return None };
-        let dw2 = match &body[3] { AslStatement::DigitalWrite(d) => d, _ => return None };
+        let _dw2 = match &body[3] { AslStatement::DigitalWrite(d) => d, _ => return None };
         let d2 = match &body[4] { AslStatement::Delay(d) => d, _ => return None };
         
         let pin = self.gen_expr(&p_mode.pin);
@@ -106,8 +106,8 @@ impl StGenerator {
         out.push_str("    tOff : TON;\n");
         out.push_str(&format!("    LED  AT {} : BOOL; (* PIN {} *)\n", qx_str, pin));
         out.push_str("  END_VAR\n\n");
-        out.push_str(&format!("  tOn(IN := NOT tOff.Q, PT := T#{}ms);\n", t1));
-        out.push_str(&format!("  tOff(IN := tOn.Q, PT := T#{}ms);\n\n", t2));
+        out.push_str(&format!("  tOn(IN := NOT tOff.Q, PT := {});\n", t1));
+        out.push_str(&format!("  tOff(IN := tOn.Q, PT := {});\n\n", t2));
         out.push_str("  LED := tOn.Q;\n");
         
         Some(out)

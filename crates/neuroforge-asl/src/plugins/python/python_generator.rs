@@ -42,13 +42,38 @@ impl PythonGenerator {
 impl AslGenerator for PythonGenerator {
     fn generate(&mut self, program: &AslProgram) -> GeneratorOutput {
         let mut out = String::new();
-        out.push_str("import machine\nimport utime\n\n");
+        let stringified = serde_json::to_string(program).unwrap_or_default();
+        
+        let needs_machine = stringified.contains("\"pinMode\"") 
+            || stringified.contains("\"digitalWrite\"") 
+            || stringified.contains("\"analogWrite\"") 
+            || stringified.contains("\"read\"")
+            || stringified.contains("\"uart") 
+            || stringified.contains("\"i2c") 
+            || stringified.contains("\"spi")
+            || stringified.contains("\"pwm");
 
-        for global in &program.globals {
+        let needs_time = stringified.contains("\"delay\"");
+
+        if needs_machine {
+            let mut imports = vec!["Pin"];
+            if stringified.contains("\"analogWrite\"") || stringified.contains("\"pwm") { imports.push("PWM"); }
+            if stringified.contains("\"read\"") || stringified.contains("analogRead") || stringified.contains("digitalRead") { imports.push("ADC"); }
+            if stringified.contains("\"uart") || stringified.contains("\"serial") { imports.push("UART"); }
+            out.push_str(&format!("from machine import {}\n", imports.join(", ")));
+        }
+        if needs_time {
+            out.push_str("from time import sleep_ms\n");
+        }
+        if needs_machine || needs_time {
+            out.push('\n');
+        }
+
+        for global_var in &program.globals {
             out.push_str(&format!(
                 "{} = {}\n",
-                global.name,
-                global
+                global_var.name,
+                global_var
                     .initial_value
                     .as_ref()
                     .map(|v| v.to_string())
@@ -64,9 +89,30 @@ impl AslGenerator for PythonGenerator {
             out.push_str("\n\n");
         }
 
-        // Tasks — Arduino-style setup/loop goes here as the "main" task
+        // Setup logic (top-level initialization)
+        if !program.setup_body.is_empty() {
+            out.push_str("# --- Initialization ---\n");
+            for stmt in &program.setup_body {
+                out.push_str(&self.gen_stmt(stmt, 0));
+                out.push('\n');
+            }
+            out.push('\n');
+        }
+
+        // Loop logic (main loop)
+        if !program.loop_body.is_empty() {
+            out.push_str("# --- Main Loop ---\n");
+            out.push_str("while True:\n");
+            for stmt in &program.loop_body {
+                out.push_str(&self.gen_stmt(stmt, 1));
+                out.push('\n');
+            }
+            out.push('\n');
+        }
+
+        // Tasks fallback (for other tasks if any)
         for task in &program.tasks {
-            if !task.body.is_empty() {
+            if task.name != "setup" && task.name != "loop" && !task.body.is_empty() {
                 out.push_str(&format!("# --- Task: {} ---\n", task.name));
                 for stmt in &task.body {
                     out.push_str(&self.gen_stmt(stmt, 0));
@@ -103,7 +149,10 @@ impl PythonGenerator {
 
     fn gen_expr(&self, expr: &AslExpr) -> String {
         match expr {
-            AslExpr::Literal(l) => l.value.to_string(),
+            AslExpr::Literal(l) => match &l.value {
+                serde_json::Value::Bool(b) => if *b { "True".to_string() } else { "False".to_string() },
+                _ => l.value.to_string(),
+            },
             AslExpr::Var(v) => v.name.clone(),
             AslExpr::Binary(b) => format!(
                 "({} {} {})",
@@ -112,15 +161,33 @@ impl PythonGenerator {
                 self.gen_expr(&b.right)
             ),
             AslExpr::Unary(u) => format!("{}{}", u.op.to_symbol(), self.gen_expr(&u.expr)),
-            AslExpr::Call(c) => format!(
-                "{}({})",
-                c.callee,
-                c.args
-                    .iter()
-                    .map(|a| self.gen_expr(a))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
+            AslExpr::Call(c) => {
+                // println!("DEBUG gen_expr Call: callee='{}'", c.callee);
+                match c.callee.as_str() {
+                    "digitalRead" | "machine.digitalRead" => {
+                        let pin = c.args.first().map(|a| self.gen_expr(a)).unwrap_or_else(|| "0".into());
+                        format!("Pin({}).value()", pin)
+                    }
+                    "analogRead" | "machine.analogRead" => {
+                        let pin = c.args.first().map(|a| self.gen_expr(a)).unwrap_or_else(|| "0".into());
+                        format!("ADC(Pin({})).read_u16()", pin)
+                    }
+                    "Serial.print" | "print" | "println" | "Serial.println" => {
+                        let arg = c.args.first().map(|a| self.gen_expr(a)).unwrap_or_else(|| "".into());
+                        let newline = c.callee.contains("println");
+                        if newline { format!("print({})", arg) } else { format!("print({}, end='')", arg) }
+                    }
+                    _ => format!(
+                        "{}({})",
+                        c.callee,
+                        c.args
+                            .iter()
+                            .map(|a| self.gen_expr(a))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    )
+                }
+            }
             AslExpr::Member(m) => format!("{}.{}", self.gen_expr(&m.target), m.property),
             AslExpr::Index(i) => {
                 format!("{}[{}]", self.gen_expr(&i.target), self.gen_expr(&i.index))
@@ -189,6 +256,22 @@ impl PythonGenerator {
                 ));
                 out
             }
+            AslStatement::For(s) => {
+                let mut out = String::new();
+                if let Some(init) = &s.init {
+                    for stmt in init {
+                        out.push_str(&self.gen_stmt(stmt, level));
+                        out.push('\n');
+                    }
+                }
+                out.push_str(&format!("{}while {}:\n", ind, self.gen_expr(&s.condition)));
+                out.push_str(&self.gen_block(&s.body, level + 1));
+                for stmt in &s.update {
+                    out.push_str(&self.gen_stmt(stmt, level + 1));
+                    out.push('\n');
+                }
+                out
+            }
             AslStatement::ForIn(s) => {
                 let mut out = format!(
                     "{}for {} in {}:\n",
@@ -210,7 +293,7 @@ impl PythonGenerator {
             AslStatement::Break => format!("{}break", ind),
             AslStatement::Continue => format!("{}continue", ind),
             AslStatement::Delay(d) => {
-                format!("{}utime.sleep_ms({})", ind, self.gen_expr(&d.milliseconds))
+                format!("{}sleep_ms({})", ind, self.gen_expr(&d.milliseconds))
             }
             AslStatement::Print(p) => {
                 let args: Vec<String> = p.args.iter().map(|a| self.gen_expr(a)).collect();
@@ -218,31 +301,59 @@ impl PythonGenerator {
             }
             AslStatement::PinMode(p) => {
                 let mode = match p.mode {
-                    crate::types::asl_types::PinModeKind::Output => "machine.Pin.OUT",
-                    crate::types::asl_types::PinModeKind::Input => "machine.Pin.IN",
-                    crate::types::asl_types::PinModeKind::InputPullup => {
-                        "machine.Pin.IN, machine.Pin.PULL_UP"
-                    }
+                    crate::types::asl_types::PinModeKind::Output => "Pin.OUT",
+                    crate::types::asl_types::PinModeKind::Input => "Pin.IN",
+                    crate::types::asl_types::PinModeKind::InputPullup => "Pin.IN, Pin.PULL_UP",
                 };
-                let pin_name = self.gen_expr(&p.pin);
-                format!(
-                    "{}pin_{} = machine.Pin({}, {})",
-                    ind,
-                    pin_name,
-                    pin_name,
-                    mode
-                )
+                let pin_expr = self.gen_expr(&p.pin);
+                let var_name = if pin_expr.chars().all(|c| c.is_ascii_digit()) {
+                    format!("pin_{}", pin_expr)
+                } else {
+                    pin_expr.clone()
+                };
+                format!("{}{} = Pin({}, {})", ind, var_name, pin_expr, mode)
             }
             AslStatement::DigitalWrite(d) => {
-                let val = match &d.value {
-                    crate::types::asl_types::DigitalValue::High => "1".to_string(),
-                    crate::types::asl_types::DigitalValue::Low => "0".to_string(),
-                    crate::types::asl_types::DigitalValue::Expr(e) => self.gen_expr(e),
+                let pin_expr = self.gen_expr(&d.pin);
+                let var_name = if pin_expr.chars().all(|c| c.is_ascii_digit()) {
+                    format!("pin_{}", pin_expr)
+                } else {
+                    pin_expr.clone()
                 };
-                format!("{}pin_{}.value({})", ind, self.gen_expr(&d.pin), val)
+                match &d.value {
+                    crate::types::asl_types::DigitalValue::High => format!("{}.on()", var_name),
+                    crate::types::asl_types::DigitalValue::Low => format!("{}.off()", var_name),
+                    crate::types::asl_types::DigitalValue::Expr(e) => {
+                        format!("{}.value({})", var_name, self.gen_expr(e))
+                    }
+                }
+            }
+            AslStatement::AnalogWrite(a) => {
+                let pin_expr = self.gen_expr(&a.pin);
+                // Arduino 8-bit (0-255) -> MicroPython 16-bit (0-65535)
+                format!("{}PWM(Pin({})).duty_u16(int(({}) * 65535 / 255))", ind, pin_expr, self.gen_expr(&a.value))
+            }
+            AslStatement::PwmSetDuty(p) => {
+                format!("{}PWM(Pin({})).duty_u16(int(({}) * 65535 / 255))", ind, self.gen_expr(&p.pin), self.gen_expr(&p.duty))
+            }
+            AslStatement::Read(r) => {
+                let pin_expr = self.gen_expr(&r.pin);
+                let var_name = if pin_expr.parse::<i64>().is_ok() {
+                    format!("pin_{}", pin_expr)
+                } else {
+                    pin_expr.clone()
+                };
+                match r.mode {
+                    crate::types::asl_types::ReadMode::Digital => {
+                        format!("{}{} = {}.value()", ind, r.target, var_name)
+                    }
+                    crate::types::asl_types::ReadMode::Analog => {
+                        format!("{}{} = ADC(Pin({})).read_u16()", ind, r.target, pin_expr)
+                    }
+                }
             }
             AslStatement::SerialBegin(s) => format!(
-                "{}uart = machine.UART(0, baudrate={})",
+                "{}uart = UART(0, baudrate={})",
                 ind,
                 self.gen_expr(&s.baud)
             ),
@@ -278,17 +389,17 @@ mod tests {
     #[test]
     fn roundtrip_blink() {
         let src = r#"
-import machine
-import utime
+from machine import Pin
+from time import sleep_ms
 
 def main():
     while True:
-        utime.sleep_ms(500)
+        sleep_ms(500)
 "#;
         let prog = PythonParser::parse(src).expect("parse falhou");
         let out = PythonGenerator::new().generate(&prog);
         assert!(
-            out.code.contains("utime.sleep_ms"),
+            out.code.contains("sleep_ms"),
             "deve conter sleep_ms: {}",
             out.code
         );

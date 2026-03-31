@@ -3,11 +3,12 @@
 
 use crate::transforms::context::TransformContext;
 use crate::transforms::expr_transform::transform_expr;
+use crate::transforms::statement_registry::transform_statement;
 use crate::types::asl_types::*;
-use crate::types::typed_nodes::{BlockKind, BlockNode};
+use crate::types::typed_nodes::{BlockKind, BlockNode, StatementNode};
 
 /// Transforma um `BlockNode` em zero ou mais `AslStatement`
-pub fn transform_block(block: &BlockNode, ctx: &TransformContext) -> Vec<AslStatement> {
+pub fn transform_block(block: &BlockNode, ctx: &mut TransformContext) -> Vec<AslStatement> {
     match &block.kind {
         BlockKind::If {
             condition,
@@ -130,7 +131,11 @@ pub fn transform_block(block: &BlockNode, ctx: &TransformContext) -> Vec<AslStat
     }
 }
 
-/// Transforma uma lista de nós de bloco/expressão em Vec<AslStatement>
-pub fn transform_body(nodes: &[BlockNode], ctx: &TransformContext) -> Vec<AslStatement> {
-    nodes.iter().flat_map(|n| transform_block(n, ctx)).collect()
+/// Transforma uma lista de nós de expressão/statement em Vec<AslStatement>
+pub fn transform_body(nodes: &[StatementNode], ctx: &mut TransformContext) -> Vec<AslStatement> {
+    let mut stmts = Vec::new();
+    for n in nodes {
+        stmts.extend(transform_statement(n, ctx));
+    }
+    stmts
 }

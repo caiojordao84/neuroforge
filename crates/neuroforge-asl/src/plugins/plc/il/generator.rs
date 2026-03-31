@@ -229,6 +229,7 @@ mod tests {
                 params: vec![], return_type: None,
                 body: stmts,
             }],
+            ..Default::default()
         }
     }
     fn gen(prog: &AslProgram) -> String {

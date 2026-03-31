@@ -121,7 +121,31 @@ impl<'src> CVisitor<'src> {
                 _ => {}
             }
         }
-        Ok(ProgramNode { node_type: NodeType::Program, functions, globals, imports: vec![] })
+
+        let mut setup_body = vec![];
+        let mut loop_body = vec![];
+        let mut has_loop = false;
+        let mut regular_functions = vec![];
+
+        for f in functions {
+            if f.name == "setup" {
+                setup_body.extend(f.body);
+            } else if f.name == "loop" {
+                loop_body.extend(f.body);
+                has_loop = true;
+            } else {
+                regular_functions.push(f);
+            }
+        }
+
+        Ok(ProgramNode { 
+            node_type: NodeType::Program, 
+            functions: regular_functions, 
+            globals, 
+            setup_body, 
+            loop_body, 
+            has_loop 
+        })
     }
 
     fn visit_function(&mut self, node: Node) -> FunctionNode {
@@ -175,7 +199,7 @@ impl<'src> CVisitor<'src> {
 
     fn visit_statement(&mut self, node: Node) -> Option<BaseNode> {
         match node.kind() {
-            "expression_statement" => { let inner = node.named_child(0)?; self.visit_expr(inner) }
+            "expression_statement" => node.named_child(0).map(|inner| self.visit_expr(inner)),
             "if_statement"       => Some(self.visit_if(node)),
             "for_statement"      => Some(self.visit_for(node)),
             "while_statement"    => Some(self.visit_while(node)),
@@ -189,12 +213,12 @@ impl<'src> CVisitor<'src> {
         }
     }
 
-    fn visit_expr(&mut self, node: Node) -> Option<BaseNode> {
+    fn visit_expr(&mut self, node: Node) -> BaseNode {
         match node.kind() {
-            "call_expression"       => Some(self.visit_call(node)),
-            "assignment_expression" => Some(self.visit_assignment(node)),
-            "update_expression"     => Some(self.visit_update(node)),
-            _                       => Some(BaseNode::raw(self.text(node))),
+            "call_expression"       => self.visit_call(node),
+            "assignment_expression" => self.visit_assignment(node),
+            "update_expression"     => self.visit_update(node),
+            _                       => BaseNode::raw(self.text(node)),
         }
     }
 
@@ -269,36 +293,102 @@ impl<'src> CVisitor<'src> {
 
     fn visit_declaration(&mut self, node: Node) -> BaseNode {
         let type_name  = node.child_by_field_name("type").map(|t| self.text(t).to_string()).unwrap_or_default();
-        let name       = node.child_by_field_name("declarator").map(|d| self.text(d).to_string()).unwrap_or_default();
-        let value      = node.child_by_field_name("value").map(|v| self.text(v).to_string());
+        
+        let declarator = node.child_by_field_name("declarator");
+        let (name, value) = if let Some(d) = declarator {
+            if d.kind() == "init_declarator" {
+                let identifier = d.child_by_field_name("declarator").map(|n| self.text(n).to_string()).unwrap_or_default();
+                // Tenta "value" ou "initializer", senão pega o último filho (se não for o próprio declarador)
+                let val_node = d.child_by_field_name("value").or(d.child_by_field_name("initializer"));
+                let val_text = if let Some(v) = val_node {
+                    let mut txt = self.text(v).to_string();
+                    if txt.starts_with('=') {
+                        txt = txt[1..].trim().to_string();
+                    }
+                    Some(txt)
+                } else if d.child_count() >= 3 {
+                    // Esperado: [declarator, '=', literal]
+                    let idx = (d.child_count() as u32) - 1;
+                    let last = d.child(idx).unwrap();
+                    Some(self.text(last).to_string())
+                } else {
+                    None
+                };
+                (identifier, val_text)
+            } else {
+                (self.text(d).to_string(), None)
+            }
+        } else {
+            ("".to_string(), None)
+        };
+
         BaseNode::var_decl(type_name, name, value, node.start_position().row + 1)
     }
 
     fn visit_if(&mut self, node: Node) -> BaseNode {
-        let cond      = node.child_by_field_name("condition").map(|c| self.text(c).to_string()).unwrap_or_default();
+        let cond      = node.child_by_field_name("condition").map(|c| self.visit_expr(c)).unwrap_or_else(|| BaseNode::raw("true"));
         let then_body = node.child_by_field_name("consequence").map(|b| self.visit_block(b)).unwrap_or_default();
         let else_body = node.child_by_field_name("alternative").map(|b| self.visit_block(b));
-        BaseNode::if_stmt(cond, then_body, else_body, node.start_position().row + 1)
+        
+        let mut n = BaseNode::new(NodeType::IfStatement);
+        n.children.push(cond);
+        
+        let mut then_node = BaseNode::new(NodeType::Block);
+        then_node.children = then_body;
+        n.children.push(then_node);
+        
+        if let Some(eb) = else_body {
+            let mut else_node = BaseNode::new(NodeType::Block);
+            else_node.children = eb;
+            n.children.push(else_node);
+        }
+        
+        n.attributes.insert("line".to_string(), (node.start_position().row + 1).into());
+        n
     }
 
     fn visit_for(&mut self, node: Node) -> BaseNode {
-        let init = node.child_by_field_name("initializer").map(|n| self.text(n).to_string()).unwrap_or_default();
-        let cond = node.child_by_field_name("condition").map(|n| self.text(n).to_string()).unwrap_or_default();
-        let upd  = node.child_by_field_name("update").map(|n| self.text(n).to_string()).unwrap_or_default();
+        let init = node.child_by_field_name("initializer").map(|n| self.visit_expr(n));
+        let cond = node.child_by_field_name("condition").map(|n| self.visit_expr(n));
+        let upd  = node.child_by_field_name("update").map(|n| self.visit_expr(n));
         let body = node.child_by_field_name("body").map(|b| self.visit_block(b)).unwrap_or_default();
-        BaseNode::for_loop(init, cond, upd, body, node.start_position().row + 1)
+        
+        let mut n = BaseNode::new(NodeType::ForLoop);
+        if let Some(i) = init { n.children.push(i); } else { n.children.push(BaseNode::raw("")); }
+        if let Some(c) = cond { n.children.push(c); } else { n.children.push(BaseNode::raw("")); }
+        if let Some(u) = upd  { n.children.push(u); } else { n.children.push(BaseNode::raw("")); }
+        
+        let mut body_node = BaseNode::new(NodeType::Block);
+        body_node.children = body;
+        n.children.push(body_node);
+        n.attributes.insert("line".to_string(), (node.start_position().row + 1).into());
+        n
     }
 
     fn visit_while(&mut self, node: Node) -> BaseNode {
-        let cond = node.child_by_field_name("condition").map(|c| self.text(c).to_string()).unwrap_or_default();
+        let cond = node.child_by_field_name("condition").map(|c| self.visit_expr(c)).unwrap_or_else(|| BaseNode::raw("true"));
         let body = node.child_by_field_name("body").map(|b| self.visit_block(b)).unwrap_or_default();
-        BaseNode::while_loop(cond, body, node.start_position().row + 1)
+        
+        let mut n = BaseNode::new(NodeType::WhileLoop);
+        n.children.push(cond);
+        let mut body_node = BaseNode::new(NodeType::Block);
+        body_node.children = body;
+        n.children.push(body_node);
+        n.attributes.insert("line".to_string(), (node.start_position().row + 1).into());
+        n
     }
 
     fn visit_do_while(&mut self, node: Node) -> BaseNode {
         let body = node.child_by_field_name("body").map(|b| self.visit_block(b)).unwrap_or_default();
-        let cond = node.child_by_field_name("condition").map(|c| self.text(c).to_string()).unwrap_or_default();
-        BaseNode::do_while(body, cond, node.start_position().row + 1)
+        let cond = node.child_by_field_name("condition").map(|c| self.visit_expr(c)).unwrap_or_else(|| BaseNode::raw("true"));
+        
+        let mut n = BaseNode::new(NodeType::DoWhile);
+        n.children.push(cond);
+        let mut body_node = BaseNode::new(NodeType::Block);
+        body_node.children = body;
+        n.children.push(body_node);
+        n.attributes.insert("line".to_string(), (node.start_position().row + 1).into());
+        n
     }
 
     fn visit_switch(&mut self, node: Node) -> BaseNode {

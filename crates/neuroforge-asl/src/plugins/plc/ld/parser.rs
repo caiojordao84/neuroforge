@@ -122,6 +122,7 @@ impl LdParser {
             globals:   vec![],
             functions,
             tasks:     vec![],
+            ..Default::default()
         })
     }
 
@@ -284,6 +285,7 @@ fn empty_program() -> AslProgram {
             target_board: Some("plc".to_string()),
         },
         structs: vec![], globals: vec![], functions: vec![], tasks: vec![],
+        ..Default::default()
     }
 }
 

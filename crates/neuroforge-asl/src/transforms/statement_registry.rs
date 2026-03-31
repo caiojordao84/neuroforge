@@ -35,23 +35,46 @@ pub fn program_to_asl(program: &ProgramNode, ctx: &mut TransformContext) -> AslP
         .map(|f| transform_function(f, ctx))
         .collect();
 
-    // O programa principal (setup + loop ou main) torna-se a task "main"
-    let main_body: Vec<AslStatement> = program
-        .body
-        .iter()
-        .flat_map(|s| transform_statement(s, ctx))
-        .collect();
+    let mut setup_body = vec![];
+    let mut loop_body = vec![];
+    let mut tasks = vec![];
 
-    let main_task = AslTask {
-        name: "main".to_string(),
-        body: main_body,
-    };
+    if !program.setup_body.is_empty() {
+        let setup_stmts: Vec<AslStatement> = program.setup_body.iter().flat_map(|s| transform_statement(s, ctx)).collect();
+        setup_body = setup_stmts.clone();
+        tasks.push(AslTask {
+            name: "setup".to_string(),
+            body: setup_stmts,
+        });
+    }
+
+    if !program.loop_body.is_empty() {
+        let loop_stmts: Vec<AslStatement> = program.loop_body.iter().flat_map(|s| transform_statement(s, ctx)).collect();
+        loop_body = loop_stmts.clone();
+        tasks.push(AslTask {
+            name: "loop".to_string(),
+            body: loop_stmts,
+        });
+    }
+
+    // Fallback: se ambos vazios e não há funções (ex: scripts cursivos), tenta body se existisse...
+    if tasks.is_empty() {
+        tasks.push(AslTask { name: "main".to_string(), body: vec![] });
+    }
 
     AslProgram {
         asl_version: "4.0.0".to_string(),
-        tasks: vec![main_task],
+        metadata: AslMetadata {
+            name: None,
+            description: None,
+            version: None,
+            target_board: None,
+        },
         globals,
         functions,
+        tasks,
+        setup_body,
+        loop_body,
         ..Default::default()
     }
 }
@@ -132,11 +155,17 @@ fn transform_var_decl(
     v: &crate::types::typed_nodes::VarDeclNode,
     ctx: &mut TransformContext,
 ) -> AslGlobalVar {
-    let _ = ctx;
+    let initial_value = v.value.as_ref().map(|e| {
+        match transform_expr(e, ctx) {
+            AslExpr::Literal(l) => l.value,
+            _ => serde_json::Value::Null,
+        }
+    });
+    
     AslGlobalVar {
         name: v.name.clone(),
         r#type: resolve_type(v.var_type.as_deref().unwrap_or("int")),
-        initial_value: None,
+        initial_value,
         struct_type: None,
         comments: None,
     }

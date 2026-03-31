@@ -135,16 +135,13 @@ pub fn wasm_cross_transpile(
             crate::plugins::plc::st_generator::StGenerator::new()
                 .generate(&asl_program)
         }
-        TargetLanguage::C | TargetLanguage::Cpp | TargetLanguage::Arduino
-        | TargetLanguage::Rust => {
-            // C and Rust generators use BaseNode, not AslProgram.
-            // AslProgram→BaseNode reverse conversion is not yet implemented.
-            // For same-language, we already handle this in the src==dst check.
-            return Err(JsValue::from_str(&format!(
-                "Cross-transpilation to '{}' is not yet supported. \
-                 Supported targets: python, st",
-                to_lang
-            )));
+        TargetLanguage::C | TargetLanguage::Cpp | TargetLanguage::Arduino => {
+            crate::plugins::c::c_generator::CGenerator::new()
+                .generate(&asl_program)
+        }
+        TargetLanguage::Rust => {
+            crate::plugins::rust_std::rust_generator::RustGenerator::new()
+                .generate(&asl_program)
         }
         _ => return Err(JsValue::from_str(&format!(
             "Target language '{}' not supported for cross-transpilation",
@@ -286,8 +283,6 @@ fn diags_to_json(diags: &[crate::analysis::Diagnostic]) -> String {
 mod tests {
     use super::*;
 
-    // ── Testes que não usam JsValue — correm em qualquer target ───────────────
-
     #[test]
     fn version_not_empty() {
         assert!(!wasm_version().is_empty());
@@ -298,38 +293,78 @@ mod tests {
         assert!(wasm_supported_langs().contains("rust"));
     }
 
-    // ── Testes com JsValue — só compilam/correm em wasm32 ────────────────────
-    // Execute com: wasm-pack test --headless --chrome
-    // ou:          wasm-pack test --node
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::wasm_bindgen_test;
 
     #[cfg(target_arch = "wasm32")]
-    mod wasm_only {
-        use super::*;
-        use wasm_bindgen_test::*;
-        wasm_bindgen_test_configure!(run_in_browser);
+    #[wasm_bindgen_test]
+    fn transpile_c_to_python() {
+        let src = "void setup() { pinMode(13, OUTPUT); }\nvoid loop() { digitalWrite(13, HIGH); }";
+        let result = wasm_transpile(src, "c", "python");
+        assert!(result.is_ok(), "{:?}", result);
+        assert!(!result.unwrap().is_empty());
+    }
 
-        #[wasm_bindgen_test]
-        fn transpile_c_to_python() {
-            let src = "void setup() { pinMode(13, OUTPUT); }\nvoid loop() { digitalWrite(13, HIGH); }";
-            let result = wasm_transpile(src, "c", "python");
-            assert!(result.is_ok(), "{:?}", result);
-            assert!(!result.unwrap().is_empty());
-        }
+    #[cfg(target_arch = "wasm32")]
+    #[wasm_bindgen_test]
+    fn transpile_with_map_returns_json() {
+        let src = "void setup() {}\nvoid loop() {}";
+        let result = wasm_transpile_with_map(src, "c", "c");
+        assert!(result.is_ok(), "{:?}", result);
+        let json = result.unwrap();
+        assert!(json.contains("output"), "{}", json);
+        assert!(json.contains("source_map"), "{}", json);
+    }
 
-        #[wasm_bindgen_test]
-        fn transpile_with_map_returns_json() {
-            let src = "void setup() {}\nvoid loop() {}";
-            let result = wasm_transpile_with_map(src, "c", "c");
-            assert!(result.is_ok(), "{:?}", result);
-            let json = result.unwrap();
-            assert!(json.contains("output"), "{}", json);
-            assert!(json.contains("source_map"), "{}", json);
-        }
+    #[cfg(target_arch = "wasm32")]
+    #[wasm_bindgen_test]
+    fn transpile_unknown_lang_returns_err() {
+        let result = wasm_transpile("x", "c", "vhdl");
+        assert!(result.is_err());
+    }
 
-        #[wasm_bindgen_test]
-        fn transpile_unknown_lang_returns_err() {
-            let result = wasm_transpile("x", "c", "vhdl");
-            assert!(result.is_err());
-        }
+    #[cfg(target_arch = "wasm32")]
+    #[wasm_bindgen_test]
+    fn cross_transpile_c_to_python_returns_valid() {
+        let src = "void setup() { }\nvoid loop() { digitalWrite(13, HIGH); }";
+        let result = wasm_cross_transpile(src, "cpp", "python");
+        assert!(result.is_ok(), "{:?}", result);
+        let code = result.unwrap();
+        assert!(code.contains("def loop():"));
+        assert!(code.contains("digitalWrite(13, HIGH)"));
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    #[wasm_bindgen_test]
+    fn cross_transpile_rust_to_st_returns_valid() {
+        let src = "fn setup() {}\nfn loop() { digitalRead(11); }";
+        let result = wasm_cross_transpile(src, "rust", "st");
+        assert!(result.is_ok(), "{:?}", result);
+        let code = result.unwrap();
+        assert!(code.contains("PROGRAM main"));
+        assert!(code.contains("digitalRead"));
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    #[wasm_bindgen_test]
+    fn parse_to_asl_returns_serializeable_json() {
+        let src = "void setup() { delay(100); }\nvoid loop() { }";
+        let result = wasm_parse_to_asl(src, "cpp");
+        assert!(result.is_ok(), "{:?}", result);
+        let json = result.unwrap();
+        assert!(json.starts_with('{'));
+        assert!(json.contains("\"asl_version\":\"4.0.0\""));
+        assert!(json.contains("\"tasks\":"));
+        assert!(json.contains("\"delay\""));
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    #[wasm_bindgen_test]
+    fn cross_transpile_c_to_rust_works() {
+        let src = "void setup() {}\nvoid loop(){ digitalWrite(13, HIGH); }";
+        let result = wasm_cross_transpile(src, "cpp", "rust");
+        assert!(result.is_ok(), "{:?}", result);
+        let code = result.unwrap();
+        assert!(code.contains("gpio_set"));
     }
 }
