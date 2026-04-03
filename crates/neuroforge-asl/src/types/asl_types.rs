@@ -36,11 +36,11 @@ pub enum AslType {
 
     // §3.2 — Aliases genéricos
     #[default]
-    Int,    // alias → int32
-    Uint,   // alias → uint32
-    Short,  // alias → int16
-    Long,   // alias → int64
-    Byte,   // alias → uint8
+    Int, // alias → int32
+    Uint,  // alias → uint32
+    Short, // alias → int16
+    Long,  // alias → int64
+    Byte,  // alias → uint8
 
     // §3.3 — Float, lógica, char, string, void
     Float,
@@ -70,49 +70,84 @@ impl AslType {
     /// Devolve o nome canónico conforme o Dicionário (used em serialização de campos `type`).
     pub fn as_str(&self) -> &'static str {
         match self {
-            AslType::Sint8    => "sint8",   AslType::Int16    => "int16",
-            AslType::Int32    => "int32",   AslType::Int64    => "int64",
-            AslType::Uint8    => "uint8",   AslType::Uint16   => "uint16",
-            AslType::Uint32   => "uint32",  AslType::Uint64   => "uint64",
-            AslType::Int      => "int",     AslType::Uint     => "uint",
-            AslType::Short    => "short",   AslType::Long     => "long",
-            AslType::Byte     => "byte",    AslType::Float    => "float",
-            AslType::Double   => "double",  AslType::Bool     => "bool",
-            AslType::Char     => "char",    AslType::String   => "string",
-            AslType::Void     => "void",    AslType::Auto     => "auto",
-            AslType::Array    => "array",   AslType::Struct   => "struct",
-            AslType::Enum     => "enum",    AslType::Option   => "option",
-            AslType::Time     => "time",    AslType::Date     => "date",
-            AslType::TimeOfDay => "timeOfDay", AslType::DateTime => "dateTime",
+            AslType::Sint8 => "sint8",
+            AslType::Int16 => "int16",
+            AslType::Int32 => "int32",
+            AslType::Int64 => "int64",
+            AslType::Uint8 => "uint8",
+            AslType::Uint16 => "uint16",
+            AslType::Uint32 => "uint32",
+            AslType::Uint64 => "uint64",
+            AslType::Int => "int",
+            AslType::Uint => "uint",
+            AslType::Short => "short",
+            AslType::Long => "long",
+            AslType::Byte => "byte",
+            AslType::Float => "float",
+            AslType::Double => "double",
+            AslType::Bool => "bool",
+            AslType::Char => "char",
+            AslType::String => "string",
+            AslType::Void => "void",
+            AslType::Auto => "auto",
+            AslType::Array => "array",
+            AslType::Struct => "struct",
+            AslType::Enum => "enum",
+            AslType::Option => "option",
+            AslType::Time => "time",
+            AslType::Date => "date",
+            AslType::TimeOfDay => "timeOfDay",
+            AslType::DateTime => "dateTime",
         }
     }
 
     /// Parseia a partir de uma string canónica do Dicionário.
     pub fn from_str(s: &str) -> Self {
         match s {
-            "sint8"     => AslType::Sint8,   "int16"     => AslType::Int16,
-            "int32"     => AslType::Int32,   "int64"     => AslType::Int64,
-            "uint8"     => AslType::Uint8,   "uint16"    => AslType::Uint16,
-            "uint32"    => AslType::Uint32,  "uint64"    => AslType::Uint64,
-            "int"       => AslType::Int,     "uint"      => AslType::Uint,
-            "short"     => AslType::Short,   "long"      => AslType::Long,
-            "byte"      => AslType::Byte,    "float"     => AslType::Float,
-            "double"    => AslType::Double,  "bool"      => AslType::Bool,
-            "char"      => AslType::Char,    "string"    => AslType::String,
-            "void"      => AslType::Void,    "auto"      => AslType::Auto,
-            "array"     => AslType::Array,   "struct"    => AslType::Struct,
-            "enum"      => AslType::Enum,    "option"    => AslType::Option,
-            "time"      => AslType::Time,    "date"      => AslType::Date,
-            "timeOfDay" => AslType::TimeOfDay, "dateTime"=> AslType::DateTime,
+            "sint8" => AslType::Sint8,
+            "int16" => AslType::Int16,
+            "int32" => AslType::Int32,
+            "int64" => AslType::Int64,
+            "uint8" => AslType::Uint8,
+            "uint16" => AslType::Uint16,
+            "uint32" => AslType::Uint32,
+            "uint64" => AslType::Uint64,
+            "int" => AslType::Int,
+            "uint" => AslType::Uint,
+            "short" => AslType::Short,
+            "long" => AslType::Long,
+            "byte" => AslType::Byte,
+            "float" => AslType::Float,
+            "double" => AslType::Double,
+            "bool" => AslType::Bool,
+            "char" => AslType::Char,
+            "string" => AslType::String,
+            "void" => AslType::Void,
+            "auto" => AslType::Auto,
+            "array" => AslType::Array,
+            "struct" => AslType::Struct,
+            "enum" => AslType::Enum,
+            "option" => AslType::Option,
+            "time" => AslType::Time,
+            "date" => AslType::Date,
+            "timeOfDay" => AslType::TimeOfDay,
+            "dateTime" => AslType::DateTime,
             // Aliases maiúsculos IEC 61131-3
-            "BOOL"  => AslType::Bool,  "INT"   => AslType::Int16,
-            "DINT"  => AslType::Int32, "LINT"  => AslType::Int64,
-            "SINT"  => AslType::Sint8, "UINT"  => AslType::Uint16,
-            "UDINT" => AslType::Uint32,"ULINT" => AslType::Uint64,
-            "REAL"  => AslType::Float, "LREAL" => AslType::Double,
-            "TIME"  => AslType::Time,  "DATE"  => AslType::Date,
-            "STRING"=> AslType::String,"BYTE"  => AslType::Byte,
-            _       => AslType::Auto,
+            "BOOL" => AslType::Bool,
+            "INT" => AslType::Int16,
+            "DINT" => AslType::Int32,
+            "LINT" => AslType::Int64,
+            "SINT" => AslType::Sint8,
+            "UINT" => AslType::Uint16,
+            "UDINT" => AslType::Uint32,
+            "ULINT" => AslType::Uint64,
+            "REAL" => AslType::Float,
+            "LREAL" => AslType::Double,
+            "TIME" => AslType::Time,
+            "DATE" => AslType::Date,
+            "STRING" => AslType::String,
+            "BYTE" => AslType::Byte,
+            _ => AslType::Auto,
         }
     }
 }
@@ -190,13 +225,14 @@ pub struct AslFunctionBlock {
 // §2 — Programa ASL (root)
 // ============================================================================
 
-/// Metadata do programa (§2.1). `targetBoard` serializa em camelCase.
+/// Metadata do programa (§2.1). `targetBoard` serializa em camelCase conforme §2.1 do Dicionário.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AslMetadata {
     pub name: Option<String>,
     pub description: Option<String>,
     pub version: Option<String>,
+    /// targetBoard conforme §2.1 do Dicionário (camelCase)
     pub target_board: Option<String>,
 }
 
@@ -268,7 +304,9 @@ pub struct AslGlobalVar {
     pub comments: Option<Vec<String>>,
 }
 
-fn default_lifecycle() -> String { "normal".to_string() }
+fn default_lifecycle() -> String {
+    "normal".to_string()
+}
 
 /// Parâmetro de função (§11.1). O campo `default` é opcional.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -310,7 +348,9 @@ pub struct AslTask {
     pub body: Vec<AslStatement>,
 }
 
-fn default_void() -> String { "void".to_string() }
+fn default_void() -> String {
+    "void".to_string()
+}
 
 // ============================================================================
 // §6–§27 — Statements
@@ -649,7 +689,9 @@ impl AslDuration {
     pub fn from_ms(ms: u64) -> Self {
         let total_us = ms * 1000;
         AslDuration {
-            days: 0, hours: 0, minutes: 0,
+            days: 0,
+            hours: 0,
+            minutes: 0,
             seconds: (ms / 1000) as u32,
             milliseconds: (ms % 1000) as u32,
             microseconds: (total_us % 1000) as u32,
@@ -917,20 +959,41 @@ pub struct AslComment {
 // ============================================================================
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslUartWrite  { pub port: AslExpr, pub data: AslExpr }
+pub struct AslUartWrite {
+    pub port: AslExpr,
+    pub data: AslExpr,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslUartRead   { pub port: AslExpr, pub length: AslExpr, pub target: String }
+pub struct AslUartRead {
+    pub port: AslExpr,
+    pub length: AslExpr,
+    pub target: String,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslI2cWrite   { pub bus: AslExpr, pub address: AslExpr, pub data: AslExpr }
+pub struct AslI2cWrite {
+    pub bus: AslExpr,
+    pub address: AslExpr,
+    pub data: AslExpr,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslI2cRead    { pub bus: AslExpr, pub address: AslExpr, pub length: AslExpr, pub target: String }
+pub struct AslI2cRead {
+    pub bus: AslExpr,
+    pub address: AslExpr,
+    pub length: AslExpr,
+    pub target: String,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AslSpiTransfer { pub bus: AslExpr, pub cs_pin: AslExpr, pub tx_data: AslExpr, pub target: Option<String> }
+pub struct AslSpiTransfer {
+    pub bus: AslExpr,
+    pub cs_pin: AslExpr,
+    pub tx_data: AslExpr,
+    pub target: Option<String>,
+}
 
 // ============================================================================
 // Statement structs — §22.4 Modbus (novo em v1.2)
@@ -992,19 +1055,30 @@ pub struct AslModbusWriteSingleCoil {
 // ============================================================================
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslPwmInit    { pub pin: AslExpr, pub freq: AslExpr, pub duty: AslExpr }
+pub struct AslPwmInit {
+    pub pin: AslExpr,
+    pub freq: AslExpr,
+    pub duty: AslExpr,
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslPwmSetDuty { pub pin: AslExpr, pub duty: AslExpr }
+pub struct AslPwmSetDuty {
+    pub pin: AslExpr,
+    pub duty: AslExpr,
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslPwmSetFreq { pub pin: AslExpr, pub freq: AslExpr }
+pub struct AslPwmSetFreq {
+    pub pin: AslExpr,
+    pub freq: AslExpr,
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslPwmStop    { pub pin: AslExpr }
+pub struct AslPwmStop {
+    pub pin: AslExpr,
+}
 
 // ============================================================================
 // Statement structs — IEC Timers / Counters / Latches / Triggers
 // ============================================================================
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AslTimerTon {
@@ -1081,14 +1155,28 @@ pub struct AslCounterCtud {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslLatchSr { pub instance: String, pub s: AslExpr, pub r: AslExpr }
+pub struct AslLatchSr {
+    pub instance: String,
+    pub s: AslExpr,
+    pub r: AslExpr,
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslLatchRs { pub instance: String, pub r: AslExpr, pub s: AslExpr }
+pub struct AslLatchRs {
+    pub instance: String,
+    pub r: AslExpr,
+    pub s: AslExpr,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslTrigR { pub instance: String, pub r#in: AslExpr }
+pub struct AslTrigR {
+    pub instance: String,
+    pub r#in: AslExpr,
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslTrigF { pub instance: String, pub r#in: AslExpr }
+pub struct AslTrigF {
+    pub instance: String,
+    pub r#in: AslExpr,
+}
 
 // ============================================================================
 // Statement structs — §23 Servo
@@ -1114,7 +1202,9 @@ pub struct AslServoWrite {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AslServoDetach { pub var_name: String }
+pub struct AslServoDetach {
+    pub var_name: String,
+}
 
 // ============================================================================
 // Statement structs — §24 RGB
@@ -1156,27 +1246,44 @@ pub struct AslTimerInterrupt {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AslMutexOp      { pub mutex_name: String }
+pub struct AslMutexOp {
+    pub mutex_name: String,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AslQueueSend    { pub queue_name: String, pub value: AslExpr }
+pub struct AslQueueSend {
+    pub queue_name: String,
+    pub value: AslExpr,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AslQueueReceive { pub queue_name: String, pub target: String }
+pub struct AslQueueReceive {
+    pub queue_name: String,
+    pub target: String,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AslSemaphoreOp  { pub semaphore_name: String }
+pub struct AslSemaphoreOp {
+    pub semaphore_name: String,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AslEventGroupOp { pub group: String, pub bits: AslExpr }
+pub struct AslEventGroupOp {
+    pub group: String,
+    pub bits: AslExpr,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AslEventGroupWaitBits { pub group: String, pub bits: AslExpr, pub target: String }
+pub struct AslEventGroupWaitBits {
+    pub group: String,
+    pub bits: AslExpr,
+    pub target: String,
+}
 
 // ============================================================================
 // Statement structs — §28 Sensores Industriais
@@ -1461,23 +1568,35 @@ pub enum AslExpr {
 impl AslExpr {
     /// Literal inteiro (R4 — nunca usar HIGH/LOW, usar int(1)/int(0))
     pub fn int(v: i64) -> Self {
-        AslExpr::Literal(AslLiteral { value: serde_json::json!(v) })
+        AslExpr::Literal(AslLiteral {
+            value: serde_json::json!(v),
+        })
     }
     pub fn float(v: f64) -> Self {
-        AslExpr::Literal(AslLiteral { value: serde_json::json!(v) })
+        AslExpr::Literal(AslLiteral {
+            value: serde_json::json!(v),
+        })
     }
     /// R4 — bool normalizado para 1/0 conforme o Dicionário
     pub fn bool_val(v: bool) -> Self {
-        AslExpr::Literal(AslLiteral { value: serde_json::json!(if v { 1 } else { 0 }) })
+        AslExpr::Literal(AslLiteral {
+            value: serde_json::json!(if v { 1 } else { 0 }),
+        })
     }
     pub fn str_val(v: &str) -> Self {
-        AslExpr::Literal(AslLiteral { value: serde_json::json!(v) })
+        AslExpr::Literal(AslLiteral {
+            value: serde_json::json!(v),
+        })
     }
     pub fn null() -> Self {
-        AslExpr::Literal(AslLiteral { value: serde_json::Value::Null })
+        AslExpr::Literal(AslLiteral {
+            value: serde_json::Value::Null,
+        })
     }
     pub fn var(name: &str) -> Self {
-        AslExpr::Var(AslVarRef { name: name.to_string() })
+        AslExpr::Var(AslVarRef {
+            name: name.to_string(),
+        })
     }
 }
 
@@ -1487,37 +1606,63 @@ impl AslExpr {
 
 /// §14.1 — literal. value é JSON Value (int, float, bool, string, null).
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslLiteral { pub value: serde_json::Value }
+pub struct AslLiteral {
+    pub value: serde_json::Value,
+}
 
 /// §14.2 — var.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslVarRef { pub name: String }
+pub struct AslVarRef {
+    pub name: String,
+}
 
 /// §10.1 — array literal.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslArray { pub elements: Vec<AslExpr> }
+pub struct AslArray {
+    pub elements: Vec<AslExpr>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslObjectProp { pub key: AslExpr, pub value: AslExpr }
+pub struct AslObjectProp {
+    pub key: AslExpr,
+    pub value: AslExpr,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslObject { pub properties: Vec<AslObjectProp> }
+pub struct AslObject {
+    pub properties: Vec<AslObjectProp>,
+}
 
 /// §10.2 — index.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslIndex { pub target: AslExpr, pub index: AslExpr }
+pub struct AslIndex {
+    pub target: AslExpr,
+    pub index: AslExpr,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AslIndex2D { pub array: AslExpr, pub row_index: AslExpr, pub col_index: AslExpr }
+pub struct AslIndex2D {
+    pub array: AslExpr,
+    pub row_index: AslExpr,
+    pub col_index: AslExpr,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AslIndex3D { pub array: AslExpr, pub d1_index: AslExpr, pub d2_index: AslExpr, pub d3_index: AslExpr }
+pub struct AslIndex3D {
+    pub array: AslExpr,
+    pub d1_index: AslExpr,
+    pub d2_index: AslExpr,
+    pub d3_index: AslExpr,
+}
 
 /// §14.7 — member.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslMember { pub target: AslExpr, pub property: String }
+pub struct AslMember {
+    pub target: AslExpr,
+    pub property: String,
+}
 
 /// §14.4 — unary. `op` é símbolo directo (R5).
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1528,11 +1673,18 @@ pub struct AslUnary {
 
 /// §14.3 — binary. `op` é símbolo directo (R5).
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslBinary { pub op: BinaryOp, pub left: AslExpr, pub right: AslExpr }
+pub struct AslBinary {
+    pub op: BinaryOp,
+    pub left: AslExpr,
+    pub right: AslExpr,
+}
 
 /// §11.2 — call.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslCall { pub callee: String, pub args: Vec<AslExpr> }
+pub struct AslCall {
+    pub callee: String,
+    pub args: Vec<AslExpr>,
+}
 
 /// §14.5 — conditional (ternário).
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1553,7 +1705,10 @@ pub struct AslCast {
 
 /// §12.2 — newStruct.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslNewStructField { pub name: String, pub value: AslExpr }
+pub struct AslNewStructField {
+    pub name: String,
+    pub value: AslExpr,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AslNewStruct {
@@ -1563,7 +1718,9 @@ pub struct AslNewStruct {
 
 /// §10.3 — arrayLength.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslArrayLength { pub target: AslExpr }
+pub struct AslArrayLength {
+    pub target: AslExpr,
+}
 
 // ============================================================================
 // §14.3/14.4 — Operadores (R5: símbolo directo, nunca "add"/"gte")
@@ -1572,34 +1729,46 @@ pub struct AslArrayLength { pub target: AslExpr }
 /// Operador unário. Serializa como símbolo directo (R5).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum UnaryOp {
-    #[serde(rename = "-")]  Neg,
-    #[serde(rename = "!")]  Not,
-    #[serde(rename = "~")]  BitNot,
-    #[serde(rename = "+")]  Pos,
-    #[serde(rename = "&")]  Addr,
-    #[serde(rename = "*")]  Deref,
+    #[serde(rename = "-")]
+    Neg,
+    #[serde(rename = "!")]
+    Not,
+    #[serde(rename = "~")]
+    BitNot,
+    #[serde(rename = "+")]
+    Pos,
+    #[serde(rename = "&")]
+    Addr,
+    #[serde(rename = "*")]
+    Deref,
 }
 
 impl UnaryOp {
     #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Self {
         match s {
-            "-" => UnaryOp::Neg,  "!" => UnaryOp::Not,
-            "~" => UnaryOp::BitNot, "+" => UnaryOp::Pos,
-            "&" => UnaryOp::Addr, "*" => UnaryOp::Deref,
+            "-" => UnaryOp::Neg,
+            "!" => UnaryOp::Not,
+            "~" => UnaryOp::BitNot,
+            "+" => UnaryOp::Pos,
+            "&" => UnaryOp::Addr,
+            "*" => UnaryOp::Deref,
             // IEC aliases
             "NOT" | "not" => UnaryOp::Not,
             "NEG" | "neg" => UnaryOp::Neg,
-            _             => UnaryOp::Neg,
+            _ => UnaryOp::Neg,
         }
     }
 
     /// Símbolo canónico ASL (R5).
     pub fn to_symbol(&self) -> &'static str {
         match self {
-            UnaryOp::Neg    => "-", UnaryOp::Not    => "!",
-            UnaryOp::BitNot => "~", UnaryOp::Pos    => "+",
-            UnaryOp::Addr   => "&", UnaryOp::Deref  => "*",
+            UnaryOp::Neg => "-",
+            UnaryOp::Not => "!",
+            UnaryOp::BitNot => "~",
+            UnaryOp::Pos => "+",
+            UnaryOp::Addr => "&",
+            UnaryOp::Deref => "*",
         }
     }
 
@@ -1607,8 +1776,8 @@ impl UnaryOp {
     pub fn to_iec_symbol(&self) -> &'static str {
         match self {
             UnaryOp::Not | UnaryOp::BitNot => "NOT ",
-            UnaryOp::Neg                   => "-",
-            other                          => other.to_symbol(),
+            UnaryOp::Neg => "-",
+            other => other.to_symbol(),
         }
     }
 }
@@ -1616,65 +1785,105 @@ impl UnaryOp {
 /// Operador binário. Serializa como símbolo directo (R5 — "+" não "add", ">=" não "gte").
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum BinaryOp {
-    #[serde(rename = "+")]  Add,
-    #[serde(rename = "-")]  Sub,
-    #[serde(rename = "*")]  Mul,
-    #[serde(rename = "/")]  Div,
-    #[serde(rename = "%")]  Mod,
-    #[serde(rename = "//")]  IntDiv,
-    #[serde(rename = "**")]  Pow,
-    #[serde(rename = "==")]  Eq,
-    #[serde(rename = "!=")]  Neq,
-    #[serde(rename = "<")]   Lt,
-    #[serde(rename = "<=")]  Lte,
-    #[serde(rename = ">")]   Gt,
-    #[serde(rename = ">=")]  Gte,
-    #[serde(rename = "&&")]  And,
-    #[serde(rename = "||")]  Or,
-    #[serde(rename = "&")]   BitAnd,
-    #[serde(rename = "|")]   BitOr,
-    #[serde(rename = "^")]   BitXor,
-    #[serde(rename = "<<")]  Shl,
-    #[serde(rename = ">>")]  Shr,
+    #[serde(rename = "+")]
+    Add,
+    #[serde(rename = "-")]
+    Sub,
+    #[serde(rename = "*")]
+    Mul,
+    #[serde(rename = "/")]
+    Div,
+    #[serde(rename = "%")]
+    Mod,
+    #[serde(rename = "//")]
+    IntDiv,
+    #[serde(rename = "**")]
+    Pow,
+    #[serde(rename = "==")]
+    Eq,
+    #[serde(rename = "!=")]
+    Neq,
+    #[serde(rename = "<")]
+    Lt,
+    #[serde(rename = "<=")]
+    Lte,
+    #[serde(rename = ">")]
+    Gt,
+    #[serde(rename = ">=")]
+    Gte,
+    #[serde(rename = "&&")]
+    And,
+    #[serde(rename = "||")]
+    Or,
+    #[serde(rename = "&")]
+    BitAnd,
+    #[serde(rename = "|")]
+    BitOr,
+    #[serde(rename = "^")]
+    BitXor,
+    #[serde(rename = "<<")]
+    Shl,
+    #[serde(rename = ">>")]
+    Shr,
 }
 
 impl BinaryOp {
     #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Self {
         match s {
-            "+"   => BinaryOp::Add,    "-"   => BinaryOp::Sub,
-            "*"   => BinaryOp::Mul,    "/"   => BinaryOp::Div,
-            "%"   => BinaryOp::Mod,    "//"  => BinaryOp::IntDiv,
-            "**"  => BinaryOp::Pow,    "=="  => BinaryOp::Eq,
-            "!="  => BinaryOp::Neq,    "<"   => BinaryOp::Lt,
-            "<="  => BinaryOp::Lte,    ">"   => BinaryOp::Gt,
-            ">="  => BinaryOp::Gte,    "&&"  => BinaryOp::And,
-            "||"  => BinaryOp::Or,     "&"   => BinaryOp::BitAnd,
-            "|"   => BinaryOp::BitOr,  "^"   => BinaryOp::BitXor,
-            "<<"  => BinaryOp::Shl,    ">>"  => BinaryOp::Shr,
+            "+" => BinaryOp::Add,
+            "-" => BinaryOp::Sub,
+            "*" => BinaryOp::Mul,
+            "/" => BinaryOp::Div,
+            "%" => BinaryOp::Mod,
+            "//" => BinaryOp::IntDiv,
+            "**" => BinaryOp::Pow,
+            "==" => BinaryOp::Eq,
+            "!=" => BinaryOp::Neq,
+            "<" => BinaryOp::Lt,
+            "<=" => BinaryOp::Lte,
+            ">" => BinaryOp::Gt,
+            ">=" => BinaryOp::Gte,
+            "&&" => BinaryOp::And,
+            "||" => BinaryOp::Or,
+            "&" => BinaryOp::BitAnd,
+            "|" => BinaryOp::BitOr,
+            "^" => BinaryOp::BitXor,
+            "<<" => BinaryOp::Shl,
+            ">>" => BinaryOp::Shr,
             // IEC 61131-3 text operators
             "AND" | "and" => BinaryOp::And,
-            "OR"  | "or"  => BinaryOp::Or,
+            "OR" | "or" => BinaryOp::Or,
             "XOR" | "xor" => BinaryOp::BitXor,
             "MOD" | "mod" => BinaryOp::Mod,
-            "EXPT"| "expt"=> BinaryOp::Pow,
-            _             => BinaryOp::Add,
+            "EXPT" | "expt" => BinaryOp::Pow,
+            _ => BinaryOp::Add,
         }
     }
 
     /// Símbolo canónico ASL (R5).
     pub fn to_symbol(&self) -> &'static str {
         match self {
-            BinaryOp::Add    => "+",   BinaryOp::Sub    => "-",
-            BinaryOp::Mul    => "*",   BinaryOp::Div    => "/",
-            BinaryOp::Mod    => "%",   BinaryOp::IntDiv => "//",
-            BinaryOp::Pow    => "**",  BinaryOp::Eq     => "==",
-            BinaryOp::Neq    => "!=",  BinaryOp::Lt     => "<",
-            BinaryOp::Lte    => "<=",  BinaryOp::Gt     => ">",
-            BinaryOp::Gte    => ">=",  BinaryOp::And    => "&&",
-            BinaryOp::Or     => "||",  BinaryOp::BitAnd => "&",
-            BinaryOp::BitOr  => "|",   BinaryOp::BitXor => "^",
-            BinaryOp::Shl    => "<<",  BinaryOp::Shr    => ">>",
+            BinaryOp::Add => "+",
+            BinaryOp::Sub => "-",
+            BinaryOp::Mul => "*",
+            BinaryOp::Div => "/",
+            BinaryOp::Mod => "%",
+            BinaryOp::IntDiv => "//",
+            BinaryOp::Pow => "**",
+            BinaryOp::Eq => "==",
+            BinaryOp::Neq => "!=",
+            BinaryOp::Lt => "<",
+            BinaryOp::Lte => "<=",
+            BinaryOp::Gt => ">",
+            BinaryOp::Gte => ">=",
+            BinaryOp::And => "&&",
+            BinaryOp::Or => "||",
+            BinaryOp::BitAnd => "&",
+            BinaryOp::BitOr => "|",
+            BinaryOp::BitXor => "^",
+            BinaryOp::Shl => "<<",
+            BinaryOp::Shr => ">>",
         }
     }
 
@@ -1682,12 +1891,17 @@ impl BinaryOp {
     /// Eq="=", Neq="<>", And="AND", Or="OR", BitXor="XOR", Mod="MOD", Pow="EXPT"
     pub fn to_iec_symbol(&self) -> &'static str {
         match self {
-            BinaryOp::Eq     => "=",    BinaryOp::Neq    => "<>",
-            BinaryOp::And    => "AND",  BinaryOp::Or     => "OR",
-            BinaryOp::BitAnd => "AND",  BinaryOp::BitOr  => "OR",
-            BinaryOp::BitXor => "XOR",  BinaryOp::Mod    => "MOD",
-            BinaryOp::Pow    => "EXPT", BinaryOp::IntDiv => "/",
-            other            => other.to_symbol(),
+            BinaryOp::Eq => "=",
+            BinaryOp::Neq => "<>",
+            BinaryOp::And => "AND",
+            BinaryOp::Or => "OR",
+            BinaryOp::BitAnd => "AND",
+            BinaryOp::BitOr => "OR",
+            BinaryOp::BitXor => "XOR",
+            BinaryOp::Mod => "MOD",
+            BinaryOp::Pow => "EXPT",
+            BinaryOp::IntDiv => "/",
+            other => other.to_symbol(),
         }
     }
 }
@@ -1745,8 +1959,17 @@ pub enum AslLadderElement {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslContact { pub variable: String, pub comment: Option<String> }
+pub struct AslContact {
+    pub variable: String,
+    pub comment: Option<String>,
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslCoil    { pub variable: String, pub comment: Option<String> }
+pub struct AslCoil {
+    pub variable: String,
+    pub comment: Option<String>,
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslFbCall  { pub name: String, pub inputs: HashMap<String, AslExpr> }
+pub struct AslFbCall {
+    pub name: String,
+    pub inputs: HashMap<String, AslExpr>,
+}
