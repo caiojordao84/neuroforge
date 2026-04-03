@@ -112,3 +112,5 @@ apps/shared/src/lib/wasm/
 
 # Agent
 .agent/
+.opencode/
+opencode/
