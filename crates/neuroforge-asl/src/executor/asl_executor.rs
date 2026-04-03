@@ -7,21 +7,21 @@
 //! Stubs Fase 2 PLC:
 //!   IL, LD, FBD, SFC   → todo!()
 
-use crate::plugins::c::CGenerator;
-use crate::plugins::core::GeneratorOutput;
-use crate::plugins::rust_std::RustGenerator;
-use crate::plugins::python::python_parser::PythonParser;
-use crate::plugins::python::python_generator::PythonGenerator;
-use crate::plugins::core::AslGenerator;
-use crate::plugins::plc::st_parser::StParser;
-use crate::plugins::plc::st_generator::StGenerator;
 use crate::plugins::c::c_parser::CParser;
+use crate::plugins::c::CGenerator;
+use crate::plugins::core::AslGenerator;
+use crate::plugins::core::GeneratorOutput;
+use crate::plugins::plc::st_generator::StGenerator;
+use crate::plugins::plc::st_parser::StParser;
+use crate::plugins::python::python_generator::PythonGenerator;
+use crate::plugins::python::python_parser::PythonParser;
 use crate::plugins::rust_std::rust_parser::RustParser;
+use crate::plugins::rust_std::RustGenerator;
 
-use crate::types::asl_types::AslProgram;
-use crate::transforms::context::Language;
-use crate::types::nodes_to_typed::nodes_to_typed;
 use crate::transforms::code_to_asl::ast_to_asl;
+use crate::transforms::context::Language;
+use crate::types::asl_types::AslProgram;
+use crate::types::nodes_to_typed::nodes_to_typed;
 
 /// Linguagem / plataforma alvo.
 #[derive(Debug, Clone, PartialEq)]
@@ -55,17 +55,17 @@ impl TargetLanguage {
     #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
-            "c" | "c++" | "cpp"         => Some(Self::C),
-            "arduino"                   => Some(Self::Arduino),
-            "rust"                      => Some(Self::Rust),
-            "python" | "py"             => Some(Self::Python),
-            "micropython" | "upython"   => Some(Self::MicroPython),
+            "c" | "c++" | "cpp" => Some(Self::C),
+            "arduino" => Some(Self::Arduino),
+            "rust" => Some(Self::Rust),
+            "python" | "py" => Some(Self::Python),
+            "micropython" | "upython" => Some(Self::MicroPython),
             "st" | "structuredtext" | "iec61131" | "plc" => Some(Self::St),
-            "il" | "instructionlist"    => Some(Self::Il),
-            "ld" | "ladder"             => Some(Self::Ld),
-            "fbd" | "functionblock"     => Some(Self::Fbd),
-            "sfc" | "sequentialfunction"=> Some(Self::Sfc),
-            _                           => None,
+            "il" | "instructionlist" => Some(Self::Il),
+            "ld" | "ladder" => Some(Self::Ld),
+            "fbd" | "functionblock" => Some(Self::Fbd),
+            "sfc" | "sequentialfunction" => Some(Self::Sfc),
+            _ => None,
         }
     }
 }
@@ -83,7 +83,11 @@ impl TranspileOutput {
     fn from_generator_output(out: GeneratorOutput) -> Self {
         Self {
             code: out.code,
-            source_map: out.map.iter().map(|e| (e.generated_line, e.source_line)).collect(),
+            source_map: out
+                .map
+                .iter()
+                .map(|e| (e.generated_line, e.source_line))
+                .collect(),
         }
     }
 }
@@ -97,8 +101,16 @@ impl AslExecutor {
     /// Caso contrário, utiliza o parser para gerar a AST Universal (AslProgram) primeiro.
     pub fn run(source: &str, target: &TargetLanguage) -> Result<TranspileOutput, String> {
         let trimmed_source = source.trim();
-        
-        let program = if trimmed_source.starts_with('{') && trimmed_source.contains("\"aslVersion\"") {
+
+        // Detect source language for cross-compilation
+        let source_is_python = trimmed_source.contains("from machine")
+            || trimmed_source.contains("from time")
+            || trimmed_source.contains("import machine")
+            || trimmed_source.contains("import utime");
+
+        let program = if trimmed_source.starts_with('{')
+            && trimmed_source.contains("\"aslVersion\"")
+        {
             // Se já recebemos a ASL Tree diretamente (SFC/Blockly Editor Frontend payload)
             serde_json::from_str::<AslProgram>(trimmed_source)
                 .map_err(|e| format!("Erro ao fazer parse do ASL JSON: {}", e))?
@@ -107,14 +119,25 @@ impl AslExecutor {
             // Usa os novos pipes de transformação Universal
             match target {
                 TargetLanguage::C | TargetLanguage::Cpp | TargetLanguage::Arduino => {
-                    let prog = CParser::parse(source).map_err(|e| format!("CParser: {e}"))?;
-                    let typed = nodes_to_typed(&prog);
-                    ast_to_asl(&typed, Language::Cpp)
+                    // Check if source is Python/MicroPython for cross-compilation
+                    if source_is_python {
+                        PythonParser::parse(source).map_err(|e| format!("PythonParser: {e}"))?
+                    } else {
+                        let prog = CParser::parse(source).map_err(|e| format!("CParser: {e}"))?;
+                        let typed = nodes_to_typed(&prog);
+                        ast_to_asl(&typed, Language::Cpp)
+                    }
                 }
                 TargetLanguage::Rust => {
-                    let prog = RustParser::parse(source).map_err(|e| format!("RustParser: {e}"))?;
-                    let typed = nodes_to_typed(&prog);
-                    ast_to_asl(&typed, Language::Rust)
+                    // Check if source is Python/MicroPython for cross-compilation
+                    if source_is_python {
+                        PythonParser::parse(source).map_err(|e| format!("PythonParser: {e}"))?
+                    } else {
+                        let prog =
+                            RustParser::parse(source).map_err(|e| format!("RustParser: {e}"))?;
+                        let typed = nodes_to_typed(&prog);
+                        ast_to_asl(&typed, Language::Rust)
+                    }
                 }
                 TargetLanguage::Python | TargetLanguage::MicroPython => {
                     PythonParser::parse(source).map_err(|e| format!("PythonParser: {e}"))?
@@ -122,8 +145,14 @@ impl AslExecutor {
                 TargetLanguage::St => {
                     StParser::parse(source).map_err(|e| format!("StParser: {e}"))?
                 }
-                TargetLanguage::Il | TargetLanguage::Ld | TargetLanguage::Fbd | TargetLanguage::Sfc => {
-                    return Err(format!("O Parsing direto para {:?} não é suportado até a Fase 2", target));
+                TargetLanguage::Il
+                | TargetLanguage::Ld
+                | TargetLanguage::Fbd
+                | TargetLanguage::Sfc => {
+                    return Err(format!(
+                        "O Parsing direto para {:?} não é suportado até a Fase 2",
+                        target
+                    ));
                 }
             }
         };
@@ -146,10 +175,18 @@ impl AslExecutor {
                 let out = StGenerator::new().generate(&program);
                 Ok(TranspileOutput::from_generator_output(out))
             }
-            TargetLanguage::Il => Err("IL (Instruction List) ainda não implementado — Fase 2 PLC".to_string()),
-            TargetLanguage::Ld => Err("LD (Ladder Diagram) ainda não implementado — Fase 2 PLC".to_string()),
-            TargetLanguage::Fbd => Err("FBD (Function Block Diagram) ainda não implementado — Fase 2 PLC".to_string()),
-            TargetLanguage::Sfc => Err("SFC (Sequential Function Chart) ainda não implementado — Fase 2 PLC".to_string()),
+            TargetLanguage::Il => {
+                Err("IL (Instruction List) ainda não implementado — Fase 2 PLC".to_string())
+            }
+            TargetLanguage::Ld => {
+                Err("LD (Ladder Diagram) ainda não implementado — Fase 2 PLC".to_string())
+            }
+            TargetLanguage::Fbd => {
+                Err("FBD (Function Block Diagram) ainda não implementado — Fase 2 PLC".to_string())
+            }
+            TargetLanguage::Sfc => Err(
+                "SFC (Sequential Function Chart) ainda não implementado — Fase 2 PLC".to_string(),
+            ),
         }
     }
 }
@@ -175,8 +212,11 @@ void loop() {
 }
 "#;
         let out = AslExecutor::run(src, &TargetLanguage::C).expect("falhou C blink");
-        assert!(out.code.contains("digitalWrite") || out.code.contains("setup"),
-            "código C deve ter setup ou digitalWrite: {}", out.code);
+        assert!(
+            out.code.contains("digitalWrite") || out.code.contains("setup"),
+            "código C deve ter setup ou digitalWrite: {}",
+            out.code
+        );
     }
 
     #[test]
@@ -201,8 +241,11 @@ fn main() {
 }
 "#;
         let out = AslExecutor::run(src, &TargetLanguage::Rust).expect("falhou Rust blink");
-        assert!(out.code.contains("fn main"),
-            "código Rust deve ter fn main: {}", out.code);
+        assert!(
+            out.code.contains("fn main"),
+            "código Rust deve ter fn main: {}",
+            out.code
+        );
     }
 
     // ── Python / MicroPython ─────────────────────────────────────────────────
@@ -217,8 +260,11 @@ def main():
         sleep_ms(500)
 "#;
         let out = AslExecutor::run(src, &TargetLanguage::Python).expect("falhou Python blink");
-        assert!(out.code.contains("from time import sleep_ms"),
-            "código Python deve ter from time import sleep_ms: {}", out.code);
+        assert!(
+            out.code.contains("from time import sleep_ms"),
+            "código Python deve ter from time import sleep_ms: {}",
+            out.code
+        );
     }
 
     #[test]
@@ -242,28 +288,43 @@ PROGRAM Main
 END_PROGRAM
 "#;
         let out = AslExecutor::run(src, &TargetLanguage::St).expect("falhou ST");
-        assert!(out.code.contains("PROGRAM"),
-            "código ST deve ter PROGRAM: {}", out.code);
-        assert!(out.code.contains("IF"),
-            "código ST deve ter IF: {}", out.code);
+        assert!(
+            out.code.contains("PROGRAM"),
+            "código ST deve ter PROGRAM: {}",
+            out.code
+        );
+        assert!(
+            out.code.contains("IF"),
+            "código ST deve ter IF: {}",
+            out.code
+        );
     }
 
     // ── TargetLanguage::from_str ──────────────────────────────────────────────
     #[test]
     fn target_language_from_str() {
-        assert_eq!(TargetLanguage::from_str("c"),           Some(TargetLanguage::C));
-        assert_eq!(TargetLanguage::from_str("C++"),         Some(TargetLanguage::C));
-        assert_eq!(TargetLanguage::from_str("arduino"),     Some(TargetLanguage::Arduino));
-        assert_eq!(TargetLanguage::from_str("rust"),        Some(TargetLanguage::Rust));
-        assert_eq!(TargetLanguage::from_str("python"),      Some(TargetLanguage::Python));
-        assert_eq!(TargetLanguage::from_str("micropython"), Some(TargetLanguage::MicroPython));
-        assert_eq!(TargetLanguage::from_str("st"),          Some(TargetLanguage::St));
-        assert_eq!(TargetLanguage::from_str("plc"),         Some(TargetLanguage::St));
-        assert_eq!(TargetLanguage::from_str("il"),          Some(TargetLanguage::Il));
-        assert_eq!(TargetLanguage::from_str("ld"),          Some(TargetLanguage::Ld));
-        assert_eq!(TargetLanguage::from_str("fbd"),         Some(TargetLanguage::Fbd));
-        assert_eq!(TargetLanguage::from_str("sfc"),         Some(TargetLanguage::Sfc));
-        assert_eq!(TargetLanguage::from_str("vhdl"),        None);
+        assert_eq!(TargetLanguage::from_str("c"), Some(TargetLanguage::C));
+        assert_eq!(TargetLanguage::from_str("C++"), Some(TargetLanguage::C));
+        assert_eq!(
+            TargetLanguage::from_str("arduino"),
+            Some(TargetLanguage::Arduino)
+        );
+        assert_eq!(TargetLanguage::from_str("rust"), Some(TargetLanguage::Rust));
+        assert_eq!(
+            TargetLanguage::from_str("python"),
+            Some(TargetLanguage::Python)
+        );
+        assert_eq!(
+            TargetLanguage::from_str("micropython"),
+            Some(TargetLanguage::MicroPython)
+        );
+        assert_eq!(TargetLanguage::from_str("st"), Some(TargetLanguage::St));
+        assert_eq!(TargetLanguage::from_str("plc"), Some(TargetLanguage::St));
+        assert_eq!(TargetLanguage::from_str("il"), Some(TargetLanguage::Il));
+        assert_eq!(TargetLanguage::from_str("ld"), Some(TargetLanguage::Ld));
+        assert_eq!(TargetLanguage::from_str("fbd"), Some(TargetLanguage::Fbd));
+        assert_eq!(TargetLanguage::from_str("sfc"), Some(TargetLanguage::Sfc));
+        assert_eq!(TargetLanguage::from_str("vhdl"), None);
     }
 
     // ── Stubs Fase 2 devolvem Err ─────────────────────────────────────────────

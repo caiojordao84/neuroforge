@@ -133,13 +133,13 @@ impl CGenerator {
                 };
                 self.add_ln(lines, &format!("{}digitalWrite({}, {});", indent, pin, val));
             }
-            AslStatement::Read(r) => {
+            AslStatement::DigitalInput(r) => {
                 let pin = self.gen_expr(&r.pin);
-                if matches!(r.mode, ReadMode::Analog) {
-                    self.add_ln(lines, &format!("{}{} = analogRead({});", indent, r.target, pin));
-                } else {
-                    self.add_ln(lines, &format!("{}{} = digitalRead({});", indent, r.target, pin));
-                }
+                self.add_ln(lines, &format!("{}{} = digitalRead({});", indent, r.target, pin));
+            }
+            AslStatement::AnalogInput(r) => {
+                let pin = self.gen_expr(&r.pin);
+                self.add_ln(lines, &format!("{}{} = analogRead({});", indent, r.target, pin));
             }
             AslStatement::AnalogWrite(a) => {
                 let pin = self.gen_expr(&a.pin);
@@ -166,23 +166,19 @@ impl CGenerator {
             AslStatement::If(i) => {
                 let cond = self.gen_expr(&i.condition);
                 self.add_ln(lines, &format!("{}if ({}) {{", indent, cond));
-                for b in &i.then_branch { self.gen_stmt(b, lines, &format!("{}  ", indent)); }
+                for b in &i.then_body { self.gen_stmt(b, lines, &format!("{}  ", indent)); }
                 
-                if let Some(eb) = &i.else_branch {
-                    if eb.len() == 1 && matches!(eb[0], AslStatement::If(_)) {
-                        self.add_ln(lines, &format!("{}}} else ", indent));
-                        // Redução de indentação manual para encadear `else if`
-                        let mut temp = vec![];
-                        self.gen_stmt(&eb[0], &mut temp, indent);
-                        if let Some((first, rest)) = temp.split_first() {
-                            if let Some(last) = lines.last_mut() { *last += first.trim_start(); }
-                            lines.extend(rest.iter().map(|l| format!("{}{}", indent, l.trim_start())));
-                        }
-                    } else {
-                        self.add_ln(lines, &format!("{}}} else {{", indent));
-                        for b in eb { self.gen_stmt(b, lines, &format!("{}  ", indent)); }
-                        self.add_ln(lines, &format!("{}}}", indent));
-                    }
+                // §8.1 — ElseIf Clauses
+                for ei in &i.else_if {
+                    let ei_cond = self.gen_expr(&ei.condition);
+                    self.add_ln(lines, &format!("{}}} else if ({}) {{", indent, ei_cond));
+                    for b in &ei.body { self.gen_stmt(b, lines, &format!("{}  ", indent)); }
+                }
+
+                if let Some(eb) = &i.else_body {
+                    self.add_ln(lines, &format!("{}}} else {{", indent));
+                    for b in eb { self.gen_stmt(b, lines, &format!("{}  ", indent)); }
+                    self.add_ln(lines, &format!("{}}}", indent));
                 } else {
                     self.add_ln(lines, &format!("{}}}", indent));
                 }
@@ -193,11 +189,47 @@ impl CGenerator {
                 for b in &w.body { self.gen_stmt(b, lines, &format!("{}  ", indent)); }
                 self.add_ln(lines, &format!("{}}}", indent));
             }
-            AslStatement::ForIn(f) => {
-                let iter = self.gen_expr(&f.iterable);
-                self.add_ln(lines, &format!("{}for (auto {} : {}) {{", indent, f.var_name, iter));
-                for b in &f.body { self.gen_stmt(b, lines, &format!("{}  ", indent)); }
-                self.add_ln(lines, &format!("{}}}", indent));
+            AslStatement::For(f) => {
+                match f.as_ref() {
+                    AslFor::Range(r) => {
+                        let from = self.gen_expr(&r.from);
+                        let to = self.gen_expr(&r.to);
+                        let step = self.gen_expr(&r.step);
+                        self.add_ln(lines, &format!("{}for (int {} = {}; {} < {}; {} += {}) {{", indent, r.var, from, r.var, to, r.var, step));
+                        for b in &r.body { self.gen_stmt(b, lines, &format!("{}  ", indent)); }
+                        self.add_ln(lines, &format!("{}}}", indent));
+                    }
+                    AslFor::Each(e) => {
+                        let iter = self.gen_expr(&e.iterable);
+                        self.add_ln(lines, &format!("{}for (auto {} : {}) {{", indent, e.var, iter));
+                        for b in &e.body { self.gen_stmt(b, lines, &format!("{}  ", indent)); }
+                        self.add_ln(lines, &format!("{}}}", indent));
+                    }
+                    AslFor::CStyle(c) => {
+                        // C-style for
+                        self.add_ln(lines, &format!("{}for (", indent));
+                        // Simplificação: apenas primeiro init
+                        if let Some(first) = c.init.first() {
+                            let mut temp = vec![];
+                            self.gen_stmt(first, &mut temp, "");
+                            let init_str = temp.join(" ").trim_end_matches(';').to_string();
+                            if let Some(last) = lines.last_mut() { *last += init_str; }
+                        }
+                        if let Some(last) = lines.last_mut() {
+                            *last += &format!("; {}; ", self.gen_expr(&c.condition));
+                        }
+                        if let Some(first) = c.update.first() {
+                            let mut temp = vec![];
+                            self.gen_stmt(first, &mut temp, "");
+                            let up_str = temp.join(" ").trim_end_matches(';').to_string();
+                            if let Some(last) = lines.last_mut() { *last += &format!("{}) {{", up_str); }
+                        } else {
+                            if let Some(last) = lines.last_mut() { *last += ") {"; }
+                        }
+                        for b in &c.body { self.gen_stmt(b, lines, &format!("{}  ", indent)); }
+                        self.add_ln(lines, &format!("{}}}", indent));
+                    }
+                }
             }
             AslStatement::Return(r) => {
                 if let Some(v) = &r.value {

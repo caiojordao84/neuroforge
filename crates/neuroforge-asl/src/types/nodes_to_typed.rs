@@ -16,15 +16,19 @@ pub fn nodes_to_typed(prog: &crate::types::nodes::ProgramNode) -> ProgramNode {
         .filter_map(|g| base_to_var_decl(g))
         .collect();
 
-    let functions: Vec<FunctionNode> = prog
-        .functions
-        .iter()
-        .map(|f| convert_function(f))
-        .collect();
+    let functions: Vec<FunctionNode> = prog.functions.iter().map(|f| convert_function(f)).collect();
 
     // Tenta usar os corpos já separados no ProgramNode untyped.
-    let mut setup_body: Vec<StatementNode> = prog.setup_body.iter().filter_map(base_to_statement).collect();
-    let mut loop_body: Vec<StatementNode> = prog.loop_body.iter().filter_map(base_to_statement).collect();
+    let mut setup_body: Vec<StatementNode> = prog
+        .setup_body
+        .iter()
+        .filter_map(base_to_statement)
+        .collect();
+    let mut loop_body: Vec<StatementNode> = prog
+        .loop_body
+        .iter()
+        .filter_map(base_to_statement)
+        .collect();
     let mut has_loop = prog.has_loop;
     let mut other_fns: Vec<FunctionNode> = vec![];
 
@@ -43,7 +47,7 @@ pub fn nodes_to_typed(prog: &crate::types::nodes::ProgramNode) -> ProgramNode {
             }
         }
     } else {
-        // Se as funções setup/loop já foram "extraídas" para os corpos, 
+        // Se as funções setup/loop já foram "extraídas" para os corpos,
         // filtramos elas da lista de funções regulares.
         for f in functions {
             if f.name != "setup" && f.name != "loop" {
@@ -89,11 +93,9 @@ fn convert_function(f: &crate::types::nodes::FunctionNode) -> FunctionNode {
 
 fn base_to_statement(node: &BaseNode) -> Option<StatementNode> {
     match &node.node_type {
-        NodeType::VarDeclaration => {
-            Some(StatementNode {
-                kind: StatementKind::VarDecl(base_to_var_decl(node)?),
-            })
-        }
+        NodeType::VarDeclaration => Some(StatementNode {
+            kind: StatementKind::VarDecl(base_to_var_decl(node)?),
+        }),
         NodeType::Assignment => {
             let left = attr_str(node, "left");
             let right = attr_str(node, "right");
@@ -135,8 +137,17 @@ fn base_to_statement(node: &BaseNode) -> Option<StatementNode> {
             let else_node = node.children.get(2);
 
             let condition = base_to_expr(cond_node);
-            let then_body = then_node.children.iter().filter_map(|n| base_to_statement(n)).collect();
-            let else_body = else_node.map(|eb| eb.children.iter().filter_map(|n| base_to_statement(n)).collect());
+            let then_body = then_node
+                .children
+                .iter()
+                .filter_map(|n| base_to_statement(n))
+                .collect();
+            let else_body = else_node.map(|eb| {
+                eb.children
+                    .iter()
+                    .filter_map(|n| base_to_statement(n))
+                    .collect()
+            });
 
             Some(StatementNode {
                 kind: StatementKind::Block(BlockNode {
@@ -153,14 +164,15 @@ fn base_to_statement(node: &BaseNode) -> Option<StatementNode> {
             let body_node = node.children.get(1).expect("While body missing");
 
             let condition = base_to_expr(cond_node);
-            let body = body_node.children.iter().filter_map(|n| base_to_statement(n)).collect();
+            let body = body_node
+                .children
+                .iter()
+                .filter_map(|n| base_to_statement(n))
+                .collect();
 
             Some(StatementNode {
                 kind: StatementKind::Block(BlockNode {
-                    kind: BlockKind::While {
-                        condition,
-                        body,
-                    },
+                    kind: BlockKind::While { condition, body },
                 }),
             })
         }
@@ -169,29 +181,35 @@ fn base_to_statement(node: &BaseNode) -> Option<StatementNode> {
             let body_node = node.children.get(1).expect("DoWhile body missing");
 
             let condition = base_to_expr(cond_node);
-            let body = body_node.children.iter().filter_map(|n| base_to_statement(n)).collect();
+            let body = body_node
+                .children
+                .iter()
+                .filter_map(|n| base_to_statement(n))
+                .collect();
 
             Some(StatementNode {
                 kind: StatementKind::Block(BlockNode {
-                    kind: BlockKind::DoWhile {
-                        condition,
-                        body,
-                    },
+                    kind: BlockKind::DoWhile { condition, body },
                 }),
             })
         }
         NodeType::ForLoop => {
             let init_node = node.children.get(0);
             let cond_node = node.children.get(1);
-            let upd_node  = node.children.get(2);
+            let upd_node = node.children.get(2);
             let body_node = node.children.get(3);
 
             let init = init_node.map(|n| base_to_expr(n));
             let condition = cond_node.map(|n| base_to_expr(n));
             let update = upd_node.map(|n| base_to_expr(n));
-            
+
             let body = body_node
-                .map(|b| b.children.iter().filter_map(|n| base_to_statement(n)).collect())
+                .map(|b| {
+                    b.children
+                        .iter()
+                        .filter_map(|n| base_to_statement(n))
+                        .collect()
+                })
                 .unwrap_or_default();
 
             Some(StatementNode {
@@ -226,7 +244,6 @@ fn base_to_statement(node: &BaseNode) -> Option<StatementNode> {
         _ => None,
     }
 }
-
 
 fn base_to_var_decl(node: &BaseNode) -> Option<VarDeclNode> {
     if node.node_type != NodeType::VarDeclaration {
@@ -274,7 +291,9 @@ fn base_to_expr(node: &BaseNode) -> ExprNode {
             }
         }
         _ => ExprNode {
-            kind: ExprKind::Identifier(attr_str_opt(node, "value").unwrap_or_else(|| format!("{:?}", node.node_type))),
+            kind: ExprKind::Identifier(
+                attr_str_opt(node, "value").unwrap_or_else(|| format!("{:?}", node.node_type)),
+            ),
         },
     }
 }
@@ -282,22 +301,32 @@ fn base_to_expr(node: &BaseNode) -> ExprNode {
 fn parse_raw_expr(s: &str) -> ExprNode {
     let s = s.trim();
     if s.is_empty() {
-        return ExprNode { kind: ExprKind::NullLiteral };
+        return ExprNode {
+            kind: ExprKind::NullLiteral,
+        };
     }
     // Try integer
     if let Ok(n) = s.parse::<i64>() {
-        return ExprNode { kind: ExprKind::IntLiteral(n) };
+        return ExprNode {
+            kind: ExprKind::IntLiteral(n),
+        };
     }
     // Try float
     if let Ok(f) = s.parse::<f64>() {
-        return ExprNode { kind: ExprKind::FloatLiteral(f) };
+        return ExprNode {
+            kind: ExprKind::FloatLiteral(f),
+        };
     }
     // Boolean
     if s == "true" || s == "HIGH" || s == "1" {
-        return ExprNode { kind: ExprKind::BoolLiteral(true) };
+        return ExprNode {
+            kind: ExprKind::BoolLiteral(true),
+        };
     }
     if s == "false" || s == "LOW" || s == "0" {
-        return ExprNode { kind: ExprKind::BoolLiteral(false) };
+        return ExprNode {
+            kind: ExprKind::BoolLiteral(false),
+        };
     }
 
     if (s.starts_with('"') && s.ends_with('"')) || (s.starts_with('\'') && s.ends_with('\'')) {
@@ -307,40 +336,53 @@ fn parse_raw_expr(s: &str) -> ExprNode {
     }
 
     if s.ends_with("++") {
-        let name = s[..s.len()-2].trim();
+        let name = s[..s.len() - 2].trim();
         if !name.is_empty() && !name.contains(' ') {
-            return ExprNode { kind: ExprKind::PostfixInc(name.to_string()) };
+            return ExprNode {
+                kind: ExprKind::PostfixInc(name.to_string()),
+            };
         }
     }
     if s.ends_with("--") {
-        let name = s[..s.len()-2].trim();
+        let name = s[..s.len() - 2].trim();
         if !name.is_empty() && !name.contains(' ') {
-            return ExprNode { kind: ExprKind::PostfixDec(name.to_string()) };
+            return ExprNode {
+                kind: ExprKind::PostfixDec(name.to_string()),
+            };
         }
     }
 
     // Operadores binários (simplificado)
-    for op in ["==", "!=", ">=", "<=", ">", "<", "&&", "||", "+", "-", "*", "/"] {
+    for op in [
+        "==", "!=", ">=", "<=", ">", "<", "&&", "||", "+", "-", "*", "/",
+    ] {
         if let Some(idx) = s.find(op) {
             // Evitar conflitos com operadores compostos (ex: = vs ==) e postfix (ex: i--)
-            if (op == "==" || op == "!=" || op == ">=" || op == "<=") || 
-               (!s.get(idx..idx+2).map_or(false, |next| next == "==" || next == "!=" || next == ">=" || next == "<=" || next == "--" || next == "++")) {
-                
+            if (op == "==" || op == "!=" || op == ">=" || op == "<=")
+                || (!s.get(idx..idx + 2).map_or(false, |next| {
+                    next == "=="
+                        || next == "!="
+                        || next == ">="
+                        || next == "<="
+                        || next == "--"
+                        || next == "++"
+                }))
+            {
                 let left = s[..idx].trim();
                 let right = s[idx + op.len()..].trim();
-                
+
                 if !left.is_empty() && !right.is_empty() {
                     // Verificamos se estamos a meio de parênteses (ex: "f(a == b)")
                     let open_count = left.chars().filter(|&c| c == '(').count();
                     let close_count = left.chars().filter(|&c| c == ')').count();
-                    
+
                     if open_count == close_count {
                         return ExprNode {
                             kind: ExprKind::BinaryOp {
                                 op: op.to_string(),
                                 left: Box::new(parse_raw_expr(left)),
                                 right: Box::new(parse_raw_expr(right)),
-                            }
+                            },
                         };
                     }
                 }
@@ -349,29 +391,31 @@ fn parse_raw_expr(s: &str) -> ExprNode {
     }
 
     if s.starts_with("digitalRead(") && s.ends_with(')') {
-        let pin_str = s[12..s.len()-1].trim();
+        let pin_str = s[12..s.len() - 1].trim();
         return ExprNode {
             kind: ExprKind::Call(CallNode {
                 name: "digitalRead".to_string(),
                 object: None,
                 args: vec![parse_raw_expr(pin_str)],
                 result_var: None,
-            })
+            }),
         };
     }
     if s.starts_with("analogRead(") && s.ends_with(')') {
-        let pin_str = s[11..s.len()-1].trim();
+        let pin_str = s[11..s.len() - 1].trim();
         return ExprNode {
             kind: ExprKind::Call(CallNode {
                 name: "analogRead".to_string(),
                 object: None,
                 args: vec![parse_raw_expr(pin_str)],
                 result_var: None,
-            })
+            }),
         };
     }
 
-    ExprNode { kind: ExprKind::Identifier(s.to_string()) }
+    ExprNode {
+        kind: ExprKind::Identifier(s.to_string()),
+    }
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -493,16 +537,23 @@ void loop() {
         let typed = nodes_to_typed(&prog);
 
         // setup + loop bodies are inlined into body
-        assert!(!typed.body.is_empty(), "body should not be empty");
+        assert!(
+            !typed.setup_body.is_empty() || !typed.loop_body.is_empty(),
+            "body should not be empty"
+        );
         assert!(typed.has_loop, "should detect loop function");
 
         // Should have a main-like structure with calls
         let call_count = typed
-            .body
+            .setup_body
             .iter()
+            .chain(typed.loop_body.iter())
             .filter(|s| matches!(&s.kind, StatementKind::Call(_)))
             .count();
-        assert!(call_count >= 3, "should have at least 3 calls (pinMode, digitalWrite, delay), got {call_count}");
+        assert!(
+            call_count >= 3,
+            "should have at least 3 calls (pinMode, digitalWrite, delay), got {call_count}"
+        );
     }
 
     #[test]
@@ -519,6 +570,10 @@ void loop() {}
 
         assert!(!typed.globals.is_empty(), "should have globals");
         // CParser includes initializer in decl name: "ledPin = 13"
-        assert!(typed.globals[0].name.contains("ledPin"), "global should contain ledPin, got: {}", typed.globals[0].name);
+        assert!(
+            typed.globals[0].name.contains("ledPin"),
+            "global should contain ledPin, got: {}",
+            typed.globals[0].name
+        );
     }
 }

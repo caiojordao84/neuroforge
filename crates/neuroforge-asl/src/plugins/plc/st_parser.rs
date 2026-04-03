@@ -243,30 +243,23 @@ impl StVisitor {
             Statement::If { condition, then_body, elsif_parts, else_body, .. } => {
                 let cond_expr   = Self::lower_expr(condition);
                 let then_branch = self.visit_stmts(then_body);
-                let elsif_list: Vec<(Expression, StatementList)> = elsif_parts;
-                let else_branch = if !elsif_list.is_empty() {
-                    let mut chain: Vec<AslStatement> = elsif_list
-                        .into_iter()
-                        .map(|(cond, body)| {
-                            let body_stmts = self.visit_stmts(body);
-                            AslStatement::If(Box::new(AslIf {
-                                condition:   Self::lower_expr(cond),
-                                then_branch: body_stmts,
-                                else_branch: None,
-                            }))
-                        })
-                        .collect();
-                    if let Some(eb) = else_body {
-                        chain.extend(self.visit_stmts(eb));
-                    }
-                    Some(chain)
-                } else if let Some(eb) = else_body {
-                    let stmts = self.visit_stmts(eb);
-                    if stmts.is_empty() { None } else { Some(stmts) }
-                } else {
-                    None
-                };
-                vec![AslStatement::If(Box::new(AslIf { condition: cond_expr, then_branch, else_branch }))]
+                
+                let else_if: Vec<AslElseIf> = elsif_parts
+                    .into_iter()
+                    .map(|(cond, body)| AslElseIf {
+                        condition: Self::lower_expr(cond),
+                        body:      self.visit_stmts(body),
+                    })
+                    .collect();
+                
+                let else_body = else_body.map(|eb| self.visit_stmts(eb));
+
+                vec![AslStatement::If(Box::new(AslIf {
+                    condition: cond_expr,
+                    then_body: then_branch,
+                    else_if,
+                    else_body,
+                }))]
             }
             Statement::For { control_var, start, end, step, body, .. } => {
                 let start_expr = Self::lower_expr(start);

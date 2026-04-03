@@ -1,14 +1,18 @@
 //! Inline de constantes declaradas com valor literal imutável.
 //! Remove a declaração e substitui todas as referências pelo valor.
 
-use std::collections::HashMap;
 use crate::types::asl_types::{
-    AslProgram, AslFunction, AslTask, AslStatement, AslExpr, AslLiteral,
+    AslExpr, AslFunction, AslLiteral, AslProgram, AslStatement, AslTask,
 };
+use std::collections::HashMap;
 
 pub fn inline_constants(program: &mut AslProgram) {
-    for func in &mut program.functions { inline_function(func); }
-    for task in &mut program.tasks     { inline_task(task);     }
+    for func in &mut program.functions {
+        inline_function(func);
+    }
+    for task in &mut program.tasks {
+        inline_task(task);
+    }
 }
 
 fn inline_function(func: &mut AslFunction) {
@@ -32,11 +36,15 @@ fn collect_inlineable(body: &[AslStatement]) -> HashMap<String, serde_json::Valu
                     candidates.insert(d.name.clone(), value.clone());
                 }
             }
-            AslStatement::Assign(a) => { reassigned.insert(a.target.clone()); }
+            AslStatement::Assign(a) => {
+                reassigned.insert(a.target.clone());
+            }
             _ => {}
         }
     }
-    for name in &reassigned { candidates.remove(name); }
+    for name in &reassigned {
+        candidates.remove(name);
+    }
     candidates
 }
 
@@ -57,7 +65,9 @@ fn inline_body(
                 out.push(AslStatement::Expr(e));
             }
             AslStatement::Return(mut r) => {
-                if let Some(e) = &mut r.value { inline_expr(e, consts); }
+                if let Some(e) = &mut r.value {
+                    inline_expr(e, consts);
+                }
                 out.push(AslStatement::Return(r));
             }
             AslStatement::If(mut s) => {
@@ -88,9 +98,13 @@ fn inline_expr(expr: &mut AslExpr, consts: &HashMap<String, serde_json::Value>) 
             inline_expr(&mut b.left, consts);
             inline_expr(&mut b.right, consts);
         }
-        AslExpr::Unary(u) => { inline_expr(&mut u.expr, consts); }
+        AslExpr::Unary(u) => {
+            inline_expr(&mut u.expr, consts);
+        }
         AslExpr::Call(c) => {
-            for a in &mut c.args { inline_expr(a, consts); }
+            for a in &mut c.args {
+                inline_expr(a, consts);
+            }
         }
         AslExpr::Conditional(c) => {
             inline_expr(&mut c.condition, consts);
@@ -111,11 +125,17 @@ mod tests {
     fn prog_with(body: Vec<AslStatement>) -> AslProgram {
         let mut p = AslProgram::default();
         p.functions.push(AslFunction {
-            name: "test".to_string(), params: vec![], return_type: None, body,
+            name: "test".to_string(),
+            params: vec![],
+            return_type: None,
+            body: body.clone(),
         });
         AslProgram {
             functions: vec![AslFunction {
-                name: "test".to_string(), params: vec![], return_type: None, body,
+                name: "test".to_string(),
+                params: vec![],
+                return_type: None,
+                body,
             }],
             ..Default::default()
         }
@@ -125,18 +145,21 @@ mod tests {
     fn inlines_const_and_removes_declare() {
         let stmts = vec![
             AslStatement::Declare(AslDeclare {
-                name: "MAX".to_string(), r#type: AslType::Int,
+                name: "MAX".to_string(),
+                r#type: AslType::Int,
                 value: Some(AslExpr::int(100)),
             }),
             AslStatement::Assign(AslAssign {
                 target: "x".to_string(),
-                value:  AslExpr::var("MAX"),
+                value: AslExpr::var("MAX"),
             }),
         ];
         let mut prog = prog_with(stmts);
         inline_constants(&mut prog);
         let body = &prog.functions[0].body;
-        assert!(!body.iter().any(|s| matches!(s, AslStatement::Declare(d) if d.name == "MAX")));
+        assert!(!body
+            .iter()
+            .any(|s| matches!(s, AslStatement::Declare(d) if d.name == "MAX")));
         if let AslStatement::Assign(a) = &body[0] {
             assert!(matches!(&a.value, AslExpr::Literal(l) if l.value.as_f64() == Some(100.0)));
         } else {
@@ -148,16 +171,20 @@ mod tests {
     fn does_not_inline_reassigned_var() {
         let stmts = vec![
             AslStatement::Declare(AslDeclare {
-                name: "counter".to_string(), r#type: AslType::Int,
+                name: "counter".to_string(),
+                r#type: AslType::Int,
                 value: Some(AslExpr::int(0)),
             }),
             AslStatement::Assign(AslAssign {
-                target: "counter".to_string(), value: AslExpr::int(1),
+                target: "counter".to_string(),
+                value: AslExpr::int(1),
             }),
         ];
         let mut prog = prog_with(stmts);
         inline_constants(&mut prog);
-        assert!(prog.functions[0].body.iter()
+        assert!(prog.functions[0]
+            .body
+            .iter()
             .any(|s| matches!(s, AslStatement::Declare(d) if d.name == "counter")));
     }
 }

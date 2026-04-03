@@ -329,16 +329,16 @@ pub enum AslStatement {
     // ── §6 — Pinos ─────────────────────────────────────────────────────────
     #[serde(rename = "pinMode")]
     PinMode(AslPinMode),
-    /// R1: nome semântico. C++ digitalWrite(pin,HIGH/LOW) → digitalOutput
+    /// §6.3 — digitalOutput
     #[serde(rename = "digitalOutput")]
     DigitalOutput(AslDigitalOutput),
-    /// R1: nome semântico. C++ analogWrite(pin,val) → analogOutput
+    /// §6.5 — analogOutput
     #[serde(rename = "analogOutput")]
     AnalogOutput(AslAnalogOutput),
-    /// R1: nome semântico. digitalRead(pin) → target
+    /// §6.4 — digitalInput
     #[serde(rename = "digitalInput")]
     DigitalInput(AslDigitalInput),
-    /// R1: nome semântico. analogRead(pin) → target
+    /// §6.6 — analogInput
     #[serde(rename = "analogInput")]
     AnalogInput(AslAnalogInput),
 
@@ -507,6 +507,68 @@ pub enum AslStatement {
     #[serde(rename = "sensorRead")]
     SensorRead(AslSensorRead),
 
+    // ── §29 — Energy Management (novo em v1.2) ───────────────────────────────
+    #[serde(rename = "sleepMode")]
+    SleepMode(AslSleepMode),
+    #[serde(rename = "watchdogTimer")]
+    WatchdogTimer(AslWatchdogTimer),
+
+    // ── §30 — Persistent Storage (novo em v1.2) ──────────────────────────────
+    #[serde(rename = "storageWrite")]
+    StorageWrite(AslStorageWrite),
+    #[serde(rename = "storageRead")]
+    StorageRead(AslStorageRead),
+    #[serde(rename = "storageCommit")]
+    StorageCommit,
+
+    // ── §31 — Network Communication (novo em v1.2) ──────────────────────────
+    #[serde(rename = "wifiConnect")]
+    WifiConnect(AslWifiConnect),
+    #[serde(rename = "wifiDisconnect")]
+    WifiDisconnect,
+    #[serde(rename = "wifiStatus")]
+    WifiStatus(AslWifiStatus),
+    #[serde(rename = "mqttConnect")]
+    MqttConnect(AslMqttConnect),
+    #[serde(rename = "mqttSubscribe")]
+    MqttSubscribe(AslMqttSubscribe),
+    #[serde(rename = "mqttPublish")]
+    MqttPublish(AslMqttPublish),
+    #[serde(rename = "mqttDisconnect")]
+    MqttDisconnect,
+    #[serde(rename = "httpGet")]
+    HttpGet(AslHttpGet),
+    #[serde(rename = "httpPost")]
+    HttpPost(AslHttpPost),
+
+    // ── §32 — Displays (novo em v1.2) ────────────────────────────────────────
+    #[serde(rename = "lcdInit")]
+    LcdInit(AslLcdInit),
+    #[serde(rename = "lcdPrint")]
+    LcdPrint(AslLcdPrint),
+    #[serde(rename = "lcdClear")]
+    LcdClear,
+    #[serde(rename = "lcdSetCursor")]
+    LcdSetCursor(AslLcdSetCursor),
+    #[serde(rename = "oledInit")]
+    OledInit(AslOledInit),
+    #[serde(rename = "oledDrawText")]
+    OledDrawText(AslOledDrawText),
+    #[serde(rename = "oledDisplay")]
+    OledDisplay,
+    #[serde(rename = "oledClear")]
+    OledClear,
+
+    // ── §34 — Logging (novo em v1.2) ─────────────────────────────────────────
+    #[serde(rename = "log")]
+    Log(AslLog),
+
+    // ── §35 — Testing and Simulation (novo em v1.2) ─────────────────────────
+    #[serde(rename = "assert")]
+    Assert(AslAssert),
+    #[serde(rename = "simProbe")]
+    SimProbe(AslSimProbe),
+
     // ── SFC — State Machine ──────────────────────────────────────────────────
     #[serde(rename = "stateMachine")]
     StateMachine(Box<AslStateMachine>),
@@ -538,7 +600,7 @@ pub enum PinModeKind {
     OpenDrain,
 }
 
-/// §6.3 — R1: `digitalOutput` (não `digitalWrite`).
+/// §6.3 — digitalOutput.
 /// R4: value é AslExpr — HIGH/LOW devem ser normalizados para literal 1/0 pelo parser.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AslDigitalOutput {
@@ -546,21 +608,21 @@ pub struct AslDigitalOutput {
     pub value: AslExpr,
 }
 
-/// §6.5 — R1: `analogOutput` (não `analogWrite`).
+/// §6.5 — analogOutput.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AslAnalogOutput {
     pub pin: AslExpr,
     pub value: AslExpr,
 }
 
-/// §6.4 — R1: `digitalInput` (não `read` com mode).
+/// §6.4 — digitalInput.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AslDigitalInput {
     pub pin: AslExpr,
     pub target: String,
 }
 
-/// §6.6 — R1: `analogInput` (não `read` com mode).
+/// §6.6 — analogInput.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AslAnalogInput {
     pub pin: AslExpr,
@@ -622,7 +684,6 @@ pub struct AslDelay {
 pub struct AslIf {
     pub condition: AslExpr,
     pub then_body: Vec<AslStatement>,
-    /// Array de else-if (§8.1 — nunca fundido com else_body)
     #[serde(default)]
     pub else_if: Vec<AslElseIf>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -944,16 +1005,80 @@ pub struct AslPwmStop    { pub pin: AslExpr }
 // ============================================================================
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslTimerTon { pub instance: String, pub r#in: AslExpr, pub pt: AslExpr }
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslTimerTof { pub instance: String, pub r#in: AslExpr, pub pt: AslExpr }
+#[serde(rename_all = "camelCase")]
+pub struct AslTimerTon {
+    pub instance: String,
+    pub r#in: AslExpr,
+    pub pt: AslExpr,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub out_q: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub out_et: Option<String>,
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslTimerTp  { pub instance: String, pub r#in: AslExpr, pub pt: AslExpr }
+#[serde(rename_all = "camelCase")]
+pub struct AslTimerTof {
+    pub instance: String,
+    pub r#in: AslExpr,
+    pub pt: AslExpr,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub out_q: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub out_et: Option<String>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AslTimerTp {
+    pub instance: String,
+    pub r#in: AslExpr,
+    pub pt: AslExpr,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub out_q: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub out_et: Option<String>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslCounterCtu { pub instance: String, pub cu: AslExpr, pub r: AslExpr, pub pv: AslExpr }
+#[serde(rename_all = "camelCase")]
+pub struct AslCounterCtu {
+    pub instance: String,
+    pub cu: AslExpr,
+    pub r: AslExpr,
+    pub pv: AslExpr,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub out_q: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub out_cv: Option<String>,
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AslCounterCtd { pub instance: String, pub cd: AslExpr, pub ld: AslExpr, pub pv: AslExpr }
+#[serde(rename_all = "camelCase")]
+pub struct AslCounterCtd {
+    pub instance: String,
+    pub cd: AslExpr,
+    pub ld: AslExpr,
+    pub pv: AslExpr,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub out_q: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub out_cv: Option<String>,
+}
+
+/// §19.3 — CTUD Count Up/Down (novo em v1.2)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AslCounterCtud {
+    pub instance: String,
+    pub cu: AslExpr,
+    pub cd: AslExpr,
+    pub r: AslExpr,
+    pub ld: AslExpr,
+    pub pv: AslExpr,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub out_q: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub out_cv: Option<String>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AslLatchSr { pub instance: String, pub s: AslExpr, pub r: AslExpr }
@@ -1079,6 +1204,153 @@ pub struct AslSensorRead {
     pub target: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fault_detect: Option<AslSensorFaultDetect>,
+}
+
+// ============================================================================
+// Statement structs — §29 Energy Management (novo em v1.2)
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AslSleepMode {
+    pub mode: String, // "IDLE" | "LIGHT_SLEEP" | "DEEP_SLEEP"
+    pub duration: AslExpr,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AslWatchdogTimer {
+    pub timeout: AslExpr,
+    pub enable: bool,
+}
+
+// ============================================================================
+// Statement structs — §30 Persistent Storage (novo em v1.2)
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AslStorageWrite {
+    pub address: AslExpr,
+    pub data: AslExpr,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AslStorageRead {
+    pub address: AslExpr,
+    pub length: AslExpr,
+    pub target: String,
+}
+
+// ============================================================================
+// Statement structs — §31 Network Communication (novo em v1.2)
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AslWifiConnect {
+    pub ssid: AslExpr,
+    pub password: AslExpr,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AslWifiStatus {
+    pub target: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AslMqttConnect {
+    pub broker: AslExpr,
+    pub port: AslExpr,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AslMqttPublish {
+    pub topic: AslExpr,
+    pub payload: AslExpr,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AslMqttSubscribe {
+    pub topic: AslExpr,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AslHttpGet {
+    pub url: AslExpr,
+    pub target: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AslHttpPost {
+    pub url: AslExpr,
+    pub body: AslExpr,
+    pub target: String,
+}
+
+// ============================================================================
+// Statement structs — §32 Displays (novo em v1.2)
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AslLcdInit {
+    pub address: AslExpr,
+    pub cols: u32,
+    pub rows: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AslLcdPrint {
+    pub col: u32,
+    pub row: u32,
+    pub text: AslExpr,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AslLcdSetCursor {
+    pub col: u32,
+    pub row: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AslOledInit {
+    pub width: u32,
+    pub height: u32,
+    pub address: AslExpr,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AslOledDrawText {
+    pub x: u32,
+    pub y: u32,
+    pub text: AslExpr,
+}
+
+// ============================================================================
+// Statement structs — §34 Logging (novo em v1.2)
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AslLog {
+    pub level: String, // "DEBUG" | "INFO" | "WARN" | "ERROR"
+    pub module: String,
+    pub message: AslExpr,
+}
+
+// ============================================================================
+// Statement structs — §35 Testing and Simulation (novo em v1.2)
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AslAssert {
+    pub condition: AslExpr,
+    pub message: AslExpr,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AslSimProbe {
+    pub name: String,
+    pub value: AslExpr,
 }
 
 // ============================================================================

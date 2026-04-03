@@ -23,8 +23,9 @@ pub fn transform_block(block: &BlockNode, ctx: &mut TransformContext) -> Vec<Asl
                 .unwrap_or_default();
             vec![AslStatement::If(Box::new(AslIf {
                 condition: cond,
-                then_branch: then_stmts,
-                else_branch: if else_stmts.is_empty() {
+                then_body: then_stmts,
+                else_if: vec![],
+                else_body: if else_stmts.is_empty() {
                     None
                 } else {
                     Some(else_stmts)
@@ -74,12 +75,12 @@ pub fn transform_block(block: &BlockNode, ctx: &mut TransformContext) -> Vec<Asl
                 })
                 .unwrap_or_default();
             let stmts = transform_body(body, ctx);
-            vec![AslStatement::For(Box::new(AslFor {
-                init: init_stmt,
+            vec![AslStatement::For(Box::new(AslFor::CStyle(AslForCStyle {
+                init: init_stmt.unwrap_or_default(),
                 condition: cond,
                 update: update_stmt,
                 body: stmts,
-            }))]
+            })))]
         }
 
         BlockKind::ForIn {
@@ -89,11 +90,11 @@ pub fn transform_block(block: &BlockNode, ctx: &mut TransformContext) -> Vec<Asl
         } => {
             let iter = transform_expr(iterable, ctx);
             let stmts = transform_body(body, ctx);
-            vec![AslStatement::ForIn(Box::new(AslForIn {
-                var_name: variable.clone(),
+            vec![AslStatement::For(Box::new(AslFor::Each(AslForEach {
+                var: variable.clone(),
                 iterable: iter,
                 body: stmts,
-            }))]
+            })))]
         }
 
         BlockKind::Switch {
