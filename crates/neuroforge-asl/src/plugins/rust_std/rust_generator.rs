@@ -1,418 +1,321 @@
-//! RustGenerator — gerador de código Rust (embassy + standalone) a partir de AslProgram.
-//! Migrado para a Arquitetura NeuroForge Fase 1C (Consome ASL JSON Tree Omni-direcional).
+//! Gerador Rust idiomático para ASL v4 (ecossistema esp-hal/Embassy)
+//!
+//! **Semântica:**
+//! - no_std, no_main
+//! - #[esp_hal_embassy::main]
+//! - Inicialização de periféricos esp-hal (Ledc)
+//! - Variáveis locais (se possível)
+//! - Suporte a Tasks via Spawner (opcional)
 
-use crate::types::asl_types::*;
-use crate::plugins::core::{AslGenerator, GeneratorOutput, SourceMapEntry};
-use crate::plugins::core::{ShimDefinition, ShimLanguage, ShimManager};
+use crate::plugins::core::generator::GeneratorOutput;
+use crate::types::asl_types::{
+    AslBinary, AslCall, AslExpr, AslProgram, AslReturn, AslStatement, AslTask, BinaryOp,
+    PinModeKind, UnaryOp,
+};
+use std::collections::{HashMap, HashSet};
 
+#[derive(Default)]
 pub struct RustGenerator {
-    source_map: Vec<SourceMapEntry>,
-    current_line: u32,
-    shims: ShimManager,
-}
-
-impl Default for RustGenerator {
-    fn default() -> Self {
-        Self::new()
-    }
+    globals: HashSet<String>,
+    uses_ledc: bool,
+    pwm_channels: HashMap<String, u8>,
+    next_channel: u8,
 }
 
 impl RustGenerator {
     pub fn new() -> Self {
-        let mut shims = ShimManager::new(ShimLanguage::Rust);
-        shims.register_shims(default_rust_shims());
-        Self {
-            source_map: vec![],
-            current_line: 1,
-            shims,
-        }
+        Self::default()
     }
 
-    fn scan_for_shims(&mut self, program: &AslProgram) {
-        // Implementação simplificada para rastreio de shims.
-        // O ideal é varrer iterativamente ou via Visitor tipado.
-        // Aqui checamos se determinadas funções/tipos são usados.
-        let stringified = serde_json::to_string(program).unwrap_or_default();
-        if stringified.contains("EEPROM") {
-            self.shims.require_shim("EEPROM");
+    pub fn generate(&mut self, program: &AslProgram) -> GeneratorOutput {
+        self.scan_peripherals(program);
+        self.globals = program.globals.iter().map(|g| g.name.clone()).collect();
+
+        let mut code = String::new();
+        code.push_str("#![no_std]\n");
+        code.push_str("#![no_main]\n\n");
+
+        code.push_str("use embassy_executor::Spawner;\n");
+        code.push_str("use embassy_time::Timer;\n");
+        code.push_str("use esp_hal::time::Rate;\n");
+        code.push_str("use {esp_backtrace as _, esp_println as _};\n");
+
+        if self.uses_ledc {
+            code.push_str("use esp_hal::ledc::{\n");
+            code.push_str("    channel::{self, ChannelIFace},\n");
+            code.push_str("    timer::{self, TimerIFace},\n");
+            code.push_str("    LSGlobalClkSource, Ledc, LowSpeed,\n");
+            code.push_str("};\n");
         }
-        if stringified.contains("lcd.") || stringified.contains("LiquidCrystal_I2C") {
-            self.shims.require_shim("LiquidCrystal_I2C");
-        }
-        if stringified.contains("keypad") || stringified.contains("Keypad") {
-            self.shims.require_shim("Keypad");
-        }
-    }
+        code.push_str("\n");
 
-    fn add_ln(&mut self, lines: &mut Vec<String>, text: &str) {
-        lines.push(text.to_string());
-        // Na nova implementação sem Node lines diretos, o source mapping exato 
-        // seria feito associando metadados dos `AslStatement`.
-        // Para simplificar a performance agora, omitimos linhas exatas se não vierem no AST.
-        self.current_line += text.lines().count().max(1) as u32;
-    }
+        // 1. Constantes para Pinos (Ref: pattern steal do usuário)
+        self.generate_pin_constants(program, &mut code);
 
-    fn gen_expr(&mut self, expr: &AslExpr) -> String {
-        match expr {
-            AslExpr::Literal(l) => {
-                let s = l.value.to_string();
-                if let Some(v) = l.value.as_f64() {
-                    if v.fract() != 0.0 {
-                        return format!("{}f32", v);
-                    }
-                }
-                if let Some(s_val) = l.value.as_str() {
-                    return format!("\"{}\"", s_val); 
-                }
-                s
-            }
-            AslExpr::Var(v) => v.name.clone(),
-            AslExpr::Binary(b) => {
-                format!("{} {} {}", self.gen_expr(&b.left), b.op.to_symbol(), self.gen_expr(&b.right))
-            }
-            AslExpr::Unary(u) => {
-                format!("{}{}", u.op.to_symbol(), self.gen_expr(&u.expr))
-            }
-            AslExpr::Call(c) => {
-                let args: Vec<String> = c.args.iter().map(|a| self.gen_expr(a)).collect();
-                let args_str = args.join(", ");
-                match c.callee.as_str() {
-                    "pulseIn" => format!("pulse_in({})", args_str),
-                    "shiftIn" => format!("shift_in({})", args_str),
-                    "shiftOut" => format!("shift_out({})", args_str),
-                    "attachInterrupt" => format!("attach_interrupt({})", args_str),
-                    "len" => format!("{}.len()", args_str),
-                    _ => format!("{}({})", c.callee, args_str),
-                }
-            }
-            AslExpr::Member(m) => {
-                format!("{}.{}", self.gen_expr(&m.target), m.property)
-            }
-            AslExpr::Index(i) => {
-                let tgt = self.gen_expr(&i.target);
-                let idx = self.gen_expr(&i.index);
-                format!("{}[{} as usize]", tgt, idx)
-            }
-            AslExpr::Array(a) => {
-                let elems: Vec<String> = a.elements.iter().map(|e| self.gen_expr(e)).collect();
-                format!("vec![{}]", elems.join(", "))
-            }
-            _ => "0".to_string(), // Fallback (DesignatedStruct etc. pode ser expandido depois)
-        }
-    }
+        // 2. Globais (Atoms only if referenced outside main)
+        self.generate_globals(program, &mut code);
 
-    fn gen_stmt(&mut self, stmt: &AslStatement, lines: &mut Vec<String>, indent: &str) {
-        match stmt {
-            AslStatement::Comment(c) => {
-                let text = c.text.trim();
-                if text.starts_with("/*") || text.starts_with("//") {
-                    self.add_ln(lines, &format!("{}{}", indent, text));
-                } else {
-                    self.add_ln(lines, &format!("{}// {}", indent, text));
-                }
-            }
-            AslStatement::Declare(d) => {
-                let val = d.value.as_ref().map(|v| self.gen_expr(v)).unwrap_or_else(|| "0".to_string());
-                self.add_ln(lines, &format!("{}let mut {} = {};", indent, d.name, val));
-            }
-            AslStatement::Assign(a) => {
-                let val = self.gen_expr(&a.value);
-                self.add_ln(lines, &format!("{}{} = {};", indent, a.target, val));
-            }
-            AslStatement::SetIndex(s) => {
-                let idx = self.gen_expr(&s.index);
-                let val = self.gen_expr(&s.value);
-                self.add_ln(lines, &format!("{}{}[{} as usize] = {};", indent, s.target, idx, val));
-            }
-            AslStatement::PinMode(p) => {
-                let pin = self.gen_expr(&p.pin);
-                let mode = match p.mode {
-                    PinModeKind::Output => "Output",
-                    PinModeKind::Input => "Input",
-                    PinModeKind::InputPullup => "InputPullUp",
-                };
-                self.add_ln(lines, &format!("{}gpio_mode({}, {});", indent, pin, mode));
-            }
-            AslStatement::DigitalWrite(d) => {
-                let pin = self.gen_expr(&d.pin);
-                let val = match &d.value {
-                    DigitalValue::High => "1".to_string(),
-                    DigitalValue::Low => "0".to_string(),
-                    DigitalValue::Expr(e) => self.gen_expr(e),
-                };
-                self.add_ln(lines, &format!("{}gpio_set({}, {});", indent, pin, val));
-            }
-            AslStatement::Read(r) => {
-                let pin = self.gen_expr(&r.pin);
-                if matches!(r.mode, ReadMode::Analog) {
-                    self.add_ln(lines, &format!("{}{} = adc.read({});", indent, r.target, pin));
-                } else {
-                    self.add_ln(lines, &format!("{}{} = gpio_get({});", indent, r.target, pin));
-                }
-            }
-            AslStatement::AnalogWrite(a) => {
-                let pin = self.gen_expr(&a.pin);
-                let val = self.gen_expr(&a.value);
-                self.add_ln(lines, &format!("{}pwm.set_duty({}, {});", indent, pin, val));
-            }
-            AslStatement::Delay(d) => {
-                let ms = self.gen_expr(&d.milliseconds);
-                self.add_ln(lines, &format!("{}delay.delay_ms({}u32);", indent, ms));
-            }
-            AslStatement::SerialBegin(s) => {
-                let b = self.gen_expr(&s.baud);
-                self.add_ln(lines, &format!("{}Serial::begin({});", indent, b));
-            }
-            AslStatement::Print(p) => {
-                let args: Vec<String> = p.args.iter().map(|a| self.gen_expr(a)).collect();
-                if args.is_empty() { return; }
-                if p.newline {
-                    self.add_ln(lines, &format!("{}println!(\"{{}}\", {});", indent, args[0]));
-                } else {
-                    self.add_ln(lines, &format!("{}print!(\"{{}}\", {});", indent, args[0]));
-                }
-            }
-            AslStatement::If(i) => {
-                let cond = self.gen_expr(&i.condition);
-                self.add_ln(lines, &format!("{}if {} {{", indent, cond));
-                for b in &i.then_branch {
-                    self.gen_stmt(b, lines, &format!("{}    ", indent));
-                }
-                if let Some(eb) = &i.else_branch {
-                    if eb.len() == 1 && matches!(eb[0], AslStatement::If(_)) {
-                        self.add_ln(lines, &format!("{}}} else {{", indent));
-                        self.gen_stmt(&eb[0], lines, indent);
-                        self.add_ln(lines, &format!("{}}}", indent));
-                    } else {
-                        self.add_ln(lines, &format!("{}}} else {{", indent));
-                        for b in eb {
-                            self.gen_stmt(b, lines, &format!("{}    ", indent));
-                        }
-                        self.add_ln(lines, &format!("{}}}", indent));
-                    }
-                } else {
-                    self.add_ln(lines, &format!("{}}}", indent));
-                }
-            }
-            AslStatement::While(w) => {
-                let cond = self.gen_expr(&w.condition);
-                self.add_ln(lines, &format!("{}while {} {{", indent, cond));
-                for b in &w.body {
-                    self.gen_stmt(b, lines, &format!("{}    ", indent));
-                }
-                self.add_ln(lines, &format!("{}}}", indent));
-            }
-            AslStatement::ForIn(f) => {
-                let iter = self.gen_expr(&f.iterable);
-                self.add_ln(lines, &format!("{}for {} in {} {{", indent, f.var_name, iter));
-                for b in &f.body {
-                    self.gen_stmt(b, lines, &format!("{}    ", indent));
-                }
-                self.add_ln(lines, &format!("{}}}", indent));
-            }
-            AslStatement::Return(r) => {
-                if let Some(v) = &r.value {
-                    let val = self.gen_expr(v);
-                    self.add_ln(lines, &format!("{}return {};", indent, val));
-                } else {
-                    self.add_ln(lines, &format!("{}return;", indent));
-                }
-            }
-            AslStatement::Break => {
-                self.add_ln(lines, &format!("{}break;", indent));
-            }
-            AslStatement::Continue => {
-                self.add_ln(lines, &format!("{}continue;", indent));
-            }
-            AslStatement::Expr(e) => {
-                let ex = self.gen_expr(&e.expr);
-                self.add_ln(lines, &format!("{}{};", indent, ex));
-            }
-            AslStatement::UartWrite(u) => {
-                let port = self.gen_expr(&u.port);
-                let data = self.gen_expr(&u.data);
-                self.add_ln(lines, &format!("{}uart_write({}, {});", indent, port, data));
-            }
-            AslStatement::I2cWrite(i) => {
-                let addr = self.gen_expr(&i.address);
-                let data = self.gen_expr(&i.data);
-                self.add_ln(lines, &format!("{}i2c_write({}, {});", indent, addr, data));
-            }
-            AslStatement::I2cRead(i) => {
-                let addr = self.gen_expr(&i.address);
-                let len = self.gen_expr(&i.length);
-                self.add_ln(lines, &format!("{}{} = i2c_read({}, {});", indent, i.target, addr, len));
-            }
-            AslStatement::SpiTransfer(s) => {
-                let cs = self.gen_expr(&s.cs_pin);
-                let val = self.gen_expr(&s.tx_data);
-                self.add_ln(lines, &format!("{}spi_transfer({}, {});", indent, cs, val));
-            }
-            _ => {
-                self.add_ln(lines, &format!("{}// Unhandled ASL Statement", indent));
-            }
-        }
-    }
-}
-
-impl AslGenerator for RustGenerator {
-    fn generate(&mut self, program: &AslProgram) -> GeneratorOutput {
-        self.source_map.clear();
-        self.current_line = 1;
-        self.shims.reset_runtime();
-        let mut lines: Vec<String> = Vec::with_capacity(256);
-
-        self.scan_for_shims(program);
-
-        // Detect se é um sketch estilo Arduino
-        let has_setup_body = !program.setup_body.is_empty();
-        let has_loop_body = !program.loop_body.is_empty();
-
-        let setup = if has_setup_body {
-            Some(AslFunction {
-                name: "setup".to_string(),
-                params: vec![],
-                body: program.setup_body.clone(),
-                return_type: None,
-            })
-        } else {
-            program.functions.iter().find(|f| f.name == "setup").cloned()
-                .or_else(|| program.tasks.iter().find(|t| t.name == "setup").map(|t| AslFunction {
-                    name: "setup".to_string(),
-                    params: vec![],
-                    body: t.body.clone(),
-                    return_type: None,
-                }))
-        };
-        
-        let loop_ = if has_loop_body {
-            Some(AslFunction {
-                name: "loop".to_string(),
-                params: vec![],
-                body: program.loop_body.clone(),
-                return_type: None,
-            })
-        } else {
-            program.functions.iter().find(|f| f.name == "loop").cloned()
-                .or_else(|| program.tasks.iter().find(|t| t.name == "loop").map(|t| AslFunction {
-                    name: "loop".to_string(),
-                    params: vec![],
-                    body: t.body.clone(),
-                    return_type: None,
-                }))
-        };
-
-        let main_task_body = program.tasks.iter().find(|t| t.name == "main").map(|t| t.body.clone());
-        let main_fn = program.functions.iter().find(|f| f.name == "main").cloned();
-        
-        let is_embassy = setup.is_some() || loop_.is_some();
-
-        if is_embassy {
-            self.add_ln(&mut lines, "// Generated Rust Code (Embassy/ESP32)");
-            self.add_ln(&mut lines, "#![no_std]");
-            self.add_ln(&mut lines, "#![no_main]");
-            self.add_ln(&mut lines, "");
-            self.add_ln(&mut lines, "use esp_hal::prelude::*;");
-            self.add_ln(&mut lines, "");
-        } else {
-            self.add_ln(&mut lines, "// Generated Rust Code (Standard)");
+        // 3. Funções Puras
+        for func in &program.functions {
+            code.push_str(&self.generate_function(func));
         }
 
-        let shim_code = self.shims.get_required_shims_code();
-        if !shim_code.is_empty() {
-            for line in shim_code.lines() {
-                self.add_ln(&mut lines, line);
-            }
-            self.add_ln(&mut lines, "");
-        }
-
-        // Globais
-        for global in &program.globals {
-            let val = global.initial_value.as_ref().map(|v| v.to_string()).unwrap_or_else(|| "0".to_string());
-            let t_str = match global.r#type {
-                AslType::Int => "i32",
-                AslType::Float => "f32",
-                AslType::Bool => "bool",
-                AslType::String => "String",
-                AslType::Void => "()",
-                AslType::Struct => "struct",
-            };
-            self.add_ln(&mut lines, &format!("static mut {}: {} = {};", global.name, t_str, val));
-        }
-        if !program.globals.is_empty() {
-            self.add_ln(&mut lines, "");
-        }
-
-        // Helper functions
-        let helpers = program.functions.iter().filter(|f| f.name != "setup" && f.name != "loop" && f.name != "main");
-        for f in helpers {
-            let params: Vec<String> = f.params.iter().map(|p| format!("{}: {}", p.name, p.r#type)).collect();
-            let ret = match &f.return_type {
-                Some(AslType::Int) => " -> i32".to_string(),
-                Some(AslType::Float) => " -> f32".to_string(),
-                Some(AslType::Bool) => " -> bool".to_string(),
-                Some(AslType::String) => " -> String".to_string(),
-                Some(AslType::Void) | None => "".to_string(),
-                Some(AslType::Struct) => " -> struct".to_string(),
-            };
-            self.add_ln(&mut lines, &format!("fn {}({}){} {{", f.name, params.join(", "), ret));
-            for stmt in &f.body {
-                self.gen_stmt(stmt, &mut lines, "    ");
-            }
-            self.add_ln(&mut lines, "}");
-            self.add_ln(&mut lines, "");
-        }
-
-        if is_embassy {
-            self.add_ln(&mut lines, "#[entry]");
-            self.add_ln(&mut lines, "fn main() -> ! {");
-            self.add_ln(&mut lines, "    let peripherals = Peripherals::take();");
-            self.add_ln(&mut lines, "    let system = peripherals.SYSTEM.split();");
-            self.add_ln(&mut lines, "    let clocks = ClockControl::boot_defaults(system.clock_control).freeze();");
-            self.add_ln(&mut lines, "    let mut delay = Delay::new(&clocks);");
-            self.add_ln(&mut lines, "");
-
-            if let Some(s) = setup {
-                self.add_ln(&mut lines, "    // Setup");
-                for stmt in &s.body {
-                    self.gen_stmt(stmt, &mut lines, "    ");
+        // 4. Tasks Externas (Spawner) se necessário
+        let complex_mode = program.tasks.len() > 2;
+        if complex_mode {
+            for task in &program.tasks {
+                if task.name != "setup" && task.name != "loop" {
+                    code.push_str(&self.generate_async_task(task));
                 }
             }
-
-            self.add_ln(&mut lines, "");
-            self.add_ln(&mut lines, "    loop {");
-            if let Some(l) = loop_ {
-                for stmt in &l.body {
-                    self.gen_stmt(stmt, &mut lines, "        ");
-                }
-            }
-            self.add_ln(&mut lines, "    }");
-            self.add_ln(&mut lines, "}");
-        } else if let Some(mf) = main_fn {
-            self.add_ln(&mut lines, "fn main() {");
-            for stmt in &mf.body {
-                self.gen_stmt(stmt, &mut lines, "    ");
-            }
-            self.add_ln(&mut lines, "}");
-        } else if let Some(mtb) = main_task_body {
-            self.add_ln(&mut lines, "fn main() {");
-            for stmt in &mtb {
-                self.gen_stmt(stmt, &mut lines, "    ");
-            }
-            self.add_ln(&mut lines, "}");
         }
+
+        // 5. Entry point (Monolithic main)
+        code.push_str("#[esp_hal_embassy::main]\n");
+        code.push_str("async fn main(_spawner: Spawner) {\n");
+        code.push_str("    let peripherals = esp_hal::init(esp_hal::Config::default());\n\n");
+
+        if self.uses_ledc {
+            code.push_str("    let mut ledc = Ledc::new(peripherals.LEDC);\n");
+            code.push_str("    ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);\n\n");
+            code.push_str(
+                "    let mut lstimer0 = ledc.timer::<LowSpeed>(timer::Number::Timer0);\n",
+            );
+            code.push_str("    lstimer0.configure(timer::config::Config {\n");
+            code.push_str("        duty: timer::config::Duty::Duty8Bit,\n");
+            code.push_str("        clock_source: timer::LSClockSource::APBClk,\n");
+            code.push_str("        frequency: Rate::from_khz(5),\n");
+            code.push_str("    }).unwrap();\n\n");
+
+            // Inicializar canais para cada pino PWM detectado
+            self.generate_ledc_init(program, &mut code);
+        }
+
+        // Setup logic
+        if let Some(setup) = program.tasks.iter().find(|t| t.name == "setup") {
+            for stmt in &setup.body {
+                code.push_str(&format!("    {};\n", self.generate_statement(stmt, 1)));
+            }
+        }
+
+        // Loop logic
+        if let Some(loop_task) = program.tasks.iter().find(|t| t.name == "loop") {
+            code.push_str("\n    loop {\n");
+            for stmt in &loop_task.body {
+                code.push_str(&format!("        {};\n", self.generate_statement(stmt, 2)));
+            }
+            code.push_str("        Timer::after_millis(1).await;\n"); // Prevenção de loop quente
+            code.push_str("    }\n");
+        }
+
+        code.push_str("}\n");
+
+        let mut files = HashMap::new();
+        files.insert("src/main.rs".to_string(), code.clone());
+        files.insert("Cargo.toml".to_string(), self.generate_cargo_toml(program));
 
         GeneratorOutput {
-            code: lines.join("\n"),
-            map: self.source_map.clone(),
+            code,
+            map: vec![],
+            files: Some(files),
         }
     }
-}
 
-fn default_rust_shims() -> Vec<ShimDefinition> {
-    vec![
-        ShimDefinition::new("EEPROM", "// use esp_hal::rom::ets_sys;").with_description("EEPROM shim"),
-        ShimDefinition::new("LiquidCrystal_I2C", "// use lcd_i2c::LcdI2C;").with_description("LCD I2C shim"),
-        ShimDefinition::new("Keypad", "// use keypad::Keypad;").with_description("Keypad shim"),
-    ]
+    fn scan_peripherals(&mut self, program: &AslProgram) {
+        self.uses_ledc = false;
+        self.pwm_channels.clear();
+        self.next_channel = 0;
+
+        let scan_stmt = |stmt: &AslStatement, this: &mut Self| {
+            if let AslStatement::AnalogOutput(ao) = stmt {
+                this.uses_ledc = true;
+                if let AslExpr::Literal(l) = &ao.pin {
+                    let pin_name = format!("PIN_{}", l.value);
+                    this.pwm_channels.entry(pin_name).or_insert_with(|| {
+                        let ch = this.next_channel;
+                        this.next_channel += 1;
+                        ch
+                    });
+                }
+            }
+        };
+
+        for task in &program.tasks {
+            for stmt in &task.body {
+                scan_stmt(stmt, self);
+            }
+        }
+    }
+
+    fn generate_pin_constants(&self, program: &AslProgram, code: &mut String) {
+        // Encontrar declarações de pinos no escopo 'const' ou via literals em hardware calls
+        let mut pins = HashSet::new();
+        for g in &program.globals {
+            if g.scope == "const" && g.name.to_lowercase().contains("pin") {
+                pins.insert(g.name.clone());
+            }
+        }
+        // Fallback para pins em pwm_channels
+        for name in self.pwm_channels.keys() {
+            pins.insert(name.clone());
+        }
+
+        for pin in pins {
+            // Ref: const LED_PIN: u8 = 9;
+            // Se o valor estiver disponível via Globals, usar ele
+            let val = program
+                .globals
+                .iter()
+                .find(|g| g.name == pin)
+                .and_then(|g| g.value.as_ref())
+                .and_then(|v| v.as_literal())
+                .and_then(|l| l.value.as_i64())
+                .unwrap_or(9); // Default dummy
+            code.push_str(&format!("const {}: u8 = {};\n", pin.to_uppercase(), val));
+        }
+        code.push_str("\n");
+    }
+
+    fn generate_ledc_init(&self, _program: &AslProgram, code: &mut String) {
+        for (pin_name, ch) in &self.pwm_channels {
+            code.push_str(&format!(
+                "    let pin_{} = esp_hal::gpio::Output::new(\n",
+                ch
+            ));
+            code.push_str(&format!("        esp_hal::gpio::AnyPin::new(unsafe {{ esp_hal::gpio::GpioPin::<{}>::steal() }}),\n", pin_name.to_uppercase()));
+            code.push_str("        esp_hal::gpio::Level::Low,\n");
+            code.push_str("    );\n");
+            code.push_str(&format!(
+                "    let mut channel{} = ledc.channel(channel::Number::Channel{}, pin_{});\n",
+                ch, ch, ch
+            ));
+            code.push_str(&format!(
+                "    channel{}.configure(channel::config::Config {{\n",
+                ch
+            ));
+            code.push_str(&format!("        timer: &lstimer0, duty_pct: 0, drive_mode: channel::config::DriveMode::PushPull,\n"));
+            code.push_str("    }).unwrap();\n\n");
+        }
+    }
+
+    fn generate_globals(&self, program: &AslProgram, code: &mut String) {
+        for g in &program.globals {
+            if g.scope != "const" {
+                // No modelo monolítico main, variáveis de setup/loop podem ser locais ao main
+                // Por agora, não injetaremos Atomics aqui se o usuário quer localidade.
+            }
+        }
+    }
+
+    fn generate_function(&self, func: &crate::types::asl_types::AslFunction) -> String {
+        let mut s = format!("fn {}(", func.name);
+        // ... (simplified params)
+        s.push_str(") {\n");
+        for stmt in &func.body {
+            s.push_str(&format!("    {};\n", self.generate_statement(stmt, 1)));
+        }
+        s.push_str("}\n\n");
+        s
+    }
+
+    fn generate_async_task(&self, _task: &AslTask) -> String {
+        // ... (simplified async task)
+        "".to_string()
+    }
+
+    fn generate_statement(&self, stmt: &AslStatement, _indent: usize) -> String {
+        match stmt {
+            AslStatement::AnalogOutput(ao) => {
+                let pin_name = if let AslExpr::Literal(l) = &ao.pin {
+                    format!("PIN_{}", l.value)
+                } else {
+                    "PIN_9".to_string()
+                };
+
+                let ch = self.pwm_channels.get(&pin_name).unwrap_or(&0);
+                let val = self.generate_expr(&ao.value);
+                // Ref: channel0.set_duty( ((brightness * 100) / 255) as u8 ).unwrap();
+                format!(
+                    "channel{}.set_duty((({} * 100) / 255) as u8).unwrap()",
+                    ch, val
+                )
+            }
+            AslStatement::Delay(d) => {
+                format!("Timer::after_millis({}).await", d.duration.total_ms())
+            }
+            AslStatement::Declare(d) => {
+                let val = d
+                    .value
+                    .as_ref()
+                    .map(|v| self.generate_expr(v))
+                    .unwrap_or("0".into());
+                format!("let mut {} = {}", d.name, val)
+            }
+            AslStatement::Assign(a) => {
+                format!("{} = {}", a.target, self.generate_expr(&a.value))
+            }
+            AslStatement::If(i) => {
+                let cond = self.generate_expr(&i.condition);
+                let mut s = format!("if {} {{\n", cond);
+                for st in &i.then_body {
+                    s.push_str(&format!(
+                        "            {};\n",
+                        self.generate_statement(st, 3)
+                    ));
+                }
+                s.push_str("        }");
+                s
+            }
+            _ => format!("// unimplemented statement {:?}", stmt),
+        }
+    }
+
+    fn generate_expr(&self, expr: &AslExpr) -> String {
+        match expr {
+            AslExpr::Literal(l) => l.value.to_string(),
+            AslExpr::Var(v) => v.name.clone(),
+            AslExpr::Binary(b) => {
+                format!(
+                    "({} {} {})",
+                    self.generate_expr(&b.left),
+                    self.generate_op(&b.op),
+                    self.generate_expr(&b.right)
+                )
+            }
+            _ => "0".to_string(),
+        }
+    }
+
+    fn generate_op(&self, op: &BinaryOp) -> &str {
+        match op {
+            BinaryOp::Add => "+",
+            BinaryOp::Sub => "-",
+            BinaryOp::Mul => "*",
+            BinaryOp::Div => "/",
+            BinaryOp::Eq => "==",
+            BinaryOp::Lte => "<=",
+            BinaryOp::Gte => ">=",
+            BinaryOp::And => "&&",
+            BinaryOp::Or => "||",
+            _ => "+",
+        }
+    }
+
+    fn generate_cargo_toml(&self, _program: &AslProgram) -> String {
+        let mut s = String::new();
+        s.push_str(
+            "[package]\nname = \"neuroforge-out\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n",
+        );
+        s.push_str("[dependencies]\n");
+        s.push_str("esp-hal = { version = \"0.22.0\", features = [\"esp32\"] }\n");
+        s.push_str("esp-backtrace = { version = \"0.14.2\", features = [\"esp32\", \"panic-handler\", \"exception-handler\", \"println\"] }\n");
+        s.push_str("esp-println = { version = \"0.12.0\", features = [\"esp32\", \"log\"] }\n");
+        s.push_str(
+            "embassy-executor = { version = \"0.6.1\", features = [\"task-arena-size-12288\"] }\n",
+        );
+        s.push_str("embassy-time = { version = \"0.3.2\", features = [\"generic-queue-8\"] }\n");
+        s.push_str("esp-hal-embassy = { version = \"0.5.0\", features = [\"esp32\"] }\n");
+        s.push_str("critical-section = \"1.1.2\"\n");
+        s
+    }
 }

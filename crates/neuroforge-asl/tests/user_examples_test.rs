@@ -16,15 +16,11 @@ void loop() {
 }
 "#;
     use neuroforge_asl::plugins::c::c_parser::CParser;
-    use neuroforge_asl::types::nodes_to_typed::nodes_to_typed;
-    use neuroforge_asl::transforms::code_to_asl::ast_to_asl;
-    use neuroforge_asl::transforms::context::Language;
+    use neuroforge_asl::parser::neuro_parser::NeuroParser;
     use neuroforge_asl::plugins::python::python_generator::PythonGenerator;
     use neuroforge_asl::plugins::core::AslGenerator;
 
-    let p = CParser::parse(src).expect("C parse failed");
-    let t = nodes_to_typed(&p);
-    let ir = ast_to_asl(&t, Language::Cpp);
+    let ir = CParser::parse(src).expect("C parse failed");
     let out = PythonGenerator::new().generate(&ir);
     
     println!("--- Blink Output ---\n{}", out.code);
@@ -75,15 +71,11 @@ void loop() {
 }
 "#;
     use neuroforge_asl::plugins::c::c_parser::CParser;
-    use neuroforge_asl::types::nodes_to_typed::nodes_to_typed;
-    use neuroforge_asl::transforms::code_to_asl::ast_to_asl;
-    use neuroforge_asl::transforms::context::Language;
+    use neuroforge_asl::parser::neuro_parser::NeuroParser;
     use neuroforge_asl::plugins::python::python_generator::PythonGenerator;
     use neuroforge_asl::plugins::core::AslGenerator;
 
-    let p = CParser::parse(src).expect("C parse failed");
-    let t = nodes_to_typed(&p);
-    let ir = ast_to_asl(&t, Language::Cpp);
+    let ir = CParser::parse(src).expect("C parse failed");
     let out = PythonGenerator::new().generate(&ir);
 
     println!("--- PWM Output ---\n{}", out.code);
