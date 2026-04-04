@@ -1,0 +1,444 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://simulator.com/schemas/board-config.json",
+    "title": "Microcontroller Board Configuration Schema",
+    "description": "Unified schema for simulating microcontroller boards (v2.0)",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "description": "Unique board identifier (kebab-case)"
+        },
+        "name": {
+            "type": "string",
+            "description": "Human-readable board name"
+        },
+        "manufacturer": {
+            "type": "string",
+            "description": "Board manufacturer"
+        },
+        "mcu": {
+            "type": "string",
+            "description": "Microcontroller model"
+        },
+        "category": {
+            "type": "string",
+            "enum": [
+                "maker",
+                "industrial",
+                "educational",
+                "prototyping",
+                "custom"
+            ],
+            "description": "Board category"
+        },
+        "image": {
+            "type": "string",
+            "description": "Path to board image (SVG preferred)"
+        },
+        "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Official product page URL"
+        },
+        "specs": {
+            "type": "object",
+            "properties": {
+                "flashMemory": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Flash memory in bytes"
+                },
+                "sram": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "SRAM in bytes"
+                },
+                "eeprom": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "EEPROM in bytes (0 if none)"
+                },
+                "clockSpeed": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Clock speed in Hz"
+                },
+                "voltage": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Operating voltage (V)"
+                },
+                "wireless": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "wifi",
+                            "bluetooth",
+                            "ble",
+                            "zigbee",
+                            "lora",
+                            "nfc"
+                        ]
+                    },
+                    "uniqueItems": true,
+                    "description": "Wireless capabilities"
+                }
+            },
+            "required": [
+                "flashMemory",
+                "sram",
+                "eeprom",
+                "clockSpeed",
+                "voltage"
+            ],
+            "additionalProperties": false
+        },
+        "dimensions": {
+            "type": "object",
+            "description": "Physical dimensions for visual rendering",
+            "properties": {
+                "width": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Width in mm"
+                },
+                "height": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Height in mm"
+                },
+                "thickness": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "PCB thickness in mm"
+                }
+            },
+            "additionalProperties": false
+        },
+        "powerPins": {
+            "type": "array",
+            "description": "Dedicated power pins (not GPIO)",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "enum": [
+                            "VIN",
+                            "VCC",
+                            "5V",
+                            "3V3",
+                            "GND",
+                            "VBAT",
+                            "RESET",
+                            "AREF",
+                            "IOREF"
+                        ]
+                    },
+                    "voltage": {
+                        "type": "number",
+                        "description": "Voltage level (V)"
+                    },
+                    "direction": {
+                        "type": "string",
+                        "enum": [
+                            "input",
+                            "output",
+                            "bidirectional"
+                        ],
+                        "description": "Power flow direction"
+                    }
+                },
+                "required": [
+                    "name"
+                ],
+                "additionalProperties": false
+            }
+        },
+        "gpio": {
+            "type": "array",
+            "minItems": 1,
+            "description": "GPIO pins configuration",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "pin": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "Pin number (logical)"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "digital",
+                            "analog",
+                            "power"
+                        ],
+                        "description": "Pin type"
+                    },
+                    "pwm": {
+                        "type": "boolean",
+                        "description": "Supports PWM output"
+                    },
+                    "interrupt": {
+                        "type": "boolean",
+                        "description": "Can trigger interrupts"
+                    },
+                    "adc": {
+                        "type": "boolean",
+                        "description": "Has ADC (analog input)"
+                    },
+                    "dac": {
+                        "type": "boolean",
+                        "description": "Has DAC (analog output)"
+                    },
+                    "touch": {
+                        "type": "boolean",
+                        "description": "Touch-sensitive (capacitive)"
+                    },
+                    "inputOnly": {
+                        "type": "boolean",
+                        "description": "Cannot be set as OUTPUT"
+                    },
+                    "label": {
+                        "type": "string",
+                        "description": "Pin label (silk screen)"
+                    }
+                },
+                "required": [
+                    "pin",
+                    "type",
+                    "pwm",
+                    "label"
+                ],
+                "additionalProperties": false
+            }
+        },
+        "peripherals": {
+            "type": "object",
+            "description": "Communication peripherals",
+            "properties": {
+                "serial": {
+                    "type": "object",
+                    "properties": {
+                        "uarts": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Number of UART interfaces"
+                        },
+                        "pins": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            },
+                            "uniqueItems": true,
+                            "description": "Default UART pins (TX, RX)"
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "i2c": {
+                    "type": "object",
+                    "properties": {
+                        "channels": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Number of I2C channels"
+                        },
+                        "sda": {
+                            "type": "integer",
+                            "description": "Default SDA pin"
+                        },
+                        "scl": {
+                            "type": "integer",
+                            "description": "Default SCL pin"
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "spi": {
+                    "type": "object",
+                    "properties": {
+                        "channels": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Number of SPI channels"
+                        },
+                        "miso": {
+                            "type": "integer"
+                        },
+                        "mosi": {
+                            "type": "integer"
+                        },
+                        "sck": {
+                            "type": "integer"
+                        },
+                        "ss": {
+                            "type": "integer"
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "wifi": {
+                    "type": "object",
+                    "properties": {
+                        "protocols": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "description": "Supported WiFi standards"
+                        },
+                        "modes": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "sta",
+                                    "ap",
+                                    "sta+ap"
+                                ]
+                            },
+                            "description": "WiFi operation modes"
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "bluetooth": {
+                    "type": "object",
+                    "properties": {
+                        "classic": {
+                            "type": "boolean"
+                        },
+                        "ble": {
+                            "type": "boolean"
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            "additionalProperties": false
+        },
+        "usb": {
+            "type": "object",
+            "description": "USB connectivity details",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "USB-A",
+                        "USB-B",
+                        "micro-USB",
+                        "USB-C",
+                        "mini-USB",
+                        "none"
+                    ]
+                },
+                "chipset": {
+                    "type": "string",
+                    "description": "USB-Serial chipset"
+                },
+                "vid": {
+                    "type": "string",
+                    "pattern": "^0x[0-9A-Fa-f]{4}$",
+                    "description": "Vendor ID"
+                },
+                "pid": {
+                    "type": "string",
+                    "pattern": "^0x[0-9A-Fa-f]{4}$",
+                    "description": "Product ID"
+                }
+            },
+            "additionalProperties": false
+        },
+        "restrictions": {
+            "type": "object",
+            "description": "Hardware limitations and warnings",
+            "properties": {
+                "strappingPins": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    },
+                    "description": "Pins with special boot behavior"
+                },
+                "reservedPins": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    },
+                    "description": "Pins that should not be used"
+                },
+                "outputCurrent": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Max current per GPIO pin (mA)"
+                },
+                "warnings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Important usage warnings"
+                }
+            },
+            "additionalProperties": false
+        },
+        "compatibility": {
+            "type": "object",
+            "description": "Software compatibility information",
+            "properties": {
+                "arduinoCore": {
+                    "type": "string"
+                },
+                "platformio": {
+                    "type": "string"
+                },
+                "frameworks": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "additionalProperties": false
+        },
+        "languages": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "enum": [
+                    "arduino-cpp",
+                    "micropython",
+                    "circuitpython",
+                    "esp-idf",
+                    "rust",
+                    "assembly"
+                ]
+            },
+            "uniqueItems": true,
+            "description": "Supported programming languages"
+        },
+        "bootloader": {
+            "type": "string",
+            "description": "Bootloader type"
+        }
+    },
+    "required": [
+        "id",
+        "name",
+        "manufacturer",
+        "mcu",
+        "category",
+        "image",
+        "specs",
+        "gpio",
+        "peripherals",
+        "languages",
+        "bootloader"
+    ],
+    "additionalProperties": false
+}
