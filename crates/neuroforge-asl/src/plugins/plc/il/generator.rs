@@ -6,17 +6,20 @@
 //! RT-11: completa    o     XOR/XORN, CALC/CALCN, RETC/RETCN, 10 testes.
 
 use crate::types::asl_types::{
-    AslBinary, AslExpr, AslFunction, AslProgram, AslStatement,
-    BinaryOp, UnaryOp,
+    AslBinary, AslExpr, AslFunction, AslProgram, AslStatement, BinaryOp, UnaryOp,
 };
 
 pub struct IlGenerator;
 
 impl IlGenerator {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self
+    }
 
     pub fn generate(&self, program: &AslProgram) -> String {
-        program.functions.iter()
+        program
+            .functions
+            .iter()
             .map(|f| self.gen_function(f))
             .collect::<Vec<_>>()
             .join("\n\n")
@@ -147,19 +150,19 @@ impl IlGenerator {
     fn extract_rhs_parts(op: &BinaryOp, rhs: &AslExpr) -> (&'static str, bool, String) {
         let il_op = match op {
             BinaryOp::And | BinaryOp::BitAnd => "AND",
-            BinaryOp::Or  | BinaryOp::BitOr  => "OR",
-            BinaryOp::BitXor                 => "XOR",
-            BinaryOp::Add                    => "ADD",
-            BinaryOp::Sub                    => "SUB",
-            BinaryOp::Mul                    => "MUL",
-            BinaryOp::Div                    => "DIV",
-            BinaryOp::Gt                     => "GT",
-            BinaryOp::Gte                    => "GE",
-            BinaryOp::Eq                     => "EQ",
-            BinaryOp::Neq                    => "NE",
-            BinaryOp::Lte                    => "LE",
-            BinaryOp::Lt                     => "LT",
-            _                                => "AND",
+            BinaryOp::Or | BinaryOp::BitOr => "OR",
+            BinaryOp::BitXor => "XOR",
+            BinaryOp::Add => "ADD",
+            BinaryOp::Sub => "SUB",
+            BinaryOp::Mul => "MUL",
+            BinaryOp::Div => "DIV",
+            BinaryOp::Gt => "GT",
+            BinaryOp::Gte => "GE",
+            BinaryOp::Eq => "EQ",
+            BinaryOp::Neq => "NE",
+            BinaryOp::Lte => "LE",
+            BinaryOp::Lt => "LT",
+            _ => "AND",
         };
         match rhs {
             AslExpr::Unary(u) if matches!(u.op, UnaryOp::Not) => {
@@ -169,9 +172,9 @@ impl IlGenerator {
                     (il_op, false, "_unknown".to_string())
                 }
             }
-            AslExpr::Var(v)     => (il_op, false, v.name.clone()),
+            AslExpr::Var(v) => (il_op, false, v.name.clone()),
             AslExpr::Literal(l) => (il_op, false, l.value.to_string()),
-            _                   => (il_op, false, "_complex".to_string()),
+            _ => (il_op, false, "_complex".to_string()),
         }
     }
 
@@ -187,7 +190,9 @@ impl IlGenerator {
 }
 
 impl Default for IlGenerator {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 // ============================================================================
@@ -199,30 +204,47 @@ mod tests {
     use crate::plugins::plc::il::parser::IlParser;
     use crate::types::asl_types::*;
 
-    //           helpers                                                                                                                                                                                                 
+    //           helpers
 
     fn var(name: &str) -> AslExpr {
-        AslExpr::Var(AslVarRef { name: name.to_string(), ..Default::default() })
+        AslExpr::Var(AslVarRef {
+            name: name.to_string(),
+            ..Default::default()
+        })
     }
     fn not(e: AslExpr) -> AslExpr {
-        AslExpr::Unary(Box::new(AslUnary { op: UnaryOp::Not, expr: e }))
+        AslExpr::Unary(Box::new(AslUnary {
+            op: UnaryOp::Not,
+            expr: e,
+        }))
     }
     fn binary(op: BinaryOp, l: AslExpr, r: AslExpr) -> AslExpr {
-        AslExpr::Binary(Box::new(AslBinary { op, left: l, right: r, ..Default::default() }))
+        AslExpr::Binary(Box::new(AslBinary {
+            op,
+            left: l,
+            right: r,
+            ..Default::default()
+        }))
     }
     fn simple_prog(name: &str, stmts: Vec<AslStatement>) -> AslProgram {
         AslProgram {
             asl_version: "4.0.0".to_string(),
             metadata: AslMetadata {
                 name: Some(name.to_string()),
-                description: None, version: None,
+                description: None,
+                version: None,
                 target_board: Some("plc".to_string()),
             },
-            structs: vec![], globals: vec![], tasks: vec![],
+            structs: vec![],
+            globals: vec![],
+            tasks: vec![],
             functions: vec![AslFunction {
                 name: name.to_string(),
-                params: vec![], return_type: None,
-                body: stmts, ..Default::default() }],
+                params: vec![],
+                return_type: None,
+                body: stmts,
+                ..Default::default()
+            }],
             ..Default::default()
         }
     }
@@ -233,77 +255,89 @@ mod tests {
     #[test]
     fn generate_produces_nonempty_output() {
         let prog = IlParser::parse("PROGRAM P\n LD A\n END_PROGRAM").unwrap();
-        let out  = gen(&prog);
+        let out = gen(&prog);
         assert!(!out.is_empty());
         assert!(out.contains("PROGRAM P"));
     }
 
     #[test]
     fn generate_ldn_for_not_operand() {
-        let prog = simple_prog("P", vec![
-            AslStatement::Assign(AslAssign {
+        let prog = simple_prog(
+            "P",
+            vec![AslStatement::Assign(AslAssign {
                 target: "Q".to_string(),
-                value:  not(var("X")), ..Default::default()
-            }),
-        ]);
+                value: not(var("X")),
+                ..Default::default()
+            })],
+        );
         let out = gen(&prog);
         assert!(out.contains("LDN"));
     }
 
     #[test]
     fn generate_andn_for_negated_rhs() {
-        let prog = simple_prog("P", vec![
-            AslStatement::Assign(AslAssign {
+        let prog = simple_prog(
+            "P",
+            vec![AslStatement::Assign(AslAssign {
                 target: "Q".to_string(),
-                value:  binary(BinaryOp::And, var("A"), not(var("B"))), ..Default::default()
-            }),
-        ]);
+                value: binary(BinaryOp::And, var("A"), not(var("B"))),
+                ..Default::default()
+            })],
+        );
         let out = gen(&prog);
         assert!(out.contains("ANDN"));
     }
 
     #[test]
     fn generate_xor_operator() {
-        let prog = simple_prog("P", vec![
-            AslStatement::Assign(AslAssign {
+        let prog = simple_prog(
+            "P",
+            vec![AslStatement::Assign(AslAssign {
                 target: "Q".to_string(),
-                value:  binary(BinaryOp::BitXor, var("A"), var("B")), ..Default::default()
-            }),
-        ]);
+                value: binary(BinaryOp::BitXor, var("A"), var("B")),
+                ..Default::default()
+            })],
+        );
         let out = gen(&prog);
         assert!(out.contains("XOR"));
     }
 
     #[test]
     fn generate_calc_for_conditional_call() {
-        let prog = simple_prog("P", vec![
-            AslStatement::If(Box::new(AslIf {
+        let prog = simple_prog(
+            "P",
+            vec![AslStatement::If(Box::new(AslIf {
                 condition: var("Enable"),
-                then_body: vec![
-                    AslStatement::Expr(AslExpressionStmt {
-                        expr: AslExpr::Call(Box::new(AslCall {
-                            callee: "MyFB".to_string(),
-                            args: vec![], ..Default::default() })), ..Default::default()
-                    }),
-                ],
-                else_body: None, ..Default::default()
-            })),
-        ]);
+                then_body: vec![AslStatement::Expr(AslExpressionStmt {
+                    expr: AslExpr::Call(Box::new(AslCall {
+                        callee: "MyFB".to_string(),
+                        args: vec![],
+                        ..Default::default()
+                    })),
+                    ..Default::default()
+                })],
+                else_body: None,
+                ..Default::default()
+            }))],
+        );
         let out = gen(&prog);
         assert!(out.contains("CALC"));
     }
 
     #[test]
     fn generate_retc_for_conditional_return() {
-        let prog = simple_prog("P", vec![
-            AslStatement::If(Box::new(AslIf {
+        let prog = simple_prog(
+            "P",
+            vec![AslStatement::If(Box::new(AslIf {
                 condition: var("Done"),
-                then_body: vec![
-                    AslStatement::Return(AslReturn { value: None , ..Default::default() }),
-                ],
-                else_body: None, ..Default::default()
-            })),
-        ]);
+                then_body: vec![AslStatement::Return(AslReturn {
+                    value: None,
+                    ..Default::default()
+                })],
+                else_body: None,
+                ..Default::default()
+            }))],
+        );
         let out = gen(&prog);
         assert!(out.contains("RETC"));
     }

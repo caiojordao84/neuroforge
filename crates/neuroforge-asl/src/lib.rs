@@ -1,13 +1,17 @@
 //! neuroforge-asl - Motor ASL universal do NeuroForge
 //! Migração de TypeScript para Rust em curso (Fase 1+)
 
-pub mod types;
-pub mod transforms;
-pub mod flow;
 pub mod executor;
-pub mod parser;
+pub mod flow;
 pub mod helpers;
-pub mod plugins;
 pub mod optimizer;
+pub mod parser;
+pub mod plugins;
+pub mod transforms;
 pub mod transpile;
+pub mod types;
 pub mod wasm;
+
+// Re-export transpile functions for convenient access
+pub use crate::transpile::transpile;
+pub use crate::transpile::transpile_with_map;

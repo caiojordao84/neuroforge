@@ -1,4 +1,6 @@
+use neuroforge_asl::parser::NeuroParser;
 use neuroforge_asl::plugins::c::CParser;
+use neuroforge_asl::plugins::core::AslGenerator;
 use neuroforge_asl::plugins::python::PythonGenerator;
 
 #[test]

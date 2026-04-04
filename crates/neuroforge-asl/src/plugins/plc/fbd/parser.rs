@@ -88,401 +88,306 @@
 
 //!                                    .connection_point_out: Option<ConnectionPointOut>
 
-
-
 #![allow(dead_code, unused_imports)]
-
 #![allow(clippy::doc_lazy_continuation, clippy::doc_overindented_list_items)]
-
-
 
 use std::collections::HashMap;
 
-
-
 use crate::types::asl_types::{
-
-    AslProgram, AslFunction, AslStatement, AslExpr, AslMetadata,
-
-    AslAssign, AslBinary, AslUnary, AslCall, AslExpressionStmt,
-
-    BinaryOp, UnaryOp, AslLiteral,
-
-    AslTimerTon, AslTimerTof, AslTimerTp,
-
-    AslCounterCtu, AslCounterCtd,
-
-    AslLatchSr, AslLatchRs,
-
-    AslTrigR, AslTrigF,
-
+    AslAssign, AslBinary, AslCall, AslCounterCtd, AslCounterCtu, AslExpr, AslExpressionStmt,
+    AslFunction, AslLatchRs, AslLatchSr, AslLiteral, AslMetadata, AslProgram, AslStatement,
+    AslTimerTof, AslTimerTon, AslTimerTp, AslTrigF, AslTrigR, AslUnary, BinaryOp, UnaryOp,
 };
 
 use crate::plugins::plc::plcopen_xml::parse_project;
 
-
-
 #[derive(Debug, thiserror::Error)]
 
 pub enum FbdParseError {
+    #[error("XML error: {0}")]
+    XmlError(String),
 
-    #[error("XML error: {0}")] XmlError(String),
-
-    #[error("FBD vazio")]       Empty,
-
+    #[error("FBD vazio")]
+    Empty,
 }
 
-
-
-//           IR interno                                                                                                                                                                                              
-
-
+//           IR interno
 
 /// Pin de entrada de um bloco: nome formal + lista de localIds que o alimentam.
 
 #[derive(Debug, Clone)]
 
 struct InputPin {
-
     formal: String,
 
     sources: Vec<u32>,
-
 }
-
-
 
 /// Pin de sa  da de um bloco: nome formal + localId sint  tico deste pin.
 
 #[derive(Debug, Clone)]
 
 struct OutputPin {
-
     formal: String,
-
 }
-
-
 
 #[derive(Debug, Clone)]
 
 enum FbdNode {
-
     /// inVariable: fonte de express  o escalar
-
     InVar { expr: String },
 
     /// outVariable / inOutVariable: destino de assign
-
-    OutVar { expression: String, sources: Vec<u32> },
+    OutVar {
+        expression: String,
+        sources: Vec<u32>,
+    },
 
     /// Bloco funcional gen  rico ou IEC especial
-
     Block {
-
-        type_name:     String,
+        type_name: String,
 
         instance_name: Option<String>,
 
-        inputs:        Vec<InputPin>,
+        inputs: Vec<InputPin>,
 
-        outputs:       Vec<OutputPin>,
-
+        outputs: Vec<OutputPin>,
     },
-
 }
 
-
-
-//           Parser p  blico                                                                                                                                                                                     
-
-
+//           Parser p  blico
 
 pub struct FbdParser;
 
-
-
 impl FbdParser {
-
     /// Parse PLCopen XML com bodies FBD     AslProgram.
 
     pub fn parse(xml: &str) -> Result<AslProgram, FbdParseError> {
-
         if xml.trim().is_empty() {
-
             return Err(FbdParseError::Empty);
-
         }
 
-        let project = parse_project(xml)
-
-            .map_err(|e| FbdParseError::XmlError(e.to_string()))?;
-
-
+        let project = parse_project(xml).map_err(|e| FbdParseError::XmlError(e.to_string()))?;
 
         let mut functions: Vec<AslFunction> = vec![];
 
-
-
         let Some(types) = project.types.as_ref() else {
-
             return Ok(empty_program());
-
         };
 
         let Some(pous) = types.pous.as_ref() else {
-
             return Ok(empty_program());
-
         };
 
-
-
         for pou in &pous.pou {
-
             let name = pou.name.as_str();
-
-
 
             // pou.body    Vec<Box<Body>>     usar o primeiro body
 
-            let Some(body) = pou.body.first() else { continue; };
-
-
+            let Some(body) = pou.body.first() else {
+                continue;
+            };
 
             // campo: body.fbd  (Option<Box<Body_FBD_Inline>>)
 
-            let Some(fbd) = body.fbd.as_ref() else { continue; };
-
-
+            let Some(fbd) = body.fbd.as_ref() else {
+                continue;
+            };
 
             let body_stmts = Self::lower_fbd(fbd);
 
             functions.push(AslFunction {
-
-                name:        name.to_string(),
+                name: name.to_string(),
 
                 return_type: None,
 
-                params:      vec![],
+                params: vec![],
 
-                body:        body_stmts, ..Default::default() });
-
+                body: body_stmts,
+                ..Default::default()
+            });
         }
-
-
 
         if functions.is_empty() {
-
             return Err(FbdParseError::Empty);
-
         }
 
-
-
         Ok(AslProgram {
-
             asl_version: "4.0.0".to_string(),
 
             metadata: AslMetadata {
+                name: None,
 
-                name:         None,
+                description: None,
 
-                description:  None,
-
-                version:      None,
+                version: None,
 
                 target_board: Some("plc".to_string()),
-
             },
 
-            structs:   vec![],
+            structs: vec![],
 
-            globals:   vec![],
+            globals: vec![],
 
             functions,
 
-            tasks:     vec![],
+            tasks: vec![],
 
             ..Default::default()
-
         })
-
     }
 
-
-
-    //           FBD     Vec<AslStatement>                                                                                                                                              
-
-
+    //           FBD     Vec<AslStatement>
 
     fn lower_fbd(fbd: &plcopen::Body_FBD_Inline) -> Vec<AslStatement> {
-
         // 1. Construir mapa localId     FbdNode
 
         let mut nodes: HashMap<u32, FbdNode> = HashMap::new();
 
-
-
         // inVariable     fonte (.expression: Option<String>)
 
         for iv in &fbd.in_variable {
-
-            let id   = parse_id(&iv.local_id);
+            let id = parse_id(&iv.local_id);
 
             let expr = iv.expression.as_deref().unwrap_or("").trim().to_string();
 
             nodes.insert(id, FbdNode::InVar { expr });
-
         }
-
-
 
         // inOutVariable     registar como OutVar (o lado de sa  da    tratado igual)
 
         for iov in &fbd.in_out_variable {
-
-            let id         = parse_id(&iov.local_id);
+            let id = parse_id(&iov.local_id);
 
             let expression = iov.expression.as_deref().unwrap_or("").trim().to_string();
 
-            let sources    = collect_inputs(iov.connection_point_in.as_ref());
+            let sources = collect_inputs(iov.connection_point_in.as_ref());
 
-            nodes.insert(id, FbdNode::OutVar { expression, sources });
-
+            nodes.insert(
+                id,
+                FbdNode::OutVar {
+                    expression,
+                    sources,
+                },
+            );
         }
-
-
 
         // block     FB gen  rico ou IEC especial
 
         for blk in &fbd.block {
+            let id = parse_id(&blk.local_id);
 
-            let id            = parse_id(&blk.local_id);
-
-            let type_name     = blk.type_name.clone();
+            let type_name = blk.type_name.clone();
 
             let instance_name = blk.instance_name.clone();
 
+            let inputs: Vec<InputPin> = blk
+                .input_variables
+                .as_ref()
+                .map(|iv| {
+                    iv.variable
+                        .iter()
+                        .map(|v| InputPin {
+                            formal: v.formal_parameter.clone(),
 
-
-            let inputs: Vec<InputPin> = blk.input_variables.as_ref()
-
-                .map(|iv| iv.variable.iter().map(|v| InputPin {
-
-                    formal:  v.formal_parameter.clone(),
-
-                    sources: collect_inputs(v.connection_point_in.as_ref()),
-
-                }).collect())
-
+                            sources: collect_inputs(v.connection_point_in.as_ref()),
+                        })
+                        .collect()
+                })
                 .unwrap_or_default();
 
-
-
-            let outputs: Vec<OutputPin> = blk.output_variables.as_ref()
-
-                .map(|ov| ov.variable.iter().map(|v| OutputPin {
-
-                    formal: v.formal_parameter.clone(),
-
-                }).collect())
-
+            let outputs: Vec<OutputPin> = blk
+                .output_variables
+                .as_ref()
+                .map(|ov| {
+                    ov.variable
+                        .iter()
+                        .map(|v| OutputPin {
+                            formal: v.formal_parameter.clone(),
+                        })
+                        .collect()
+                })
                 .unwrap_or_default();
 
-
-
-            nodes.insert(id, FbdNode::Block { type_name, instance_name, inputs, outputs });
-
+            nodes.insert(
+                id,
+                FbdNode::Block {
+                    type_name,
+                    instance_name,
+                    inputs,
+                    outputs,
+                },
+            );
         }
-
-
 
         // outVariable     destino (.expression: Option<String>)
 
         // Inserir por   ltimo para n  o sobrescrever inOutVariable com mesmo id
 
         for ov in &fbd.out_variable {
-
-            let id         = parse_id(&ov.local_id);
+            let id = parse_id(&ov.local_id);
 
             let expression = ov.expression.as_deref().unwrap_or("").trim().to_string();
 
-            let sources    = collect_inputs(ov.connection_point_in.as_ref());
+            let sources = collect_inputs(ov.connection_point_in.as_ref());
 
-            nodes.insert(id, FbdNode::OutVar { expression, sources });
-
+            nodes.insert(
+                id,
+                FbdNode::OutVar {
+                    expression,
+                    sources,
+                },
+            );
         }
-
-
 
         // 2. Emitir statements
 
         let mut stmts: Vec<AslStatement> = vec![];
 
-
-
         // 2a. Blocos IEC especiais     emitir statement especializado
 
         for blk in &fbd.block {
-
             if let Some(stmt) = Self::try_iec_block(blk, &nodes) {
-
                 stmts.push(stmt);
-
             }
-
         }
-
-
 
         // 2b. outVariable     Assign
 
         for ov in &fbd.out_variable {
-
-            let target  = ov.expression.as_deref().unwrap_or("").trim().to_string();
+            let target = ov.expression.as_deref().unwrap_or("").trim().to_string();
 
             let sources = collect_inputs(ov.connection_point_in.as_ref());
 
-            if sources.is_empty() { continue; }
-
-
+            if sources.is_empty() {
+                continue;
+            }
 
             let value = Self::resolve_expr(sources[0], &nodes, 0);
 
             stmts.push(AslStatement::Assign(AslAssign { target, value }));
-
         }
-
-
 
         // 2c. inOutVariable     Assign (lado de escrita)
 
         for iov in &fbd.in_out_variable {
-
-            let target  = iov.expression.as_deref().unwrap_or("").trim().to_string();
+            let target = iov.expression.as_deref().unwrap_or("").trim().to_string();
 
             let sources = collect_inputs(iov.connection_point_in.as_ref());
 
-            if sources.is_empty() { continue; }
-
-
+            if sources.is_empty() {
+                continue;
+            }
 
             let value = Self::resolve_expr(sources[0], &nodes, 0);
 
             stmts.push(AslStatement::Assign(AslAssign { target, value }));
-
         }
 
-
-
         stmts
-
     }
 
-
-
-    //           Resolu    o recursiva de express  o                                                                                                                
+    //           Resolu    o recursiva de express  o
 
     //
 
@@ -496,83 +401,57 @@ impl FbdParser {
 
     //   desconhecido     AslExpr::Var("_fbd_unknown_{id}")
 
-
-
     fn resolve_expr(node_id: u32, nodes: &HashMap<u32, FbdNode>, depth: u8) -> AslExpr {
-
         if depth > 32 {
-
             return AslExpr::var("_fbd_depth_limit");
-
         }
 
         match nodes.get(&node_id) {
-
             None => AslExpr::var(&format!("_fbd_unknown_{node_id}")),
 
-
-
             Some(FbdNode::InVar { expr }) => {
-
                 if expr.is_empty() {
-
-                    AslExpr::Literal(AslLiteral { value: serde_json::json!(null) })
-
+                    AslExpr::Literal(AslLiteral {
+                        value: serde_json::json!(null),
+                    })
                 } else {
-
                     AslExpr::var(expr)
-
                 }
-
             }
-
-
 
             Some(FbdNode::OutVar { expression, .. }) => AslExpr::var(expression),
 
-
-
-            Some(FbdNode::Block { type_name, instance_name, inputs, outputs: _ }) => {
-
+            Some(FbdNode::Block {
+                type_name,
+                instance_name,
+                inputs,
+                outputs: _,
+            }) => {
                 // Bloco gen  rico: callee = instanceName ?? typeName
 
-                let callee = instance_name.as_deref()
-
+                let callee = instance_name
+                    .as_deref()
                     .filter(|s| !s.is_empty())
-
                     .unwrap_or(type_name.as_str())
-
                     .to_string();
 
-
-
-                let args: Vec<AslExpr> = inputs.iter().map(|pin| {
-
-                    if pin.sources.is_empty() {
-
-                        AslExpr::var(&format!("_fbd_unconnected_{}", pin.formal))
-
-                    } else {
-
-                        Self::resolve_expr(pin.sources[0], nodes, depth + 1)
-
-                    }
-
-                }).collect();
-
-
+                let args: Vec<AslExpr> = inputs
+                    .iter()
+                    .map(|pin| {
+                        if pin.sources.is_empty() {
+                            AslExpr::var(&format!("_fbd_unconnected_{}", pin.formal))
+                        } else {
+                            Self::resolve_expr(pin.sources[0], nodes, depth + 1)
+                        }
+                    })
+                    .collect();
 
                 AslExpr::Call(Box::new(AslCall { callee, args }))
-
             }
-
         }
-
     }
 
-
-
-    //           Dispatch de blocos IEC especiais                                                                                                                
+    //           Dispatch de blocos IEC especiais
 
     //
 
@@ -580,120 +459,95 @@ impl FbdParser {
 
     // Retorna None se o bloco n  o    um FB IEC especial (ser   tratado como Call).
 
-
-
     fn try_iec_block(
-
         blk: &plcopen::FbdObjects_block_Inline,
 
         nodes: &HashMap<u32, FbdNode>,
-
     ) -> Option<AslStatement> {
-
-        let instance = blk.instance_name.as_deref()
-
+        let instance = blk
+            .instance_name
+            .as_deref()
             .filter(|s| !s.is_empty())
-
             .unwrap_or(blk.type_name.as_str())
-
             .to_string();
-
-
 
         /// Helper: resolve o primeiro source do pin com dado formalParameter.
 
         fn pin_expr(
-
             blk: &plcopen::FbdObjects_block_Inline,
 
             formal: &str,
 
             nodes: &HashMap<u32, FbdNode>,
-
         ) -> AslExpr {
-
-            blk.input_variables.as_ref()
-
-                .and_then(|iv| iv.variable.iter().find(|v| v.formal_parameter.eq_ignore_ascii_case(formal)))
-
+            blk.input_variables
+                .as_ref()
+                .and_then(|iv| {
+                    iv.variable
+                        .iter()
+                        .find(|v| v.formal_parameter.eq_ignore_ascii_case(formal))
+                })
                 .and_then(|v| {
-
                     let srcs = collect_inputs(v.connection_point_in.as_ref());
 
                     srcs.first().copied()
-
                 })
-
                 .map(|id| FbdParser::resolve_expr(id, nodes, 0))
-
                 .unwrap_or_else(|| AslExpr::var(&format!("_fbd_{formal}_unconnected")))
-
         }
 
-
-
         match blk.type_name.to_ascii_uppercase().as_str() {
-
             "TON" => Some(AslStatement::TimerTon(AslTimerTon {
-
                 instance,
 
                 r#in: pin_expr(blk, "IN", nodes),
 
-                pt:   pin_expr(blk, "PT", nodes),
+                pt: pin_expr(blk, "PT", nodes),
 
                 out_q: AslExpr::null(),
 
                 out_et: AslExpr::null(),
-
             })),
 
             "TOF" => Some(AslStatement::TimerTof(AslTimerTof {
-
                 instance,
 
                 r#in: pin_expr(blk, "IN", nodes),
 
-                pt:   pin_expr(blk, "PT", nodes),
+                pt: pin_expr(blk, "PT", nodes),
 
                 out_q: AslExpr::null(),
 
                 out_et: AslExpr::null(),
-
             })),
 
             "TP" => Some(AslStatement::TimerTp(AslTimerTp {
-
                 instance,
 
                 r#in: pin_expr(blk, "IN", nodes),
 
-                pt:   pin_expr(blk, "PT", nodes),
+                pt: pin_expr(blk, "PT", nodes),
 
                 out_q: AslExpr::null(),
 
                 out_et: AslExpr::null(),
-
             })),
 
             "CTU" => Some(AslStatement::CounterCtu(AslCounterCtu {
-
                 instance,
 
                 cu: pin_expr(blk, "CU", nodes),
 
-                r:  pin_expr(blk, "R",  nodes),
+                r: pin_expr(blk, "R", nodes),
 
                 pv: pin_expr(blk, "PV", nodes),
 
                 out_q: AslExpr::null(),
 
                 out_cv: AslExpr::null(),
-
             })),
 
             "CTD" => Some(AslStatement::CounterCtd(AslCounterCtd {
-
                 instance,
 
                 cd: pin_expr(blk, "CD", nodes),
@@ -705,110 +559,84 @@ impl FbdParser {
                 out_q: AslExpr::null(),
 
                 out_cv: AslExpr::null(),
-
             })),
 
             "SR" => Some(AslStatement::LatchSr(AslLatchSr {
-
                 instance,
 
                 s: pin_expr(blk, "S1", nodes),
 
-                r: pin_expr(blk, "R",  nodes),
-
+                r: pin_expr(blk, "R", nodes),
             })),
 
             "RS" => Some(AslStatement::LatchRs(AslLatchRs {
-
                 instance,
 
                 r: pin_expr(blk, "R1", nodes),
 
-                s: pin_expr(blk, "S",  nodes),
-
+                s: pin_expr(blk, "S", nodes),
             })),
 
             "R_TRIG" => Some(AslStatement::TrigR(AslTrigR {
-
                 instance,
 
                 r#in: pin_expr(blk, "CLK", nodes),
-
             })),
 
             "F_TRIG" => Some(AslStatement::TrigF(AslTrigF {
-
                 instance,
 
                 r#in: pin_expr(blk, "CLK", nodes),
-
             })),
 
             _ => None,
-
         }
-
     }
-
 }
 
-
-
-//           Helpers de m  dulo                                                                                                                                                                         
-
-
+//           Helpers de m  dulo
 
 /// Parse seguro de localId String     u32.
 
 fn parse_id(s: &str) -> u32 {
-
     s.trim().parse::<u32>().unwrap_or(0)
-
 }
-
-
 
 /// Recolhe ref_local_id de todos os connection points de entrada.
 
 /// ConnectionPointIn.connection: Vec<Connection>       .ref_local_id: String
 
 fn collect_inputs(cp_in: Option<&plcopen::ConnectionPointIn>) -> Vec<u32> {
+    let Some(cp) = cp_in else {
+        return vec![];
+    };
 
-    let Some(cp) = cp_in else { return vec![]; };
-
-    cp.connection.iter()
-
+    cp.connection
+        .iter()
         .map(|conn| parse_id(&conn.ref_local_id))
-
         .collect()
-
 }
 
-
-
 fn empty_program() -> AslProgram {
-
     AslProgram {
-
         asl_version: "4.0.0".to_string(),
 
         metadata: AslMetadata {
-
-            name: None, description: None, version: None,
+            name: None,
+            description: None,
+            version: None,
 
             target_board: Some("plc".to_string()),
-
         },
 
-        structs: vec![], globals: vec![], functions: vec![], tasks: vec![],
+        structs: vec![],
+        globals: vec![],
+        functions: vec![],
+        tasks: vec![],
 
         ..Default::default()
-
     }
-
 }
-
-
 
 // ============================================================================
 
@@ -824,20 +652,15 @@ mod tests {
 
     use crate::types::asl_types::{AslExpr, AslStatement};
 
-
-
-    //           XMLs de teste                                                                                                                                                                         
+    //           XMLs de teste
 
     //
 
     // Estrutura PLCopen TC6 XML m  nima e v  lida.
 
-
-
     /// inVariable(1, "SensorA")     outVariable(2, "Motor")
 
     fn xml_passthrough() -> &'static str {
-
         r#"<?xml version="1.0" encoding="UTF-8"?>
 
 <project xmlns="http://www.plcopen.org/xml/tc6_0201">
@@ -899,15 +722,11 @@ mod tests {
 </project>
 
 "#
-
     }
-
-
 
     /// inVariable(1,"A") + inVariable(2,"B")     block AND(3)     outVariable(4,"Result")
 
     fn xml_generic_block() -> &'static str {
-
         r#"<?xml version="1.0" encoding="UTF-8"?>
 
 <project xmlns="http://www.plcopen.org/xml/tc6_0201">
@@ -1025,15 +844,11 @@ mod tests {
 </project>
 
 "#
-
     }
-
-
 
     /// TON block com IN=Start, PT=Preset     statement TimerTon
 
     fn xml_ton_block() -> &'static str {
-
         r#"<?xml version="1.0" encoding="UTF-8"?>
 
 <project xmlns="http://www.plcopen.org/xml/tc6_0201">
@@ -1135,63 +950,53 @@ mod tests {
 </project>
 
 "#
-
     }
 
-
-
-    //           Helpers                                                                                                                                                                                           
-
-
+    //           Helpers
 
     fn first_assign(stmts: &[AslStatement]) -> &AslAssign {
-
-        stmts.iter().find_map(|s| if let AslStatement::Assign(a) = s { Some(a) } else { None })
-
+        stmts
+            .iter()
+            .find_map(|s| {
+                if let AslStatement::Assign(a) = s {
+                    Some(a)
+                } else {
+                    None
+                }
+            })
             .expect("esperado Assign")
-
     }
-
-
 
     fn first_timer_ton(stmts: &[AslStatement]) -> &AslTimerTon {
-
-        stmts.iter().find_map(|s| if let AslStatement::TimerTon(t) = s { Some(t) } else { None })
-
+        stmts
+            .iter()
+            .find_map(|s| {
+                if let AslStatement::TimerTon(t) = s {
+                    Some(t)
+                } else {
+                    None
+                }
+            })
             .expect("esperado TimerTon")
-
     }
 
-
-
-    //           Testes                                                                                                                                                                                              
-
-
+    //           Testes
 
     #[test]
 
     fn empty_xml_returns_err() {
-
         assert!(FbdParser::parse("").is_err());
-
     }
-
-
 
     #[test]
 
     fn invalid_xml_returns_err() {
-
         assert!(FbdParser::parse("<not valid").is_err());
-
     }
-
-
 
     #[test]
 
     fn passthrough_parse_ok() {
-
         let prog = FbdParser::parse(xml_passthrough()).expect("parse passthrough");
 
         assert!(!prog.functions.is_empty());
@@ -1203,138 +1008,87 @@ mod tests {
         let assign = first_assign(&func.body);
 
         assert_eq!(assign.target, "Motor");
-
     }
-
-
 
     #[test]
 
     fn passthrough_value_is_var_sensora() {
-
-        let prog   = FbdParser::parse(xml_passthrough()).expect("parse");
+        let prog = FbdParser::parse(xml_passthrough()).expect("parse");
 
         let assign = first_assign(&prog.functions[0].body);
 
         assert!(
-
             matches!(&assign.value, AslExpr::Var(v) if v.name == "SensorA"),
-
-            "valor esperado Var(SensorA), obtido: {:?}", assign.value
-
+            "valor esperado Var(SensorA), obtido: {:?}",
+            assign.value
         );
-
     }
-
-
 
     #[test]
 
     fn generic_block_produces_assign_with_call() {
-
-        let prog   = FbdParser::parse(xml_generic_block()).expect("parse generic block");
+        let prog = FbdParser::parse(xml_generic_block()).expect("parse generic block");
 
         let assign = first_assign(&prog.functions[0].body);
 
         assert_eq!(assign.target, "Result");
 
         assert!(
-
             matches!(&assign.value, AslExpr::Call(c) if c.callee == "AndBlock1"),
-
-            "esperado Call(AndBlock1), obtido: {:?}", assign.value
-
+            "esperado Call(AndBlock1), obtido: {:?}",
+            assign.value
         );
-
     }
-
-
 
     #[test]
 
     fn generic_block_call_has_two_args() {
-
-        let prog   = FbdParser::parse(xml_generic_block()).expect("parse");
+        let prog = FbdParser::parse(xml_generic_block()).expect("parse");
 
         let assign = first_assign(&prog.functions[0].body);
 
         if let AslExpr::Call(c) = &assign.value {
-
             assert_eq!(c.args.len(), 2, "AND block deve ter 2 args");
-
         } else {
-
             panic!("esperado Call");
-
         }
-
     }
-
-
 
     #[test]
 
     fn ton_block_emits_timer_ton_statement() {
-
-        let prog  = FbdParser::parse(xml_ton_block()).expect("parse TON");
+        let prog = FbdParser::parse(xml_ton_block()).expect("parse TON");
 
         let timer = first_timer_ton(&prog.functions[0].body);
 
         assert_eq!(timer.instance, "Timer1");
-
     }
-
-
 
     #[test]
 
     fn ton_in_pin_resolves_to_start() {
-
-        let prog  = FbdParser::parse(xml_ton_block()).expect("parse");
+        let prog = FbdParser::parse(xml_ton_block()).expect("parse");
 
         let timer = first_timer_ton(&prog.functions[0].body);
 
         assert!(
-
             matches!(&timer.r#in, AslExpr::Var(v) if v.name == "Start"),
-
-            "IN deve ser Var(Start), obtido: {:?}", timer.r#in
-
+            "IN deve ser Var(Start), obtido: {:?}",
+            timer.r#in
         );
-
     }
-
-
 
     #[test]
 
     fn ton_pt_pin_resolves_to_preset() {
-
-        let prog  = FbdParser::parse(xml_ton_block()).expect("parse");
+        let prog = FbdParser::parse(xml_ton_block()).expect("parse");
 
         let timer = first_timer_ton(&prog.functions[0].body);
 
         assert!(
-
             matches!(&timer.pt, AslExpr::Var(v) if v.name == "Preset"),
-
-            "PT deve ser Var(Preset), obtido: {:?}", timer.pt
-
+            "PT deve ser Var(Preset), obtido: {:?}",
+            timer.pt
         );
-
     }
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

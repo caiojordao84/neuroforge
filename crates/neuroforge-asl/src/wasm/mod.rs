@@ -6,17 +6,4 @@
 
 //! mas os s  mbolos `#[wasm_bindgen]` s  o ignorados pelo linker nativo.
 
-
-
 pub mod bindings;
-
-
-
-
-
-
-
-
-
-
-

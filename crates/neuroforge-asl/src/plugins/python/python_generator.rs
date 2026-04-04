@@ -116,6 +116,18 @@ impl AslGenerator for PythonGenerator {
             out.push('\n');
         }
 
+        // Helper to detect infinite while loops
+        fn is_infinite_while_loop(stmt: &AslStatement) -> bool {
+            if let AslStatement::While(w) = stmt {
+                if let AslExpr::Literal(l) = &w.condition {
+                    if l.value.as_bool() == Some(true) {
+                        return true;
+                    }
+                }
+            }
+            false
+        }
+
         for func in &program.functions {
             out.push_str(&self.gen_function(func, 0, program));
 
@@ -135,6 +147,10 @@ impl AslGenerator for PythonGenerator {
                 out.push_str("# Setup\n");
 
                 for stmt in &setup.body {
+                    // Skip infinite while loops (loop {} in Rust) - they go to while True
+                    if is_infinite_while_loop(stmt) {
+                        continue;
+                    }
                     out.push_str(&self.gen_stmt(stmt, 0));
 
                     out.push('\n');
@@ -147,7 +163,7 @@ impl AslGenerator for PythonGenerator {
                 out.push_str("while True:\n");
 
                 for stmt in &loop_task.body {
-                    out.push_str(&self.gen_stmt(stmt, 1));
+                    out.push_str(&self.gen_stmt(stmt, 2));
 
                     out.push('\n');
                 }
@@ -528,13 +544,34 @@ impl PythonGenerator {
 
                 let val_str = self.gen_expr(&d.value);
 
+                // FIX: Add proper indentation prefix - was missing ind variable!
                 if val_str == "HIGH" {
-                    format!("{}.on()", var_name)
+                    format!("{}{}.on()", ind, var_name)
                 } else if val_str == "LOW" {
-                    format!("{}.off()", var_name)
+                    format!("{}{}.off()", ind, var_name)
                 } else {
-                    format!("{}.value({})", var_name, val_str)
+                    format!("{}{}.value({})", ind, var_name, val_str)
                 }
+            }
+
+            // PWM statements - handle pwm_init and pwm_set_duty from embedded Rust
+            AslStatement::PwmInit(p) => {
+                let pin_expr = self.gen_expr(&p.pin);
+                let freq = self.gen_expr(&p.freq);
+                let var_name = self.get_pin_var(&pin_expr);
+                // PWM initialization - create PWM object at pin
+                format!(
+                    "{}{} = PWM(Pin({}), freq={})",
+                    ind, var_name, pin_expr, freq
+                )
+            }
+
+            AslStatement::PwmSetDuty(p) => {
+                let pin_expr = self.gen_expr(&p.pin);
+                let duty = self.gen_expr(&p.duty);
+                let var_name = self.get_pin_var(&pin_expr);
+                // Convert 0-255 to 0-65535 (duty_u16)
+                format!("{}{}.duty_u16(int({} * 257))", ind, var_name, duty)
             }
 
             AslStatement::AnalogOutput(a) => {
@@ -542,11 +579,11 @@ impl PythonGenerator {
 
                 let pwm_var = self.get_pin_var(&pin_expr);
 
+                let value_expr = self.gen_expr(&a.value);
+
                 // Arduino 8-bit (0-255) -> MicroPython 16-bit (0-65535)
-
                 // 255 * 257 = 65535
-
-                format!("{}.duty_u16(int(({}) * 257))", ind, pwm_var)
+                format!("{}{}.duty_u16(int(({}) * 257))", ind, pwm_var, value_expr)
             }
 
             AslStatement::DigitalInput(r) => {
