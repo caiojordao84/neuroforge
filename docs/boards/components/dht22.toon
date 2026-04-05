@@ -1,0 +1,30 @@
+# NeuroForge Component — DHT22
+id: dht22
+name: DHT22 Temperature & Humidity Sensor
+category: sensor
+subcategory: temperature
+svgId: dht22
+voltage: 3.3
+
+signals:
+| id   | name  | direction    | signalType | required | svgAnchorId |
+| data | DATA  | bidirectional | digital    | true     | anchor-data |
+| vcc  | VCC   | input        | power      | true     | anchor-vcc  |
+| gnd  | GND   | input        | gnd        | true     | anchor-gnd  |
+
+aslHint:
+  semanticType: sensor_temperature
+  defaultOperation: digitalInput
+  include: dht
+  hmiWidget: gauge
+  hmiUnit: °C
+  hmiMin: -40
+  hmiMax: 80
+
+restrictions:
+  requiresInterrupt: true
+  maxCurrentMa: 2
+  notes:
+    - Single-wire bidirectional communication
+    - Requires 2s minimum sampling interval
+    - Pull-up resistor (4.7kΩ) on data line recommended

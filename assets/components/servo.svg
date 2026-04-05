@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60" width="100" height="60">
+  <defs>
+    <style>
+      .signal-anchor { fill: #fff; stroke: #333; stroke-width: 1.5; }
+      .signal-anchor:hover { fill: #4a90d9; }
+      .signal-digital { stroke: #333; }
+      .signal-pwm { stroke: #e67e22; }
+      .signal-analog { stroke: #27ae60; }
+      .signal-power { stroke: #e74c3c; }
+      .signal-gnd { stroke: #2c3e50; }
+    </style>
+  </defs>
+  <circle id="anchor-sig" class="signal-anchor signal-pwm" data-signal="sig" data-signal-type="pwm" data-direction="input" cx="10" cy="30" r="4"/>
+  <circle id="anchor-vcc" class="signal-anchor signal-power" data-signal="vcc" data-signal-type="power" data-direction="input" cx="90" cy="20" r="4"/>
+  <circle id="anchor-gnd" class="signal-anchor signal-gnd" data-signal="gnd" data-signal-type="power" data-direction="input" cx="90" cy="40" r="4"/>
+  <rect x="25" y="15" width="50" height="30" rx="4" fill="#34495e" stroke="#2c3e50" stroke-width="2"/>
+  <circle cx="50" cy="30" r="10" fill="#7f8c8d" stroke="#2c3e50" stroke-width="1"/>
+  <line x1="50" y1="30" x2="60" y2="20" stroke="#e67e22" stroke-width="2"/>
+  <circle cx="85" cy="20" r="4" fill="#e74c3c"/>
+  <circle cx="85" cy="40" r="4" fill="#2c3e50"/>
+  <text x="30" y="38" font-family="Arial" font-size="8" fill="#ecf0f1">SERVO</text>
+</svg>

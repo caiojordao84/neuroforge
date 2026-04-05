@@ -1,0 +1,385 @@
+# NeuroForge Board Schema TOON
+# Version: 3.0 (migrated from JSON schema v2.0)
+# Extends Section 3 of architecture document
+
+$schema: https://neuroforge.com/schemas/board-schema-v3
+id: neuroforge-board-schema-v3
+title: Microcontroller Board Configuration Schema
+description: Unified schema for boards - supports TOON format with ASL profiles
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Section 3.1 - Immediate Fixes Applied
+
+# Extended powerPins.name enum (was rigid, now flexible)
+powerPins:
+  name:
+    enum:
+      - VIN
+      - VCC
+      - 5V
+      - 3V3
+      - GND
+      - VBAT
+      - VBUS        # NEW - added per Section 3.1
+      - VSYS        # NEW
+      - 3V3_EN      # NEW
+      - EN          # NEW
+      - RESET
+      - AREF
+      - IOREF
+
+# Extended specs - removed additionalProperties: false, added cores/architecture
+specs:
+  flashMemory:
+    type: integer
+    minimum: 0
+    description: Flash memory in KB
+  sram:
+    type: integer
+    minimum: 0
+    description: SRAM in KB
+  eeprom:
+    type: integer
+    minimum: 0
+    description: EEPROM in KB (0 if none)
+  clockSpeed:
+    type: integer
+    minimum: 0
+    description: Clock speed in Hz
+  frequencyMhz:      # NEW - alternate field for MHz
+    type: number
+    minimum: 0
+    description: Clock frequency in MHz
+  voltage:
+    type: number
+    minimum: 0
+    description: Operating voltage (V)
+  cores:            # NEW - Section 3.1 fix
+    type: integer
+    minimum: 1
+    description: Number of CPU cores
+  architecture:    # NEW - Section 3.1 fix
+    type: string
+    description: CPU architecture (e.g., AVR, ARM Cortex-M, RISC-V)
+  additionalProperties: true  # REMOVED BLOCK - was: false
+
+# Extended gpio with physicalPin (Section 3.1 fix)
+gpio:
+  type: array
+  minItems: 1
+  items:
+    properties:
+      pin:           # This is logicalPin (ASL uses this)
+        type: integer
+        minimum: 0
+      physicalPin:  # NEW - Section 3.1 fix (SVG uses physical)
+        type: integer
+        description: Physical connector pin number
+      label:
+        type: string
+        description: Pin label (silk screen)
+      pwm:
+        type: boolean
+        description: Supports PWM output
+      interrupt:
+        type: boolean
+        description: Can trigger interrupts
+      adc:
+        type: boolean
+        description: Has ADC (analog input)
+      dac:
+        type: boolean
+        description: Has DAC (analog output)
+      touch:
+        type: boolean
+        description: Touch-sensitive (capacitive)
+      inputOnly:
+        type: boolean
+        description: Cannot be set as OUTPUT (ESP32 GPIO34-39)
+      strapping:
+        type: boolean
+        description: Strapping pin (boot mode dependent)
+      warning:
+        type: string
+        description: Usage warning for this pin
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Section 3.2 - svgMap (NEW FIELD)
+
+svgMap:
+  file:
+    type: string
+    description: Path to board SVG file
+  viewBox:
+    type: string
+    description: SVG viewBox (e.g., "0 0 500 360")
+  pins:
+    type: array
+    description: GPIO pin to SVG coordinate mapping
+    items:
+      properties:
+        id:
+          type: string
+          description: Pin element ID (e.g., "pin-d3")
+        logicalPin:
+          type: integer
+          description: Logical pin number (ASL uses this)
+        physicalPin:
+          type: integer
+          description: Physical connector number
+        cx:
+          type: number
+          description: SVG circle center X coordinate
+        cy:
+          type: number
+          description: SVG circle center Y coordinate
+        side:
+          type: string
+          enum: [left, right, top, bottom]
+          description: Which side of board the pin is on
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Section 3.3 - aslProfile (NEW FIELD)
+
+aslProfile:
+  targets:
+    type: array
+    description: Available language targets for ASL transpilation
+    items:
+      properties:
+        language:
+          type: string
+          description: Target language (arduino-cpp, rust, micropython, etc.)
+        targetId:
+          type: string
+          description: Unique target identifier
+        hal:
+          type: string
+          description: Hardware Abstraction Layer
+        halVersion:
+          type: string
+          description: HAL version (optional)
+        stdAvailable:
+          type: boolean
+          description: Standard library available
+        allocAvailable:
+          type: boolean
+          description: Memory allocator available
+        confidenceFloor:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Minimum acceptable confidence score
+        agentSkill:
+          type: string
+          description: Path to agent skill file
+        forbiddenPins:
+          type: array
+          items:
+            type: integer
+          description: Pins not usable for this target
+        notes:
+          type: array
+          items:
+            type: string
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Section 3.4 - plcProfile (Roadmap - Conditional)
+
+plcProfile:
+  $comment: Only required for boards with category: plc
+  standard:
+    type: string
+    enum: [IEC-61131-3]
+    description: PLC programming standard
+  languages:
+    type: array
+    items:
+      type: string
+      enum: [LD, FBD, ST, IL, SFC]
+    description: Supported PLC languages
+  cycleTimeMs:
+    type: integer
+    minimum: 1
+    description: Minimum cycle time in milliseconds
+  safetyRating:
+    type: string
+    enum: [SIL-0, SIL-1, SIL-2, SIL-3]
+    description: Safety integrity level
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Category - Extended with plc (Section 3.1)
+
+category:
+  enum:
+    - maker
+    - industrial
+    - educational
+    - prototyping
+    - custom
+    - plc       # NEW - Section 3.1 fix
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Other Fields (from JSON schema v2.0 - migrated)
+
+id:
+  type: string
+  pattern: "^[a-z0-9-]+$"
+  description: Unique board identifier (kebab-case)
+
+name:
+  type: string
+  description: Human-readable board name
+
+manufacturer:
+  type: string
+  description: Board manufacturer
+
+mcu:
+  type: string
+  description: Microcontroller model
+
+image:
+  type: string
+  description: Path to board image (SVG preferred)
+
+url:
+  type: string
+  format: uri
+  description: Official product page URL
+
+dimensions:
+  properties:
+    width:
+      type: number
+      minimum: 0
+      description: Width in mm
+    height:
+      type: number
+      minimum: 0
+      description: Height in mm
+    thickness:
+      type: number
+      minimum: 0
+      description: PCB thickness in mm
+
+peripherals:
+  serial:
+    properties:
+      uarts:
+        type: integer
+        minimum: 0
+      pins:
+        type: array
+        items:
+          type: integer
+  i2c:
+    properties:
+      channels:
+        type: integer
+        minimum: 0
+      sda:
+        type: integer
+      scl:
+        type: integer
+  spi:
+    properties:
+      channels:
+        type: integer
+        minimum: 0
+      miso:
+        type: integer
+      mosi:
+        type: integer
+      sck:
+        type: integer
+      ss:
+        type: integer
+  wifi:
+    properties:
+      protocols:
+        type: array
+        items:
+          type: string
+      modes:
+        type: array
+        items:
+          enum: [sta, ap, sta+ap]
+  bluetooth:
+    properties:
+      classic:
+        type: boolean
+      ble:
+        type: boolean
+
+usb:
+  properties:
+    type:
+      enum: [USB-A, USB-B, micro-USB, USB-C, mini-USB, none]
+    chipset:
+      type: string
+    vid:
+      type: string
+      pattern: "^0x[0-9A-Fa-f]{4}$"
+    pid:
+      type: string
+      pattern: "^0x[0-9A-Fa-f]{4}$"
+
+restrictions:
+  properties:
+    strappingPins:
+      type: array
+      items:
+        type: integer
+    reservedPins:
+      type: array
+      items:
+        type: integer
+    outputCurrent:
+      type: integer
+      minimum: 0
+      description: Max current per GPIO pin (mA)
+    warnings:
+      type: array
+      items:
+        type: string
+
+compatibility:
+  properties:
+    arduinoCore:
+      type: string
+    platformio:
+      type: string
+    frameworks:
+      type: array
+      items:
+        type: string
+
+languages:
+  type: array
+  items:
+    enum:
+      - arduino-cpp
+      - micropython
+      - circuitpython
+      - esp-idf
+      - rust
+      - assembly
+      - iec-st    # NEW - Structured Text for PLC
+
+bootloader:
+  type: string
+  description: Bootloader type
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Required Fields
+
+required:
+  - id
+  - name
+  - manufacturer
+  - mcu
+  - category
+  - specs
+  - gpio
+  - languages

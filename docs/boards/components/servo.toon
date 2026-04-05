@@ -1,0 +1,29 @@
+# NeuroForge Component — Servo Motor
+id: servo
+name: Servo Motor
+category: actuator
+subcategory: servo
+svgId: servo
+voltage: 5.0
+
+signals:
+| id  | name | direction | signalType | required | svgAnchorId |
+| sig | SIG | input     | pwm        | true     | anchor-sig  |
+| vcc | VCC  | input     | power      | true     | anchor-vcc  |
+| gnd | GND  | input     | gnd        | true     | anchor-gnd  |
+
+aslHint:
+  semanticType: servo
+  defaultOperation: pwmInit
+  include: servo
+  hmiWidget: slider
+  hmiMin: 0
+  hmiMax: 180
+
+restrictions:
+  requiresPwm: true
+  maxCurrentMa: 500
+  notes:
+    - Standard servo uses 50Hz PWM (20ms period)
+    - Pulse width 1-2ms controls position
+    - External power recommended for current draw

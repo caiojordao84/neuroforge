@@ -5,6 +5,7 @@
   "scripts": {
     "dev:desktop": "pnpm --filter @neuroforge/desktop tauri dev",
     "dev:webapp":  "pnpm --filter @neuroforge/webapp dev",
+    "dev:schemasmith": "pnpm --filter @neuroforge/schemasmith tauri dev",
     "build:wasm":  "cd crates/neuroforge-asl && wasm-pack build --target web --out-dir ../../apps/shared/src/lib/wasm --no-default-features",
     "check:rust":  "cargo check --workspace",
     "test:rust":   "cargo test --workspace",

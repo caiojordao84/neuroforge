@@ -1,0 +1,17 @@
+[package]
+name    = "neuroforge-schemasmith"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri              = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs    = "2"
+serde              = { workspace = true }
+serde_json         = { workspace = true }
+serde_toon         = "0.2"
+neuroforge-asl     = { path = "../../../crates/neuroforge-asl" }
+thiserror          = { workspace = true }

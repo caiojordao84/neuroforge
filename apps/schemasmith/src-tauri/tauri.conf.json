@@ -1,0 +1,31 @@
+{
+  "app": {
+    "windows": [
+      {
+        "title": "SchemaSmith",
+        "width": 1400,
+        "height": 900,
+        "center": true,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ]
+  },
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../build"
+  },
+  "identifier": "com.neuroforge.schemasmith",
+  "bundle": {
+    "icon": []
+  },
+  "plugins": {
+    "dialog": {},
+    "fs": {
+      "scope": {
+        "allow": ["$APPDATA/**", "$DOCUMENT/**", "$DOWNLOAD/**", "$HOME/**", "**"]
+      }
+    }
+  }
+}

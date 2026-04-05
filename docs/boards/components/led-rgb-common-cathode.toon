@@ -1,0 +1,28 @@
+# NeuroForge Component — RGB LED Common Cathode
+id: led-rgb-common-cathode
+name: RGB LED Common Cathode
+category: indicator
+subcategory: led
+svgId: led-rgb
+voltage: 3.3
+
+signals:
+| id    | name | direction | signalType | required | svgAnchorId |
+| red   | R    | input     | pwm        | true     | anchor-r    |
+| green | G    | input     | pwm        | true     | anchor-g    |
+| blue  | B    | input     | pwm        | true     | anchor-b    |
+| gnd   | GND  | input     | gnd        | true     | anchor-gnd  |
+
+aslHint:
+  semanticType: led_rgb
+  defaultOperation: analogOutput
+  hmiWidget: led
+  hmiMin: 0
+  hmiMax: 255
+
+restrictions:
+  requiresPwm: true
+  maxCurrentMa: 20
+  notes:
+    - Requires current-limiting resistor in series on each channel
+    - Common cathode connected to GND

@@ -1,0 +1,26 @@
+# NeuroForge Component — Relay 5V Module
+id: relay-5v
+name: Relay 5V Module (SRD-05VDC)
+category: actuator
+subcategory: switch
+svgId: relay-5v
+voltage: 5
+
+signals:
+| id   | name | direction | signalType | required | svgAnchorId |
+| in   | IN   | input     | digital    | true     | anchor-in   |
+| vcc  | VCC  | input     | power      | true     | anchor-vcc  |
+| gnd  | GND  | input     | gnd        | true     | anchor-gnd  |
+
+aslHint:
+  semanticType: switch_control
+  defaultOperation: digitalOutput
+  hmiWidget: switch
+
+restrictions:
+  maxCurrentMa: 80
+  notes:
+    - SPST relay, 10A @ 250VAC rating
+    - Opto-isolated for electrical isolation
+    - LED indicator for relay status
+    - IN LOW = relay OFF, IN HIGH = relay ON

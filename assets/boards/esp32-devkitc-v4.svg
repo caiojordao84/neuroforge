@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="100%" height="100%" viewBox="0 0 400 600" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;">
+    <defs>
+        <style>
+            .pin { fill: #2563eb; stroke: #1e40af; stroke-width: 0.5; }
+            .pin-power { fill: #dc2626; stroke: #991b1b; stroke-width: 0.5; }
+            .pin-ground { fill: #171717; stroke: #000; stroke-width: 0.5; }
+            .pin-strapping { fill: #f59e0b; stroke: #b45309; stroke-width: 0.5; }
+            .pin-warning { stroke: #dc2626; stroke-width: 1; }
+            .pin-input-only { fill: #7c3aed; stroke: #5b21b6; stroke-width: 0.5; }
+            .pin-adc { fill: #ca8a04; stroke: #a16207; stroke-width: 0.5; }
+            .pin-dac { fill: #059669; stroke: #047857; stroke-width: 0.5; }
+            .pin-pwm { fill: #ea580c; stroke: #c2410c; stroke-width: 0.5; }
+            .pin-i2c { fill: #16a34a; stroke: #15803d; stroke-width: 0.5; }
+            .pin-spi { fill: #7c3aed; stroke: #5b21b6; stroke-width: 0.5; }
+            .pin-uart { fill: #0891b2; stroke: #0e7490; stroke-width: 0.5; }
+            .pin-touch { fill: #06b6d4; stroke: #0891b2; stroke-width: 0.5; }
+            .pin-enable { fill: #dc2626; stroke: #991b1b; stroke-width: 0.5; }
+            .board-body { fill: #0f766e; }
+            .board-label { fill: #fff; font-family: 'Roboto Mono', monospace; font-size: 14px; }
+            .header-label { fill: #fff; font-family: 'Roboto', sans-serif; font-size: 10px; font-weight: bold; }
+            .pin-label { fill: #fff; font-family: 'Roboto Mono', monospace; font-size: 6px; }
+            .chip-label { fill: #fff; font-family: 'Roboto Mono', monospace; font-size: 8px; }
+            .warning-text { fill: #dc2626; font-family: 'Roboto', sans-serif; font-size: 6px; }
+        </style>
+    </defs>
+
+    <!-- BOARD BODY -->
+    <g id="board">
+        <rect class="board-body" x="20" y="20" width="360" height="560" rx="8"/>
+        <text class="board-label" x="200" y="80" text-anchor="middle">ESP32 DevKitC V4</text>
+        <text class="chip-label" x="200" y="320" text-anchor="middle">ESP32-WROOM-32</text>
+    </g>
+
+    <!-- USB CONNECTOR -->
+    <g id="usb-connector">
+        <rect x="160" y="5" width="80" height="30" fill="#374151" rx="2"/>
+        <rect x="180" y="10" width="40" height="20" fill="#1f2937" rx="1"/>
+    </g>
+
+    <!-- BUTTONS -->
+    <g id="buttons">
+        <g id="boot-button">
+            <rect x="340" y="100" width="20" height="10" fill="#4b5563" rx="1"/>
+            <text x="350" y="125" class="pin-label" text-anchor="middle">BOOT</text>
+        </g>
+        <g id="reset-button">
+            <rect x="40" y="100" width="20" height="10" fill="#4b5563" rx="1"/>
+            <text x="50" y="125" class="pin-label" text-anchor="middle">EN</text>
+        </g>
+    </g>
+
+    <!-- ESP32 CHIP -->
+    <g id="esp32-chip">
+        <rect x="100" y="260" width="200" height="100" fill="#1f2937" rx="4"/>
+        <rect x="110" y="270" width="180" height="80" fill="#374151" rx="2"/>
+        <text class="chip-label" x="200" y="315" text-anchor="middle">ESP32</text>
+    </g>
+
+    <!-- LEFT HEADER - PINS (Top to Bottom) -->
+    <g id="header-left">
+        <text x="50" y="160" class="header-label" text-anchor="middle">GPIO</text>
+
+        <!-- 3V3 - Power -->
+        <circle id="pin-3v3" class="pin pin-power" data-pin="3V3" data-voltage="3.3" cx="50" cy="180" r="6"/>
+        <text x="25" y="185" class="pin-label">3V3</text>
+
+        <!-- EN - Enable/Reset -->
+        <circle id="pin-en" class="pin pin-enable" data-pin="EN" cx="50" cy="210" r="6"/>
+        <text x="25" y="215" class="pin-label">EN</text>
+
+        <!-- GPIO36 SVP - Input Only -->
+        <circle id="pin-gpio36" class="pin pin-digital pin-adc pin-input-only" data-pin="36" data-warning="Input-only (ADC)" cx="50" cy="240" r="6"/>
+        <text x="25" y="245" class="pin-label">36</text>
+
+        <!-- GPIO35 - Input Only -->
+        <circle id="pin-gpio35" class="pin pin-digital pin-adc pin-input-only" data-pin="35" data-warning="Input-only (ADC)" cx="50" cy="270" r="6"/>
+        <text x="25" y="275" class="pin-label">35</text>
+
+        <!-- GPIO34 - Input Only -->
+        <circle id="pin-gpio34" class="pin pin-digital pin-adc pin-input-only" data-pin="34" data-warning="Input-only (ADC)" cx="50" cy="300" r="6"/>
+        <text x="25" y="305" class="pin-label">34</text>
+
+        <!-- GPIO33 -->
+        <circle id="pin-gpio33" class="pin pin-digital pin-adc pin-touch pin-pwm" data-pin="33" cx="50" cy="330" r="6"/>
+        <text x="25" y="335" class="pin-label">33</text>
+
+        <!-- GPIO32 -->
+        <circle id="pin-gpio32" class="pin pin-digital pin-adc pin-touch pin-pwm" data-pin="32" cx="50" cy="360" r="6"/>
+        <text x="25" y="365" class="pin-label">32</text>
+
+        <!-- GPIO25 DAC1 -->
+        <circle id="pin-gpio25" class="pin pin-digital pin-adc pin-dac pin-pwm" data-pin="25" cx="50" cy="390" r="6"/>
+        <text x="25" y="395" class="pin-label">25</text>
+
+        <!-- GPIO26 DAC2 -->
+        <circle id="pin-gpio26" class="pin pin-digital pin-adc pin-dac pin-pwm" data-pin="26" cx="50" cy="420" r="6"/>
+        <text x="25" y="425" class="pin-label">26</text>
+
+        <!-- GPIO27 -->
+        <circle id="pin-gpio27" class="pin pin-digital pin-adc pin-touch pin-pwm" data-pin="27" cx="50" cy="450" r="6"/>
+        <text x="25" y="455" class="pin-label">27</text>
+
+        <!-- GPIO22 SCL -->
+        <circle id="pin-gpio22" class="pin pin-digital pin-i2c pin-pwm" data-pin="22" cx="50" cy="480" r="6"/>
+        <text x="25" y="485" class="pin-label">22</text>
+
+        <!-- GPIO21 SDA -->
+        <circle id="pin-gpio21" class="pin pin-digital pin-i2c pin-pwm" data-pin="21" cx="50" cy="510" r="6"/>
+        <text x="25" y="515" class="pin-label">21</text>
+
+        <!-- GPIO19 MISO -->
+        <circle id="pin-gpio19" class="pin pin-digital pin-spi pin-pwm" data-pin="19" cx="50" cy="540" r="6"/>
+        <text x="25" y="545" class="pin-label">19</text>
+
+        <!-- GPIO18 SCK -->
+        <circle id="pin-gpio18" class="pin pin-digital pin-spi pin-pwm" data-pin="18" cx="50" cy="570" r="6"/>
+        <text x="25" y="575" class="pin-label">18</text>
+    </g>
+
+    <!-- RIGHT HEADER - PINS (Top to Bottom) -->
+    <g id="header-right">
+        <text x="350" y="160" class="header-label" text-anchor="middle">GPIO</text>
+
+        <!-- GND -->
+        <circle id="pin-gnd-top" class="pin pin-ground" data-pin="GND" cx="350" cy="180" r="6"/>
+        <text x="375" y="185" class="pin-label">GND</text>
+
+        <!-- VIN -->
+        <circle id="pin-vin" class="pin pin-power" data-pin="VIN" data-voltage="5.0" cx="350" cy="210" r="6"/>
+        <text x="375" y="215" class="pin-label">VIN</text>
+
+        <!-- GPIO1 TX -->
+        <circle id="pin-gpio1" class="pin pin-digital pin-uart" data-pin="1" cx="350" cy="240" r="6"/>
+        <text x="375" y="245" class="pin-label">1</text>
+
+        <!-- GPIO0 - Boot (Strapping) -->
+        <circle id="pin-gpio0" class="pin pin-digital pin-strapping pin-warning" data-pin="0" data-warning="Strapping pin - Boot mode selection" cx="350" cy="270" r="6"/>
+        <text x="375" y="275" class="pin-label">0</text>
+
+        <!-- GPIO3 RX -->
+        <circle id="pin-gpio3" class="pin pin-digital pin-uart" data-pin="3" cx="350" cy="300" r="6"/>
+        <text x="375" y="305" class="pin-label">3</text>
+
+        <!-- GPIO5 - Strapping -->
+        <circle id="pin-gpio5" class="pin pin-digital pin-strapping pin-warning" data-pin="5" data-warning="Strapping pin - SDIO slave timing" cx="350" cy="330" r="6"/>
+        <text x="375" y="335" class="pin-label">5</text>
+
+        <!-- GPIO4 -->
+        <circle id="pin-gpio4" class="pin pin-digital pin-adc pin-touch pin-pwm" data-pin="4" cx="350" cy="360" r="6"/>
+        <text x="375" y="365" class="pin-label">4</text>
+
+        <!-- GPIO2 - Strapping -->
+        <circle id="pin-gpio2" class="pin pin-digital pin-adc pin-touch pin-strapping pin-warning pin-pwm" data-pin="2" data-warning="Strapping pin - Boot voltage selection" cx="350" cy="390" r="6"/>
+        <text x="375" y="395" class="pin-label">2</text>
+
+        <!-- GPIO15 MTDO - Strapping -->
+        <circle id="pin-gpio15" class="pin pin-digital pin-adc pin-touch pin-strapping pin-warning pin-pwm" data-pin="15" data-warning="Strapping pin - Silences boot messages" cx="350" cy="420" r="6"/>
+        <text x="375" y="425" class="pin-label">15</text>
+
+        <!-- GPIO13 -->
+        <circle id="pin-gpio13" class="pin pin-digital pin-adc pin-touch pin-pwm" data-pin="13" cx="350" cy="450" r="6"/>
+        <text x="375" y="455" class="pin-label">13</text>
+
+        <!-- GPIO12 MTDI - Strapping -->
+        <circle id="pin-gpio12" class="pin pin-digital pin-adc pin-touch pin-strapping pin-warning pin-pwm" data-pin="12" data-warning="Strapping pin - Flash voltage (MTDI)" cx="350" cy="480" r="6"/>
+        <text x="375" y="485" class="pin-label">12</text>
+
+        <!-- GPIO14 -->
+        <circle id="pin-gpio14" class="pin pin-digital pin-adc pin-touch pin-pwm" data-pin="14" cx="350" cy="510" r="6"/>
+        <text x="375" y="515" class="pin-label">14</text>
+
+        <!-- GPIO23 MOSI -->
+        <circle id="pin-gpio23" class="pin pin-digital pin-spi pin-pwm" data-pin="23" cx="350" cy="540" r="6"/>
+        <text x="375" y="545" class="pin-label">23</text>
+
+        <!-- GPIO16 -->
+        <circle id="pin-gpio16" class="pin pin-digital pin-pwm" data-pin="16" cx="350" cy="570" r="6"/>
+        <text x="375" y="575" class="pin-label">16</text>
+    </g>
+
+    <!-- LEDS -->
+    <g id="leds">
+        <circle id="led-power" fill="#16a34a" cx="80" cy="100" r="4"/>
+        <text x="80" y="118" class="pin-label" text-anchor="middle">PWR</text>
+        <circle id="led-wifi" fill="#2563eb" cx="120" cy="100" r="4"/>
+        <text x="120" y="118" class="pin-label" text-anchor="middle">WiFi</text>
+    </g>
+
+    <!-- WARNINGS -->
+    <g id="warnings">
+        <text x="200" y="420" class="warning-text" text-anchor="middle">⚠ Reserved: GPIO6-11 (SPI Flash)</text>
+        <text x="200" y="435" class="warning-text" text-anchor="middle">⚠ Strapping: GPIO0,2,5,12,15</text>
+        <text x="200" y="450" class="warning-text" text-anchor="middle">⚠ Input-only: GPIO34-39</text>
+    </g>
+
+</svg>

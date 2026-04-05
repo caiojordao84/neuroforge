@@ -1,0 +1,28 @@
+# NeuroForge Component — DC Motor with L298N Driver
+id: dc-motor-l298n
+name: DC Motor with L298N Driver
+category: actuator
+subcategory: motor
+svgId: dc-motor-l298n
+voltage: 12
+
+signals:
+| id   | name | direction | signalType | required | svgAnchorId |
+| in1  | IN1  | input     | digital    | true     | anchor-in1  |
+| in2  | IN2  | input     | digital    | true     | anchor-in2  |
+| ena  | ENA  | input     | pwm        | true     | anchor-ena  |
+| vcc  | VCC  | input     | power      | true     | anchor-vcc  |
+| gnd  | GND  | input     | gnd        | true     | anchor-gnd  |
+
+aslHint:
+  semanticType: motor_dc
+  defaultOperation: pwmOutput
+  hmiWidget: slider
+
+restrictions:
+  maxCurrentMa: 2000
+  notes:
+    - IN1/IN2 control direction: 00=brake, 01=forward, 10=backward, 11=brake
+    - ENA for PWM speed control (0-100% duty cycle)
+    - Supports 5-35V motor voltage
+    - 2A per channel max current

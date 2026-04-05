@@ -1,0 +1,238 @@
+# Raspberry Pi Pico W - Board Configuration TOON
+# Phase B board - RP2040 with WiFi + Bluetooth (CYW43439)
+
+id: raspberry-pi-pico-w
+name: Raspberry Pi Pico W
+manufacturer: Raspberry Pi
+mcu: RP2040
+category: maker
+family: rp2040-family
+image: /assets/boards/raspberry-pi-pico-w.svg
+url: https://www.raspberrypi.com/products/raspberry-pi-pico-w/
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SPECS
+
+specs:
+  flashMemory: 2097152        # bytes (2MB)
+  sram: 270336                # bytes (264KB)
+  eeprom: 0                   # none
+  clockSpeed: 133000000       # Hz (133MHz)
+  frequencyMhz: 133          # alternate
+  voltage: 3.3                # V
+  cores: 2                    # RP2040 has dual ARM Cortex-M0+
+  architecture: ARM Cortex-M0+
+  wireless:
+    - wifi
+    - bluetooth
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DIMENSIONS
+
+dimensions:
+  width: 21
+  height: 51
+  thickness: 1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# POWER PINS
+
+powerPins:
+  | name   | voltage | direction    | notes                        |
+  | VBUS   | 5.0     | input        | 5V from USB                  |
+  | VSYS   | 5.0     | bidirectional| System voltage input         |
+  | 3V3    | 3.3     | output       | 3.3V regulated               |
+  | 3V3_EN | 3.3     | input        | 3.3V enable (active high)    |
+  | GND    | 0.0     | bidirectional| Ground                       |
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GPIO
+
+gpio:
+  # GP0-GP9
+  | pin | physicalPin | label  | pwm  | interrupt | adc  | strapping | warning |
+  | 0   | 1           | GP0    | true | true      | false| false     |         |
+  | 1   | 2           | GP1    | true | true      | false| false     |         |
+  | 2   | 3           | GP2    | true | true      | false| false     |         |
+  | 3   | 4           | GP3    | true | true      | false| false     |         |
+  | 4   | 5           | GP4    | true | true      | false| false     |         |
+  | 5   | 6           | GP5    | true | true      | false| false     |         |
+  | 6   | 7           | GP6    | true | true      | false| false     |         |
+  | 7   | 8           | GP7    | true | true      | false| false     |         |
+  | 8   | 9           | GP8    | true | true      | false| false     |         |
+  | 9   | 10          | GP9    | true | true      | false| false     |         |
+
+  # GP10-GP19
+  | pin | physicalPin | label  | pwm  | interrupt | adc  | strapping | warning |
+  | 10  | 11          | GP10   | true | true      | false| false     |         |
+  | 11  | 12          | GP11   | true | true      | false| false     |         |
+  | 12  | 13          | GP12   | true | true      | false| false     |         |
+  | 13  | 14          | GP13   | true | true      | false| false     |         |
+  | 14  | 15          | GP14   | true | true      | false| false     |         |
+  | 15  | 16          | GP15   | true | true      | false| false     |         |
+  | 16  | 17          | GP16   | true | true      | false| false     |         |
+  | 17  | 18          | GP17   | true | true      | false| false     |         |
+  | 18  | 19          | GP18   | true | true      | false| false     |         |
+  | 19  | 20          | GP19   | true | true      | false| false     |         |
+
+  # GP20-GP22
+  | pin | physicalPin | label  | pwm  | interrupt | adc  | strapping | warning |
+  | 20  | 21          | GP20   | true | true      | false| false     |         |
+  | 21  | 22          | GP21   | true | true      | false| false     |         |
+  | 22  | 23          | GP22   | true | true      | false| false     |         |
+
+  # GP23-24 (Reserved for CYW43439)
+  | pin | physicalPin | label  | pwm  | interrupt | adc  | strapping | warning              |
+  | 23  | 24          | WL_GP  | false| false     | false| false     | Reserved for WiFi/BT |
+  | 24  | 25          | WL_GP  | false| false     | false| false     | Reserved for WiFi/BT |
+
+  # GP25 - LED
+  | pin | physicalPin | label      | pwm  | interrupt | adc  | strapping | warning       |
+  | 25  | 26          | LED_BUILTIN| true | false     | false| false     | Onboard LED   |
+
+  # GP26-28 (ADC)
+  | pin | physicalPin | label   | pwm  | interrupt | adc  | strapping | warning |
+  | 26  | 27          | GP26_A0| true | true      | true | false     | ADC0   |
+  | 27  | 28          | GP27_A1| true | true      | true | false     | ADC1   |
+  | 28  | 29          | GP28_A2| true | true      | true | false     | ADC2   |
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PERIPHERALS
+
+peripherals:
+  serial:
+    uarts: 2
+    pins: [0, 1]
+  i2c:
+    channels: 2
+    sda: 4
+    scl: 5
+  spi:
+    channels: 2
+    miso: 16
+    mosi: 19
+    sck: 18
+    ss: 17
+  adc:
+    channels: 3
+    resolution: 12
+    pins: [26, 27, 28]
+  wifi:
+    protocols:
+      - 802.11b
+      - 802.11g
+      - 802.11n
+    modes:
+      - sta
+      - ap
+  bluetooth:
+    classic: false
+    ble: true
+    version: "4.2"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# USB
+
+usb:
+  type: micro-USB
+  chipset: Native USB
+  vid: "0x2E8A"
+  pid: "0x000F"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LEDS
+
+leds:
+  | id            | color  | function    | linkedPin |
+  | led-wifi      | yellow | wifi-status | 23        |
+  | led-user      | green  | user        | 25        |
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RESTRICTIONS
+
+restrictions:
+  strappingPins: []  # RP2040 no strapping like ESP32
+  reservedPins: [23, 24]  # Reserved for CYW43439 WiFi/BT
+  outputCurrent: 12  # mA per pin (3.3V logic)
+  warnings:
+    - GP23, GP24 are reserved for CYW43439 WiFi/BT module
+    - GP25 is connected to onboard LED
+    - System voltage is 3.3V, not 5V tolerant
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COMPATIBILITY
+
+compatibility:
+  arduinoCore: arduino:mbed_rp2040
+  platformio: raspberrypi
+  frameworks:
+    - arduino
+    - micropython
+    - circuitpython
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LANGUAGES
+
+languages:
+  - arduino-cpp
+  - micropython
+  - circuitpython
+  - rust-embassy-rp
+
+bootloader: UF2
+
+# ─────────────────────────────────────────────────────────────────────────────
+# svgMap
+
+svgMap:
+  file: assets/boards/raspberry-pi-pico-w.svg
+  viewBox: 0 0 300 700
+  pins:
+  | id           | logicalPin | physicalPin | cx    | cy    | side  |
+  | pin-gp0      | 0          | 1           | 40    | 100   | left  |
+  | pin-gp1      | 1          | 2           | 40    | 130   | left  |
+  | pin-gp2      | 2          | 3           | 40    | 160   | left  |
+  | pin-gp3      | 3          | 4           | 40    | 190   | left  |
+  | pin-gp4      | 4          | 5           | 40    | 220   | left  |
+  | pin-gp5      | 5          | 6           | 40    | 250   | left  |
+  | pin-gp6      | 6          | 7           | 40    | 280   | left  |
+  | pin-gp7      | 7          | 8           | 40    | 310   | left  |
+  | pin-gp8      | 8          | 9           | 40    | 340   | left  |
+  | pin-gp9      | 9          | 10          | 40    | 370   | left  |
+  | pin-gp10     | 10         | 11          | 40    | 400   | left  |
+  | pin-gp11     | 11         | 12          | 40    | 430   | left  |
+  | pin-gp12     | 12         | 13          | 40    | 460   | left  |
+  | pin-gp13     | 13         | 14          | 40    | 490   | left  |
+  | pin-gp14     | 14         | 15          | 40    | 520   | left  |
+  | pin-gp15     | 15         | 16          | 40    | 550   | left  |
+  | pin-gp16     | 16         | 17          | 40    | 580   | left  |
+  | pin-gp17     | 17         | 18          | 40    | 610   | left  |
+  | pin-gp18     | 18         | 19          | 40    | 640   | left  |
+  | pin-gp19     | 19         | 20          | 40    | 670   | left  |
+  | pin-gp20     | 20         | 21          | 260   | 100   | right |
+  | pin-gp21     | 21         | 22          | 260   | 130   | right |
+  | pin-gp22     | 22         | 23          | 260   | 160   | right |
+  | pin-wifi-gp  | WL_REG    |             | 260   | 190   | right |
+  | pin-wifi-gp2 | WL_GP     |             | 260   | 220   | right |
+  | pin-led      | 25         | 26          | 260   | 250   | right |
+  | pin-gp26     | 26         | 27          | 260   | 280   | right |
+  | pin-gp27     | 27         | 28          | 260   | 310   | right |
+  | pin-gp28     | 28         | 29          | 260   | 340   | right |
+  | pin-agnd     | AGND      |             | 260   | 370   | right |
+  | pin-vsys     | VSYS      |             | 260   | 400   | right |
+  | pin-3v3      | 3V3       |             | 260   | 430   | right |
+  | pin-3v3-en   | 3V3_EN    |             | 260   | 460   | right |
+  | pin-gnd1     | GND       |             | 260   | 490   | right |
+  | pin-gnd2     | GND       |             | 260   | 520   | right |
+  | pin-vbus     | VBUS      |             | 260   | 550   | right |
+
+# ─────────────────────────────────────────────────────────────────────────────
+# aslProfile
+
+aslProfile:
+  targets:
+    | language       | targetId                  | hal            | std   | alloc | confidenceFloor | agentSkill                                    |
+    | arduino-cpp    | raspberry-pi-pico-w-arduino| mbed-rp2040   | true  | true  | 0.93            | agent_skills/languages/arduino-cpp-rp2040.md |
+    | micropython    | raspberry-pi-pico-w-mp    | rp2040        | true  | true  | 0.93            | agent_skills/languages/micropython-rp2040.md   |
+    | circuitpython  | raspberry-pi-pico-w-cp   | rp2040         | true  | true  | 0.91            | agent_skills/languages/circuitpython-rp2040.md|
+    | rust-embassy-rp| raspberry-pi-pico-w-rust | embassy-rp     | true  | true  | 0.88            | agent_skills/languages/rust-embassy-rp.md     |

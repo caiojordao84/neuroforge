@@ -1,0 +1,389 @@
+# Raspberry Pi Pico - Board Configuration TOON
+# Migrated from raspberry-pi-pico.json (v2.0 → TOON v3.0)
+# Includes svgMap and aslProfile fields per architecture v3
+
+id: raspberry-pi-pico
+name: Raspberry Pi Pico
+manufacturer: Raspberry Pi
+mcu: RP2040
+category: maker
+family: rp2040-family
+image: /assets/boards/raspberry-pi-pico.svg
+url: https://www.raspberrypi.com/products/raspberry-pi-pico/
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SPECS - Extended with cores and architecture (Section 3.1 fix)
+
+specs:
+  flashMemory: 2097152    # bytes (2MB)
+  sram: 270336            # bytes (264KB)
+  eeprom: 0               # none
+  clockSpeed: 133000000   # Hz (133MHz)
+  frequencyMhz: 133       # alternate
+  voltage: 3.3            # V
+  cores: 2                # RP2040 has dual ARM Cortex-M0+
+  architecture: ARM Cortex-M0+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DIMENSIONS
+
+dimensions:
+  width: 21
+  height: 51
+  thickness: 1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# POWER PINS - Fixed: consolidated GND entries (Section 1 diagnosis fix)
+
+powerPins:
+  | name   | voltage | direction    | notes                        |
+  | VBUS   | 5.0     | input        | 5V from USB                  |
+  | VSYS   | 5.0     | bidirectional| System voltage input         |
+  | 3V3    | 3.3     | output       | 3.3V regulated               |
+  | 3V3_EN | 3.3     | input        | 3.3V enable (active high)    |
+  | GND    | 0.0     | bidirectional| Ground (consolidated from 8)|
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GPIO - Now with physicalPin
+
+gpio:
+  # GP0-GP9
+  | pin | physicalPin | label  | pwm  | interrupt | adc  | strapping | warning |
+  | 0   | 1           | GP0    | true | true      | false| false     |         |
+  | 1   | 2           | GP1    | true | true      | false| false     |         |
+  | 2   | 3           | GP2    | true | true      | false| false     |         |
+  | 3   | 4           | GP3    | true | true      | false| false     |         |
+  | 4   | 5           | GP4    | true | true      | false| false     |         |
+  | 5   | 6           | GP5    | true | true      | false| false     |         |
+  | 6   | 7           | GP6    | true | true      | false| false     |         |
+  | 7   | 8           | GP7    | true | true      | false| false     |         |
+  | 8   | 9           | GP8    | true | true      | false| false     |         |
+  | 9   | 10          | GP9    | true | true      | false| false     |         |
+
+  # GP10-GP19
+  | pin | physicalPin | label  | pwm  | interrupt | adc  | strapping | warning |
+  | 10  | 11          | GP10   | true | true      | false| false     |         |
+  | 11  | 12          | GP11   | true | true      | false| false     |         |
+  | 12  | 13          | GP12   | true | true      | false| false     |         |
+  | 13  | 14          | GP13   | true | true      | false| false     |         |
+  | 14  | 15          | GP14   | true | true      | false| false     |         |
+  | 15  | 16          | GP15   | true | true      | false| false     |         |
+  | 16  | 17          | GP16   | true | true      | false| false     |         |
+  | 17  | 18          | GP17   | true | true      | false| false     |         |
+  | 18  | 19          | GP18   | true | true      | false| false     |         |
+  | 19  | 20          | GP19   | true | true      | false| false     |         |
+
+  # GP20-GP22
+  | pin | physicalPin | label  | pwm  | interrupt | adc  | strapping | warning |
+  | 20  | 21          | GP20   | true | true      | false| false     |         |
+  | 21  | 22          | GP21   | true | true      | false| false     |         |
+  | 22  | 23          | GP22   | true | true      | false| false     |         |
+
+  # GP25 - LED
+  | pin | physicalPin | label      | pwm  | interrupt | adc  | strapping | warning       |
+  | 25  | 26          | LED_BUILTIN| true | false     | false| false     | Onboard LED   |
+
+  # GP26-28 (ADC)
+  | pin | physicalPin | label   | pwm  | interrupt | adc  | strapping | warning |
+  | 26  | 27          | GP26_A0| true | true      | true | false     | ADC0   |
+  | 27  | 28          | GP27_A1| true | true      | true | false     | ADC1   |
+  | 28  | 29          | GP28_A2| true | true      | true | false     | ADC2   |
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PERIPHERALS
+
+peripherals:
+  serial:
+    uarts: 2
+    pins: [0, 1]
+  i2c:
+    channels: 2
+    sda: 4
+    scl: 5
+  spi:
+    channels: 2
+    miso: 16
+    mosi: 19
+    sck: 18
+    ss: 17
+
+# ─────────────────────────────────────────────────────────────────────────────
+# USB
+
+usb:
+  type: micro-USB
+  chipset: Native USB
+  vid: "0x2E8A"
+  pid: "0x000A"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RESTRICTIONS
+
+restrictions:
+  strappingPins: []  # RP2040 no strapping like ESP32
+  reservedPins: [23, 24, 29]  # Reserved for flash/QMI
+  outputCurrent: 12  # mA per pin (3.3V logic)
+  warnings:
+    - GP25 is connected to onboard LED
+    - System voltage is 3.3V, not 5V tolerant
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COMPATIBILITY
+
+compatibility:
+  arduinoCore: arduino:mbed_rp2040
+  platformio: raspberrypi
+  frameworks:
+    - arduino
+    - micropython
+    - circuitpython
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LANGUAGES
+
+languages:
+  - arduino-cpp
+  - micropython
+  - circuitpython
+  - rust
+
+bootloader: UF2
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Section 3.2 - svgMap (NEW - coordinates TBD, need SVG first)
+
+svgMap:
+  file: assets/boards/raspberry-pi-pico.svg
+  viewBox: 0 0 300 700
+  pins:
+    # Left side GPIO (pins 1-20)
+    - logicalPin: 0   # GP0
+      cx: 40  cy: 100
+      label: "GP0"
+      classes: [pin-digital, pin-pwm, pin-interrupt]
+      data-pwm: true
+      data-interrupt: true
+    - logicalPin: 1   # GP1
+      cx: 40  cy: 130
+      label: "GP1"
+      classes: [pin-digital, pin-pwm, pin-interrupt]
+      data-pwm: true
+      data-interrupt: true
+    - logicalPin: 2   # GP2
+      cx: 40  cy: 160
+      label: "GP2"
+      classes: [pin-digital, pin-pwm, pin-interrupt]
+      data-pwm: true
+      data-interrupt: true
+    - logicalPin: 3   # GP3
+      cx: 40  cy: 190
+      label: "GP3"
+      classes: [pin-digital, pin-pwm, pin-interrupt]
+      data-pwm: true
+      data-interrupt: true
+    - logicalPin: 4   # GP4 (I2C SDA)
+      cx: 40  cy: 220
+      label: "GP4"
+      classes: [pin-digital, pin-pwm, pin-interrupt, pin-i2c]
+      data-pwm: true
+      data-interrupt: true
+      data-i2c: "SDA"
+    - logicalPin: 5   # GP5 (I2C SCL)
+      cx: 40  cy: 250
+      label: "GP5"
+      classes: [pin-digital, pin-pwm, pin-interrupt, pin-i2c]
+      data-pwm: true
+      data-interrupt: true
+      data-i2c: "SCL"
+    - logicalPin: 6   # GP6
+      cx: 40  cy: 280
+      label: "GP6"
+      classes: [pin-digital, pin-pwm, pin-interrupt]
+      data-pwm: true
+      data-interrupt: true
+    - logicalPin: 7   # GP7
+      cx: 40  cy: 310
+      label: "GP7"
+      classes: [pin-digital, pin-pwm, pin-interrupt]
+      data-pwm: true
+      data-interrupt: true
+    - logicalPin: 8   # GP8
+      cx: 40  cy: 340
+      label: "GP8"
+      classes: [pin-digital, pin-pwm, pin-interrupt]
+      data-pwm: true
+      data-interrupt: true
+    - logicalPin: 9   # GP9
+      cx: 40  cy: 370
+      label: "GP9"
+      classes: [pin-digital, pin-pwm, pin-interrupt]
+      data-pwm: true
+      data-interrupt: true
+    - logicalPin: 10  # GP10
+      cx: 40  cy: 400
+      label: "GP10"
+      classes: [pin-digital, pin-pwm, pin-interrupt]
+      data-pwm: true
+      data-interrupt: true
+    - logicalPin: 11  # GP11
+      cx: 40  cy: 430
+      label: "GP11"
+      classes: [pin-digital, pin-pwm, pin-interrupt]
+      data-pwm: true
+      data-interrupt: true
+    - logicalPin: 12  # GP12
+      cx: 40  cy: 460
+      label: "GP12"
+      classes: [pin-digital, pin-pwm, pin-interrupt]
+      data-pwm: true
+      data-interrupt: true
+    - logicalPin: 13  # GP13
+      cx: 40  cy: 490
+      label: "GP13"
+      classes: [pin-digital, pin-pwm, pin-interrupt]
+      data-pwm: true
+      data-interrupt: true
+    - logicalPin: 14  # GP14
+      cx: 40  cy: 520
+      label: "GP14"
+      classes: [pin-digital, pin-pwm, pin-interrupt]
+      data-pwm: true
+      data-interrupt: true
+    - logicalPin: 15  # GP15
+      cx: 40  cy: 550
+      label: "GP15"
+      classes: [pin-digital, pin-pwm, pin-interrupt]
+      data-pwm: true
+      data-interrupt: true
+    - logicalPin: 16  # GP16 (SPI MISO)
+      cx: 40  cy: 580
+      label: "GP16"
+      classes: [pin-digital, pin-pwm, pin-interrupt, pin-spi]
+      data-pwm: true
+      data-interrupt: true
+      data-spi: "MISO"
+    - logicalPin: 17  # GP17 (SPI CS)
+      cx: 40  cy: 610
+      label: "GP17"
+      classes: [pin-digital, pin-pwm, pin-interrupt, pin-spi]
+      data-pwm: true
+      data-interrupt: true
+      data-spi: "CS"
+    - logicalPin: 18  # GP18 (SPI SCK)
+      cx: 40  cy: 640
+      label: "GP18"
+      classes: [pin-digital, pin-pwm, pin-interrupt, pin-spi]
+      data-pwm: true
+      data-interrupt: true
+      data-spi: "SCK"
+    - logicalPin: 19  # GP19 (SPI MOSI)
+      cx: 40  cy: 670
+      label: "GP19"
+      classes: [pin-digital, pin-pwm, pin-interrupt, pin-spi]
+      data-pwm: true
+      data-interrupt: true
+      data-spi: "MOSI"
+    # Right side GPIO + Power (pins 21-37)
+    - logicalPin: 20  # GP20
+      cx: 260  cy: 100
+      label: "GP20"
+      classes: [pin-digital, pin-pwm, pin-interrupt]
+      data-pwm: true
+      data-interrupt: true
+    - logicalPin: 21  # GP21
+      cx: 260  cy: 130
+      label: "GP21"
+      classes: [pin-digital, pin-pwm, pin-interrupt]
+      data-pwm: true
+      data-interrupt: true
+    - logicalPin: 22  # GP22
+      cx: 260  cy: 160
+      label: "GP22"
+      classes: [pin-digital, pin-pwm, pin-interrupt]
+      data-pwm: true
+      data-interrupt: true
+    - logicalPin: -1  # RUN (not a GPIO)
+      cx: 260  cy: 190
+      label: "RUN"
+      classes: [pin-power]
+      data-voltage: "3.3"
+    - logicalPin: 23  # GP23 (Reserved)
+      cx: 260  cy: 220
+      label: "GP23"
+      classes: [pin-reserved]
+      data-warning: "Reserved for QSPI flash"
+    - logicalPin: 24  # GP24 (Reserved)
+      cx: 260  cy: 250
+      label: "GP24"
+      classes: [pin-reserved]
+      data-warning: "Reserved for QSPI flash"
+    - logicalPin: 25  # GP25 (LED)
+      cx: 260  cy: 280
+      label: "LED_BUILTIN"
+      classes: [pin-pwm]
+      data-pwm: true
+      data-warning: "Onboard LED"
+    - logicalPin: 26  # GP26 (ADC0, Input-only)
+      cx: 260  cy: 310
+      label: "GP26_A0"
+      classes: [pin-analog, pin-pwm, pin-interrupt, pin-input-only]
+      data-pwm: true
+      data-interrupt: true
+      data-adc: true
+    - logicalPin: 27  # GP27 (ADC1, Input-only)
+      cx: 260  cy: 340
+      label: "GP27_A1"
+      classes: [pin-analog, pin-pwm, pin-interrupt, pin-input-only]
+      data-pwm: true
+      data-interrupt: true
+      data-adc: true
+    - logicalPin: 28  # GP28 (ADC2, Input-only)
+      cx: 260  cy: 370
+      label: "GP28_A2"
+      classes: [pin-analog, pin-pwm, pin-interrupt, pin-input-only]
+      data-pwm: true
+      data-interrupt: true
+      data-adc: true
+    - logicalPin: -2  # AGND
+      cx: 260  cy: 400
+      label: "AGND"
+      classes: [pin-gnd]
+    - logicalPin: -3  # VSYS
+      cx: 260  cy: 430
+      label: "VSYS"
+      classes: [pin-power]
+      data-voltage: "5.0"
+    - logicalPin: -4  # 3V3
+      cx: 260  cy: 460
+      label: "3V3"
+      classes: [pin-power]
+      data-voltage: "3.3"
+    - logicalPin: -5  # 3V3_EN
+      cx: 260  cy: 490
+      label: "3V3_EN"
+      classes: [pin-power]
+      data-voltage: "3.3"
+    - logicalPin: -6  # GND
+      cx: 260  cy: 520
+      label: "GND"
+      classes: [pin-gnd]
+    - logicalPin: -7  # GND
+      cx: 260  cy: 550
+      label: "GND"
+      classes: [pin-gnd]
+    - logicalPin: -8  # VBUS
+      cx: 260  cy: 580
+      label: "VBUS"
+      classes: [pin-power]
+      data-voltage: "5.0"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Section 3.3 - aslProfile (NEW)
+
+aslProfile:
+  targets:
+    | language    | targetId                  | hal            | std   | alloc | confidenceFloor | agentSkill                                    |
+    | arduino-cpp | raspberry-pi-pico-arduino| mbed-rp2040    | true  | true  | 0.93            | agent_skills/languages/arduino-cpp-rp2040.md |
+    | micropython | raspberry-pi-pico-mp     | rp2040         | true  | true  | 0.93            | agent_skills/languages/micropython-rp2040.md   |
+    | circuitpython| raspberry-pi-pico-cp    | rp2040         | true  | true  | 0.91            | agent_skills/languages/circuitpython-rp2040.md|
+    | rust        | raspberry-pi-pico-rust   | embassy-rp     | true  | true  | 0.88            | agent_skills/languages/rust-embassy-rp.md     |

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Component Template - Copy and customize for new components -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80">
+  <defs>
+    <style>
+      /* Component body styles */
+      .component-body { fill: #4a4a4a; stroke: #2a2a2a; stroke-width: 1.5; }
+      .component-label { fill: #fff; font-family: 'Roboto Mono', monospace; font-size: 8px; }
+      
+      /* Signal anchor base styles */
+      .signal-anchor { fill: #fff; stroke: #333; stroke-width: 1.5; }
+      .signal-anchor:hover { fill: #4a90d9; cursor: pointer; }
+      
+      /* Signal type styles */
+      .signal-digital { stroke: #333; }
+      .signal-analog { stroke: #7c3aed; }
+      .signal-pwm { stroke: #e67e22; }
+      .signal-power { stroke: #dc2626; }
+      .signal-gnd { stroke: #171717; }
+      
+      /* Additional signal type styles */
+      .signal-uart { stroke: #16a34a; }
+      .signal-i2c { stroke: #0891b2; }
+      .signal-spi { stroke: #9333ea; }
+    </style>
+  </defs>
+
+  <!-- Component body -->
+  <rect class="component-body" x="10" y="10" width="100" height="60" rx="5" />
+
+  <!-- Component name placeholder -->
+  <text x="60" y="45" class="component-label" text-anchor="middle" font-size="10">COMPONENT</text>
+
+  <!-- ============================================ -->
+  <!-- SIGNAL ANCHOR TEMPLATE - Copy and modify:  -->
+  <!-- ============================================ -->
+  <!--
+  <circle
+    id="anchor-NAME"
+    class="signal-anchor signal-TYPE"
+    data-signal="SIGNAL_NAME"
+    data-signal-type="digital|analog|pwm|power|gnd|uart|i2c|spi"
+    data-direction="input|output|bidirectional"
+    cx="X" cy="Y" r="4"
+  />
+  -->
+
+  <!-- ============================================ -->
+  <!-- EXAMPLE ANCHORS - Modify or remove as needed -->
+  <!-- ============================================ -->
+
+  <!-- Digital output signal (left side) -->
+  <circle id="anchor-signal-out" class="signal-anchor signal-digital"
+    data-signal="signal_out" data-signal-type="digital" data-direction="output"
+    cx="10" cy="40" r="4" />
+
+  <!-- PWM signal (left side) -->
+  <circle id="anchor-pwm" class="signal-anchor signal-pwm"
+    data-signal="pwm" data-signal-type="pwm" data-direction="output"
+    cx="10" cy="25" r="4" />
+
+  <!-- Analog input (left side) -->
+  <circle id="anchor-analog-in" class="signal-anchor signal-analog"
+    data-signal="analog_in" data-signal-type="analog" data-direction="input"
+    cx="10" cy="55" r="4" />
+
+  <!-- Power input (top) -->
+  <circle id="anchor-vcc" class="signal-anchor signal-power"
+    data-signal="vcc" data-signal-type="power" data-direction="input"
+    cx="40" cy="10" r="4" />
+
+  <!-- GND (bottom) -->
+  <circle id="anchor-gnd" class="signal-anchor signal-gnd"
+    data-signal="gnd" data-signal-type="gnd" data-direction="input"
+    cx="40" cy="70" r="4" />
+
+  <!-- I2C SDA (right side) -->
+  <circle id="anchor-sda" class="signal-anchor signal-i2c"
+    data-signal="sda" data-signal-type="i2c" data-direction="bidirectional"
+    cx="110" cy="25" r="4" />
+
+  <!-- I2C SCL (right side) -->
+  <circle id="anchor-scl" class="signal-anchor signal-i2c"
+    data-signal="scl" data-signal-type="i2c" data-direction="input"
+    cx="110" cy="40" r="4" />
+
+  <!-- UART TX (right side) -->
+  <circle id="anchor-tx" class="signal-anchor signal-uart"
+    data-signal="tx" data-signal-type="uart" data-direction="output"
+    cx="110" cy="55" r="4" />
+
+</svg>

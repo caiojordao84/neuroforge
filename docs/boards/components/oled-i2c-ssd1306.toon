@@ -1,0 +1,28 @@
+# NeuroForge Component — OLED I2C Display (SSD1306)
+id: oled-i2c-ssd1306
+name: OLED I2C Display (SSD1306)
+category: indicator
+subcategory: display
+svgId: oled-i2c-ssd1306
+voltage: 3.3
+
+signals:
+| id   | name | direction | signalType | required | svgAnchorId |
+| sda  | SDA  | bidirectional | i2c    | true     | anchor-sda  |
+| scl  | SCL  | input        | i2c    | true     | anchor-scl  |
+| vcc  | VCC  | input        | power  | true     | anchor-vcc  |
+| gnd  | GND  | input        | gnd    | true     | anchor-gnd  |
+
+aslHint:
+  semanticType: display_text
+  include: ssd1306
+  hmiWidget: text
+  hmiLines: 8
+  hmiCharsPerLine: 21
+
+restrictions:
+  maxCurrentMa: 25
+  notes:
+    - I2C address: 0x3C (default)
+    - Supports 128×64 pixel resolution
+    - Requires Wire library for I2C communication

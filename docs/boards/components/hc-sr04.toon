@@ -1,0 +1,32 @@
+# NeuroForge Component — HC-SR04 Ultrasonic Sensor
+id: hc-sr04
+name: HC-SR04 Ultrasonic Distance Sensor
+category: sensor
+subcategory: distance
+svgId: hc-sr04
+voltage: 5.0
+
+signals:
+| id    | name | direction | signalType | required | svgAnchorId |
+| trig  | TRIG | output    | digital    | true     | anchor-trig |
+| echo  | ECHO | input     | digital    | true     | anchor-echo |
+| vcc   | VCC  | input     | power      | true     | anchor-vcc  |
+| gnd   | GND  | input     | gnd        | true     | anchor-gnd  |
+
+aslHint:
+  semanticType: sensor_distance
+  defaultOperation: digitalInput
+  hmiWidget: numeric
+  hmiUnit: cm
+  hmiMin: 2
+  hmiMax: 400
+
+restrictions:
+  requiresInterrupt: true
+  maxCurrentMa: 15
+  minVoltage: 4.5
+  maxVoltage: 5.5
+  notes:
+    - Trig pulse must be at least 10μs
+    - Echo output width indicates distance (2-400cm)
+    - Requires 60ms minimum between readings

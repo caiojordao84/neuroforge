@@ -1,0 +1,180 @@
+# NeuroForge Component Schema TOON
+# Version: 1.0 (NEW - Section 4 of architecture document)
+# Defines peripheral I/O devices: sensors, actuators, indicators, passives
+
+$schema: https://neuroforge.com/schemas/component-schema-v1
+id: neuroforge-component-schema-v1
+title: Component Configuration Schema
+description: Schema for defining electronic components that connect to boards
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Core Identity
+
+id:
+  type: string
+  pattern: "^[a-z0-9-]+$"
+  description: Unique component identifier (kebab-case)
+
+name:
+  type: string
+  description: Human-readable component name
+
+category:
+  type: string
+  enum:
+    - sensor        # LDR, DHT22, HC-SR04, PIR, MPU6050, encoder
+    - actuator     # Servo, DC motor, stepper motor, pump
+    - indicator    # Simple LED, RGB LED, buzzer, 7-seg display, OLED
+    - passive      # Resistor, capacitor, potentiometer
+    - communication # RF module, BT UART, CAN transceiver
+  description: Component category
+
+subcategory:
+  type: string
+  description: Specific component type (e.g., "led", "servo", "temperature")
+
+svgId:
+  type: string
+  description: SVG component template identifier
+
+voltage:
+  type: number
+  minimum: 0
+  maximum: 48
+  description: Operating voltage (V)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Section 4 - signals (Tabular Format)
+
+signals:
+  type: array
+  description: Connection signals/anchors on the component
+  # Tabular format - token-efficient for LLM context
+  columns:
+    - id:          # Signal identifier (e.g., "red", "data", "vcc")
+    - name:        # Human-readable name (e.g., "R", "DATA", "VCC")
+    - direction:  # input | output | bidirectional
+    - signalType: # digital | analog | pwm | gnd | power | i2c | spi | uart
+    - required:   # true | false - is this signal mandatory?
+    - svgAnchorId: # ID of the anchor point in the SVG
+  rows:
+    # Example: RGB LED
+    # | red   | R    | input  | pwm  | true  | anchor-r    |
+    # | green | G    | input  | pwm  | true  | anchor-g    |
+    # | blue  | B    | input  | pwm  | true  | anchor-b    |
+    # | gnd   | GND  | input  | gnd  | true  | anchor-gnd  |
+    #
+    # Example: DHT22
+    # | data  | DATA | bidirectional | digital | true  | anchor-data |
+    # | vcc   | VCC  | input         | power   | true  | anchor-vcc  |
+    # | gnd   | GND  | input         | gnd     | true  | anchor-gnd  |
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Section 4 - aslHint (AI Agent Context)
+
+aslHint:
+  description: Hints for ASL transpiler and agent
+  properties:
+    semanticType:
+      type: string
+      description: |
+        ASL semantic type for code generation:
+        - sensor_digital, sensor_analog, sensor_temperature, sensor_distance
+        - led_simple, led_rgb, led_ws2812
+        - servo, motor_dc, motor_stepper
+        - relay, buzzer, display_oled, display_lcd
+    defaultOperation:
+      type: string
+      description: Default ASL operation statement kind
+      # e.g., "digitalInput", "analogOutput", "pwmInit", "i2cRead"
+    include:
+      type: string
+      description: Required library/header (e.g., "dht", "servo", "wire")
+    hmiWidget:
+      type: string
+      enum:
+        - led
+        - gauge
+        - slider
+        - toggle
+        - chart
+        - label
+        - numeric
+        - arc
+        - none
+      description: HMI widget type for visualization
+    hmiUnit:
+      type: string
+      description: Unit for HMI display (e.g., "°C", "%", "V")
+    hmiMin:
+      type: number
+      description: Minimum value for HMI widget range
+    hmiMax:
+      type: number
+      description: Maximum value for HMI widget range
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Section 4 - restrictions
+
+restrictions:
+  description: Hardware limitations and requirements
+  properties:
+    requiresPwm:
+      type: boolean
+      description: Component requires PWM-capable pin
+    requiresAdc:
+      type: boolean
+      description: Component requires ADC-capable pin
+    requiresInterrupt:
+      type: boolean
+      description: Component requires interrupt-capable pin
+    requiresI2c:
+      type: boolean
+      description: Component requires I2C bus
+    requiresSpi:
+      type: boolean
+      description: Component requires SPI bus
+    requiresUart:
+      type: boolean
+      description: Component requires UART bus
+    maxCurrentMa:
+      type: integer
+      minimum: 0
+      description: Maximum current draw (mA)
+    minVoltage:
+      type: number
+      description: Minimum operating voltage (V)
+    maxVoltage:
+      type: number
+      description: Maximum operating voltage (V)
+    notes:
+      type: array
+      items:
+        type: string
+      description: Important usage notes and warnings
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Additional Metadata
+
+manufacturer:
+  type: string
+  description: Component manufacturer
+
+datasheet:
+  type: string
+  format: uri
+  description: URL to component datasheet
+
+package:
+  type: string
+  description: Physical package type (e.g., "DIP-8", "SOIC-16", "0402")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Required Fields
+
+required:
+  - id
+  - name
+  - category
+  - signals
+  - aslHint

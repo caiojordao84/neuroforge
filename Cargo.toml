@@ -1,10 +1,11 @@
-﻿[workspace]
+[workspace]
 members = [
     "crates/neuroforge-asl",
     "crates/neuroforge-transport",
     "crates/neuroforge-firmware",
     "apps/desktop/src-tauri",
     "apps/mobile/src-tauri",
+    "apps/schemasmith/src-tauri",
 ]
 resolver = "2"
 

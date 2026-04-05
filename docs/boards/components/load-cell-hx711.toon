@@ -1,0 +1,32 @@
+# NeuroForge Component — Load Cell with HX711
+id: load-cell-hx711
+name: Load Cell + HX711
+category: sensor
+subcategory: weight
+svgId: load-cell-hx711
+voltage: 5.0
+
+signals:
+| id  | name | direction | signalType | required | svgAnchorId |
+| dt  | DT   | input     | digital    | true      | anchor-dt   |
+| sck | SCK  | output    | digital    | true      | anchor-sck  |
+| vcc | VCC  | input     | power      | true      | anchor-vcc  |
+| gn1 | GND1 | input     | gnd        | true      | anchor-gnd1 |
+
+aslHint:
+  semanticType: sensor_weight
+  defaultOperation: digitalInput
+  hmiWidget: gauge
+  hmiMin: 0
+  hmiMax: 1000
+  hmiUnit: "g"
+
+restrictions:
+  requiresPwm: false
+  requiresAdc: false
+  maxCurrentMa: 30
+  notes:
+    - HX711 is a 24-bit ADC for load cells
+    - Typical load cell ranges: 1kg, 5kg, 10kg, 50kg, 100kg
+    - Calibration required for accurate measurements
+    - Data output rate: 10Hz or 80Hz

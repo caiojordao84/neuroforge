@@ -1,0 +1,24 @@
+# NeuroForge Component — Resistor
+id: resistor
+name: Resistor
+category: passive
+subcategory: resistor
+svgId: resistor
+voltage: 0
+
+signals:
+| id  | name | direction | signalType | required | svgAnchorId |
+| p1  | P1   | bidirectional | passive | true   | anchor-p1   |
+| p2  | P2   | bidirectional | passive | true   | anchor-p2   |
+
+aslHint:
+  semanticType: resistor
+  defaultOperation: none
+  hmiWidget: none
+
+restrictions:
+  maxCurrentMa: 250
+  notes:
+    - Passive component, no power connection needed
+    - Use for current limiting with LEDs
+    - Color code indicates resistance value

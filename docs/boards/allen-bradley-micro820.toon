@@ -1,0 +1,108 @@
+# Allen Bradley Micro820 - Board Configuration TOON
+# Phase C - Industrial/PLC section
+# Small PLC with 20 I/O points
+
+id: allen-bradley-micro820
+name: Allen Bradley Micro820
+manufacturer: Allen Bradley (Rockwell Automation)
+mcu: Micro820 (Simulation)
+category: plc
+image: /boards/allen-bradley-micro820.svg
+url: https://www.ab.com/micro820
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SPECS - 20 I/O points total
+
+specs:
+  model: "1762-Micro820"
+  digitalInputs: 12
+  digitalOutputs: 8
+  analogInputs: 0
+  analogOutputs: 0
+  totalIO: 20
+  memory: 20    # KB
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DIMENSIONS
+
+dimensions:
+  width: 300
+  height: 250
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PLC PROFILE - Subset of IEC-61131-3 (LD and ST only)
+
+plcProfile:
+  standard: IEC-61131-3
+  languages:
+    - LD    # Ladder Diagram
+    - ST    # Structured Text
+  cycleTimeMs: 5
+  safetyRating: SIL-1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# I/O Configuration
+
+io:
+  digitalInputs: 12
+  digitalOutputs: 8
+  analogInputs: 0
+  analogOutputs: 0
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Communication Interfaces
+
+peripherals:
+  ethernet:
+    enabled: true
+    protocols: [EtherNet/IP, Modbus-TCP]
+  serial:
+    uarts: 1
+    type: RS-232
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PLC-specific features
+
+plcFeatures:
+  taskConfig: true
+  visualization: true
+  softmotion: false
+  safety: false
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Languages
+
+languages: [iec-st]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SVG Map
+
+svgMap:
+  file: assets/boards/allen-bradley-micro820.svg
+  viewBox: 0 0 300 250
+  pins:
+    # Digital Inputs (left side)
+    | id          | ioType   | label | cx  | cy  | side |
+    | di-0        | input    | I:0   | 25  | 45  | left |
+    | di-1        | input    | I:1   | 25  | 65  | left |
+    | di-2        | input    | I:2   | 25  | 85  | left |
+    | di-3        | input    | I:3   | 25  | 105 | left |
+    | di-4        | input    | I:4   | 25  | 125 | left |
+    | di-5        | input    | I:5   | 25  | 145 | left |
+    | di-6        | input    | I:6   | 25  | 165 | left |
+    | di-7        | input    | I:7   | 25  | 185 | left |
+    | di-8        | input    | I:8   | 25  | 205 | left |
+    | di-9        | input    | I:9   | 25  | 225 | left |
+    # Digital Outputs (right side)
+    | id          | ioType   | label | cx  | cy  | side |
+    | do-0        | output   | O:0   | 275 | 45  | right|
+    | do-1        | output   | O:1   | 275 | 65  | right|
+    | do-2        | output   | O:2   | 275 | 85  | right|
+    | do-3        | output   | O:3   | 275 | 105 | right|
+    | do-4        | output   | O:4   | 275 | 125 | right|
+    | do-5        | output   | O:5   | 275 | 145 | right|
+    | do-6        | output   | O:6   | 275 | 165 | right|
+    | do-7        | output   | O:7   | 275 | 185 | right|
+    # USB port (top)
+    | id          | ioType   | label | cx  | cy  | side |
+    | usb-0       | bidirectional | USB | 150 | 35  | top  |

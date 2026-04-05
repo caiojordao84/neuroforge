@@ -1,0 +1,111 @@
+# Siemens S7-1200 Subset - Board Configuration TOON
+# Phase C - Industrial/PLC section
+# Simulated S7-1200 PLC with limited I/O
+
+id: siemens-s7-1200
+name: Siemens S7-1200 (Simulated)
+manufacturer: Siemens
+mcu: S7-1200 (Simulation)
+category: plc
+image: /boards/siemens-s7-1200.svg
+url: https://www.siemens.com/s7-1200
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SPECS - Limited I/O for simulation
+
+specs:
+  model: "CPU 1214C"
+  digitalInputs: 14
+  digitalOutputs: 10
+  analogInputs: 2
+  memory: 100    # KB
+  workMemory: 50  # KB
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DIMENSIONS
+
+dimensions:
+  width: 350
+  height: 280
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PLC PROFILE - Subset of IEC-61131-3 (no SFC, IL)
+
+plcProfile:
+  standard: IEC-61131-3
+  languages:
+    - LD    # Ladder Diagram
+    - FBD   # Function Block Diagram
+    - ST    # Structured Text
+  cycleTimeMs: 1
+  safetyRating: SIL-2
+
+# ─────────────────────────────────────────────────────────────────────────────
+# I/O Configuration
+
+io:
+  digitalInputs: 14
+  digitalOutputs: 10
+  analogInputs: 2
+  analogOutputs: 0
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Communication Interfaces
+
+peripherals:
+  ethernet:
+    enabled: true
+    protocols: [Profinet, Modbus-TCP]
+  serial:
+    uarts: 1
+  rs485:
+    enabled: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PLC-specific features
+
+plcFeatures:
+  taskConfig: true
+  visualization: true
+  softmotion: false
+  safety: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Languages
+
+languages: [iec-st]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SVG Map
+
+svgMap:
+  file: assets/boards/siemens-s7-1200.svg
+  viewBox: 0 0 350 280
+  pins:
+    # Digital Inputs (left side)
+    | id          | ioType   | label | cx  | cy  | side |
+    | di-0        | input    | I0.0  | 30  | 50  | left |
+    | di-1        | input    | I0.1  | 30  | 75  | left |
+    | di-2        | input    | I0.2  | 30  | 100 | left |
+    | di-3        | input    | I0.3  | 30  | 125 | left |
+    | di-4        | input    | I0.4  | 30  | 150 | left |
+    | di-5        | input    | I0.5  | 30  | 175 | left |
+    | di-6        | input    | I0.6  | 30  | 200 | left |
+    | di-7        | input    | I0.7  | 30  | 225 | left |
+    # Digital Outputs (right side)
+    | id          | ioType   | label | cx  | cy  | side |
+    | do-0        | output   | Q0.0  | 320 | 50  | right|
+    | do-1        | output   | Q0.1  | 320 | 75  | right|
+    | do-2        | output   | Q0.2  | 320 | 100 | right|
+    | do-3        | output   | Q0.3  | 320 | 125 | right|
+    | do-4        | output   | Q0.4  | 320 | 150 | right|
+    | do-5        | output   | Q0.5  | 320 | 175 | right|
+    | do-6        | output   | Q0.6  | 320 | 200 | right|
+    | do-7        | output   | Q0.7  | 320 | 225 | right|
+    # Analog Inputs (top)
+    | id          | ioType   | label | cx  | cy  | side |
+    | ai-0        | input    | AI0   | 100 | 35  | top  |
+    | ai-1        | input    | AI1   | 200 | 35  | top  |
+    # Ethernet port (bottom)
+    | id          | ioType   | label | cx  | cy  | side |
+    | eth-0       | bidirectional | ETH  | 175 | 245 | bottom|

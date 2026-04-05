@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60" width="100" height="60">
+  <defs>
+    <style>
+      .signal-anchor { fill: #fff; stroke: #333; stroke-width: 1.5; }
+      .signal-anchor:hover { fill: #4a90d9; }
+      .signal-digital { stroke: #333; }
+      .signal-pwm { stroke: #e67e22; }
+      .signal-analog { stroke: #27ae60; }
+      .signal-power { stroke: #e74c3c; }
+      .signal-gnd { stroke: #2c3e50; }
+    </style>
+  </defs>
+  <circle id="anchor-sig" class="signal-anchor signal-pwm" data-signal="sig" data-signal-type="pwm" data-direction="input" cx="10" cy="30" r="4"/>
+  <circle id="anchor-gnd" class="signal-anchor signal-gnd" data-signal="gnd" data-signal-type="power" data-direction="input" cx="90" cy="30" r="4"/>
+  <rect x="20" y="15" width="60" height="30" rx="15" fill="#2c3e50" stroke="#1a252f" stroke-width="2"/>
+  <circle cx="35" cy="30" r="8" fill="#34495e"/>
+  <rect x="45" y="22" width="25" height="16" rx="2" fill="#e74c3c"/>
+  <text x="52" y="34" font-family="Arial" font-size="8" font-weight="bold" fill="#fff">+</text>
+  <line x1="10" y1="30" x2="20" y2="30" stroke="#333" stroke-width="2"/>
+  <line x1="80" y1="30" x2="90" y2="30" stroke="#333" stroke-width="2"/>
+</svg>

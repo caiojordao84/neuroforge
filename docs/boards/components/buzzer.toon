@@ -1,0 +1,27 @@
+# NeuroForge Component — Buzzer
+id: buzzer
+name: Piezo Buzzer
+category: indicator
+subcategory: buzzer
+svgId: buzzer
+voltage: 5.0
+
+signals:
+| id  | name | direction | signalType | required | svgAnchorId |
+| sig | SIG | input     | pwm        | true     | anchor-sig  |
+| gnd | GND | input     | gnd        | true     | anchor-gnd  |
+
+aslHint:
+  semanticType: buzzer
+  defaultOperation: digitalOutput
+  hmiWidget: toggle
+  hmiMin: 0
+  hmiMax: 1
+
+restrictions:
+  requiresPwm: true
+  maxCurrentMa: 100
+  notes:
+    - Passive buzzer requires PWM for tone control
+    - Active buzzer produces tone on HIGH signal
+    - Do not exceed rated voltage

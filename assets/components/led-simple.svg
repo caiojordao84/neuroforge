@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60" width="100" height="60">
+  <defs>
+    <style>
+      .signal-anchor { fill: #fff; stroke: #333; stroke-width: 1.5; }
+      .signal-anchor:hover { fill: #4a90d9; }
+      .signal-digital { stroke: #333; }
+      .signal-pwm { stroke: #e67e22; }
+      .signal-analog { stroke: #27ae60; }
+      .signal-power { stroke: #e74c3c; }
+      .signal-gnd { stroke: #2c3e50; }
+    </style>
+  </defs>
+  <circle id="anchor-anode" class="signal-anchor signal-pwm" data-signal="anode" data-signal-type="pwm" data-direction="input" cx="10" cy="30" r="4"/>
+  <circle id="anchor-cathode" class="signal-anchor signal-gnd" data-signal="cathode" data-signal-type="power" data-direction="input" cx="90" cy="30" r="4"/>
+  <rect x="25" y="18" width="50" height="24" rx="2" fill="#e74c3c" stroke="#c0392b" stroke-width="2"/>
+  <circle cx="50" cy="30" r="8" fill="#fff" opacity="0.3"/>
+  <path d="M 35 30 L 65 30" stroke="#c0392b" stroke-width="2"/>
+  <path d="M 50 20 L 50 40" stroke="#c0392b" stroke-width="2"/>
+</svg>

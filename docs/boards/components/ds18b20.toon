@@ -1,0 +1,29 @@
+# NeuroForge Component — DS18B20 Temperature Sensor
+id: ds18b20
+name: DS18B20 Digital Temperature Sensor
+category: sensor
+subcategory: temperature
+svgId: ds18b20
+voltage: 5
+
+signals:
+| id   | name  | direction    | signalType | required | svgAnchorId |
+| data | DATA | bidirectional | onewire    | true     | anchor-data |
+| vcc  | VCC  | input        | power      | true     | anchor-vcc  |
+| gnd  | GND  | input        | gnd        | true     | anchor-gnd  |
+
+aslHint:
+  semanticType: sensor_temperature
+  defaultOperation: oneWire
+  include: onewire
+  hmiWidget: gauge
+  hmiUnit: °C
+  hmiMin: -55
+  hmiMax: 125
+
+restrictions:
+  maxCurrentMa: 1.5
+  notes:
+    - Requires 4.7kΩ pull-up resistor on data line
+    - 64-bit unique ROM code for multi-sensor support
+    - 12-bit resolution (0.0625°C precision)

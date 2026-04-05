@@ -1,0 +1,31 @@
+# NeuroForge Component — ACS712 Current Sensor
+id: acs712-current-sensor
+name: ACS712 Current Sensor
+category: sensor
+subcategory: current
+svgId: acs712-current-sensor
+voltage: 5.0
+
+signals:
+| id  | name | direction | signalType | required | svgAnchorId |
+| out | OUT  | output    | analog     | true      | anchor-out  |
+| vcc | VCC  | input     | power      | true      | anchor-vcc  |
+| gn1 | GND1 | input     | gnd        | true      | anchor-gnd1 |
+
+aslHint:
+  semanticType: sensor_current
+  defaultOperation: analogInput
+  hmiWidget: gauge
+  hmiMin: 0
+  hmiMax: 20
+  hmiUnit: "A"
+
+restrictions:
+  requiresAdc: true
+  maxCurrentMa: 15
+  notes:
+    - Hall-effect current sensor
+    - Three variants: 5A, 20A, 30A ranges
+    - Output: 185mV/A (5A), 100mV/A (20A), 66mV/A (30A)
+    - Zero current output = VCC/2
+    - Isolated - safe for AC and DC measurement

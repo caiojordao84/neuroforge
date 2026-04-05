@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Board Template - Copy and customize for new boards -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="600" height="400">
+  <defs>
+    <style>
+      /* Base styles */
+      .board-outline { fill: #3a3a3a; stroke: #1a1a1a; stroke-width: 2; }
+      .board-body { fill: #4a4a4a; }
+      .board-label { fill: #fff; font-family: 'Roboto Mono', monospace; font-size: 14px; }
+      
+      /* Pin types */
+      .pin { fill: #2563eb; stroke: #1e40af; stroke-width: 0.5; }
+      .pin-digital { fill: #2563eb; stroke: #1e40af; stroke-width: 0.5; }
+      .pin-analog { fill: #7c3aed; stroke: #5b21b6; stroke-width: 0.5; }
+      .pin-pwm { fill: #ea580c; stroke: #c2410c; stroke-width: 0.5; }
+      .pin-interrupt { fill: #0891b2; stroke: #0e7490; stroke-width: 0.5; }
+      .pin-power { fill: #dc2626; stroke: #991b1b; stroke-width: 0.5; }
+      .pin-gnd { fill: #171717; stroke: #000; stroke-width: 0.5; }
+      .pin-reserved { fill: #6b7280; stroke: #4b5563; stroke-width: 0.5; }
+      .pin-i2c { fill: #16a34a; stroke: #15803d; stroke-width: 0.5; }
+      .pin-spi { fill: #7c3aed; stroke: #5b21b6; stroke-width: 0.5; }
+      
+      /* Pin label */
+      .pin-label { fill: #fff; font-family: 'Roboto Mono', monospace; font-size: 6px; }
+      
+      /* Hover effect */
+      .pin:hover { fill: #60a5fa; cursor: pointer; }
+    </style>
+  </defs>
+
+  <!-- Board outline -->
+  <rect class="board-outline" x="10" y="10" width="580" height="380" rx="10" />
+  <rect class="board-body" x="20" y="20" width="560" height="360" rx="8" />
+
+  <!-- Board name placeholder -->
+  <text x="300" y="200" class="board-label" text-anchor="middle" font-size="24">YOUR BOARD NAME</text>
+  <text x="300" y="225" class="board-label" text-anchor="middle" font-size="12" opacity="0.7">CHIP NAME / MODEL</text>
+
+  <!-- ============================================ -->
+  <!-- PIN TEMPLATE - Copy this and modify:        -->
+  <!-- ============================================ -->
+  <!--
+  <circle
+    id="pin-ID"
+    class="pin pin-digital pin-pwm pin-interrupt"
+    data-pin="NUMBER"
+    data-label="GP#"
+    data-pwm="true"
+    data-interrupt="true"
+    data-i2c="SDA|SCL"
+    data-spi="MISO|MOSI|SCK|CS"
+    data-adc="true"
+    data-warning="optional warning text"
+    cx="X" cy="Y" r="6"
+  />
+  <text x="LABEL_X" y="LABEL_Y" class="pin-label">LABEL</text>
+  -->
+
+  <!-- ============================================ -->
+  <!-- EXAMPLE PINS - Modify or remove as needed   -->
+  <!-- ============================================ -->
+
+  <!-- Digital GPIO pin (left side) -->
+  <circle id="pin-gpio0" class="pin pin-digital pin-pwm pin-interrupt"
+    data-pin="0" data-label="GP0" data-pwm="true" data-interrupt="true"
+    cx="40" cy="50" r="6" />
+  <text x="25" y="54" class="pin-label">GP0</text>
+
+  <!-- Digital GPIO pin with I2C -->
+  <circle id="pin-gpio1" class="pin pin-digital pin-pwm pin-interrupt pin-i2c"
+    data-pin="1" data-label="GP1" data-pwm="true" data-interrupt="true" data-i2c="SDA"
+    cx="40" cy="80" r="6" />
+  <text x="25" y="84" class="pin-label">GP1</text>
+
+  <!-- Analog input pin -->
+  <circle id="pin-a0" class="pin pin-analog pin-input-only"
+    data-pin="A0" data-label="A0" data-adc="true"
+    cx="40" cy="110" r="6" />
+  <text x="25" y="114" class="pin-label">A0</text>
+
+  <!-- SPI pin -->
+  <circle id="pin-mosi" class="pin pin-digital pin-spi"
+    data-pin="MOSI" data-label="MOSI" data-spi="MOSI"
+    cx="40" cy="140" r="6" />
+  <text x="25" y="144" class="pin-label">MOSI</text>
+
+  <!-- Power pins (bottom) -->
+  <circle id="pin-3v3" class="pin pin-power"
+    data-pin="3V3" data-label="3V3" data-voltage="3.3"
+    cx="100" cy="370" r="6" />
+  <text x="100" y="390" class="pin-label">3V3</text>
+
+  <circle id="pin-5v" class="pin pin-power"
+    data-pin="5V" data-label="5V" data-voltage="5.0"
+    cx="200" cy="370" r="6" />
+  <text x="200" y="390" class="pin-label">5V</text>
+
+  <!-- GND pins -->
+  <circle id="pin-gnd-1" class="pin pin-gnd"
+    data-pin="GND" data-label="GND"
+    cx="300" cy="370" r="6" />
+  <text x="300" y="390" class="pin-label">GND</text>
+
+  <circle id="pin-gnd-2" class="pin pin-gnd"
+    data-pin="GND" data-label="GND"
+    cx="400" cy="370" r="6" />
+  <text x="400" y="390" class="pin-label">GND</text>
+
+  <!-- Reserved pin example -->
+  <circle id="pin-rsvd" class="pin pin-reserved"
+    data-pin="RSVD" data-label="RSVD" data-warning="Reserved for internal use"
+    cx="500" cy="370" r="6" />
+  <text x="500" y="390" class="pin-label">RSVD</text>
+
+  <!-- Digital GPIO pin (right side) -->
+  <circle id="pin-gpio2" class="pin pin-digital pin-pwm pin-interrupt"
+    data-pin="2" data-label="GP2" data-pwm="true" data-interrupt="true"
+    cx="560" cy="50" r="6" />
+  <text x="575" y="54" class="pin-label">GP2</text>
+
+</svg>

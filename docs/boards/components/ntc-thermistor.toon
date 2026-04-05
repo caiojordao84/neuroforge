@@ -1,0 +1,31 @@
+# NeuroForge Component — NTC Thermistor
+id: ntc-thermistor
+name: NTC Thermistor
+category: sensor
+subcategory: temperature
+svgId: ntc-thermistor
+voltage: 3.3
+
+signals:
+| id  | name | direction | signalType | required | svgAnchorId |
+| out | OUT  | output    | analog     | true      | anchor-out  |
+| vcc | VCC  | input     | power      | false     | anchor-vcc  |
+| gn1 | GND1 | input     | gnd        | true      | anchor-gnd1 |
+
+aslHint:
+  semanticType: sensor_temperature
+  defaultOperation: analogInput
+  hmiWidget: numeric
+  hmiMin: -40
+  hmiMax: 125
+  hmiUnit: "°C"
+
+restrictions:
+  requiresAdc: true
+  maxCurrentMa: 1
+  notes:
+    - NTC = Negative Temperature Coefficient
+    - Resistance decreases as temperature increases
+    - Common values: 10kΩ, 100kΩ at 25°C
+    - Requires voltage divider circuit for ADC reading
+    - Beta value typically 3950K for common thermistors

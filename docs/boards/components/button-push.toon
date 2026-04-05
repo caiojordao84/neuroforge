@@ -1,0 +1,27 @@
+# NeuroForge Component — Push Button
+id: button-push
+name: Push Button
+category: sensor
+subcategory: switch
+svgId: button-push
+voltage: 3.3
+
+signals:
+| id  | name | direction | signalType | required | svgAnchorId |
+| out | OUT | output    | digital    | true     | anchor-out  |
+| vcc | VCC | input     | power      | true     | anchor-vcc  |
+| gnd | GND | input     | gnd        | true     | anchor-gnd  |
+
+aslHint:
+  semanticType: sensor_digital
+  defaultOperation: digitalInput
+  hmiWidget: toggle
+  hmiMin: 0
+  hmiMax: 1
+
+restrictions:
+  requiresInterrupt: true
+  maxCurrentMa: 1
+  notes:
+    - Use internal pull-down resistor for stable readings
+    - Debouncing may be required in software

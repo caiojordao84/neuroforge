@@ -1,0 +1,212 @@
+# Arduino MKR WiFi 1010 - Board Configuration TOON
+# Phase B board - SAMD21 with WiFi (NINA-W102)
+
+id: arduino-mkr-wifi-1010
+name: Arduino MKR WiFi 1010
+manufacturer: Arduino
+mcu: SAMD21G18A
+category: maker
+family: avr-family
+image: /assets/boards/arduino-mkr-wifi-1010.svg
+url: https://store.arduino.cc/products/arduino-mkr-wifi-1010
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SPECS
+
+specs:
+  flashMemory: 262144        # bytes (256KB)
+  sram: 32768                # bytes (32KB)
+  eeprom: 0                  # none
+  clockSpeed: 48000000       # Hz (48MHz)
+  frequencyMhz: 48           # alternate
+  voltage: 3.3              # V
+  cores: 1                   # Single core ARM Cortex-M0+
+  architecture: ARM Cortex-M0+
+  wireless:
+    - wifi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DIMENSIONS
+
+dimensions:
+  width: 25
+  height: 67
+  thickness: 1.6
+
+# ─────────────────────────────────────────────────────────────────────────────
+# POWER PINS
+
+powerPins:
+  | name   | voltage | direction | notes                         |
+  | VIN    | 5.0     | input     | 5V input from USB or external|
+  | VCC    | 3.3     | output    | 3.3V regulated output        |
+  | GND    |         |           | Ground                        |
+  | RESET  |         | input     | Reset pin                     |
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GPIO - SAMD21 MKR pinout
+
+gpio:
+  # Digital pins D0-D14
+  | pin | physicalPin | label        | pwm   | interrupt | adc  | strapping | warning                  |
+  | 0   | 22          | D0           | false | true      | false| false     |                          |
+  | 1   | 23          | D1           | false | true      | false| false     |                          |
+  | 2   | 10          | D2           | true  | true      | false| false     |                          |
+  | 3   | 11          | D3           | true  | true      | false| false     |                          |
+  | 4   | 14          | D4           | true  | true      | false| false     |                          |
+  | 5   | 15          | D5           | true  | true      | false| false     |                          |
+  | 6   | 20          | D6           | true  | true      | false| false     |                          |
+  | 7   | 21          | D7           | true  | true      | false| false     |                          |
+  | 8   | 6           | D8           | true  | true      | false| false     |                          |
+  | 9   | 7           | D9           | true  | true      | false| false     |                          |
+  | 10  | 18          | D10 SS       | true  | true      | false| false     | SPI SS                   |
+  | 11  | 19          | D11 MOSI     | true  | true      | false| false     | SPI MOSI                 |
+  | 12  | 20          | D12 MISO     | true  | true      | false| false     | SPI MISO                 |
+  | 13  | 21          | D13 SCK      | true  | true      | false| false     | SPI SCK                  |
+  | 14  | 2           | D14          | true  | true      | false| false     |                          |
+
+  # Analog pins A0-A6 (pins 15-20)
+  | pin | physicalPin | label        | pwm   | interrupt | adc  | strapping | warning |
+  | 15  | 4           | A0           | false | false     | true | false     |         |
+  | 16  | 5           | A1           | false | false     | true | false     |         |
+  | 17  | 6           | A2           | false | false     | true | false     |         |
+  | 18  | 8           | A3           | false | false     | true | false     |         |
+  | 19  | 9           | A4 SDA       | false | false     | true | false     | I2C SDA |
+  | 20  | 10          | A5 SCL       | false | false     | true | false     | I2C SCL |
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PERIPHERALS
+
+peripherals:
+  serial:
+    uarts: 2
+    default:
+      tx: 0
+      rx: 1
+  i2c:
+    channels: 1
+    default:
+      sda: 19
+      scl: 20
+  spi:
+    channels: 1
+    default:
+      miso: 12
+      mosi: 11
+      sck: 13
+      ss: 10
+  adc:
+    channels: 6
+    resolution: 12
+    pins: [15, 16, 17, 18, 19, 20]
+  dac:
+    channels: 1
+    resolution: 10
+    pins: [2]
+  wifi:
+    chipset: NINA-W102
+    protocols:
+      - 802.11b
+      - 802.11g
+      - 802.11n
+    modes:
+      - sta
+      - ap
+
+# ─────────────────────────────────────────────────────────────────────────────
+# USB
+
+usb:
+  type: micro-USB
+  chipset: SAMD21 Native USB
+  vid: "0x2341"
+  pid: "0x0275"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LEDS
+
+leds:
+  | id            | color  | function    | linkedPin |
+  | led-power     | green  | power       |           |
+  | led-wifi      | blue   | wifi-status |           |
+  | led-user      | yellow | user        | 6         |
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BUTTONS
+
+buttons:
+  | id             | linkedPin | function | activeLevel |
+  | reset-button   | RESET     | reset    | low         |
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RESTRICTIONS
+
+restrictions:
+  outputCurrent: 7   # mA per pin (3.3V logic)
+  warnings:
+    - Pins 0 and 1 are used for UART by default
+    - Pin 13 controls the on-board LED
+    - Maximum total current from all I/O pins: 150mA
+    - WiFi NINA-W102 occupies some GPIO internally
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COMPATIBILITY
+
+compatibility:
+  arduinoCore: 1.8.13
+  platformio: samd
+  frameworks:
+    - arduino
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LANGUAGES
+
+languages:
+  - arduino-cpp
+
+bootloader: samd-bootloader
+
+# ─────────────────────────────────────────────────────────────────────────────
+# svgMap
+
+svgMap:
+  file: assets/boards/arduino-mkr-wifi-1010.svg
+  viewBox: 0 0 350 700
+  pins:
+  | id           | logicalPin | physicalPin | cx    | cy    | side  |
+  | pin-d0       | 0          | 22          | 50    | 100   | left  |
+  | pin-d1       | 1          | 23          | 50    | 130   | left  |
+  | pin-d2       | 2          | 10          | 50    | 160   | left  |
+  | pin-d3       | 3          | 11          | 50    | 190   | left  |
+  | pin-d4       | 4          | 14          | 50    | 220   | left  |
+  | pin-d5       | 5          | 15          | 50    | 250   | left  |
+  | pin-d6       | 6          | 20          | 50    | 280   | left  |
+  | pin-d7       | 7          | 21          | 50    | 310   | left  |
+  | pin-a0       | 15         | 4           | 50    | 340   | left  |
+  | pin-a1       | 16         | 5           | 50    | 370   | left  |
+  | pin-a2       | 17         | 6           | 50    | 400   | left  |
+  | pin-a3       | 18         | 8           | 50    | 430   | left  |
+  | pin-a4       | 19         | 9           | 50    | 460   | left  |
+  | pin-a5       | 20         | 10          | 50    | 490   | left  |
+  | pin-gnd1     | GND        |             | 50    | 520   | left  |
+  | pin-gnd2     | GND        |             | 50    | 550   | left  |
+  | pin-aref     | AREF       |             | 50    | 580   | left  |
+  | pin-d8       | 8          | 6           | 300   | 100   | right |
+  | pin-d9       | 9          | 7           | 300   | 130   | right |
+  | pin-d10      | 10         | 18          | 300   | 160   | right |
+  | pin-d11      | 11         | 19          | 300   | 190   | right |
+  | pin-d12      | 12         | 20          | 300   | 220   | right |
+  | pin-d13      | 13         | 21          | 300   | 250   | right |
+  | pin-d14      | 14         | 2           | 300   | 280   | right |
+  | pin-vcc      | VCC        |             | 300   | 310   | right |
+  | pin-rst      | RESET      |             | 300   | 340   | right |
+  | pin-vin      | VIN        |             | 300   | 370   | right |
+  | pin-gnd3     | GND        |             | 300   | 400   | right |
+
+# ─────────────────────────────────────────────────────────────────────────────
+# aslProfile
+
+aslProfile:
+  targets:
+    | language    | targetId                  | hal              | std   | alloc | confidenceFloor | agentSkill                                  |
+    | arduino-cpp | arduino-mkr-wifi-1010-avr | arduino-samd-hal | false | false | 0.92            | agent_skills/languages/arduino-cpp-samd.md |

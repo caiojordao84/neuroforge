@@ -1,0 +1,265 @@
+# ESP32 DevKitC V4 - Board Configuration TOON
+# Updated from esp32-devkit.json (v2.0 → TOON v3.0)
+# Now valid with extended schema (cores, architecture supported)
+
+id: esp32-devkitc-v4
+name: ESP32 DevKitC V4
+manufacturer: Espressif Systems
+mcu: ESP32-WROOM-32
+category: maker
+family: esp32-family
+image: /boards/esp32-devkitc-v4.svg
+url: https://www.espressif.com/en/products/devkits/esp32-devkitc
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SPECS - Now VALID with cores and architecture (Section 3.1 fix)
+
+specs:
+  flashMemory: 4194304      # bytes (4MB)
+  sram: 520000             # bytes (520KB)
+  eeprom: 0                # none
+  clockSpeed: 240000000    # Hz (240MHz)
+  frequencyMhz: 240        # alternate
+  voltage: 3.3             # V
+  cores: 2                  # NOW VALID - was invalid in v2 schema
+  architecture: Xtensa LX6 # NOW VALID - was invalid in v2 schema
+  wireless:
+    - wifi
+    - bluetooth
+    - ble
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DIMENSIONS
+
+dimensions:
+  width: 27.9
+  height: 55.0
+  thickness: 1.6
+
+# ─────────────────────────────────────────────────────────────────────────────
+# POWER PINS - Using new enum values (Section 3.1 fix)
+
+powerPins:
+  | name   | voltage | direction | maxCurrent | notes                         |
+  | VIN    | 5.0     | input     |            | 5V input from USB or external|
+  | 3V3    | 3.3     | output    | 600        | 3.3V regulated output        |
+  | GND    |         |           |            | Ground                       |
+  | EN     |         | input     |            | Reset pin (active low)       |
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GPIO - With physicalPin, strapping, inputOnly (Section 3.1 fixes)
+
+gpio:
+  # GPIO 0-5 (with strapping info)
+  | pin | physicalPin | label            | pwm  | interrupt | adc  | touch | inputOnly | strapping | warning                                 |
+  | 0   | 1           | GPIO0 BOOT      | true | true      | false| true  | false     | true      | Strapping pin - Boot mode selection    |
+  | 1   | 2           | GPIO1 TX        | true | true      | false| false | false     | false     | Serial TX                                |
+  | 2   | 3           | GPIO2           | true | true      | true | true  | false     | true      | Strapping pin - Boot voltage selection |
+  | 3   | 4           | GPIO3 RX        | true | true      | false| false | false     | false     | Serial RX                                |
+  | 4   | 5           | GPIO4           | true | true      | true | true  | false     | false     |                                          |
+  | 5   | 6           | GPIO5           | true | true      | false| false | false     | true      | Strapping pin - SDIO slave timing       |
+
+  # GPIO 12-15 (with strapping)
+  | pin | physicalPin | label            | pwm  | interrupt | adc  | touch | inputOnly | strapping | warning                                 |
+  | 12  | 13          | GPIO12 MTDI     | true | true      | true | true  | false     | true      | Strapping pin - Flash voltage (MTDI)   |
+  | 13  | 14          | GPIO13          | true | true      | true | true  | false     | false     |                                          |
+  | 14  | 15          | GPIO14          | true | true      | true | true  | false     | false     |                                          |
+  | 15  | 16          | GPIO15 MTDO     | true | true      | true | true  | false     | true      | Strapping pin - Silences boot messages  |
+
+  # GPIO 16-23
+  | pin | physicalPin | label            | pwm  | interrupt | adc  | touch | inputOnly | strapping | warning |
+  | 16  | 17          | GPIO16          | true | true      | false| false | false     | false     |         |
+  | 17  | 18          | GPIO17          | true | true      | false| false | false     | false     |         |
+  | 18  | 19          | GPIO18 SCK      | true | true      | false| false | false     | false     | SPI SCK |
+  | 19  | 20          | GPIO19 MISO     | true | true      | false| false | false     | false     | SPI MISO|
+
+  # GPIO 21-23 (I2C)
+  | pin | physicalPin | label            | pwm  | interrupt | adc  | touch | inputOnly | strapping | warning |
+  | 21  | 21          | GPIO21 SDA      | true | true      | false| false | false     | false     | I2C SDA |
+  | 22  | 22          | GPIO22 SCL      | true | true      | false| false | false     | false     | I2C SCL |
+  | 23  | 23          | GPIO23 MOSI     | true | true      | false| false | false     | false     | SPI MOSI|
+
+  # GPIO 25-27 (with DAC)
+  | pin | physicalPin | label            | pwm  | interrupt | adc  | touch | inputOnly | strapping | warning |
+  | 25  | 25          | GPIO25 DAC1     | true | true      | true | false | false     | false     | DAC1    |
+  | 26  | 26          | GPIO26 DAC2     | true | true      | true | false | false     | false     | DAC2    |
+  | 27  | 27          | GPIO27          | true | true      | true | true  | false     | false     |         |
+
+  # GPIO 32-33
+  | pin | physicalPin | label            | pwm  | interrupt | adc  | touch | inputOnly | strapping | warning |
+  | 32  | 32          | GPIO32          | true | true      | true | true  | false     | false     |         |
+  | 33  | 33          | GPIO33          | true | true      | true | true  | false     | false     |         |
+
+  # GPIO 34-39 (INPUT ONLY - no pull-up/down)
+  | pin | physicalPin | label            | pwm  | interrupt | adc  | touch | inputOnly | strapping | warning                              |
+  | 34  | 34          | GPIO34          | false| false     | true | false | true      | false     | Input-only (no pull-up/pull-down)    |
+  | 35  | 35          | GPIO35          | false| false     | true | false | true      | false     | Input-only (no pull-up/pull-down)    |
+  | 36  | 36          | GPIO36 SVP      | false| false     | true | false | true      | false     | Input-only (no pull-up/pull-down)    |
+  | 39  | 39          | GPIO39 SVN      | false| false     | true | false | true      | false     | Input-only (no pull-up/pull-down)    |
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PERIPHERALS
+
+peripherals:
+  serial:
+    uarts: 3
+    default:
+      tx: 1
+      rx: 3
+  i2c:
+    channels: 2
+    default:
+      sda: 21
+      scl: 22
+  spi:
+    channels: 4
+    default:
+      miso: 19
+      mosi: 23
+      sck: 18
+  adc:
+    channels: 18
+    resolution: 12
+    pins: [0, 2, 4, 12, 13, 14, 15, 25, 26, 27, 32, 33, 34, 35, 36, 37, 38, 39]
+  dac:
+    channels: 2
+    resolution: 8
+    pins: [25, 26]
+  touch:
+    channels: 10
+    pins: [0, 2, 4, 12, 13, 14, 15, 27, 32, 33]
+  wifi:
+    protocols:
+      - 802.11b
+      - 802.11g
+      - 802.11n
+    modes:
+      - sta
+      - ap
+      - sta+ap
+  bluetooth:
+    classic: true
+    ble: true
+    version: "4.2"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# USB
+
+usb:
+  type: micro-USB
+  chipset: CP2102
+  vid: "0x10C4"
+  pid: "0xEA60"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LEDS
+
+leds:
+  | id           | color  | function    | linkedPin |
+  | led-power    | green  | power       |           |
+  | led-gpio2    | blue   | user        | 2         |
+  | led-tx       | yellow | uart-tx     | 1         |
+  | led-rx       | yellow | uart-rx     | 3         |
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BUTTONS
+
+buttons:
+  | id             | linkedPin | function | activeLevel |
+  | reset-button   | EN        | reset    | low         |
+  | boot-button    | 0         | boot     | low         |
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RESTRICTIONS
+
+restrictions:
+  strappingPins: [0, 2, 5, 12, 15]
+  reservedPins: [6, 7, 8, 9, 10, 11]  # Connected to SPI flash
+  outputCurrent: 40  # mA per pin
+  warnings:
+    - GPIO 6-11 are connected to the integrated SPI flash (DO NOT USE)
+    - GPIO 0, 2, 5, 12, 15 are strapping pins - use with caution during boot
+    - GPIO 34-39 are INPUT ONLY (no internal pull-up/pull-down resistors)
+    - GPIO 1 and 3 are used for Serial debugging (USB)
+    - Total current from all GPIO pins should not exceed 1200mA
+    - Each GPIO pin maximum current: 40mA
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COMPATIBILITY
+
+compatibility:
+  arduinoCore: 2.0.14
+  espIdf: "5.0+"
+  platformio: espressif32
+  frameworks:
+    - arduino
+    - espidf
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LANGUAGES
+
+languages:
+  - arduino-cpp
+  - micropython
+  - circuitpython
+  - esp-idf
+  - rust
+
+bootloader: esp32-bootloader
+
+# ─────────────────────────────────────────────────────────────────────────────
+# QEMU
+
+qemu:
+  machine: esp32
+  cpu: esp32
+  requiresEfuse: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Section 3.2 - svgMap (NEW - coordinates TBD, need SVG first)
+
+svgMap:
+  file: assets/boards/esp32-devkitc-v4.svg
+  viewBox: 0 0 400 600
+  pins:
+  | id           | logicalPin | physicalPin | cx    | cy    | side  |
+  | pin-3v3      | 3V3        |              | 50    | 180   | left  |
+  | pin-en       | EN         |              | 50    | 210   | left  |
+  | pin-gpio36   | 36         | 36           | 50    | 240   | left  |
+  | pin-gpio35   | 35         | 35           | 50    | 270   | left  |
+  | pin-gpio34   | 34         | 34           | 50    | 300   | left  |
+  | pin-gpio33   | 33         | 33           | 50    | 330   | left  |
+  | pin-gpio32   | 32         | 32           | 50    | 360   | left  |
+  | pin-gpio25   | 25         | 25           | 50    | 390   | left  |
+  | pin-gpio26   | 26         | 26           | 50    | 420   | left  |
+  | pin-gpio27   | 27         | 27           | 50    | 450   | left  |
+  | pin-gpio22   | 22         | 22           | 50    | 480   | left  |
+  | pin-gpio21   | 21         | 21           | 50    | 510   | left  |
+  | pin-gpio19   | 19         | 19           | 50    | 540   | left  |
+  | pin-gpio18   | 18         | 18           | 50    | 570   | left  |
+  | pin-gnd-top  | GND        |              | 350   | 180   | right |
+  | pin-vin      | VIN        |              | 350   | 210   | right |
+  | pin-gpio1    | 1          | 2            | 350   | 240   | right |
+  | pin-gpio0    | 0          | 1            | 350   | 270   | right |
+  | pin-gpio3    | 3          | 4            | 350   | 300   | right |
+  | pin-gpio5    | 5          | 6            | 350   | 330   | right |
+  | pin-gpio4    | 4          | 5            | 350   | 360   | right |
+  | pin-gpio2    | 2          | 3            | 350   | 390   | right |
+  | pin-gpio15   | 15         | 16           | 350   | 420   | right |
+  | pin-gpio13   | 13         | 14           | 350   | 450   | right |
+  | pin-gpio12   | 12         | 13           | 350   | 480   | right |
+  | pin-gpio14   | 14         | 15           | 350   | 510   | right |
+  | pin-gpio23   | 23         | 23           | 350   | 540   | right |
+  | pin-gpio16   | 16         | 17           | 350   | 570   | right |
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Section 3.3 - aslProfile (NEW)
+
+aslProfile:
+  targets:
+    | language    | targetId                | hal               | std   | alloc | confidenceFloor | agentSkill                                  |
+    | arduino-cpp | esp32-esp32             | esp32-arduino    | true  | true  | 0.89            | agent_skills/languages/arduino-cpp-esp32.md |
+    | micropython | esp32-esp32-micropython| esp32             | true  | true  | 0.89            | agent_skills/languages/micropython-esp32.md |
+    | circuitpython| esp32-esp32-circuitpython| esp32           | true  | true  | 0.87            | agent_skills/languages/circuitpython-esp32.md|
+    | esp-idf     | esp32-esp-idf           | esp-idf          | true  | true  | 0.85            | agent_skills/languages/esp-idf.md            |
+    | rust        | esp32-esp32-rust        | embassy-esp      | true  | true  | 0.82            | agent_skills/languages/rust-embassy-esp.md |

@@ -1,0 +1,26 @@
+# NeuroForge Component — Simple LED
+id: led-simple
+name: Simple LED
+category: indicator
+subcategory: led
+svgId: led-simple
+voltage: 3.3
+
+signals:
+| id  | name | direction | signalType | required | svgAnchorId |
+| ana | A    | input     | pwm        | true     | anchor-a    |
+| gn1 | GND1 | input     | gnd        | true     | anchor-gnd1 |
+
+aslHint:
+  semanticType: led_simple
+  defaultOperation: digitalOutput
+  hmiWidget: led
+  hmiMin: 0
+  hmiMax: 1
+
+restrictions:
+  requiresPwm: true
+  maxCurrentMa: 20
+  notes:
+    - Always use current-limiting resistor (220Ω-1kΩ recommended)
+    - Longer leg is anode (+), shorter is cathode (-)

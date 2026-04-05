@@ -1,0 +1,27 @@
+# NeuroForge Component — Potentiometer
+id: potentiometer
+name: Potentiometer
+category: sensor
+subcategory: analog
+svgId: potentiometer
+voltage: 3.3
+
+signals:
+| id  | name | direction | signalType | required | svgAnchorId |
+| out | OUT  | output    | analog     | true     | anchor-out  |
+| vcc | VCC  | input     | power      | true     | anchor-vcc  |
+| gnd | GND  | input     | gnd        | true     | anchor-gnd  |
+
+aslHint:
+  semanticType: sensor_analog
+  defaultOperation: analogInput
+  hmiWidget: slider
+  hmiMin: 0
+  hmiMax: 1023
+
+restrictions:
+  requiresAdc: true
+  maxCurrentMa: 1
+  notes:
+    - Linear taper most common for control applications
+    - Provides variable voltage divider output

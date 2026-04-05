@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60" width="100" height="60">
+  <defs>
+    <style>
+      .signal-anchor { fill: #fff; stroke: #333; stroke-width: 1.5; }
+      .signal-anchor:hover { fill: #4a90d9; }
+      .signal-digital { stroke: #333; }
+      .signal-pwm { stroke: #e67e22; }
+      .signal-analog { stroke: #27ae60; }
+      .signal-power { stroke: #e74c3c; }
+      .signal-gnd { stroke: #2c3e50; }
+    </style>
+  </defs>
+  <circle id="anchor-data" class="signal-anchor signal-digital" data-signal="data" data-signal-type="digital" data-direction="both" cx="10" cy="30" r="4"/>
+  <circle id="anchor-vcc" class="signal-anchor signal-power" data-signal="vcc" data-signal-type="power" data-direction="input" cx="90" cy="20" r="4"/>
+  <circle id="anchor-gnd" class="signal-anchor signal-gnd" data-signal="gnd" data-signal-type="power" data-direction="input" cx="90" cy="40" r="4"/>
+  <rect x="25" y="15" width="50" height="30" rx="3" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="2"/>
+  <rect x="30" y="20" width="25" height="20" rx="2" fill="#3498db"/>
+  <text x="35" y="34" font-family="Arial" font-size="8" font-weight="bold" fill="#fff">DHT22</text>
+  <circle cx="75" cy="25" r="3" fill="#27ae60"/>
+  <circle cx="75" cy="35" r="3" fill="#2c3e50"/>
+  <line x1="10" y1="30" x2="25" y2="30" stroke="#333" stroke-width="2"/>
+  <line x1="80" y1="20" x2="90" y2="20" stroke="#e74c3c" stroke-width="2"/>
+  <line x1="80" y1="40" x2="90" y2="40" stroke="#2c3e50" stroke-width="2"/>
+</svg>

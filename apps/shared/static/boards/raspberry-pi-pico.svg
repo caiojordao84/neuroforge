@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 300 700" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;">
+    
+    <!-- BOARD BODY -->
+    <g id="board">
+        <rect id="board-body" x="40" y="30" width="220" height="640" rx="8" style="fill:#3a3a3a;fill-rule:nonzero;"/>
+        <rect id="board-highlight" x="42" y="32" width="216" height="636" rx="6" style="fill:#4a4a4a;"/>
+        <text x="150" y="350" text-anchor="middle" style="font-family:'RobotoMono-Regular', 'Roboto Mono', monospace;font-size:24px;fill:#888;">Raspberry Pi</text>
+        <text x="150" y="380" text-anchor="middle" style="font-family:'RobotoMono-Regular', 'Roboto Mono', monospace;font-size:18px;fill:#888;">PICO</text>
+        <text x="150" y="400" text-anchor="middle" style="font-family:'RobotoMono-Regular', 'Roboto Mono', monospace;font-size:10px;fill:#666;">RP2040</text>
+    </g>
+
+    <!-- USB MICRO CONNECTOR -->
+    <g id="usb-connector">
+        <rect x="110" y="30" width="80" height="40" rx="4" style="fill:#666;"/>
+        <rect x="120" y="40" width="60" height="20" rx="2" style="fill:#333;"/>
+    </g>
+
+    <!-- LEFT SIDE GPIO HEADER -->
+    <g id="gpio-left-header">
+        <text x="20" y="95" style="font-family:'Roboto-Bold', 'Roboto';font-weight:700;font-size:8px;fill:#fff;">GPIO</text>
+        
+        <!-- GP0 - Pin 1 -->
+        <circle id="pin-gpio0" class="pin pin-digital pin-pwm pin-interrupt" data-pin="0" data-label="GP0" data-pwm="true" data-interrupt="true" cx="40" cy="100" r="5"/>
+        
+        <!-- GP1 - Pin 2 -->
+        <circle id="pin-gpio1" class="pin pin-digital pin-pwm pin-interrupt" data-pin="1" data-label="GP1" data-pwm="true" data-interrupt="true" cx="40" cy="130" r="5"/>
+        
+        <!-- GP2 - Pin 3 -->
+        <circle id="pin-gpio2" class="pin pin-digital pin-pwm pin-interrupt" data-pin="2" data-label="GP2" data-pwm="true" data-interrupt="true" cx="40" cy="160" r="5"/>
+        
+        <!-- GP3 - Pin 4 -->
+        <circle id="pin-gpio3" class="pin pin-digital pin-pwm pin-interrupt" data-pin="3" data-label="GP3" data-pwm="true" data-interrupt="true" cx="40" cy="190" r="5"/>
+        
+        <!-- GP4 - Pin 5 -->
+        <circle id="pin-gpio4" class="pin pin-digital pin-pwm pin-interrupt pin-i2c" data-pin="4" data-label="GP4" data-pwm="true" data-interrupt="true" data-i2c="SDA" cx="40" cy="220" r="5"/>
+        
+        <!-- GP5 - Pin 6 -->
+        <circle id="pin-gpio5" class="pin pin-digital pin-pwm pin-interrupt pin-i2c" data-pin="5" data-label="GP5" data-pwm="true" data-interrupt="true" data-i2c="SCL" cx="40" cy="250" r="5"/>
+        
+        <!-- GP6 - Pin 7 -->
+        <circle id="pin-gpio6" class="pin pin-digital pin-pwm pin-interrupt" data-pin="6" data-label="GP6" data-pwm="true" data-interrupt="true" cx="40" cy="280" r="5"/>
+        
+        <!-- GP7 - Pin 8 -->
+        <circle id="pin-gpio7" class="pin pin-digital pin-pwm pin-interrupt" data-pin="7" data-label="GP7" data-pwm="true" data-interrupt="true" cx="40" cy="310" r="5"/>
+        
+        <!-- GP8 - Pin 9 -->
+        <circle id="pin-gpio8" class="pin pin-digital pin-pwm pin-interrupt" data-pin="8" data-label="GP8" data-pwm="true" data-interrupt="true" cx="40" cy="340" r="5"/>
+        
+        <!-- GP9 - Pin 10 -->
+        <circle id="pin-gpio9" class="pin pin-digital pin-pwm pin-interrupt" data-pin="9" data-label="GP9" data-pwm="true" data-interrupt="true" cx="40" cy="370" r="5"/>
+        
+        <!-- GP10 - Pin 11 -->
+        <circle id="pin-gpio10" class="pin pin-digital pin-pwm pin-interrupt" data-pin="10" data-label="GP10" data-pwm="true" data-interrupt="true" cx="40" cy="400" r="5"/>
+        
+        <!-- GP11 - Pin 12 -->
+        <circle id="pin-gpio11" class="pin pin-digital pin-pwm pin-interrupt" data-pin="11" data-label="GP11" data-pwm="true" data-interrupt="true" cx="40" cy="430" r="5"/>
+        
+        <!-- GP12 - Pin 13 -->
+        <circle id="pin-gpio12" class="pin pin-digital pin-pwm pin-interrupt" data-pin="12" data-label="GP12" data-pwm="true" data-interrupt="true" cx="40" cy="460" r="5"/>
+        
+        <!-- GP13 - Pin 14 -->
+        <circle id="pin-gpio13" class="pin pin-digital pin-pwm pin-interrupt" data-pin="13" data-label="GP13" data-pwm="true" data-interrupt="true" cx="40" cy="490" r="5"/>
+        
+        <!-- GP14 - Pin 15 -->
+        <circle id="pin-gpio14" class="pin pin-digital pin-pwm pin-interrupt" data-pin="14" data-label="GP14" data-pwm="true" data-interrupt="true" cx="40" cy="520" r="5"/>
+        
+        <!-- GP15 - Pin 16 -->
+        <circle id="pin-gpio15" class="pin pin-digital pin-pwm pin-interrupt" data-pin="15" data-label="GP15" data-pwm="true" data-interrupt="true" cx="40" cy="550" r="5"/>
+        
+        <!-- GP16 - Pin 17 -->
+        <circle id="pin-gpio16" class="pin pin-digital pin-pwm pin-interrupt pin-spi" data-pin="16" data-label="GP16" data-pwm="true" data-interrupt="true" data-spi="MISO" cx="40" cy="580" r="5"/>
+        
+        <!-- GP17 - Pin 18 -->
+        <circle id="pin-gpio17" class="pin pin-digital pin-pwm pin-interrupt pin-spi" data-pin="17" data-label="GP17" data-pwm="true" data-interrupt="true" data-spi="CS" cx="40" cy="610" r="5"/>
+        
+        <!-- GP18 - Pin 19 -->
+        <circle id="pin-gpio18" class="pin pin-digital pin-pwm pin-interrupt pin-spi" data-pin="18" data-label="GP18" data-pwm="true" data-interrupt="true" data-spi="SCK" cx="40" cy="640" r="5"/>
+        
+        <!-- GP19 - Pin 20 -->
+        <circle id="pin-gpio19" class="pin pin-digital pin-pwm pin-interrupt pin-spi" data-pin="19" data-label="GP19" data-pwm="true" data-interrupt="true" data-spi="MOSI" cx="40" cy="670" r="5"/>
+    </g>
+
+    <!-- RIGHT SIDE GPIO + POWER HEADER -->
+    <g id="gpio-right-header">
+        <!-- GP20 - Pin 21 -->
+        <circle id="pin-gpio20" class="pin pin-digital pin-pwm pin-interrupt" data-pin="20" data-label="GP20" data-pwm="true" data-interrupt="true" cx="260" cy="100" r="5"/>
+        
+        <!-- GP21 - Pin 22 -->
+        <circle id="pin-gpio21" class="pin pin-digital pin-pwm pin-interrupt" data-pin="21" data-label="GP21" data-pwm="true" data-interrupt="true" cx="260" cy="130" r="5"/>
+        
+        <!-- GP22 - Pin 23 -->
+        <circle id="pin-gpio22" class="pin pin-digital pin-pwm pin-interrupt" data-pin="22" data-label="GP22" data-pwm="true" data-interrupt="true" cx="260" cy="160" r="5"/>
+        
+        <!-- RUN - Pin 24 -->
+        <circle id="pin-run" class="pin pin-power" data-pin="RUN" data-label="RUN" data-voltage="3.3" cx="260" cy="190" r="5"/>
+        
+        <!-- GP23 - Pin 25 (Strapping - QSPI) -->
+        <circle id="pin-gpio23" class="pin pin-digital pin-reserved" data-pin="23" data-label="GP23" data-warning="Reserved for QSPI flash" cx="260" cy="220" r="5"/>
+        
+        <!-- GP24 - Pin 26 (Strapping - QSPI) -->
+        <circle id="pin-gpio24" class="pin pin-digital pin-reserved" data-pin="24" data-label="GP24" data-warning="Reserved for QSPI flash" cx="260" cy="250" r="5"/>
+        
+        <!-- GP25 - Pin 27 (LED) -->
+        <circle id="pin-gpio25" class="pin pin-digital pin-pwm" data-pin="25" data-label="LED_BUILTIN" data-pwm="true" data-warning="Onboard LED pin" cx="260" cy="280" r="5"/>
+        
+        <!-- ADC0 (GP26) - Pin 28 -->
+        <circle id="pin-adc0" class="pin pin-analog pin-pwm pin-interrupt pin-input-only" data-pin="26" data-label="GP26_A0" data-pwm="true" data-interrupt="true" data-adc="true" cx="260" cy="310" r="5"/>
+        
+        <!-- ADC1 (GP27) - Pin 29 -->
+        <circle id="pin-adc1" class="pin pin-analog pin-pwm pin-interrupt pin-input-only" data-pin="27" data-label="GP27_A1" data-pwm="true" data-interrupt="true" data-adc="true" cx="260" cy="340" r="5"/>
+        
+        <!-- ADC2 (GP28) - Pin 30 -->
+        <circle id="pin-adc2" class="pin pin-analog pin-pwm pin-interrupt pin-input-only" data-pin="28" data-label="GP28_A2" data-pwm="true" data-interrupt="true" data-adc="true" cx="260" cy="370" r="5"/>
+        
+        <!-- AGND - Pin 31 -->
+        <circle id="pin-agnd" class="pin pin-gnd" data-pin="AGND" data-label="AGND" cx="260" cy="400" r="5"/>
+        
+        <!-- VSYS - Pin 32 -->
+        <circle id="pin-vsys" class="pin pin-power" data-pin="VSYS" data-label="VSYS" data-voltage="5.0" cx="260" cy="430" r="5"/>
+        
+        <!-- 3V3 - Pin 33 -->
+        <circle id="pin-3v3" class="pin pin-power" data-pin="3V3" data-label="3V3" data-voltage="3.3" cx="260" cy="460" r="5"/>
+        
+        <!-- 3V3_EN - Pin 34 -->
+        <circle id="pin-3v3-en" class="pin pin-power" data-pin="3V3_EN" data-label="3V3_EN" data-voltage="3.3" cx="260" cy="490" r="5"/>
+        
+        <!-- GND - Pin 35 -->
+        <circle id="pin-gnd-1" class="pin pin-gnd" data-pin="GND" data-label="GND" cx="260" cy="520" r="5"/>
+        
+        <!-- GND - Pin 36 -->
+        <circle id="pin-gnd-2" class="pin pin-gnd" data-pin="GND" data-label="GND" cx="260" cy="550" r="5"/>
+        
+        <!-- VBUS - Pin 37 -->
+        <circle id="pin-vbus" class="pin pin-power" data-pin="VBUS" data-label="VBUS" data-voltage="5.0" cx="260" cy="580" r="5"/>
+    </g>
+
+    <!-- ONBOARD LED -->
+    <g id="led">
+        <circle id="led-gpio25" class="led led-green" data-state="off" data-linked-pin="25" cx="150" cy="450" r="8"/>
+    </g>
+
+    <!-- CASTELLATED PADS VISUAL -->
+    <g id="castellated-pads">
+        <!-- Left side pads -->
+        <rect x="40" y="100" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="40" y="130" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="40" y="160" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="40" y="190" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="40" y="220" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="40" y="250" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="40" y="280" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="40" y="310" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="40" y="340" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="40" y="370" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="40" y="400" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="40" y="430" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="40" y="460" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="40" y="490" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="40" y="520" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="40" y="550" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="40" y="580" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="40" y="610" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="40" y="640" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="40" y="670" width="8" height="20" style="fill:#c9a227;"/>
+        
+        <!-- Right side pads -->
+        <rect x="252" y="100" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="252" y="130" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="252" y="160" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="252" y="190" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="252" y="220" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="252" y="250" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="252" y="280" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="252" y="310" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="252" y="340" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="252" y="370" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="252" y="400" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="252" y="430" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="252" y="460" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="252" y="490" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="252" y="520" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="252" y="550" width="8" height="20" style="fill:#c9a227;"/>
+        <rect x="252" y="580" width="8" height="20" style="fill:#c9a227;"/>
+    </g>
+
+    <!-- MCU CHIP -->
+    <g id="mcu-chip">
+        <rect x="80" y="300" width="140" height="140" rx="4" style="fill:#1a1a1a;"/>
+        <text x="150" y="375" text-anchor="middle" style="font-family:'RobotoMono-Regular', 'Roboto Mono', monospace;font-size:12px;fill:#c9a227;">RP2040</text>
+    </g>
+
+    <!-- SPI FLASH -->
+    <g id="flash-chip">
+        <rect x="100" y="480" width="40" height="60" rx="2" style="fill:#222;"/>
+        <text x="120" y="515" text-anchor="middle" style="font-family:'RobotoMono-Regular', 'Roboto Mono', monospace;font-size:6px;fill:#666;">FLASH</text>
+    </g>
+    
+</svg>

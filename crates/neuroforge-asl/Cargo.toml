@@ -41,6 +41,9 @@ semver    = { version = "1", features = ["serde"] }
 uuid      = { version = "1", features = ["v4", "js"] }
 roxmltree = "0.19"
 
+# ── TOON serialization (for deterministic hashing) ────────────────────────────
+serde_toon = "0.2"
+
 # ── Runtime async — feature-flagged para não puxar tokio no WASM ─────────────
 tokio = { version = "1", features = ["rt", "time"], optional = true }
 

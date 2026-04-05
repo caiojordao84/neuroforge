@@ -1,0 +1,114 @@
+# CODESYS Virtual PLC - Board Configuration TOON
+# Phase C - Industrial/PLC section
+# Virtual PLC for simulation and development - no hardware limits
+
+id: codesys-virtual
+name: CODESYS Virtual PLC
+manufacturer: CODESYS
+mcu: Virtual (Simulation)
+category: plc
+image: /boards/codesys-virtual.svg
+url: https://www.codesys.com/products/plc.html
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SPECS - Virtual PLC has no hardware limits
+
+specs:
+  virtual: true
+  noHardwareLimits: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DIMENSIONS (virtual representation)
+
+dimensions:
+  width: 400
+  height: 300
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PLC PROFILE - Full IEC-61131-3 Support
+
+plcProfile:
+  standard: IEC-61131-3
+  languages:
+    - LD    # Ladder Diagram
+    - FBD   # Function Block Diagram
+    - ST    # Structured Text
+    - IL    # Instruction List
+    - SFC   # Sequential Function Chart
+  cycleTimeMs: 10
+  safetyRating: SIL-1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# I/O Configuration - Virtual PLC supports unlimited I/O
+
+io:
+  digitalInputs: unlimited
+  digitalOutputs: unlimited
+  analogInputs: unlimited
+  analogOutputs: unlimited
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Communication Interfaces
+
+peripherals:
+  ethernet:
+    enabled: true
+    protocols: [Modbus-TCP, OPC-UA]
+  serial:
+    uarts: 2
+  can:
+    enabled: true
+  profibus:
+    enabled: false
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PLC-specific features
+
+plcFeatures:
+  taskConfig: true
+  visualization: true
+  softmotion: true
+  safety: false
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Languages
+
+languages: [iec-st]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SVG Map
+
+svgMap:
+  file: assets/boards/codesys-virtual.svg
+  viewBox: 0 0 400 300
+  pins:
+    # Digital Inputs (left side)
+    | id          | ioType   | label | cx  | cy  | side |
+    | di-0        | input    | I0    | 40  | 60  | left |
+    | di-1        | input    | I1    | 40  | 90  | left |
+    | di-2        | input    | I2    | 40  | 120 | left |
+    | di-3        | input    | I3    | 40  | 150 | left |
+    | di-4        | input    | I4    | 40  | 180 | left |
+    | di-5        | input    | I5    | 40  | 210 | left |
+    | di-6        | input    | I6    | 40  | 240 | left |
+    | di-7        | input    | I7    | 40  | 270 | left |
+    # Digital Outputs (right side)
+    | id          | ioType   | label | cx  | cy  | side |
+    | do-0        | output   | Q0    | 360 | 60  | right|
+    | do-1        | output   | Q1    | 360 | 90  | right|
+    | do-2        | output   | Q2    | 360 | 120 | right|
+    | do-3        | output   | Q3    | 360 | 150 | right|
+    | do-4        | output   | Q4    | 360 | 180 | right|
+    | do-5        | output   | Q5    | 360 | 210 | right|
+    | do-6        | output   | Q6    | 360 | 240 | right|
+    | do-7        | output   | Q7    | 360 | 270 | right|
+    # Analog Inputs (top)
+    | id          | ioType   | label | cx  | cy  | side |
+    | ai-0        | input    | AI0   | 120 | 40  | top  |
+    | ai-1        | input    | AI1   | 180 | 40  | top  |
+    | ai-2        | input    | AI2   | 240 | 40  | top  |
+    | ai-3        | input    | AI3   | 300 | 40  | top  |
+    # Analog Outputs (bottom)
+    | id          | ioType   | label | cx  | cy  | side |
+    | ao-0        | output   | AQ0   | 120 | 260 | bottom|
+    | ao-1        | output   | AQ1   | 180 | 260 | bottom|

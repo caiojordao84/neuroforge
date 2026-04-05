@@ -1,0 +1,38 @@
+# NeuroForge Component — MPU6050 IMU Sensor
+id: mpu6050
+name: MPU6050 6-Axis IMU
+category: sensor
+subcategory: imu
+svgId: mpu6050
+voltage: 3.3
+
+signals:
+| id   | name | direction    | signalType | required | svgAnchorId |
+| sda  | SDA  | bidirectional | i2c       | true     | anchor-sda  |
+| scl  | SCL  | input        | i2c        | true     | anchor-scl  |
+| xda  | XDA  | bidirectional | i2c       | false    | anchor-xda  |
+| xcl  | XCL  | input        | i2c        | false    | anchor-xcl  |
+| ad0  | AD0  | input        | digital    | false    | anchor-ad0  |
+| int  | INT  | output       | digital    | false    | anchor-int  |
+| vcc  | VCC  | input        | power      | true     | anchor-vcc  |
+| gnd  | GND  | input        | gnd        | true     | anchor-gnd  |
+
+aslHint:
+  semanticType: imu_6axis
+  include: mpu6050
+  hmiWidget: chart
+  hmiAxes: 6
+  hmiData:
+    - accelerometer_x
+    - accelerometer_y
+    - accelerometer_z
+    - gyroscope_x
+    - gyroscope_y
+    - gyroscope_z
+
+restrictions:
+  maxCurrentMa: 3.5
+  notes:
+    - I2C address: 0x68 (default) or 0x69 (AD0=HIGH)
+    - Provides accelerometer and gyroscope data
+    - Built-in digital motion processor (DMP)

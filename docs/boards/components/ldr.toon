@@ -1,0 +1,27 @@
+# NeuroForge Component — LDR (Light Dependent Resistor)
+id: ldr
+name: Light Dependent Resistor
+category: sensor
+subcategory: light
+svgId: ldr
+voltage: 3.3
+
+signals:
+| id  | name | direction | signalType | required | svgAnchorId |
+| out | OUT | output    | analog     | true     | anchor-out  |
+| gnd | GND | input     | gnd        | true     | anchor-gnd  |
+
+aslHint:
+  semanticType: sensor_analog
+  defaultOperation: analogInput
+  hmiWidget: slider
+  hmiMin: 0
+  hmiMax: 1023
+
+restrictions:
+  requiresAdc: true
+  maxCurrentMa: 1
+  notes:
+    - Resistance decreases with light intensity
+    - Use with fixed resistor for voltage divider
+    - Response time varies by component

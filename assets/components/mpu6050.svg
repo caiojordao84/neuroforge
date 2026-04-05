@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60" width="100" height="60">
+  <defs>
+    <style>
+      .signal-anchor { fill: #fff; stroke: #333; stroke-width: 1.5; }
+      .signal-anchor:hover { fill: #4a90d9; }
+      .signal-i2c { stroke: #9b59b6; }
+      .signal-digital { stroke: #333; }
+      .signal-power { stroke: #e74c3c; }
+      .signal-gnd { stroke: #2c3e50; }
+    </style>
+  </defs>
+  <circle id="anchor-sda" class="signal-anchor signal-i2c" data-signal="sda" data-signal-type="i2c" data-direction="both" cx="10" cy="15" r="4"/>
+  <circle id="anchor-scl" class="signal-anchor signal-i2c" data-signal="scl" data-signal-type="i2c" data-direction="input" cx="10" cy="30" r="4"/>
+  <circle id="anchor-ad0" class="signal-anchor signal-digital" data-signal="ad0" data-signal-type="digital" data-direction="input" cx="10" cy="45" r="4"/>
+  <circle id="anchor-vcc" class="signal-anchor signal-power" data-signal="vcc" data-signal-type="power" data-direction="input" cx="90" cy="15" r="4"/>
+  <circle id="anchor-gnd" class="signal-anchor signal-gnd" data-signal="gnd" data-signal-type="power" data-direction="input" cx="90" cy="45" r="4"/>
+  <rect x="20" y="10" width="60" height="40" rx="3" fill="#34495e" stroke="#2c3e50" stroke-width="2"/>
+  <rect x="25" y="15" width="30" height="20" fill="#ecf0f1" rx="1"/>
+  <circle cx="30" cy="25" r="4" fill="#e74c3c"/>
+  <circle cx="40" cy="25" r="4" fill="#e67e22"/>
+  <text x="55" y="23" font-family="Arial" font-size="6" font-weight="bold" fill="#fff">MPU6050</text>
+  <text x="55" y="33" font-family="Arial" font-size="5" fill="#bdc3c7">6-Axis IMU</text>
+  <line x1="10" y1="15" x2="20" y2="15" stroke="#9b59b6" stroke-width="2"/>
+  <line x1="10" y1="30" x2="20" y2="30" stroke="#9b59b6" stroke-width="2"/>
+  <line x1="10" y1="45" x2="20" y2="45" stroke="#333" stroke-width="2"/>
+  <line x1="80" y1="15" x2="90" y2="15" stroke="#e74c3c" stroke-width="2"/>
+  <line x1="80" y1="45" x2="90" y2="45" stroke="#2c3e50" stroke-width="2"/>
+</svg>

@@ -16,7 +16,7 @@
 
 //!   pou.name e pou.pou_type s  o String diretos (n  o Option).
 
-use crate::types::asl_types::{AslPlcProgram, AslType};
+use crate::types::{AslPlcProgram, AslType};
 
 pub use plcopen::to_string as project_to_xml_string;
 

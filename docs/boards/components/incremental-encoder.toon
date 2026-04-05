@@ -1,0 +1,29 @@
+# NeuroForge Component — Incremental Encoder
+id: incremental-encoder
+name: Incremental Encoder
+category: sensor
+subcategory: rotary-encoder
+svgId: incremental-encoder
+voltage: 3.3
+
+signals:
+| id  | name | direction | signalType | required | svgAnchorId |
+| a   | A    | output    | digital    | true      | anchor-a    |
+| b   | B    | output    | digital    | true      | anchor-b    |
+| vcc | VCC  | input     | power      | true      | anchor-vcc  |
+| gn1 | GND1 | input     | gnd        | true      | anchor-gnd1 |
+
+aslHint:
+  semanticType: sensor_digital
+  defaultOperation: digitalInput
+  hmiWidget: numeric
+  hmiMin: 0
+  hmiMax: 360
+
+restrictions:
+  requiresInterrupt: true
+  maxCurrentMa: 10
+  notes:
+    - Quadrature output provides direction information
+    - Use A and B phases for rotation direction detection
+    - Common resolutions: 100-1000 PPR (Pulses Per Revolution)

@@ -1,0 +1,37 @@
+# NeuroForge Component — LCD 16×2 Display
+id: lcd-16x2
+name: LCD 16×2 Display (HD44780)
+category: indicator
+subcategory: display
+svgId: lcd-16x2
+voltage: 5
+
+signals:
+| id   | name | direction | signalType | required | svgAnchorId |
+| rs   | RS   | input     | digital    | true     | anchor-rs   |
+| rw   | RW   | input     | digital    | false    | anchor-rw   |
+| e    | E    | input     | digital    | true     | anchor-e    |
+| d0   | D0   | input     | digital    | false    | anchor-d0   |
+| d1   | D1   | input     | digital    | false    | anchor-d1   |
+| d2   | D2   | input     | digital    | false    | anchor-d2   |
+| d3   | D3   | input     | digital    | false    | anchor-d3   |
+| d4   | D4   | input     | digital    | true     | anchor-d4   |
+| d5   | D5   | input     | digital    | true     | anchor-d5   |
+| d6   | D6   | input     | digital    | true     | anchor-d6   |
+| d7   | D7   | input     | digital    | true     | anchor-d7   |
+| vcc  | VCC  | input     | power      | true     | anchor-vcc  |
+| gnd  | GND  | input     | gnd        | true     | anchor-gnd  |
+
+aslHint:
+  semanticType: display_text
+  include: liquidcrystal
+  hmiWidget: text
+  hmiLines: 2
+  hmiCharsPerLine: 16
+
+restrictions:
+  maxCurrentMa: 50
+  notes:
+    - 4-bit mode uses D4-D7 only
+    - Contrast adjustment via potentiometer recommended
+    - RW pin can be tied to GND for write-only mode

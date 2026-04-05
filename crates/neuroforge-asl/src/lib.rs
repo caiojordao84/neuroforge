@@ -12,6 +12,9 @@ pub mod transpile;
 pub mod types;
 pub mod wasm;
 
+// New modular type system (Task 14)
+pub mod asl_types;
+
 // Re-export transpile functions for convenient access
 pub use crate::transpile::transpile;
 pub use crate::transpile::transpile_with_map;

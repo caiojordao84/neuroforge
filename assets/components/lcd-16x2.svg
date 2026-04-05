@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80">
+  <defs>
+    <style>
+      .signal-anchor { fill: #fff; stroke: #333; stroke-width: 1.5; }
+      .signal-anchor:hover { fill: #4a90d9; }
+      .signal-digital { stroke: #333; }
+      .signal-power { stroke: #e74c3c; }
+      .signal-gnd { stroke: #2c3e50; }
+    </style>
+  </defs>
+  <circle id="anchor-rs" class="signal-anchor signal-digital" data-signal="rs" data-signal-type="digital" data-direction="input" cx="10" cy="20" r="4"/>
+  <circle id="anchor-rw" class="signal-anchor signal-digital" data-signal="rw" data-signal-type="digital" data-direction="input" cx="10" cy="35" r="4"/>
+  <circle id="anchor-e" class="signal-anchor signal-digital" data-signal="e" data-signal-type="digital" data-direction="input" cx="10" cy="50" r="4"/>
+  <circle id="anchor-d4" class="signal-anchor signal-digital" data-signal="d4" data-signal-type="digital" data-direction="input" cx="110" cy="20" r="4"/>
+  <circle id="anchor-d5" class="signal-anchor signal-digital" data-signal="d5" data-signal-type="digital" data-direction="input" cx="110" cy="35" r="4"/>
+  <circle id="anchor-d6" class="signal-anchor signal-digital" data-signal="d6" data-signal-type="digital" data-direction="input" cx="110" cy="50" r="4"/>
+  <circle id="anchor-d7" class="signal-anchor signal-digital" data-signal="d7" data-signal-type="digital" data-direction="input" cx="110" cy="65" r="4"/>
+  <circle id="anchor-vcc" class="signal-anchor signal-power" data-signal="vcc" data-signal-type="power" data-direction="input" cx="60" cy="10" r="4"/>
+  <circle id="anchor-gnd" class="signal-anchor signal-gnd" data-signal="gnd" data-signal-type="power" data-direction="input" cx="60" cy="90" r="4"/>
+  <rect x="25" y="15" width="70" height="50" rx="3" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="2"/>
+  <rect x="30" y="20" width="60" height="30" rx="2" fill="#2c3e50"/>
+  <rect x="32" y="22" width="5" height="3" fill="#95a5a6"/>
+  <rect x="40" y="22" width="5" height="3" fill="#95a5a6"/>
+  <rect x="48" y="22" width="5" height="3" fill="#95a5a6"/>
+  <rect x="56" y="22" width="5" height="3" fill="#95a5a6"/>
+  <rect x="64" y="22" width="5" height="3" fill="#95a5a6"/>
+  <rect x="72" y="22" width="5" height="3" fill="#95a5a6"/>
+  <rect x="80" y="22" width="5" height="3" fill="#95a5a6"/>
+  <text x="40" y="58" font-family="Arial" font-size="8" font-weight="bold" fill="#2c3e50">LCD 16×2</text>
+  <line x1="10" y1="20" x2="25" y2="20" stroke="#333" stroke-width="2"/>
+  <line x1="10" y1="35" x2="25" y2="35" stroke="#333" stroke-width="2"/>
+  <line x1="10" y1="50" x2="25" y2="50" stroke="#333" stroke-width="2"/>
+  <line x1="95" y1="20" x2="110" y2="20" stroke="#333" stroke-width="2"/>
+  <line x1="95" y1="35" x2="110" y2="35" stroke="#333" stroke-width="2"/>
+  <line x1="95" y1="50" x2="110" y2="50" stroke="#333" stroke-width="2"/>
+  <line x1="95" y1="65" x2="110" y2="65" stroke="#333" stroke-width="2"/>
+  <line x1="60" y1="10" x2="60" y2="15" stroke="#e74c3c" stroke-width="2"/>
+  <line x1="60" y1="65" x2="60" y2="90" stroke="#2c3e50" stroke-width="2"/>
+</svg>

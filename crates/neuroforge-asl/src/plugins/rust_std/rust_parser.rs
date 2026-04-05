@@ -823,8 +823,11 @@ impl<'src> RustVisitor<'src> {
     }
 
     fn visit_let(&mut self, node: Node) -> Option<AslStatement> {
+        // For const_item, tree-sitter-rust uses "name" field, not "pattern"
+        // For let_declaration, it uses "pattern" field
         let name = node
-            .child_by_field_name("pattern")
+            .child_by_field_name("name")
+            .or_else(|| node.child_by_field_name("pattern"))
             .map(|n| self.text(n).to_string())
             .unwrap_or_default();
 
@@ -837,12 +840,19 @@ impl<'src> RustVisitor<'src> {
             .child_by_field_name("value")
             .map(|v| self.visit_expr(v));
 
+        // Check if this is a const declaration (const_item)
+        let is_const = node.kind() == "const_item";
+
         Some(AslStatement::Declare(AslDeclare {
             name,
             r#type: asl_type,
             value,
-            mutable: true,
-            scope: "local".into(),
+            mutable: !is_const, // const is not mutable
+            scope: if is_const {
+                "const".into()
+            } else {
+                "local".into()
+            },
             ..Default::default()
         }))
     }
@@ -857,6 +867,44 @@ impl<'src> RustVisitor<'src> {
             .child_by_field_name("right")
             .map(|n| self.visit_expr(n))
             .unwrap_or(AslExpr::int(0));
+
+        // For compound_assignment_expr (+=, -=, *=, /=, %=, &=, |=, ^=, <<=, >>=)
+        // tree-sitter-rust provides an "operator" field
+        let op = node
+            .child_by_field_name("operator")
+            .map(|n| self.text(n).to_string());
+
+        // If there's an operator, we need to convert it to the proper compound assignment
+        // The AslAssign struct doesn't have an 'op' field, so we need to add one
+        if let Some(operator) = op {
+            // For compound assignments, we need to transform:
+            // brightness += fade_amount -> brightness = brightness + fade_amount
+            let binary_op = match operator.as_str() {
+                "+=" => "+",
+                "-=" => "-",
+                "*=" => "*",
+                "/=" => "/",
+                "%=" => "%",
+                "&=" => "&",
+                "|=" => "|",
+                "^=" => "^",
+                "<<=" => "<<",
+                ">>=" => ">>",
+                _ => "+",
+            };
+
+            // Create a binary expression: target + value
+            let binary_expr = AslExpr::Binary(Box::new(AslBinary {
+                left: AslExpr::var(&target),
+                op: BinaryOp::from_str(binary_op),
+                right: value,
+            }));
+
+            return AslStatement::Assign(AslAssign {
+                target,
+                value: binary_expr,
+            });
+        }
 
         AslStatement::Assign(AslAssign { target, value })
     }

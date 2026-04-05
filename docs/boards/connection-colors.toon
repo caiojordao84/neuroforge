@@ -1,0 +1,123 @@
+# NeuroForge Connection Colors TOON
+# Version: 1.0 (Section 5 of architecture document)
+# Canonical wire colors - shared by SVG renderer, visual editor, agent diagram
+
+$schema: https://neuroforge.com/schemas/connection-colors-v1
+version: 1.0
+description: Canonical wire colors for board-component connections
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Section 5 - connections (Tabular Format)
+
+connections:
+  # Tabular format - token-efficient for LLM context
+  columns:
+    - key:        # Connection type identifier
+    - hex:        # Hex color code
+    - name:       # Human-readable name
+    - cssVar:     # CSS custom property name
+  rows:
+    | power    | #DC2626 | Power (VCC/5V/3V3)      | --color-wire-power      |
+    | gnd      | #171717 | Ground                  | --color-wire-gnd        |
+    | digital  | #2563EB | Digital I/O             | --color-wire-digital    |
+    | analog   | #CA8A04 | Analog I/O              | --color-wire-analog     |
+    | pwm      | #EA580C | PWM Output              | --color-wire-pwm        |
+    | i2c      | #16A34A | I2C (SDA/SCL)           | --color-wire-i2c        |
+    | spi      | #7C3AED | SPI (MOSI/MISO/SCK)     | --color-wire-spi        |
+    | uart     | #0891B2 | UART (TX/RX)            | --color-wire-uart       |
+    | reserved | #6B7280 | Reserved / N/A          | --color-wire-reserved   |
+    | warning  | #F59E0B | Strapping / Caution     | --color-wire-warning    |
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Section 5 - pinClasses (Tabular Format)
+
+pinClasses:
+  # Maps SVG CSS classes to connection types
+  columns:
+    - cssClass:      # SVG element class
+    - connectionKey: # Maps to connections[key]
+  rows:
+    | pin-digital     | digital       |
+    | pin-analog      | analog        |
+    | pin-pwm         | pwm           |
+    | pin-interrupt   | digital       |
+    | pin-strapping   | warning       |
+    | pin-reserved    | reserved      |
+    | pin-power       | power         |
+    | pin-gnd         | gnd           |
+    | pin-warning     | warning       |
+    | pin-touch       | digital       |
+    | pin-input-only  | analog        |
+    | pin-i2c         | i2c           |
+    | pin-spi         | spi           |
+    | pin-uart        | uart          |
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CSS Variables (for inclusion in stylesheets)
+
+cssVariables: |
+  :root {
+    /* Power */
+    --color-wire-power: #DC2626;
+    
+    /* Ground */
+    --color-wire-gnd: #171717;
+    
+    /* Digital I/O */
+    --color-wire-digital: #2563EB;
+    
+    /* Analog I/O */
+    --color-wire-analog: #CA8A04;
+    
+    /* PWM */
+    --color-wire-pwm: #EA580C;
+    
+    /* I2C */
+    --color-wire-i2c: #16A34A;
+    
+    /* SPI */
+    --color-wire-spi: #7C3AED;
+    
+    /* UART */
+    --color-wire-uart: #0891B2;
+    
+    /* Reserved */
+    --color-wire-reserved: #6B7280;
+    
+    /* Warning/Strapping */
+    --color-wire-warning: #F59E0B;
+  }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Usage Notes
+
+notes: |
+  # Wire Color Usage Guide
+  
+  ## Board Pins → Component Signals
+  - Connect only compatible types (e.g., PWM pin → PWM signal)
+  - Use wire color as visual indicator in SVG diagrams
+  
+  ## Validation Rules
+  - digital signal → any digital/pwm/interrupt pin
+  - analog signal → any analog/adc pin
+  - pwm signal → PWM-capable pin ONLY
+  - i2c signal → dedicated I2C pins (SDA/SCL)
+  - gnd signal → any GND pin
+  - power signal → VCC/5V/3V3 pin
+  
+  ## SVG Implementation
+  - Use data-pin-type attribute on circle elements
+  - Use data-signal-type attribute on component anchors
+  - Apply .pin-{key} class for color coding
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Revision History
+
+revisions:
+  - version: 1.0
+    date: 2026-04
+    changes:
+      - Initial canonical color definitions
+      - CSS custom properties added
+      - Pin class mappings defined
