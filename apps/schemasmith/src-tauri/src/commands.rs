@@ -117,7 +117,12 @@ pub fn validate_board(toon_content: String) -> Result<BoardValidationResult, Sch
         }
         Err(_) => {
             // Fallback: validate the legacy frontend format (ToonBoard)
-            // This allows the frontend to continue working while migrating to the new format
+            // This allows the frontend to continue working while migrating to the new format.
+            //
+            // NOTE: This fallback expects the old frontend format. If from_toon_str fails
+            // on a valid BoardProfile .toon file (e.g., new format with board_family but
+            // missing some field), errors will be incorrectly reported as "Missing 'board' object".
+            // TODO: Remove this fallback when all boards are migrated to native BoardProfile format.
             let parsed: serde_json::Value = serde_json::from_str(&toon_content)
                 .map_err(|e| SchemaSmithError::ParseError(e.to_string()))?;
 
@@ -273,9 +278,7 @@ pub fn validate_component(
         }
     }
 
-    let valid = errors
-        .iter()
-        .all(|e| e.error_type != "MissingField" && e.error_type != "EmptySignals");
+    let valid = errors.is_empty();
 
     Ok(ComponentValidationResult { valid, errors })
 }

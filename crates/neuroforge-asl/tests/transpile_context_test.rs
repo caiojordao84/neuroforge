@@ -154,6 +154,7 @@ fn test_transpile_context_new() {
             extensions: Default::default(),
         },
         svg_map: None,
+        languages: vec!["arduino".to_string()],
     };
 
     let target = AslTarget {
@@ -220,6 +221,7 @@ fn test_transpile_context_to_toon() {
             extensions: Default::default(),
         },
         svg_map: None,
+        languages: vec!["arduino".to_string()],
     };
 
     let target = AslTarget {

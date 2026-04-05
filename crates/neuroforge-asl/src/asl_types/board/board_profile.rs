@@ -61,6 +61,9 @@ pub struct BoardProfile {
     pub current_limits: HashMap<String, CurrentLimit>,
     /// ASL target configuration
     pub asl_target: AslTarget,
+    /// Supported languages for this board (e.g., ["arduino", "esp32"])
+    #[serde(default)]
+    pub languages: Vec<String>,
     /// SVG map for visual representation
     pub svg_map: Option<SvgMap>,
 }

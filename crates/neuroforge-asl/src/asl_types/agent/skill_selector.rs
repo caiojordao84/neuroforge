@@ -243,6 +243,7 @@ mod tests {
                 extensions: Default::default(),
             },
             svg_map: None,
+            languages: vec![],
         }
     }
 
@@ -409,6 +410,7 @@ mod tests {
             current_limits: Default::default(),
             asl_target: AslTarget::default(),
             svg_map: None,
+            languages: vec![],
         };
 
         assert_eq!(board.get_board_family(), Some("avr-family"));
@@ -434,6 +436,7 @@ mod tests {
             current_limits: Default::default(),
             asl_target: AslTarget::default(),
             svg_map: None,
+            languages: vec![],
         };
 
         // Explicit board_family should take precedence over derived from mcu

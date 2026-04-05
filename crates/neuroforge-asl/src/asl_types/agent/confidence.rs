@@ -176,7 +176,10 @@ pub enum Deduction {
     // =========================================================================
     /// Pin used in ASL but board doesn't have it
     PinNotAvailable {
-        pin: u8,
+        /// Logical pin name (e.g., "D13", "A0")
+        pin_name: String,
+        /// Physical pin number if known
+        physical_pin: Option<u8>,
         reason: String,
         penalty: f32,
     },
@@ -298,7 +301,7 @@ impl BoardConfidenceReport {
         Self::check_pin_availability(board, program, &mut deductions, &mut warnings);
         Self::check_peripherals(board, program, &mut deductions, &mut warnings);
         Self::check_memory(board, program, &mut deductions, &mut warnings);
-        Self::check_language_support(target, &mut deductions, &mut warnings);
+        Self::check_language_support(board, target, &mut deductions, &mut warnings);
         Self::check_strapping_pins(board, program, &mut deductions, &mut warnings);
         Self::check_input_only_pins(board, program, &mut deductions, &mut warnings);
         Self::check_component_compatibility(board, components, &mut deductions, &mut warnings);
@@ -336,8 +339,18 @@ impl BoardConfidenceReport {
 
         for pin in used_pins {
             if !available_pins.contains(&pin) {
+                // Try to get physical pin number from pin capabilities
+                let physical_pin = board.pin_capabilities.get(&pin).and_then(|caps| {
+                    caps.hints
+                        .iter()
+                        .find(|h| h.name == "gpio")
+                        .and_then(|h| h.value.as_ref())
+                        .and_then(|v| v.parse::<u8>().ok())
+                });
+
                 deductions.push(Deduction::PinNotAvailable {
-                    pin: 0, // Physical pin number unknown for logical names
+                    pin_name: pin.clone(),
+                    physical_pin,
                     reason: format!("Pin '{}' is not available on board '{}'", pin, board.id),
                     penalty: 0.05,
                 });
@@ -442,22 +455,46 @@ impl BoardConfidenceReport {
 
     /// Check if target language is supported.
     fn check_language_support(
+        board: &BoardProfile,
         target: &AslTarget,
         deductions: &mut Vec<Deduction>,
         _warnings: &mut Vec<String>,
     ) {
-        // Check if platform is supported - this is a basic check
-        // In a full implementation, we'd check against board's supported languages
-        let supported_platforms = ["arduino", "esp32", "stm32", "microbit"];
+        // Check against board's supported languages
+        let supported_languages = &board.languages;
 
-        if !supported_platforms
-            .iter()
-            .any(|p| target.platform.contains(p))
-        {
-            deductions.push(Deduction::LanguageUnsupported {
-                language: target.platform.clone(),
-                penalty: 0.20,
-            });
+        // If board has explicit languages list, use it
+        if !supported_languages.is_empty() {
+            let target_lang = target.platform.to_lowercase();
+            if !supported_languages
+                .iter()
+                .any(|l| l.to_lowercase() == target_lang)
+            {
+                deductions.push(Deduction::LanguageUnsupported {
+                    language: target.platform.clone(),
+                    penalty: 0.20,
+                });
+            }
+        } else {
+            // Fallback: check against known platform families
+            let known_platforms = [
+                "arduino",
+                "esp32",
+                "stm32",
+                "microbit",
+                "rp2040",
+                "avr",
+                "circuitpython",
+            ];
+            if !known_platforms
+                .iter()
+                .any(|p| target.platform.to_lowercase().contains(p))
+            {
+                deductions.push(Deduction::LanguageUnsupported {
+                    language: target.platform.clone(),
+                    penalty: 0.20,
+                });
+            }
         }
     }
 
