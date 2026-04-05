@@ -8,7 +8,7 @@ manufacturer: Arduino
 mcu: ATmega328P
 category: maker
 family: avr-family
-image: /boards/arduino-uno-r3.svg
+image: /boards/arduino-uno.svg
 url: https://store.arduino.cc/products/arduino-uno-rev3
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -126,10 +126,11 @@ languages: [arduino-cpp]
 bootloader: optiboot
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Section 3.2 - svgMap (NEW - coordinates from arduino-uno-r3.svg)
+# Section 3.2 - svgMap (coordinates from assets/boards/arduino-uno.svg)
+# NOTE: SVG file not yet created — path updated from arduino-uno-r3.svg (fix)
 
 svgMap:
-  file: assets/boards/arduino-uno-r3.svg
+  file: assets/boards/arduino-uno.svg
   viewBox: 0 0 500 360
   # Coordinates extracted from SVG - will be populated by SchemaSmith
   pins:
