@@ -417,6 +417,11 @@ impl<'src> RustVisitor<'src> {
                     if inner_kind == "for_expression" {
                         return vec![self.visit_for(inner)];
                     }
+
+                    // Handle if_expression inside expression_statement
+                    if inner_kind == "if_expression" {
+                        return vec![self.visit_if(inner)];
+                    }
                 }
 
                 vec![self.visit_expr_stmt(node.named_child(0).unwrap())]

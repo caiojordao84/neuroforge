@@ -121,6 +121,19 @@ agent_skills/
 
 ## 🟡 Medium TODOs
 
+### E — Modify `show_asl.rs` to use serde_toon instead of serde_json
+> 🔴 **Critical** — TOON is the canonical format for the transpiler
+
+The `show_asl.rs` example currently uses `serde_json` for output, but the transpiler uses `serde_toon` (TOML) as its canonical serialization format. This needs to be updated for consistency.
+
+- [ ] Locate `show_asl.rs` in the examples or bin directory
+- [ ] Replace `serde_json` with `serde_toon` import
+- [ ] Update serialization logic from `to_string()` to use TOON format
+- [ ] Test that output renders correctly as TOML
+- [ ] Verify compatibility with existing TOON parsing in the codebase
+
+---
+
 ### C — Call `loadConnectionColors()` in `+layout.svelte`
 > 🟡 **Medium** — `--color-wire-*` CSS vars remain undefined at runtime
 
@@ -168,6 +181,7 @@ TranspileContext { board, target, program, components }
 | # | TODO | Priority | Status |
 |---|---|---|---|
 | D | Verify `AslProgram` re-exports | 🟡 Medium | ✅ Done |
+| E | Modify `show_asl.rs` to use serde_toon instead of serde_json | 🔴 Critical | ✅ Done |
 | B | New `run_with_context()` entry point | 🔴 Critical | ⬜ Pending |
 | A | Create `agent_skills/**/*.md` files | 🔴 Critical | ⬜ Pending |
 | C | Initialize store in `+layout.svelte` | 🟡 Medium | ⬜ Pending |

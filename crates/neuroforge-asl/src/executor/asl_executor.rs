@@ -14,6 +14,14 @@
 
 //!   IL, LD, FBD, SFC       todo!()
 
+use crate::asl_types::agent::confidence::BoardConfidenceReport;
+
+use crate::asl_types::agent::skill_selector::SkillSelector;
+
+use crate::asl_types::agent::transpile_context::TranspileContext;
+
+use crate::asl_types::board::AslTarget;
+
 use crate::plugins::c::c_parser::CParser;
 
 use crate::plugins::c::CGenerator;
@@ -119,6 +127,19 @@ pub struct TranspileOutput {
 
     /// Source-map (linha gerada     linha fonte). Dispon  vel para C e Rust.
     pub source_map: Vec<(u32, u32)>,
+}
+
+/// Resultado da transpila    o com informa   es de confian   a e skill usada.
+#[derive(Debug)]
+pub struct AwareTranspileOutput {
+    /// C  digo gerado.
+    pub code: String,
+    /// Source-map (linha gerada     linha fonte).
+    pub source_map: Vec<(u32, u32)>,
+    /// Relat  rio de confian   a do board.
+    pub confidence: BoardConfidenceReport,
+    /// Caminho do arquivo .md de skill usado.
+    pub skill_used: String,
 }
 
 impl TranspileOutput {
@@ -232,6 +253,102 @@ impl AslExecutor {
             TargetLanguage::St => {
                 let out = StGenerator::new().generate(&program);
 
+                Ok(TranspileOutput::from_generator_output(out))
+            }
+
+            TargetLanguage::Il => {
+                Err("IL (Instruction List) ainda n  o implementado     Fase 2 PLC".to_string())
+            }
+
+            TargetLanguage::Ld => {
+                Err("LD (Ladder Diagram) ainda n  o implementado     Fase 2 PLC".to_string())
+            }
+
+            TargetLanguage::Fbd => Err(
+                "FBD (Function Block Diagram) ainda n  o implementado     Fase 2 PLC".to_string(),
+            ),
+
+            TargetLanguage::Sfc => Err(
+                "SFC (Sequential Function Chart) ainda n  o implementado     Fase 2 PLC"
+                    .to_string(),
+            ),
+        }
+    }
+
+    /// Transpila usando contexto completo (board, target, program, components).
+    ///
+    /// Este m  todo  a nova entrada que integra o sistema de agentes com o motor de transpila  o.
+    pub fn run_with_context(ctx: &TranspileContext) -> Result<AwareTranspileOutput, String> {
+        // 1. Selecionar skill usando SkillSelector
+        let selector = SkillSelector::default();
+        let skill_relative = selector.select(&ctx.board_profile, &ctx.target);
+        let skill_path = selector.skill_path(&skill_relative);
+
+        // 2. Calcular confian  a do board
+        let confidence = BoardConfidenceReport::calculate(
+            &ctx.board_profile,
+            &ctx.target,
+            &ctx.asl_program,
+            &ctx.components,
+        );
+
+        // 3. Converter AslTarget para TargetLanguage
+        let target = Self::convert_target(&ctx.target)?;
+
+        // 4. Executar transpila  o usando o m  todo existente
+        let transpile_output = Self::run_asl_program(&ctx.asl_program, &target)?;
+
+        // 5. Retornar resultado com confian  a e skill usada
+        Ok(AwareTranspileOutput {
+            code: transpile_output.code,
+            source_map: transpile_output.source_map,
+            confidence,
+            skill_used: skill_path,
+        })
+    }
+
+    /// Converte AslTarget para TargetLanguage.
+    fn convert_target(asl_target: &AslTarget) -> Result<TargetLanguage, String> {
+        let platform = asl_target.platform.to_lowercase();
+
+        // Mapear plataforma para TargetLanguage
+        match platform.as_str() {
+            "c" | "cpp" | "arduino" | "arduino-cpp" => Ok(TargetLanguage::C),
+            "rust" | "embassy" => Ok(TargetLanguage::Rust),
+            "python" | "micropython" => Ok(TargetLanguage::Python),
+            "circuitpython" => Ok(TargetLanguage::Python),
+            "st" | "structuredtext" | "iec61131" => Ok(TargetLanguage::St),
+            "il" => Ok(TargetLanguage::Il),
+            "ld" | "ladder" => Ok(TargetLanguage::Ld),
+            "fbd" | "functionblock" => Ok(TargetLanguage::Fbd),
+            "sfc" | "sequentialfunction" => Ok(TargetLanguage::Sfc),
+            _ => Err(format!("Plataforma n  o suportada: {}", platform)),
+        }
+    }
+
+    /// Executa transpila  o a partir de um AslProgram j  parseado.
+    fn run_asl_program(
+        program: &AslProgram,
+        target: &TargetLanguage,
+    ) -> Result<TranspileOutput, String> {
+        match target {
+            TargetLanguage::C | TargetLanguage::Cpp | TargetLanguage::Arduino => {
+                let out = CGenerator::new().generate(program);
+                Ok(TranspileOutput::from_generator_output(out))
+            }
+
+            TargetLanguage::Rust => {
+                let out = RustGenerator::new().generate(program);
+                Ok(TranspileOutput::from_generator_output(out))
+            }
+
+            TargetLanguage::Python | TargetLanguage::MicroPython => {
+                let out = PythonGenerator::new().generate(program);
+                Ok(TranspileOutput::from_generator_output(out))
+            }
+
+            TargetLanguage::St => {
+                let out = StGenerator::new().generate(program);
                 Ok(TranspileOutput::from_generator_output(out))
             }
 

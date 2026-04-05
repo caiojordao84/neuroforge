@@ -67,8 +67,6 @@ async fn main(_spawner: Spawner) {
 "#;
 
     let program = RustParser::parse(src).expect("parse failed");
-
-    // Output as formatted JSON
-    let json = serde_json::to_string_pretty(&program).expect("serialize failed");
-    println!("{}", json);
+    let toon = serde_toon::to_string(&program).expect("serialize failed");
+    println!("{}", toon);
 }

@@ -18,3 +18,6 @@ pub mod asl_types;
 // Re-export transpile functions for convenient access
 pub use crate::transpile::transpile;
 pub use crate::transpile::transpile_with_map;
+
+// Re-export AwareTranspileOutput for the agent system
+pub use crate::executor::asl_executor::AwareTranspileOutput;
