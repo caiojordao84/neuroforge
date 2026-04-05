@@ -1,6 +1,8 @@
 # Raspberry Pi Pico - Board Configuration TOON
 # Migrated from raspberry-pi-pico.json (v2.0 → TOON v3.0)
 # Includes svgMap and aslProfile fields per architecture v3
+# fix: svgMap.pins converted to TOON table format (consistent with arduino-uno and esp32-devkitc-v4)
+# fix: power pins use named id (e.g. "RUN", "VSYS") instead of logicalPin: -N
 
 id: raspberry-pi-pico
 name: Raspberry Pi Pico
@@ -41,7 +43,7 @@ powerPins:
   | VSYS   | 5.0     | bidirectional| System voltage input         |
   | 3V3    | 3.3     | output       | 3.3V regulated               |
   | 3V3_EN | 3.3     | input        | 3.3V enable (active high)    |
-  | GND    | 0.0     | bidirectional| Ground (consolidated from 8)|
+  | GND    | 0.0     | bidirectional| Ground (consolidated from 8) |
 
 # ─────────────────────────────────────────────────────────────────────────────
 # GPIO - Now with physicalPin
@@ -150,232 +152,55 @@ languages:
 bootloader: UF2
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Section 3.2 - svgMap (NEW - coordinates TBD, need SVG first)
+# Section 3.2 - svgMap
+# fix: converted from YAML list to TOON table format (consistent with arduino-uno and esp32-devkitc-v4)
+# fix: power/GND pins use named string id (e.g. "RUN", "VSYS") instead of logicalPin: -N
 
 svgMap:
   file: assets/boards/raspberry-pi-pico.svg
   viewBox: 0 0 300 700
   pins:
-    # Left side GPIO (pins 1-20)
-    - logicalPin: 0   # GP0
-      cx: 40  cy: 100
-      label: "GP0"
-      classes: [pin-digital, pin-pwm, pin-interrupt]
-      data-pwm: true
-      data-interrupt: true
-    - logicalPin: 1   # GP1
-      cx: 40  cy: 130
-      label: "GP1"
-      classes: [pin-digital, pin-pwm, pin-interrupt]
-      data-pwm: true
-      data-interrupt: true
-    - logicalPin: 2   # GP2
-      cx: 40  cy: 160
-      label: "GP2"
-      classes: [pin-digital, pin-pwm, pin-interrupt]
-      data-pwm: true
-      data-interrupt: true
-    - logicalPin: 3   # GP3
-      cx: 40  cy: 190
-      label: "GP3"
-      classes: [pin-digital, pin-pwm, pin-interrupt]
-      data-pwm: true
-      data-interrupt: true
-    - logicalPin: 4   # GP4 (I2C SDA)
-      cx: 40  cy: 220
-      label: "GP4"
-      classes: [pin-digital, pin-pwm, pin-interrupt, pin-i2c]
-      data-pwm: true
-      data-interrupt: true
-      data-i2c: "SDA"
-    - logicalPin: 5   # GP5 (I2C SCL)
-      cx: 40  cy: 250
-      label: "GP5"
-      classes: [pin-digital, pin-pwm, pin-interrupt, pin-i2c]
-      data-pwm: true
-      data-interrupt: true
-      data-i2c: "SCL"
-    - logicalPin: 6   # GP6
-      cx: 40  cy: 280
-      label: "GP6"
-      classes: [pin-digital, pin-pwm, pin-interrupt]
-      data-pwm: true
-      data-interrupt: true
-    - logicalPin: 7   # GP7
-      cx: 40  cy: 310
-      label: "GP7"
-      classes: [pin-digital, pin-pwm, pin-interrupt]
-      data-pwm: true
-      data-interrupt: true
-    - logicalPin: 8   # GP8
-      cx: 40  cy: 340
-      label: "GP8"
-      classes: [pin-digital, pin-pwm, pin-interrupt]
-      data-pwm: true
-      data-interrupt: true
-    - logicalPin: 9   # GP9
-      cx: 40  cy: 370
-      label: "GP9"
-      classes: [pin-digital, pin-pwm, pin-interrupt]
-      data-pwm: true
-      data-interrupt: true
-    - logicalPin: 10  # GP10
-      cx: 40  cy: 400
-      label: "GP10"
-      classes: [pin-digital, pin-pwm, pin-interrupt]
-      data-pwm: true
-      data-interrupt: true
-    - logicalPin: 11  # GP11
-      cx: 40  cy: 430
-      label: "GP11"
-      classes: [pin-digital, pin-pwm, pin-interrupt]
-      data-pwm: true
-      data-interrupt: true
-    - logicalPin: 12  # GP12
-      cx: 40  cy: 460
-      label: "GP12"
-      classes: [pin-digital, pin-pwm, pin-interrupt]
-      data-pwm: true
-      data-interrupt: true
-    - logicalPin: 13  # GP13
-      cx: 40  cy: 490
-      label: "GP13"
-      classes: [pin-digital, pin-pwm, pin-interrupt]
-      data-pwm: true
-      data-interrupt: true
-    - logicalPin: 14  # GP14
-      cx: 40  cy: 520
-      label: "GP14"
-      classes: [pin-digital, pin-pwm, pin-interrupt]
-      data-pwm: true
-      data-interrupt: true
-    - logicalPin: 15  # GP15
-      cx: 40  cy: 550
-      label: "GP15"
-      classes: [pin-digital, pin-pwm, pin-interrupt]
-      data-pwm: true
-      data-interrupt: true
-    - logicalPin: 16  # GP16 (SPI MISO)
-      cx: 40  cy: 580
-      label: "GP16"
-      classes: [pin-digital, pin-pwm, pin-interrupt, pin-spi]
-      data-pwm: true
-      data-interrupt: true
-      data-spi: "MISO"
-    - logicalPin: 17  # GP17 (SPI CS)
-      cx: 40  cy: 610
-      label: "GP17"
-      classes: [pin-digital, pin-pwm, pin-interrupt, pin-spi]
-      data-pwm: true
-      data-interrupt: true
-      data-spi: "CS"
-    - logicalPin: 18  # GP18 (SPI SCK)
-      cx: 40  cy: 640
-      label: "GP18"
-      classes: [pin-digital, pin-pwm, pin-interrupt, pin-spi]
-      data-pwm: true
-      data-interrupt: true
-      data-spi: "SCK"
-    - logicalPin: 19  # GP19 (SPI MOSI)
-      cx: 40  cy: 670
-      label: "GP19"
-      classes: [pin-digital, pin-pwm, pin-interrupt, pin-spi]
-      data-pwm: true
-      data-interrupt: true
-      data-spi: "MOSI"
-    # Right side GPIO + Power (pins 21-37)
-    - logicalPin: 20  # GP20
-      cx: 260  cy: 100
-      label: "GP20"
-      classes: [pin-digital, pin-pwm, pin-interrupt]
-      data-pwm: true
-      data-interrupt: true
-    - logicalPin: 21  # GP21
-      cx: 260  cy: 130
-      label: "GP21"
-      classes: [pin-digital, pin-pwm, pin-interrupt]
-      data-pwm: true
-      data-interrupt: true
-    - logicalPin: 22  # GP22
-      cx: 260  cy: 160
-      label: "GP22"
-      classes: [pin-digital, pin-pwm, pin-interrupt]
-      data-pwm: true
-      data-interrupt: true
-    - logicalPin: -1  # RUN (not a GPIO)
-      cx: 260  cy: 190
-      label: "RUN"
-      classes: [pin-power]
-      data-voltage: "3.3"
-    - logicalPin: 23  # GP23 (Reserved)
-      cx: 260  cy: 220
-      label: "GP23"
-      classes: [pin-reserved]
-      data-warning: "Reserved for QSPI flash"
-    - logicalPin: 24  # GP24 (Reserved)
-      cx: 260  cy: 250
-      label: "GP24"
-      classes: [pin-reserved]
-      data-warning: "Reserved for QSPI flash"
-    - logicalPin: 25  # GP25 (LED)
-      cx: 260  cy: 280
-      label: "LED_BUILTIN"
-      classes: [pin-pwm]
-      data-pwm: true
-      data-warning: "Onboard LED"
-    - logicalPin: 26  # GP26 (ADC0, Input-only)
-      cx: 260  cy: 310
-      label: "GP26_A0"
-      classes: [pin-analog, pin-pwm, pin-interrupt, pin-input-only]
-      data-pwm: true
-      data-interrupt: true
-      data-adc: true
-    - logicalPin: 27  # GP27 (ADC1, Input-only)
-      cx: 260  cy: 340
-      label: "GP27_A1"
-      classes: [pin-analog, pin-pwm, pin-interrupt, pin-input-only]
-      data-pwm: true
-      data-interrupt: true
-      data-adc: true
-    - logicalPin: 28  # GP28 (ADC2, Input-only)
-      cx: 260  cy: 370
-      label: "GP28_A2"
-      classes: [pin-analog, pin-pwm, pin-interrupt, pin-input-only]
-      data-pwm: true
-      data-interrupt: true
-      data-adc: true
-    - logicalPin: -2  # AGND
-      cx: 260  cy: 400
-      label: "AGND"
-      classes: [pin-gnd]
-    - logicalPin: -3  # VSYS
-      cx: 260  cy: 430
-      label: "VSYS"
-      classes: [pin-power]
-      data-voltage: "5.0"
-    - logicalPin: -4  # 3V3
-      cx: 260  cy: 460
-      label: "3V3"
-      classes: [pin-power]
-      data-voltage: "3.3"
-    - logicalPin: -5  # 3V3_EN
-      cx: 260  cy: 490
-      label: "3V3_EN"
-      classes: [pin-power]
-      data-voltage: "3.3"
-    - logicalPin: -6  # GND
-      cx: 260  cy: 520
-      label: "GND"
-      classes: [pin-gnd]
-    - logicalPin: -7  # GND
-      cx: 260  cy: 550
-      label: "GND"
-      classes: [pin-gnd]
-    - logicalPin: -8  # VBUS
-      cx: 260  cy: 580
-      label: "VBUS"
-      classes: [pin-power]
-      data-voltage: "5.0"
+    # Left side — GP0 to GP19
+    | id           | logicalPin | physicalPin | cx  | cy  | side  |
+    | pin-gp0      | 0          | 1           | 40  | 100 | left  |
+    | pin-gp1      | 1          | 2           | 40  | 130 | left  |
+    | pin-gp2      | 2          | 3           | 40  | 160 | left  |
+    | pin-gp3      | 3          | 4           | 40  | 190 | left  |
+    | pin-gp4      | 4          | 5           | 40  | 220 | left  |
+    | pin-gp5      | 5          | 6           | 40  | 250 | left  |
+    | pin-gp6      | 6          | 7           | 40  | 280 | left  |
+    | pin-gp7      | 7          | 8           | 40  | 310 | left  |
+    | pin-gp8      | 8          | 9           | 40  | 340 | left  |
+    | pin-gp9      | 9          | 10          | 40  | 370 | left  |
+    | pin-gp10     | 10         | 11          | 40  | 400 | left  |
+    | pin-gp11     | 11         | 12          | 40  | 430 | left  |
+    | pin-gp12     | 12         | 13          | 40  | 460 | left  |
+    | pin-gp13     | 13         | 14          | 40  | 490 | left  |
+    | pin-gp14     | 14         | 15          | 40  | 520 | left  |
+    | pin-gp15     | 15         | 16          | 40  | 550 | left  |
+    | pin-gp16     | 16         | 17          | 40  | 580 | left  |
+    | pin-gp17     | 17         | 18          | 40  | 610 | left  |
+    | pin-gp18     | 18         | 19          | 40  | 640 | left  |
+    | pin-gp19     | 19         | 20          | 40  | 670 | left  |
+    # Right side — GP20-GP22, power pins, reserved, LED, ADC, GND/VSYS/VBUS
+    | id           | logicalPin | physicalPin | cx  | cy  | side  |
+    | pin-gp20     | 20         | 21          | 260 | 100 | right |
+    | pin-gp21     | 21         | 22          | 260 | 130 | right |
+    | pin-gp22     | 22         | 23          | 260 | 160 | right |
+    | pin-run      | RUN        |             | 260 | 190 | right |
+    | pin-gp23     | 23         | 24          | 260 | 220 | right |
+    | pin-gp24     | 24         | 25          | 260 | 250 | right |
+    | pin-led      | 25         | 26          | 260 | 280 | right |
+    | pin-gp26-a0  | 26         | 27          | 260 | 310 | right |
+    | pin-gp27-a1  | 27         | 28          | 260 | 340 | right |
+    | pin-gp28-a2  | 28         | 29          | 260 | 370 | right |
+    | pin-agnd     | AGND       |             | 260 | 400 | right |
+    | pin-vsys     | VSYS       |             | 260 | 430 | right |
+    | pin-3v3      | 3V3        |             | 260 | 460 | right |
+    | pin-3v3-en   | 3V3_EN     |             | 260 | 490 | right |
+    | pin-gnd-1    | GND        |             | 260 | 520 | right |
+    | pin-gnd-2    | GND        |             | 260 | 550 | right |
+    | pin-vbus     | VBUS       |             | 260 | 580 | right |
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Section 3.3 - aslProfile (NEW)
@@ -383,7 +208,7 @@ svgMap:
 aslProfile:
   targets:
     | language    | targetId                  | hal            | std   | alloc | confidenceFloor | agentSkill                                    |
-    | arduino-cpp | raspberry-pi-pico-arduino| mbed-rp2040    | true  | true  | 0.93            | agent_skills/languages/arduino-cpp-rp2040.md |
-    | micropython | raspberry-pi-pico-mp     | rp2040         | true  | true  | 0.93            | agent_skills/languages/micropython-rp2040.md   |
+    | arduino-cpp | raspberry-pi-pico-arduino| mbed-rp2040    | true  | true  | 0.93            | agent_skills/languages/arduino-cpp-rp2040.md  |
+    | micropython | raspberry-pi-pico-mp     | rp2040         | true  | true  | 0.93            | agent_skills/languages/micropython-rp2040.md  |
     | circuitpython| raspberry-pi-pico-cp    | rp2040         | true  | true  | 0.91            | agent_skills/languages/circuitpython-rp2040.md|
     | rust        | raspberry-pi-pico-rust   | embassy-rp     | true  | true  | 0.88            | agent_skills/languages/rust-embassy-rp.md     |
