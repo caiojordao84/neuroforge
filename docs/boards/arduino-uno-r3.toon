@@ -3,6 +3,11 @@
 # Includes svgMap and aslProfile fields per architecture v3
 # fix: renamed from arduino-uno.toon to arduino-uno-r3.toon (board is specifically Rev3)
 # fix: svgMap remapped to real pin IDs and coordinates from docs/boards/arduino-uno-r3.svg (viewBox 0 0 171 129)
+# fix(svg-verify): gap Δcx=18.815 between SDA(55.615) and D13(74.430) — real gap (AREF+GND between them, already mapped)
+# fix(svg-verify): gap Δcx=10.286 between D8(105.789) and D7(116.075) — real physical separator on board, documented
+# fix(svg-verify): D18/D19(SDA/SCL) appear twice — digital header (cy=3.933) AND analog header (cy=123.071); both mapped in svgMap
+# fix(svg-verify): pin-gnd-0 is at cy=3.933 (digital header), pin-gnd-1 and pin-gnd-2 are at cy=123.071 (power header)
+# fix(svg-verify): analog data-pin in SVG is 14–19 (not 0–5); logicalPin in svgMap kept as 14–19 matching SVG data-pin
 
 id: arduino-uno-r3
 name: Arduino Uno R3
@@ -10,7 +15,7 @@ manufacturer: Arduino
 mcu: ATmega328P
 category: maker
 family: avr-family
-image: /boards/arduino-uno-r3.svg
+image: docs/boards/arduino-uno-r3.svg
 url: https://store.arduino.cc/products/arduino-uno-rev3
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -18,11 +23,11 @@ url: https://store.arduino.cc/products/arduino-uno-rev3
 
 specs:
   flashMemory: 32768       # bytes (32KB)
-  sram: 2048              # bytes (2KB)
-  eeprom: 1024            # bytes (1KB)
-  clockSpeed: 16000000    # Hz (16MHz)
+  sram: 2048               # bytes (2KB)
+  eeprom: 1024             # bytes (1KB)
+  clockSpeed: 16000000     # Hz (16MHz)
   frequencyMhz: 16
-  voltage: 5.0            # V
+  voltage: 5.0             # V
 
 # ─────────────────────────────────────────────────────────────────────────────
 # DIMENSIONS
@@ -34,56 +39,68 @@ dimensions:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # POWER PINS
-# NOTE: pin-nc (NC), pin-ioref, pin-reset, pin-3v3, pin-5v, pin-gnd-0/1/2, pin-vin, pin-aref
-# all exist in header-power group of SVG
+# SVG groups: header-power (bottom, cy=123.071) + pin-aref and pin-gnd-0 are in header-digital (top, cy=3.933)
+# pin-gnd-0  → cy=3.933  (digital header, between AREF and D13)
+# pin-gnd-1  → cy=123.071 (power header, position 6)
+# pin-gnd-2  → cy=123.071 (power header, position 7)
 
 powerPins:
-  | name   | voltage | direction | svgId      |
-  | NC     |         |           | pin-nc     |
-  | IOREF  | 5.0     | output    | pin-ioref  |
-  | RESET  |         | input     | pin-reset  |
-  | 3V3    | 3.3     | output    | pin-3v3    |
-  | 5V     | 5.0     | output    | pin-5v     |
-  | GND    |         |           | pin-gnd-1  |
-  | GND    |         |           | pin-gnd-2  |
-  | VIN    |         | input     | pin-vin    |
-  | AREF   |         | input     | pin-aref   |
-  | GND    |         |           | pin-gnd-0  |
+  | name   | voltage | direction    | svgId     | cy      | notes                      |
+  | AREF   |         | input        | pin-aref  | 3.933   | In digital header (top)    |
+  | GND    |         | bidirectional| pin-gnd-0 | 3.933   | In digital header (top)    |
+  | NC     |         |              | pin-nc    | 123.071 | Not Connected              |
+  | IOREF  | 5.0     | output       | pin-ioref | 123.071 | Logic reference voltage    |
+  | RESET  |         | input        | pin-reset | 123.071 |                            |
+  | 3V3    | 3.3     | output       | pin-3v3   | 123.071 | From onboard regulator     |
+  | 5V     | 5.0     | output       | pin-5v    | 123.071 |                            |
+  | GND    |         | bidirectional| pin-gnd-2 | 123.071 |                            |
+  | GND    |         | bidirectional| pin-gnd-1 | 123.071 |                            |
+  | VIN    |         | input        | pin-vin   | 123.071 | 7–12V external input       |
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GPIO - digital header (top, cy≈3.933) + analog header (bottom, cy≈123.071)
-# Digital header order in SVG (left→right): SCL(19), SDA(18), AREF, GND, 13,12,~11,~10,~9,8, 7,~6,~5,4,~3,2,TX>1,RX<0
-# Analog header order in SVG (left→right): A0(14),A1(15),A2(16),A3(17),A4/SDA(18),A5/SCL(19)
-# Operator note: digital and analog headers are physically separate — kept as two sections below.
+# GPIO
+# Digital header order in SVG (left→right, cx increasing):
+#   SCL(19)@49.343, SDA(18)@55.615, [AREF@61.886, GND@68.158 — power, in svgMap],
+#   13@74.430 … 8@105.789, [GAP=10.286 — physical separator on board], 7@116.075 … 0@159.977
+#
+# Analog header (left→right): A0(pin14)@128.832 … A5(pin19)@160.191
+#
+# D18/D19 = SDA/SCL appear in BOTH headers:
+#   - digital header (top):  pin-d18-sda, pin-d19-scl  (cy=3.933)
+#   - analog header (bottom): pin-a4, pin-a5           (cy=123.071)
+# Both rows exist in svgMap; logicalPin is the same (18/19).
+#
+# Analog data-pin in SVG: 14=A0, 15=A1, 16=A2, 17=A3, 18=A4/SDA, 19=A5/SCL
 
 gpio:
-  # ── Digital header (top edge, cy ≈ 3.933) ─────────────────────────────────
-  | pin | physicalPin | label          | pwm   | interrupt | adc  | strapping | warning             |
-  | 0   | 1           | D0 / RX        | false | true      | false| false     | Serial RX — avoid   |
-  | 1   | 2           | D1 / TX        | false | true      | false| false     | Serial TX — avoid   |
-  | 2   | 4           | D2             | false | true      | false| false     |                     |
-  | 3   | 5           | D3 PWM         | true  | true      | false| false     |                     |
-  | 4   | 6           | D4             | false | false     | false| false     |                     |
-  | 5   | 7           | D5 PWM         | true  | false     | false| false     |                     |
-  | 6   | 8           | D6 PWM         | true  | false     | false| false     |                     |
-  | 7   | 9           | D7             | false | false     | false| false     |                     |
-  | 8   | 10          | D8             | false | false     | false| false     |                     |
-  | 9   | 11          | D9 PWM         | true  | false     | false| false     |                     |
-  | 10  | 12          | D10 PWM / SS   | true  | false     | false| false     |                     |
-  | 11  | 13          | D11 PWM / MOSI | true  | false     | false| false     |                     |
-  | 12  | 14          | D12 / MISO     | false | false     | false| false     |                     |
-  | 13  | 15          | D13 / SCK / LED| false | false     | false| false     | Built-in LED        |
-  | 18  | 27          | D18 / A4 / SDA | false | false     | true | false     | I2C SDA             |
-  | 19  | 28          | D19 / A5 / SCL | false | false     | true | false     | I2C SCL             |
+  # ── Digital header (top edge, cy = 3.933) ─────────────────────────────────
+  | pin | physicalPin | label           | pwm   | interrupt | adc   | warning              |
+  | 0   | 1           | D0 / RX         | false | true      | false | Serial RX — avoid    |
+  | 1   | 2           | D1 / TX         | false | true      | false | Serial TX — avoid    |
+  | 2   | 4           | D2              | false | true      | false |                      |
+  | 3   | 5           | D3 / PWM        | true  | true      | false |                      |
+  | 4   | 6           | D4              | false | false     | false |                      |
+  | 5   | 7           | D5 / PWM        | true  | false     | false |                      |
+  | 6   | 8           | D6 / PWM        | true  | false     | false |                      |
+  | 7   | 9           | D7              | false | false     | false |                      |
+  | 8   | 10          | D8              | false | false     | false |                      |
+  | 9   | 11          | D9 / PWM        | true  | false     | false |                      |
+  | 10  | 12          | D10 / PWM / SS  | true  | false     | false |                      |
+  | 11  | 13          | D11 / PWM / MOSI| true  | false     | false |                      |
+  | 12  | 14          | D12 / MISO      | false | false     | false |                      |
+  | 13  | 15          | D13 / SCK / LED | false | false     | false | Built-in LED (L)     |
+  | 18  | 27          | D18 / A4 / SDA  | false | false     | true  | I2C SDA              |
+  | 19  | 28          | D19 / A5 / SCL  | false | false     | true  | I2C SCL              |
 
-  # ── Analog header (bottom edge, cy ≈ 123.071) ─────────────────────────────
-  | pin | physicalPin | label      | pwm   | interrupt | adc  | strapping | warning |
-  | 14  | 23          | A0         | false | false     | true | false     |         |
-  | 15  | 24          | A1         | false | false     | true | false     |         |
-  | 16  | 25          | A2         | false | false     | true | false     |         |
-  | 17  | 26          | A3         | false | false     | true | false     |         |
-  | 18  | 27          | A4 / SDA   | false | false     | true | false     | I2C SDA |
-  | 19  | 28          | A5 / SCL   | false | false     | true | false     | I2C SCL |
+  # ── Analog header (bottom edge, cy = 123.071) ──────────────────────────────
+  # logicalPin matches SVG data-pin (14–19); Arduino analogRead() uses A0–A5 aliases
+  | pin | physicalPin | label      | pwm   | interrupt | adc   | warning |
+  | 14  | 23          | A0         | false | false     | true  |         |
+  | 15  | 24          | A1         | false | false     | true  |         |
+  | 16  | 25          | A2         | false | false     | true  |         |
+  | 17  | 26          | A3         | false | false     | true  |         |
+  | 18  | 27          | A4 / SDA   | false | false     | true  | I2C SDA |
+  | 19  | 28          | A5 / SCL   | false | false     | true  | I2C SCL |
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PERIPHERALS
@@ -104,8 +121,11 @@ peripherals:
     sck: 13
     ss: 10
   icsp:
+    # ICSP headers are internal — not user-accessible connectors in normal use
+    # main: ATmega328P  (cx≈159-165, cy≈54-67)
+    # usb:  ATmega16U2  (cx≈43-55, cy≈16-22)
     main: [miso, vcc, sck, mosi, reset, gnd]
-    usb: [miso, vcc, sck, mosi, reset, gnd]
+    usb:  [miso, vcc, sck, mosi, reset, gnd]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # USB
@@ -130,8 +150,8 @@ leds:
 # BUTTONS
 
 buttons:
-  | id            | svgId               | function | activeLevel |
-  | reset-button  | reset-button-button | reset    | low         |
+  | id           | svgId               | function | activeLevel |
+  | reset-button | reset-button-button | reset    | low         |
 
 # ─────────────────────────────────────────────────────────────────────────────
 # RESTRICTIONS
@@ -139,9 +159,10 @@ buttons:
 restrictions:
   outputCurrent: 40  # mA per pin
   warnings:
-    - Pins 0 and 1 are used for USB serial communication
-    - Pin 13 has an onboard LED which may interfere with some applications
-    - Maximum total current from all I/O pins: 200mA
+    - Pins 0 and 1 are used for USB serial (avoid during sketch upload)
+    - Pin 13 has onboard LED — may affect readings/loads on that pin
+    - Physical gap between D8 and D7 on board (Δcx=10.286 in SVG) — intentional separator
+    - Maximum total current from all I/O pins combined: 200mA
 
 # ─────────────────────────────────────────────────────────────────────────────
 # COMPATIBILITY
@@ -160,60 +181,68 @@ bootloader: optiboot
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Section 3.2 - svgMap
-# Coordinates extracted directly from docs/boards/arduino-uno-r3.svg
-# viewBox: 0 0 171 129  (real SVG units)
-# Digital header: top edge, cy = 3.933
-# Analog header:  bottom edge, cy = 123.071
-# Power header:   bottom edge, cy = 123.071 (interleaved with analog)
-# ICSP headers:   internal — not in svgMap (no user connections)
+# Source: docs/boards/arduino-uno-r3.svg  |  viewBox: 0 0 171 129
+#
+# Layout notes:
+#   - Digital header (top):  18 pins, cy=3.933, cx from 49.343 to 159.977
+#     • AREF and GND (pin-gnd-0) are physically IN the digital header row
+#     • Real gap Δcx=18.815 between pin-d18-sda and pin-d13 → filled by AREF+GND-0 (already mapped)
+#     • Real gap Δcx=10.286 between pin-d8 and pin-d7 → physical plastic separator on board (no pin)
+#   - Power header (bottom-left):  8 pins, cy=123.071, cx from 72.386 to 116.288
+#   - Analog header (bottom-right): 6 pins, cy=123.071, cx from 128.832 to 160.191
+#     • A4 and A5 share logicalPin with D18/D19 (SDA/SCL); both rows mapped
+#   - ICSP headers: internal, not mapped
 
 svgMap:
   file: docs/boards/arduino-uno-r3.svg
   viewBox: 0 0 171 129
   pins:
-    # ── Digital header (top, side: top) ────────────────────────────────────
-    | id              | logicalPin | physicalPin | cx      | cy    | side |
-    | pin-d19-scl     | 19         | 28          | 49.343  | 3.933 | top  |
-    | pin-d18-sda     | 18         | 27          | 55.615  | 3.933 | top  |
-    | pin-aref        | AREF       |             | 61.886  | 3.933 | top  |
-    | pin-gnd-0       | GND        |             | 68.158  | 3.933 | top  |
-    | pin-d13         | 13         | 15          | 74.430  | 3.933 | top  |
-    | pin-d12         | 12         | 14          | 80.702  | 3.933 | top  |
-    | pin-d11         | 11         | 13          | 86.974  | 3.933 | top  |
-    | pin-d10         | 10         | 12          | 93.245  | 3.933 | top  |
-    | pin-d9          | 9          | 11          | 99.517  | 3.933 | top  |
-    | pin-d8          | 8          | 10          | 105.789 | 3.933 | top  |
-    | pin-d7          | 7          | 9           | 116.075 | 3.933 | top  |
-    | pin-d6          | 6          | 8           | 122.346 | 3.933 | top  |
-    | pin-d5          | 5          | 7           | 128.618 | 3.933 | top  |
-    | pin-d4          | 4          | 6           | 134.890 | 3.933 | top  |
-    | pin-d3          | 3          | 5           | 141.162 | 3.933 | top  |
-    | pin-d2          | 2          | 4           | 147.433 | 3.933 | top  |
-    | pin-d1          | 1          | 2           | 153.705 | 3.933 | top  |
-    | pin-d0          | 0          | 1           | 159.977 | 3.933 | top  |
-    # ── Power header (bottom-left, side: bottom) ────────────────────────────
-    | id              | logicalPin | physicalPin | cx      | cy      | side   |
-    | pin-nc          | NC         |             | 72.386  | 123.071 | bottom |
-    | pin-ioref       | IOREF      |             | 78.658  | 123.071 | bottom |
-    | pin-reset       | RESET      |             | 84.929  | 123.071 | bottom |
-    | pin-3v3         | 3V3        |             | 91.201  | 123.071 | bottom |
-    | pin-5v          | 5V         |             | 97.473  | 123.071 | bottom |
-    | pin-gnd-2       | GND        |             | 103.745 | 123.071 | bottom |
-    | pin-gnd-1       | GND        |             | 110.016 | 123.071 | bottom |
-    | pin-vin         | VIN        |             | 116.288 | 123.071 | bottom |
-    # ── Analog header (bottom-right, side: bottom) ──────────────────────────
-    | id              | logicalPin | physicalPin | cx      | cy      | side   |
-    | pin-a0          | 14         | 23          | 128.832 | 123.071 | bottom |
-    | pin-a1          | 15         | 24          | 135.103 | 123.071 | bottom |
-    | pin-a2          | 16         | 25          | 141.375 | 123.071 | bottom |
-    | pin-a3          | 17         | 26          | 147.647 | 123.071 | bottom |
-    | pin-a4          | 18         | 27          | 153.919 | 123.071 | bottom |
-    | pin-a5          | 19         | 28          | 160.191 | 123.071 | bottom |
+    # ── Digital header (top, side: top) ─────────────────────────────────────
+    | id          | logicalPin | physicalPin | cx      | cy    | side |
+    | pin-d19-scl | 19         | 28          | 49.343  | 3.933 | top  |
+    | pin-d18-sda | 18         | 27          | 55.615  | 3.933 | top  |
+    | pin-aref    | AREF       |             | 61.886  | 3.933 | top  |
+    | pin-gnd-0   | GND        |             | 68.158  | 3.933 | top  |
+    | pin-d13     | 13         | 15          | 74.430  | 3.933 | top  |
+    | pin-d12     | 12         | 14          | 80.702  | 3.933 | top  |
+    | pin-d11     | 11         | 13          | 86.974  | 3.933 | top  |
+    | pin-d10     | 10         | 12          | 93.245  | 3.933 | top  |
+    | pin-d9      | 9          | 11          | 99.517  | 3.933 | top  |
+    | pin-d8      | 8          | 10          | 105.789 | 3.933 | top  |
+    # gap Δcx=10.286 here — physical separator, no pin
+    | pin-d7      | 7          | 9           | 116.075 | 3.933 | top  |
+    | pin-d6      | 6          | 8           | 122.346 | 3.933 | top  |
+    | pin-d5      | 5          | 7           | 128.618 | 3.933 | top  |
+    | pin-d4      | 4          | 6           | 134.890 | 3.933 | top  |
+    | pin-d3      | 3          | 5           | 141.162 | 3.933 | top  |
+    | pin-d2      | 2          | 4           | 147.433 | 3.933 | top  |
+    | pin-d1      | 1          | 2           | 153.705 | 3.933 | top  |
+    | pin-d0      | 0          | 1           | 159.977 | 3.933 | top  |
+    # ── Power header (bottom-left, side: bottom) ─────────────────────────────
+    | id          | logicalPin | physicalPin | cx      | cy      | side   |
+    | pin-nc      | NC         |             | 72.386  | 123.071 | bottom |
+    | pin-ioref   | IOREF      |             | 78.658  | 123.071 | bottom |
+    | pin-reset   | RESET      |             | 84.929  | 123.071 | bottom |
+    | pin-3v3     | 3V3        |             | 91.201  | 123.071 | bottom |
+    | pin-5v      | 5V         |             | 97.473  | 123.071 | bottom |
+    | pin-gnd-2   | GND        |             | 103.745 | 123.071 | bottom |
+    | pin-gnd-1   | GND        |             | 110.016 | 123.071 | bottom |
+    | pin-vin     | VIN        |             | 116.288 | 123.071 | bottom |
+    # ── Analog header (bottom-right, side: bottom) ───────────────────────────
+    # logicalPin = SVG data-pin (14–19); A0=14 … A5=19
+    # A4(18) and A5(19) are duplicate mappings of D18/D19 at different cy
+    | id          | logicalPin | physicalPin | cx      | cy      | side   |
+    | pin-a0      | 14         | 23          | 128.832 | 123.071 | bottom |
+    | pin-a1      | 15         | 24          | 135.103 | 123.071 | bottom |
+    | pin-a2      | 16         | 25          | 141.375 | 123.071 | bottom |
+    | pin-a3      | 17         | 26          | 147.647 | 123.071 | bottom |
+    | pin-a4      | 18         | 27          | 153.919 | 123.071 | bottom |
+    | pin-a5      | 19         | 28          | 160.191 | 123.071 | bottom |
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Section 3.3 - aslProfile
 
 aslProfile:
   targets:
-    | language    | targetId          | hal              | std   | alloc | confidenceFloor | agentSkill                                |
-    | arduino-cpp | arduino-uno-r3-avr| arduino-avr-hal  | false | false | 0.97            | agent_skills/languages/arduino-cpp-avr.md |
+    | language    | targetId           | hal             | std   | alloc | confidenceFloor | agentSkill                                |
+    | arduino-cpp | arduino-uno-r3-avr | arduino-avr-hal | false | false | 0.97            | agent_skills/languages/arduino-cpp-avr.md |
