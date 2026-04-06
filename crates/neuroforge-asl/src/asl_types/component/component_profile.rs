@@ -129,7 +129,7 @@ impl SignalType {
     }
 
     /// Parse from string (including legacy formats).
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "digital_input" | "digitalinput" | "di" => SignalType::DigitalInput,
             "digital_output" | "digitaloutput" | "do" => SignalType::DigitalOutput,
@@ -154,19 +154,14 @@ impl SignalType {
 }
 
 /// Signal direction.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum SignalDirection {
+    #[default]
     Input,
     Output,
     Bidirectional,
     Passive,
-}
-
-impl Default for SignalDirection {
-    fn default() -> Self {
-        SignalDirection::Input
-    }
 }
 
 /// Connection definition for a component.

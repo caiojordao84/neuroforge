@@ -99,7 +99,7 @@ pub struct ConfidenceFactor {
 }
 
 /// Detailed confidence report for a transpilation operation.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ConfidenceReport {
     /// Overall confidence
@@ -116,18 +116,6 @@ pub struct ConfidenceReport {
     /// Suggestions for improvement
     #[serde(default)]
     pub suggestions: Vec<String>,
-}
-
-impl Default for ConfidenceReport {
-    fn default() -> Self {
-        Self {
-            overall: ConfidenceScore::default(),
-            per_statement: Vec::new(),
-            deductions: Vec::new(),
-            warnings: Vec::new(),
-            suggestions: Vec::new(),
-        }
-    }
 }
 
 /// Confidence for a specific statement.

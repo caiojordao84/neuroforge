@@ -208,25 +208,20 @@ impl<'src> PythonVisitor<'src> {
             }
         }
 
-        let mut tasks = vec![];
-
         // R7 Enforcement
 
-        tasks.push(AslTask {
-            name: "setup".to_string(),
-
-            body: setup_body,
-
-            ..Default::default()
-        });
-
-        tasks.push(AslTask {
-            name: "loop".to_string(),
-
-            body: loop_body,
-
-            ..Default::default()
-        });
+        let tasks = vec![
+            AslTask {
+                name: "setup".to_string(),
+                body: setup_body,
+                ..Default::default()
+            },
+            AslTask {
+                name: "loop".to_string(),
+                body: loop_body,
+                ..Default::default()
+            },
+        ];
 
         AslProgram {
             asl_version: "4.0.0".to_string(),
@@ -517,7 +512,11 @@ impl<'src> PythonVisitor<'src> {
             }
 
             "logging.info" | "logging.debug" | "logging.warning" | "logging.error" => {
-                let level = func_text.split('.').last().unwrap_or("INFO").to_uppercase();
+                let level = func_text
+                    .split('.')
+                    .next_back()
+                    .unwrap_or("INFO")
+                    .to_uppercase();
 
                 AslStatement::Log(AslLog {
                     level,

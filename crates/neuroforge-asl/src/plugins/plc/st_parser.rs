@@ -202,7 +202,7 @@ impl StVisitor {
     fn map_type(spec: &TypeSpec) -> AslType {
         let dbg = format!("{:?}", spec).to_uppercase();
 
-        AslType::from_str(&dbg)
+        AslType::parse(&dbg)
     }
 
     fn vars_to_params(vars: &[VarDecl]) -> Vec<AslParam> {

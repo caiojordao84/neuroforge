@@ -87,7 +87,7 @@ impl AslType {
     }
 
     /// Parseia a partir de uma string canônica do Dicionário.
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse(s: &str) -> Self {
         match s {
             "sint8" => AslType::Sint8,
             "int16" => AslType::Int16,
@@ -438,7 +438,7 @@ impl Condition {
         }
     }
 
-    pub fn not(mut self) -> Self {
+    pub fn toggle_negation(mut self) -> Self {
         self.negated = !self.negated;
         self
     }

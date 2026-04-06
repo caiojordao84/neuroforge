@@ -295,7 +295,7 @@ impl<'src> CVisitor<'src> {
             .map(|t| self.text(t).to_uppercase())
             .unwrap_or_else(|| "VOID".to_string());
 
-        let return_type = Some(AslType::from_str(&return_type_str));
+        let return_type = Some(AslType::parse(&return_type_str));
 
         let params = node
             .child_by_field_name("declarator")
@@ -625,25 +625,25 @@ impl<'src> CVisitor<'src> {
 
         match callee.as_str() {
             "digitalWrite" => AslStatement::DigitalOutput(AslDigitalOutput {
-                pin: args.get(0).cloned().unwrap_or(AslExpr::int(0)),
+                pin: args.first().cloned().unwrap_or(AslExpr::int(0)),
 
                 value: args.get(1).cloned().unwrap_or(AslExpr::int(0)),
             }),
 
             "digitalRead" => AslStatement::DigitalInput(AslDigitalInput {
-                pin: args.get(0).cloned().unwrap_or(AslExpr::int(0)),
+                pin: args.first().cloned().unwrap_or(AslExpr::int(0)),
 
                 target: "temp".into(),
             }),
 
             "analogWrite" => AslStatement::AnalogOutput(AslAnalogOutput {
-                pin: args.get(0).cloned().unwrap_or(AslExpr::int(0)),
+                pin: args.first().cloned().unwrap_or(AslExpr::int(0)),
 
                 value: args.get(1).cloned().unwrap_or(AslExpr::int(0)),
             }),
 
             "pinMode" => {
-                let pin = args.get(0).cloned().unwrap_or(AslExpr::int(0));
+                let pin = args.first().cloned().unwrap_or(AslExpr::int(0));
 
                 let mode_raw = args
                     .get(1)
@@ -670,7 +670,7 @@ impl<'src> CVisitor<'src> {
             }
 
             "delay" => {
-                let ms = match args.get(0) {
+                let ms = match args.first() {
                     Some(AslExpr::Literal(l)) => l
                         .value
                         .as_u64()
@@ -687,7 +687,7 @@ impl<'src> CVisitor<'src> {
 
             "delayMicroseconds" => AslStatement::Delay(AslDelay {
                 duration: AslDuration::from_us(
-                    args.get(0)
+                    args.first()
                         .and_then(|a| a.as_literal())
                         .and_then(|l| l.value.as_i64())
                         .unwrap_or(0) as u64,
@@ -695,7 +695,7 @@ impl<'src> CVisitor<'src> {
             }),
 
             "Serial.begin" => AslStatement::SerialBegin(AslSerialBegin {
-                baud: args.get(0).cloned().unwrap_or(AslExpr::int(9600)),
+                baud: args.first().cloned().unwrap_or(AslExpr::int(9600)),
 
                 port: 0,
             }),
@@ -768,15 +768,11 @@ impl<'src> CVisitor<'src> {
     }
 
     fn visit_declaration(&mut self, node: Node) -> Option<AslStatement> {
-        let type_node = node.child_by_field_name("type");
+        let type_node = node.child_by_field_name("type")?;
 
-        if type_node.is_none() {
-            return None;
-        }
+        let type_name = self.text(type_node).to_uppercase();
 
-        let type_name = self.text(type_node.unwrap()).to_uppercase();
-
-        let asl_type = AslType::from_str(&type_name);
+        let asl_type = AslType::parse(&type_name);
 
         let declarator = node.child_by_field_name("declarator");
 
@@ -977,7 +973,7 @@ impl AslFunction {
                 AslStatement::Declare(AslDeclare {
                     name: p.name.clone(),
 
-                    r#type: AslType::from_str(&p.r#type),
+                    r#type: AslType::parse(&p.r#type),
 
                     value: None,
 

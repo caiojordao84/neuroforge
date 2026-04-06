@@ -40,20 +40,20 @@ use crate::executor::{AslExecutor, TargetLanguage};
 
 pub fn transpile(source: &str, lang: &str) -> Result<String, String> {
     let target =
-        TargetLanguage::from_str(lang).ok_or_else(|| format!("Linguagem desconhecida: {lang}"))?;
+        TargetLanguage::parse(lang).ok_or_else(|| format!("Linguagem desconhecida: {lang}"))?;
 
     let output = AslExecutor::run(source, &target)?;
 
     Ok(output.code)
 }
 
-/// Transpila e devolve c  digo + source-map como `Vec<(u32, u32)>`.
+/// Transpila e devolve código + source-map como `Vec<(u32, u32)>`.
 
-/// O source-map est   dispon  vel para C e Rust; para outras linguagens    `[]`.
+/// O source-map está disponível para C e Rust; para outras linguagens é `[]`.
 
 pub fn transpile_with_map(source: &str, lang: &str) -> Result<(String, Vec<(u32, u32)>), String> {
     let target =
-        TargetLanguage::from_str(lang).ok_or_else(|| format!("Linguagem desconhecida: {lang}"))?;
+        TargetLanguage::parse(lang).ok_or_else(|| format!("Linguagem desconhecida: {lang}"))?;
 
     let output = AslExecutor::run(source, &target)?;
 

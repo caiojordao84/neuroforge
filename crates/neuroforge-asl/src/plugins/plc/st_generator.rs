@@ -170,7 +170,7 @@ impl StGenerator {
         } else {
             // Se for vari  vel ou express  o inv  lida, usa placeholder
 
-            format!("%QX0.0")
+            "%QX0.0".to_string()
         };
 
         let mut out = String::new();

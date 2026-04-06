@@ -70,9 +70,9 @@ impl CGenerator {
                     || i.else_if
                         .iter()
                         .any(|ei| ei.body.iter().any(|s| self.stmt_uses_var(s, var_name)))
-                    || i.else_body.as_ref().map_or(false, |eb| {
-                        eb.iter().any(|s| self.stmt_uses_var(s, var_name))
-                    })
+                    || i.else_body
+                        .as_ref()
+                        .is_some_and(|eb| eb.iter().any(|s| self.stmt_uses_var(s, var_name)))
             }
             AslStatement::While(w) => {
                 self.expr_uses_var(&w.condition, var_name)
@@ -101,7 +101,7 @@ impl CGenerator {
             AslStatement::Return(r) => r
                 .value
                 .as_ref()
-                .map_or(false, |v| self.expr_uses_var(v, var_name)),
+                .is_some_and(|v| self.expr_uses_var(v, var_name)),
             AslStatement::Expr(e) => self.expr_uses_var(&e.expr, var_name),
             AslStatement::Break => false,
             AslStatement::Continue => false,
@@ -210,8 +210,8 @@ impl CGenerator {
             AslStatement::Comment(c) => {
                 let text = c.text.trim();
 
-                let text = if text.starts_with('#') {
-                    format!("//{}", &text[1..])
+                let text = if let Some(stripped) = text.strip_prefix('#') {
+                    format!("//{}", stripped)
                 } else {
                     text.to_string()
                 };

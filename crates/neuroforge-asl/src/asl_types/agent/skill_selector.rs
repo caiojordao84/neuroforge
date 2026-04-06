@@ -141,7 +141,7 @@ impl SkillSelector {
     pub fn board_family_skill(_family: &str) -> String {
         // Board-specific skills don't exist - return language-based fallback instead
         // This provides a sensible default rather than a broken path
-        format!("languages/arduino-cpp-generic.md")
+        "languages/arduino-cpp-generic.md".to_string()
     }
 
     /// Derive language skill filename from platform and board family.

@@ -6,8 +6,9 @@
 use serde::{Deserialize, Serialize};
 
 /// Operador unário. Serializa como símbolo direto (R5).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub enum UnaryOp {
+    #[default]
     #[serde(rename = "-")]
     Neg,
     #[serde(rename = "!")]
@@ -22,15 +23,8 @@ pub enum UnaryOp {
     Deref,
 }
 
-impl Default for UnaryOp {
-    fn default() -> Self {
-        UnaryOp::Neg
-    }
-}
-
 impl UnaryOp {
-    #[allow(clippy::should_implement_trait)]
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse(s: &str) -> Self {
         match s {
             "-" => UnaryOp::Neg,
             "!" => UnaryOp::Not,
@@ -68,8 +62,9 @@ impl UnaryOp {
 }
 
 /// Operador binário. Serializa como símbolo direto (R5 – "+" não "add", ">=" não "gte").
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub enum BinaryOp {
+    #[default]
     #[serde(rename = "+")]
     Add,
     #[serde(rename = "-")]
@@ -116,15 +111,8 @@ pub enum BinaryOp {
     Shr,
 }
 
-impl Default for BinaryOp {
-    fn default() -> Self {
-        BinaryOp::Add
-    }
-}
-
 impl BinaryOp {
-    #[allow(clippy::should_implement_trait)]
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse(s: &str) -> Self {
         match s {
             "+" => BinaryOp::Add,
             "-" => BinaryOp::Sub,

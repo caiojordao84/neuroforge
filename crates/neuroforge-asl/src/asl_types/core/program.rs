@@ -453,9 +453,10 @@ pub struct AslPinMode {
 }
 
 /// Modos válidos conforme 6.2 do Dicionário.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum PinModeKind {
+    #[default]
     Input,
     Output,
     #[serde(rename = "INPUT_PULLUP")]
@@ -465,12 +466,6 @@ pub enum PinModeKind {
     Analog,
     #[serde(rename = "OPEN_DRAIN")]
     OpenDrain,
-}
-
-impl Default for PinModeKind {
-    fn default() -> Self {
-        PinModeKind::Input
-    }
 }
 
 /// 6.3     digitalOutput.

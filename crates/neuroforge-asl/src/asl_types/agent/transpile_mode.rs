@@ -5,10 +5,11 @@
 use serde::{Deserialize, Serialize};
 
 /// Transpile mode controlling the overall transpilation strategy.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum TranspileMode {
     /// Automatic selection based on context
+    #[default]
     Auto,
     /// Direct one-to-one translation
     Direct,
@@ -24,12 +25,6 @@ pub enum TranspileMode {
     Legacy,
     /// Debug mode with verbose output
     Debug,
-}
-
-impl Default for TranspileMode {
-    fn default() -> Self {
-        TranspileMode::Auto
-    }
 }
 
 impl TranspileMode {
@@ -84,7 +79,7 @@ impl TranspileMode {
 }
 
 /// Optimization level for transpilation.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum OptimizationLevel {
     /// No optimizations
@@ -92,15 +87,10 @@ pub enum OptimizationLevel {
     /// Basic optimizations
     Basic,
     /// Standard optimizations
+    #[default]
     Standard,
     /// Aggressive optimizations
     Aggressive,
-}
-
-impl Default for OptimizationLevel {
-    fn default() -> Self {
-        OptimizationLevel::Standard
-    }
 }
 
 impl OptimizationLevel {

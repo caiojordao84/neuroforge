@@ -211,20 +211,16 @@ impl<'src> RustVisitor<'src> {
                 }
 
                 "const_item" | "static_item" => {
-                    if let Some(stmt) = self.visit_let(child) {
-                        if let AslStatement::Declare(d) = stmt {
-                            globals.push(crate::types::asl_types::AslGlobalVar {
-                                name: d.name,
-                                r#type: d.r#type,
-
-                                value: d.value,
-                                mutable: d.mutable,
-                                scope: d.scope,
-                                lifecycle: d.lifecycle,
-
-                                ..Default::default()
-                            });
-                        }
+                    if let Some(AslStatement::Declare(d)) = self.visit_let(child) {
+                        globals.push(crate::types::asl_types::AslGlobalVar {
+                            name: d.name,
+                            r#type: d.r#type,
+                            value: d.value,
+                            mutable: d.mutable,
+                            scope: d.scope,
+                            lifecycle: d.lifecycle,
+                            ..Default::default()
+                        });
                     }
                 }
 
@@ -277,7 +273,7 @@ impl<'src> RustVisitor<'src> {
             .map(|t| self.text(t).to_uppercase())
             .unwrap_or_else(|| "VOID".to_string());
 
-        let return_type = Some(AslType::from_str(&return_type_str));
+        let return_type = Some(AslType::parse(&return_type_str));
 
         let params = node
             .child_by_field_name("parameters")
@@ -547,14 +543,11 @@ impl<'src> RustVisitor<'src> {
             .map(|n| self.text(n).to_string())
             .unwrap_or_default();
 
-        match method.as_str() {
-            "wait" => {
-                // timer.wait().await - typically waits for the timer
-                return AslStatement::Delay(AslDelay {
-                    duration: AslDuration::from_ms(0),
-                });
-            }
-            _ => {}
+        if method.as_str() == "wait" {
+            // timer.wait().await - typically waits for the timer
+            return AslStatement::Delay(AslDelay {
+                duration: AslDuration::from_ms(0),
+            });
         }
 
         let combined = format!("{}.{}", receiver, method);
@@ -606,20 +599,20 @@ impl<'src> RustVisitor<'src> {
 
         match callee.as_str() {
             "gpio_set" => AslStatement::DigitalOutput(AslDigitalOutput {
-                pin: args.get(0).cloned().unwrap_or(AslExpr::int(0)),
+                pin: args.first().cloned().unwrap_or(AslExpr::int(0)),
 
                 value: args.get(1).cloned().unwrap_or(AslExpr::int(0)),
             }),
 
             "gpio_mode" => AslStatement::PinMode(AslPinMode {
-                pin: args.get(0).cloned().unwrap_or(AslExpr::int(0)),
+                pin: args.first().cloned().unwrap_or(AslExpr::int(0)),
 
                 mode: PinModeKind::Output, // Simplified
             }),
 
             "delay_ms" => AslStatement::Delay(AslDelay {
                 duration: AslDuration::from_ms(
-                    args.get(0)
+                    args.first()
                         .and_then(|a| a.as_literal())
                         .and_then(|l| l.value.as_i64())
                         .map(|v| v.max(0) as u64)
@@ -629,23 +622,23 @@ impl<'src> RustVisitor<'src> {
 
             // PWM functions for embedded Rust
             "pwm_init" => AslStatement::PwmInit(AslPwmInit {
-                pin: args.get(0).cloned().unwrap_or(AslExpr::int(0)),
+                pin: args.first().cloned().unwrap_or(AslExpr::int(0)),
                 freq: args.get(1).cloned().unwrap_or(AslExpr::int(1000)),
                 duty: args.get(2).cloned().unwrap_or(AslExpr::int(0)),
             }),
 
             "pwm_set_duty" => AslStatement::PwmSetDuty(AslPwmSetDuty {
-                pin: args.get(0).cloned().unwrap_or(AslExpr::int(0)),
+                pin: args.first().cloned().unwrap_or(AslExpr::int(0)),
                 duty: args.get(1).cloned().unwrap_or(AslExpr::int(0)),
             }),
 
             "pwm_set_freq" => AslStatement::PwmSetFreq(AslPwmSetFreq {
-                pin: args.get(0).cloned().unwrap_or(AslExpr::int(0)),
+                pin: args.first().cloned().unwrap_or(AslExpr::int(0)),
                 freq: args.get(1).cloned().unwrap_or(AslExpr::int(1000)),
             }),
 
             "pwm_stop" => AslStatement::PwmStop(AslPwmStop {
-                pin: args.get(0).cloned().unwrap_or(AslExpr::int(0)),
+                pin: args.first().cloned().unwrap_or(AslExpr::int(0)),
             }),
 
             _ => self.visit_call_embassy(node, callee, args),
@@ -674,17 +667,14 @@ impl<'src> RustVisitor<'src> {
                     .map(|n| self.text(n).to_string())
                     .unwrap_or_default();
 
-                match method.as_str() {
-                    "spawn" => {
-                        // spawner.spawn(task) - spawn a new async task
-                        return AslStatement::Expr(AslExpressionStmt {
-                            expr: AslExpr::Call(Box::new(AslCall {
-                                callee: format!("{}::spawn", receiver),
-                                args,
-                            })),
-                        });
-                    }
-                    _ => {}
+                if method.as_str() == "spawn" {
+                    // spawner.spawn(task) - spawn a new async task
+                    return AslStatement::Expr(AslExpressionStmt {
+                        expr: AslExpr::Call(Box::new(AslCall {
+                            callee: format!("{}::spawn", receiver),
+                            args,
+                        })),
+                    });
                 }
             }
 
@@ -834,7 +824,7 @@ impl<'src> RustVisitor<'src> {
 
         let asl_type = node
             .child_by_field_name("type")
-            .map(|t| AslType::from_str(&self.text(t).to_uppercase()))
+            .map(|t| AslType::parse(&self.text(t).to_uppercase()))
             .unwrap_or(AslType::Auto);
 
         let value = node
@@ -897,7 +887,7 @@ impl<'src> RustVisitor<'src> {
             // Create a binary expression: target + value
             let binary_expr = AslExpr::Binary(Box::new(AslBinary {
                 left: AslExpr::var(&target),
-                op: BinaryOp::from_str(binary_op),
+                op: BinaryOp::parse(binary_op),
                 right: value,
             }));
 

@@ -44,7 +44,7 @@ impl RustGenerator {
             code.push_str("    LSGlobalClkSource, Ledc, LowSpeed,\n");
             code.push_str("};\n");
         }
-        code.push_str("\n");
+        code.push('\n');
 
         // 1. Constantes para Pinos (Ref: pattern steal do usuário)
         self.generate_pin_constants(program, &mut code);
@@ -170,7 +170,7 @@ impl RustGenerator {
                 .unwrap_or(9); // Default dummy
             code.push_str(&format!("const {}: u8 = {};\n", pin.to_uppercase(), val));
         }
-        code.push_str("\n");
+        code.push('\n');
     }
 
     fn generate_ledc_init(&self, _program: &AslProgram, code: &mut String) {
@@ -190,7 +190,7 @@ impl RustGenerator {
                 "    channel{}.configure(channel::config::Config {{\n",
                 ch
             ));
-            code.push_str(&format!("        timer: &lstimer0, duty_pct: 0, drive_mode: channel::config::DriveMode::PushPull,\n"));
+            code.push_str("        timer: &lstimer0, duty_pct: 0, drive_mode: channel::config::DriveMode::PushPull,\n");
             code.push_str("    }).unwrap();\n\n");
         }
     }

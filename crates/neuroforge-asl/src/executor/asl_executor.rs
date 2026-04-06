@@ -85,8 +85,7 @@ pub enum TargetLanguage {
 
 impl TargetLanguage {
     /// Converte string case-insensitive para TargetLanguage.
-    #[allow(clippy::should_implement_trait)]
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "c" | "c++" | "cpp" => Some(Self::C),
 
@@ -546,45 +545,45 @@ END_PROGRAM
         );
     }
 
-    //        TargetLanguage::from_str
+    //        TargetLanguage::parse
 
     #[test]
 
     fn target_language_from_str() {
-        assert_eq!(TargetLanguage::from_str("c"), Some(TargetLanguage::C));
+        assert_eq!(TargetLanguage::parse("c"), Some(TargetLanguage::C));
 
-        assert_eq!(TargetLanguage::from_str("C++"), Some(TargetLanguage::C));
+        assert_eq!(TargetLanguage::parse("C++"), Some(TargetLanguage::C));
 
         assert_eq!(
-            TargetLanguage::from_str("arduino"),
+            TargetLanguage::parse("arduino"),
             Some(TargetLanguage::Arduino)
         );
 
-        assert_eq!(TargetLanguage::from_str("rust"), Some(TargetLanguage::Rust));
+        assert_eq!(TargetLanguage::parse("rust"), Some(TargetLanguage::Rust));
 
         assert_eq!(
-            TargetLanguage::from_str("python"),
+            TargetLanguage::parse("python"),
             Some(TargetLanguage::Python)
         );
 
         assert_eq!(
-            TargetLanguage::from_str("micropython"),
+            TargetLanguage::parse("micropython"),
             Some(TargetLanguage::MicroPython)
         );
 
-        assert_eq!(TargetLanguage::from_str("st"), Some(TargetLanguage::St));
+        assert_eq!(TargetLanguage::parse("st"), Some(TargetLanguage::St));
 
-        assert_eq!(TargetLanguage::from_str("plc"), Some(TargetLanguage::St));
+        assert_eq!(TargetLanguage::parse("plc"), Some(TargetLanguage::St));
 
-        assert_eq!(TargetLanguage::from_str("il"), Some(TargetLanguage::Il));
+        assert_eq!(TargetLanguage::parse("il"), Some(TargetLanguage::Il));
 
-        assert_eq!(TargetLanguage::from_str("ld"), Some(TargetLanguage::Ld));
+        assert_eq!(TargetLanguage::parse("ld"), Some(TargetLanguage::Ld));
 
-        assert_eq!(TargetLanguage::from_str("fbd"), Some(TargetLanguage::Fbd));
+        assert_eq!(TargetLanguage::parse("fbd"), Some(TargetLanguage::Fbd));
 
-        assert_eq!(TargetLanguage::from_str("sfc"), Some(TargetLanguage::Sfc));
+        assert_eq!(TargetLanguage::parse("sfc"), Some(TargetLanguage::Sfc));
 
-        assert_eq!(TargetLanguage::from_str("vhdl"), None);
+        assert_eq!(TargetLanguage::parse("vhdl"), None);
     }
 
     //        Stubs Fase 2 devolvem Err
