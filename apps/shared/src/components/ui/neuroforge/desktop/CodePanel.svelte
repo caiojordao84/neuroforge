@@ -157,6 +157,7 @@
             <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
             <div
               role="menu"
+              tabindex="-1"
               class="absolute top-10 left-0 w-44 glass-panel shadow-2xl z-50 py-1 bg-[#131221] border border-white/10 rounded"
               onclick={(e: Event) => e.stopPropagation()}
             >
@@ -209,6 +210,7 @@
             <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
             <div
               role="menu"
+              tabindex="-1"
               class="absolute top-10 left-0 w-52 glass-panel shadow-2xl z-50 bg-[#131221] border border-white/10 rounded overflow-hidden"
               onclick={(e: Event) => e.stopPropagation()}
             >
@@ -265,6 +267,7 @@
           <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
           <div
             role="menu"
+            tabindex="-1"
             class="absolute top-10 right-0 w-40 glass-panel shadow-2xl z-50 py-1 bg-[#131221] border border-white/10 rounded"
             onclick={(e: Event) => e.stopPropagation()}
           >
@@ -362,6 +365,7 @@
     role="dialog"
     aria-modal="true"
     aria-labelledby="confirm-title"
+    tabindex="-1"
     class="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm"
     onclick={(e: MouseEvent) => { if (e.target === e.currentTarget) cancelReplaceMain(); }}
   >
