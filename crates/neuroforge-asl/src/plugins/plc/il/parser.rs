@@ -17,7 +17,6 @@ use crate::types::asl_types::{
 
 #[derive(Parser)]
 #[grammar = "plugins/plc/il/grammar.pest"]
-
 struct IlPestParser;
 
 #[derive(Debug, thiserror::Error)]

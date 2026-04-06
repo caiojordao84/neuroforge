@@ -72,15 +72,12 @@ use tree_sitter::{Node, Parser};
 
 use crate::types::asl_types::{
     AslAssign, AslBinary, AslCall, AslDeclare, AslDelay, AslDigitalOutput, AslDuration, AslExpr,
-    AslExpressionStmt, AslFunction, AslIf, AslMetadata, AslParam,
-    AslPinMode, AslPrint, AslProgram, AslPwmInit, AslPwmSetDuty, AslPwmSetFreq, AslPwmStop,
-    AslReturn, AslStatement, AslSwitch, AslSwitchCase, AslTask, AslType,
-    AslWhile, BinaryOp, PinModeKind,
+    AslExpressionStmt, AslFunction, AslIf, AslMetadata, AslParam, AslPinMode, AslPrint, AslProgram,
+    AslPwmInit, AslPwmSetDuty, AslPwmSetFreq, AslPwmStop, AslReturn, AslStatement, AslSwitch,
+    AslSwitchCase, AslTask, AslType, AslWhile, BinaryOp, PinModeKind,
 };
 
-use crate::parser::neuro_parser::{
-    NeuroParser, NeuroParserExt, ParseError,
-};
+use crate::parser::neuro_parser::{NeuroParser, NeuroParserExt, ParseError};
 
 #[derive(Debug, thiserror::Error)]
 

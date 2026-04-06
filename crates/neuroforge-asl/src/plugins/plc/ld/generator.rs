@@ -210,7 +210,6 @@ impl LdGenerator {
     //           Emissores de n  s LD
 
     #[allow(clippy::too_many_arguments)]
-
     fn emit_contact(
         &self,
 

@@ -234,7 +234,6 @@ pub mod normalize {
     use super::*;
 
     /// Normaliza literais booleanos/digitais (R4) usando match para performance.
-
     pub fn bool_like(raw: &str) -> Option<AslExpr> {
         match raw {
             "HIGH" | "high" | "True" | "true" | "TRUE" | "1" | "set_high" | "SET_HIGH" | "SET"

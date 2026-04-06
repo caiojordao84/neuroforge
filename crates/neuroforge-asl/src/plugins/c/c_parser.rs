@@ -77,17 +77,13 @@
 //!     else                         FunctionCall (gen  rico)
 
 use crate::types::asl_types::{
-    AslAnalogOutput, AslAssign, AslBinary, AslCall, AslDeclare, AslDelay,
-    AslDigitalInput, AslDigitalOutput, AslDoWhile, AslDuration, AslExpr,
-    AslExpressionStmt, AslFunction, AslIf, AslMetadata, AslParam,
-    AslPinMode, AslPrint, AslProgram, AslReturn, AslSerialBegin, AslStatement, AslSwitch,
-    AslSwitchCase, AslTask, AslType, AslWhile, BinaryOp, PinModeKind,
+    AslAnalogOutput, AslAssign, AslBinary, AslCall, AslDeclare, AslDelay, AslDigitalInput,
+    AslDigitalOutput, AslDoWhile, AslDuration, AslExpr, AslExpressionStmt, AslFunction, AslIf,
+    AslMetadata, AslParam, AslPinMode, AslPrint, AslProgram, AslReturn, AslSerialBegin,
+    AslStatement, AslSwitch, AslSwitchCase, AslTask, AslType, AslWhile, BinaryOp, PinModeKind,
 };
 
-use crate::parser::neuro_parser::{
-    normalize, NeuroParser, NeuroParserExt, ParseError,
-};
-
+use crate::parser::neuro_parser::{normalize, NeuroParser, NeuroParserExt, ParseError};
 
 use tree_sitter::{Node, Parser};
 
@@ -732,6 +728,7 @@ impl<'src> CVisitor<'src> {
         args
     }
 
+    #[allow(dead_code)]
     fn visit_assignment_parts(&mut self, node: Node) -> (String, AslExpr) {
         let left = self
             .text(node.child_by_field_name("left").unwrap())
@@ -742,6 +739,7 @@ impl<'src> CVisitor<'src> {
         (left, right)
     }
 
+    #[allow(dead_code)]
     fn visit_update(&self, node: Node) -> AslStatement {
         // i++ -> i = i + 1
 

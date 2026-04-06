@@ -32,7 +32,6 @@ use crate::plugins::core::GeneratorOutput;
 
 use crate::plugins::plc::st_generator::StGenerator;
 
-
 use crate::plugins::python::python_generator::PythonGenerator;
 
 use crate::plugins::python::python_parser::PythonParser;
@@ -86,9 +85,7 @@ pub enum TargetLanguage {
 
 impl TargetLanguage {
     /// Converte string case-insensitive para TargetLanguage.
-
     #[allow(clippy::should_implement_trait)]
-
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "c" | "c++" | "cpp" => Some(Self::C),
@@ -161,11 +158,8 @@ pub struct AslExecutor;
 
 impl AslExecutor {
     /// Transpila `source` para a linguagem `target` (Arquitetura NeuroForge Omni-direcional).
-
-    /// Se `source` for um ASL JSON Tree v  lido, ele transcompila diretamente a partir do JSON (bypass de parser local).
-
-    /// Caso contr  rio, utiliza o parser para gerar a AST Universal (AslProgram) primeiro.
-
+    /// Se `source` for um ASL JSON Tree vÃ¡lido, ele transcompila diretamente a partir do JSON (bypass de parser local).
+    /// Caso contrÃ¡rio, utiliza o parser para gerar a AST Universal (AslProgram) primeiro.
     pub fn run(source: &str, target: &TargetLanguage) -> Result<TranspileOutput, String> {
         let trimmed_source = source.trim();
 
@@ -188,9 +182,15 @@ impl AslExecutor {
             || trimmed_source.contains("digitalWrite")
             || trimmed_source.contains("pinMode");
 
+        // Detect if source is Structured Text (IEC 61131-3)
+        let source_is_st = trimmed_source.contains("PROGRAM ")
+            || trimmed_source.contains("FUNCTION_BLOCK ")
+            || trimmed_source.contains("END_PROGRAM")
+            || trimmed_source.contains("END_FUNCTION_BLOCK");
+
         let program =
             if trimmed_source.starts_with('{') && trimmed_source.contains("\"aslVersion\"") {
-                // Se j   recebemos a ASL Tree diretamente (SFC/Blockly Editor Frontend payload)
+                // Se jÃ¡ recebemos a ASL Tree diretamente (SFC/Blockly Editor Frontend payload)
 
                 serde_json::from_str::<AslProgram>(trimmed_source)
                     .map_err(|e| format!("Erro ao fazer parse do ASL JSON: {}", e))?
@@ -203,6 +203,8 @@ impl AslExecutor {
                     "python"
                 } else if source_is_rust {
                     "rust"
+                } else if source_is_st {
+                    "st"
                 } else if source_is_c {
                     "c"
                 } else {
@@ -210,6 +212,7 @@ impl AslExecutor {
                     match target {
                         TargetLanguage::Python | TargetLanguage::MicroPython => "python",
                         TargetLanguage::Rust => "rust",
+                        TargetLanguage::St => "st",
                         _ => "c",
                     }
                 };
@@ -220,6 +223,8 @@ impl AslExecutor {
                         PythonParser::parse(source).map_err(|e| format!("PythonParser: {e}"))?
                     }
                     "rust" => RustParser::parse(source).map_err(|e| format!("RustParser: {e}"))?,
+                    "st" => crate::plugins::plc::st_parser::StParser::parse(source)
+                        .map_err(|e| format!("StParser: {e}"))?,
                     "c" => CParser::parse(source).map_err(|e| format!("CParser: {e}"))?,
                     _ => {
                         // Fallback to C parser
@@ -228,7 +233,7 @@ impl AslExecutor {
                 }
             };
 
-        // Gera    o    feita baseada na IR Omni-direcional unicamente (AslProgram)
+        // Geração é feita baseada na IR Omni-direcional unicamente (AslProgram)
 
         match target {
             TargetLanguage::C | TargetLanguage::Cpp | TargetLanguage::Arduino => {

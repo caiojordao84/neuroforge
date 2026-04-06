@@ -10,7 +10,6 @@ use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-
 pub enum Language {
     Cpp,
 
@@ -27,7 +26,6 @@ pub enum Language {
 
 impl Language {
     #[allow(clippy::should_implement_trait)]
-
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "cpp" | "c" | "c++" | "arduino" => Some(Language::Cpp),

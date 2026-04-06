@@ -217,6 +217,7 @@ impl StVisitor {
             .collect()
     }
 
+    #[allow(dead_code)]
     fn visit_program(&mut self, prog: iec61131::ProgramDecl) -> AslFunction {
         let params = Self::vars_to_params(&prog.vars);
 
@@ -232,6 +233,7 @@ impl StVisitor {
         }
     }
 
+    #[allow(dead_code)]
     fn visit_fb(&mut self, fb: iec61131::FunctionBlockDecl) -> AslFunction {
         let body = self.visit_stmts(fb.body.unwrap_or_default());
 
@@ -492,7 +494,7 @@ impl StVisitor {
                 vec![AslStatement::If(Box::new(AslIf {
                     condition: cond_expr,
 
-                    then_body: then_body,
+                    then_body,
 
                     else_if,
 

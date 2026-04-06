@@ -8,9 +8,7 @@
 //! - Suporte a Tasks via Spawner (opcional)
 
 use crate::plugins::core::generator::GeneratorOutput;
-use crate::types::asl_types::{
-    AslExpr, AslProgram, AslStatement, AslTask, BinaryOp,
-};
+use crate::types::asl_types::{AslExpr, AslProgram, AslStatement, AslTask, BinaryOp};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Default)]

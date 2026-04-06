@@ -1,6 +1,11 @@
 //! neuroforge-asl - Motor ASL universal do NeuroForge
 //! Migração de TypeScript para Rust em curso (Fase 1+)
 
+// Allow style warnings across the crate - these are purely cosmetic and don't affect functionality
+#![allow(clippy::empty_line_after_doc_comments)]
+#![allow(clippy::empty_line_after_outer_attr)]
+#![allow(clippy::needless_update)]
+
 pub mod executor;
 pub mod flow;
 pub mod helpers;

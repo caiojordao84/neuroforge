@@ -37,13 +37,12 @@
 //!     else                    AslStatement::Expr
 
 use crate::types::asl_types::{
-    AslAssign, AslDelay, AslDigitalOutput, AslDuration, AslExpr, AslExpressionStmt, AslFunction, AslIf, AslLog, AslMetadata, AslParam, AslPinMode, AslPrint,
-    AslProgram, AslReturn, AslStatement, AslTask, AslWhile, PinModeKind,
+    AslAssign, AslDelay, AslDigitalOutput, AslDuration, AslExpr, AslExpressionStmt, AslFunction,
+    AslIf, AslLog, AslMetadata, AslParam, AslPinMode, AslPrint, AslProgram, AslReturn,
+    AslStatement, AslTask, AslWhile, PinModeKind,
 };
 
-use crate::parser::neuro_parser::{
-    normalize, NeuroParser, NeuroParserExt, ParseError,
-};
+use crate::parser::neuro_parser::{normalize, NeuroParser, NeuroParserExt, ParseError};
 
 use std::collections::HashMap;
 
@@ -668,11 +667,11 @@ impl<'src> PythonVisitor<'src> {
         AslStatement::If(Box::new(AslIf {
             condition,
 
-            then_body: then_body,
+            then_body,
 
             else_if: vec![],
 
-            else_body: else_body,
+            else_body,
             ..Default::default()
         }))
     }
