@@ -156,10 +156,12 @@
           {#if showMainMenu}
             <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
             <div
+              role="menu"
               class="absolute top-10 left-0 w-44 glass-panel shadow-2xl z-50 py-1 bg-[#131221] border border-white/10 rounded"
               onclick={(e: Event) => e.stopPropagation()}
             >
               <button
+                role="menuitem"
                 class="w-full text-left px-3 py-1.5 text-[10px] text-on-surface-variant hover:bg-primary-container/20 hover:text-primary-container transition-colors flex items-center gap-2"
                 onclick={openMainImportDialog}
               >
@@ -206,6 +208,7 @@
           {#if showLibMenu}
             <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
             <div
+              role="menu"
               class="absolute top-10 left-0 w-52 glass-panel shadow-2xl z-50 bg-[#131221] border border-white/10 rounded overflow-hidden"
               onclick={(e: Event) => e.stopPropagation()}
             >
@@ -213,6 +216,7 @@
               {#each library.libraries as lib (lib.id)}
                 <div class="flex items-center group">
                   <button
+                    role="menuitem"
                     class="flex-1 text-left px-3 py-1.5 text-[10px] font-mono hover:bg-primary-container/20 hover:text-primary-container transition-colors truncate {library.activeLibraryId === lib.id ? 'text-primary-container bg-primary-container/10' : 'text-on-surface-variant'}"
                     onclick={() => selectLibrary(lib.id)}
                   >
@@ -230,6 +234,7 @@
 
               <!-- Add new -->
               <button
+                role="menuitem"
                 class="w-full text-left px-3 py-2 text-[10px] font-medium text-primary-container/60 hover:text-primary-container hover:bg-primary-container/10 transition-colors flex items-center gap-1.5 border-t border-white/5"
                 onclick={openLibraryImportDialog}
               >
@@ -259,11 +264,13 @@
         {#if showLangMenu}
           <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
           <div
+            role="menu"
             class="absolute top-10 right-0 w-40 glass-panel shadow-2xl z-50 py-1 bg-[#131221] border border-white/10 rounded"
             onclick={(e: Event) => e.stopPropagation()}
           >
             {#each ideState.availableLanguages as lang}
               <button
+                role="menuitem"
                 class="w-full text-left px-3 py-1.5 text-[10px] hover:bg-primary-container/20 transition-colors flex items-center justify-between {ideState.language === lang ? 'text-primary-container font-bold' : 'text-on-surface-variant'}"
                 onclick={() => selectLang(lang)}
               >
@@ -352,6 +359,9 @@
 {#if confirmDialogOpen}
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
   <div
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="confirm-title"
     class="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm"
     onclick={(e: MouseEvent) => { if (e.target === e.currentTarget) cancelReplaceMain(); }}
   >
@@ -360,7 +370,7 @@
         <div class="flex items-start gap-3">
           <span class="material-symbols-outlined text-xl text-amber-400 mt-0.5">warning</span>
           <div class="space-y-1">
-            <h3 class="text-sm font-semibold text-white">Replace main file?</h3>
+            <h3 id="confirm-title" class="text-sm font-semibold text-white">Replace main file?</h3>
             <p class="text-xs text-white/50 leading-relaxed">
               This will replace the entire content of <span class="font-mono text-white/70">{ideState.mainFileName}</span> with
               <span class="font-mono text-white/70">{pendingMainImport?.name}</span>. This action cannot be undone.

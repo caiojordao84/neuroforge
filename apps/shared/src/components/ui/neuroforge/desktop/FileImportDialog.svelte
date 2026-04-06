@@ -58,6 +58,9 @@
 {#if open}
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
   <div
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="dialog-title"
     class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
     onclick={handleBackdrop}
   >
@@ -103,10 +106,11 @@
       <div class="p-4">
         {#if activeOption === 'new' && mode === 'library'}
           <div class="space-y-3">
-            <label class="block text-[10px] uppercase tracking-wider text-white/40 font-semibold">
+            <label for="filename-input" class="block text-[10px] uppercase tracking-wider text-white/40 font-semibold">
               File name (with extension)
             </label>
             <input
+              id="filename-input"
               type="text"
               placeholder="e.g. utils.h, helpers.py, motor.rs"
               bind:value={newFileName}
@@ -124,10 +128,11 @@
 
         {:else if activeOption === 'github'}
           <div class="space-y-3">
-            <label class="block text-[10px] uppercase tracking-wider text-white/40 font-semibold">
+            <label for="github-url-input" class="block text-[10px] uppercase tracking-wider text-white/40 font-semibold">
               Raw GitHub URL
             </label>
             <input
+              id="github-url-input"
               type="url"
               placeholder="https://raw.githubusercontent.com/..."
               bind:value={githubUrl}
@@ -145,10 +150,11 @@
 
         {:else if activeOption === 'file'}
           <div class="space-y-3">
-            <label class="block text-[10px] uppercase tracking-wider text-white/40 font-semibold">
+            <label for="file-input" class="block text-[10px] uppercase tracking-wider text-white/40 font-semibold">
               Select file(s) from your computer
             </label>
             <input
+              id="file-input"
               bind:this={fileInput}
               type="file"
               multiple={mode === 'library'}

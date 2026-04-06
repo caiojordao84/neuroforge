@@ -16,9 +16,9 @@
 
   let { id, data, selected = false }: Props = $props();
 
-  const mcuType = data.mcuType || 'arduino-uno';
-  const label = data.label || 'Arduino Uno R3';
-  const rotation = data.rotation || 0;
+  const mcuType = $derived(data.mcuType || 'arduino-uno');
+  const label = $derived(data.label || 'Arduino Uno R3');
+  const rotation = $derived(data.rotation || 0);
 
   // Constants consistent with original React version
   const SVG_VIEWBOX_WIDTH = 171;
