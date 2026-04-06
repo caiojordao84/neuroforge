@@ -11,9 +11,8 @@
  *
  * Uso nos componentes:
  * */
-import { useSimulationStore } from '@/stores/useSimulationStore';
-const state = useSimulationStore.getState();
-const mcu = getActiveMicrocontrollerProfile(state);
+// This file uses pure functions that accept state snapshots as parameters.
+// Use getActiveMicrocontrollerProfile(snapshot) where snapshot comes from useSimulationStore.getState()
 
 // ─────────────────────────────────────────────────────────────────
 // Tipos

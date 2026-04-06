@@ -1,4 +1,3 @@
-[env]
-CC_wasm32_unknown_unknown = "C:/wasi-sdk/bin/clang.exe"
-AR_wasm32_unknown_unknown = "C:/wasi-sdk/bin/llvm-ar.exe"
-CFLAGS_wasm32_unknown_unknown = "--sysroot=C:/wasi-sdk/share/wasi-sysroot -fPIC"
+[build]
+# Only apply Windows-specific settings on Windows
+# On other platforms, the CI should set the appropriate CC/AR/NM/STRIP/RANLIB environment variables

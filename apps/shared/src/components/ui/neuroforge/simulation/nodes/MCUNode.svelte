@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Handle, Position } from '@xyflow/svelte';
-  import { asl } from '../../../../state/asl.svelte.js';
-  import { cn } from '../../../../../lib/utils';
+  import { asl } from '@/state/asl.svelte';
+  import { cn } from '@/lib/utils';
 
   interface Props {
     id?: string;
@@ -14,7 +14,7 @@
     selected?: boolean;
   }
 
-  let { id, data, selected = false } = $props<Props>();
+  let { id, data, selected = false }: Props = $props();
 
   const mcuType = data.mcuType || 'arduino-uno';
   const label = data.label || 'Arduino Uno R3';
@@ -88,8 +88,8 @@
     return '#00d9ff';
   }
 
-  // Reactive simulation status
-  let isRunning = $derived(asl.status === 'running');
+  // Simulation status - currently not implemented, placeholder for future use
+  // let isRunning = $derived(asl.status === 'running');
   
   // Track led states (mocked or from ASL events later)
   // For now, let's just make the Power LED work with 'isRunning'
@@ -143,7 +143,7 @@
   {#each LED_MAP as led}
     {@const left = led.cx * SCALE}
     {@const top = led.cy * SCALE}
-    {@const isOn = led.type === 'power' ? isRunning : false}
+    {@const isOn = false /* led.type === 'power' ? isRunning : false */}
     {@const ledColor = led.color}
 
     <div
