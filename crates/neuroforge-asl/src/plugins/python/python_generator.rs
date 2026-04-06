@@ -40,7 +40,7 @@
 
 //!   Expr                 expr
 
-use crate::types::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement, BinaryOp};
+use crate::types::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement};
 
 use crate::plugins::core::{AslGenerator, GeneratorOutput};
 

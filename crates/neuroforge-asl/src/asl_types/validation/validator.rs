@@ -6,7 +6,6 @@
 use serde::{Deserialize, Serialize};
 
 use crate::asl_types::agent::confidence::ConfidenceReport;
-use crate::asl_types::board::pin_map::PinMap;
 use crate::asl_types::board::BoardProfile;
 use crate::asl_types::core::program::AslProgram;
 use crate::asl_types::core::types::{AslExpr, AslType};
@@ -77,7 +76,7 @@ impl AslValidator {
         &self,
         program: &AslProgram,
         errors: &mut Vec<AslValidationError>,
-        warnings: &mut Vec<String>,
+        _warnings: &mut Vec<String>,
     ) {
         // Check ASL version
         if program.asl_version.is_empty() {
@@ -107,7 +106,7 @@ impl AslValidator {
         &self,
         program: &AslProgram,
         errors: &mut Vec<AslValidationError>,
-        warnings: &mut Vec<String>,
+        _warnings: &mut Vec<String>,
     ) {
         // Check for duplicate task names
         let mut seen = std::collections::HashSet::new();
@@ -125,7 +124,7 @@ impl AslValidator {
         &self,
         program: &AslProgram,
         errors: &mut Vec<AslValidationError>,
-        warnings: &mut Vec<String>,
+        _warnings: &mut Vec<String>,
     ) {
         // Check for duplicate function names
         let mut seen = std::collections::HashSet::new();

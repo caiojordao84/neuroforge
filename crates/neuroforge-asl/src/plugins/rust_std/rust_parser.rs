@@ -68,19 +68,18 @@
 
 //!     else                     FunctionCall
 
-use tree_sitter::{Node, Parser, Tree};
+use tree_sitter::{Node, Parser};
 
 use crate::types::asl_types::{
-    AslAnalogInput, AslAnalogOutput, AslAssign, AslBinary, AslCall, AslDeclare, AslDelay,
-    AslDigitalInput, AslDigitalOutput, AslDoWhile, AslDuration, AslElseIf, AslExpr,
-    AslExpressionStmt, AslFor, AslFunction, AslIf, AslLiteral, AslLog, AslMetadata, AslParam,
+    AslAssign, AslBinary, AslCall, AslDeclare, AslDelay, AslDigitalOutput, AslDuration, AslExpr,
+    AslExpressionStmt, AslFunction, AslIf, AslMetadata, AslParam,
     AslPinMode, AslPrint, AslProgram, AslPwmInit, AslPwmSetDuty, AslPwmSetFreq, AslPwmStop,
-    AslReturn, AslSerialBegin, AslStatement, AslSwitch, AslSwitchCase, AslTask, AslType, AslUnary,
-    AslWhile, BinaryOp, PinModeKind, UnaryOp,
+    AslReturn, AslStatement, AslSwitch, AslSwitchCase, AslTask, AslType,
+    AslWhile, BinaryOp, PinModeKind,
 };
 
 use crate::parser::neuro_parser::{
-    normalize, DiagnosticSeverity, NeuroParser, NeuroParserExt, ParseDiagnostic, ParseError,
+    NeuroParser, NeuroParserExt, ParseError,
 };
 
 #[derive(Debug, thiserror::Error)]

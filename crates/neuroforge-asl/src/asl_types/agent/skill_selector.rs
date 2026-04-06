@@ -134,8 +134,14 @@ impl SkillSelector {
     }
 
     /// Get board family skill path.
-    pub fn board_family_skill(family: &str) -> String {
-        format!("boards/{family}.md")
+    ///
+    /// Note: Currently returns a stub path. The boards/ directory does not exist
+    /// in agent_skills. Board family skills should be derived from language skills
+    /// rather than having separate board-specific files.
+    pub fn board_family_skill(_family: &str) -> String {
+        // Board-specific skills don't exist - return language-based fallback instead
+        // This provides a sensible default rather than a broken path
+        format!("languages/arduino-cpp-generic.md")
     }
 
     /// Derive language skill filename from platform and board family.
@@ -145,7 +151,9 @@ impl SkillSelector {
             // AVR Family boards
             ("arduino", "avr-family") => "arduino-cpp-avr".to_string(),
             ("rust", "avr-family") => "rust-embassy-avr".to_string(),
-            ("micropython", "avr-family") => "micropython-avr".to_string(),
+            // Note: micropython-avr.md does not exist - AVR doesn't support micropython
+            // Fall back to generic micropython skill
+            ("micropython", "avr-family") => "micropython-rp2040".to_string(),
 
             // RP2040 Family boards
             ("arduino", "rp2040-family") => "arduino-cpp-rp2040".to_string(),

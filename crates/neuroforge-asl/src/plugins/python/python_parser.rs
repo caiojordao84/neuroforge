@@ -37,19 +37,17 @@
 //!     else                    AslStatement::Expr
 
 use crate::types::asl_types::{
-    AslAssign, AslBinary, AslDelay, AslDigitalOutput, AslDuration, AslExpr, AslExpressionStmt,
-    AslFor, AslFunction, AslIf, AslLiteral, AslLog, AslMetadata, AslParam, AslPinMode, AslPrint,
-    AslProgram, AslReturn, AslStatement, AslTask, AslUnary, AslWhile, BinaryOp, PinModeKind,
-    UnaryOp,
+    AslAssign, AslDelay, AslDigitalOutput, AslDuration, AslExpr, AslExpressionStmt, AslFunction, AslIf, AslLog, AslMetadata, AslParam, AslPinMode, AslPrint,
+    AslProgram, AslReturn, AslStatement, AslTask, AslWhile, PinModeKind,
 };
 
 use crate::parser::neuro_parser::{
-    normalize, DiagnosticSeverity, NeuroParser, NeuroParserExt, ParseDiagnostic, ParseError,
+    normalize, NeuroParser, NeuroParserExt, ParseError,
 };
 
 use std::collections::HashMap;
 
-use tree_sitter::{Node, Parser, Tree};
+use tree_sitter::{Node, Parser};
 
 #[derive(Debug, thiserror::Error)]
 

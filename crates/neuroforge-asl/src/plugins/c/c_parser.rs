@@ -77,20 +77,19 @@
 //!     else                         FunctionCall (gen  rico)
 
 use crate::types::asl_types::{
-    AslAnalogInput, AslAnalogOutput, AslAssign, AslBinary, AslCall, AslDeclare, AslDelay,
-    AslDigitalInput, AslDigitalOutput, AslDoWhile, AslDuration, AslElseIf, AslExpr,
-    AslExpressionStmt, AslFor, AslFunction, AslIf, AslLiteral, AslLog, AslMetadata, AslParam,
+    AslAnalogOutput, AslAssign, AslBinary, AslCall, AslDeclare, AslDelay,
+    AslDigitalInput, AslDigitalOutput, AslDoWhile, AslDuration, AslExpr,
+    AslExpressionStmt, AslFunction, AslIf, AslMetadata, AslParam,
     AslPinMode, AslPrint, AslProgram, AslReturn, AslSerialBegin, AslStatement, AslSwitch,
-    AslSwitchCase, AslTask, AslType, AslUnary, AslWhile, BinaryOp, PinModeKind, UnaryOp,
+    AslSwitchCase, AslTask, AslType, AslWhile, BinaryOp, PinModeKind,
 };
 
 use crate::parser::neuro_parser::{
-    normalize, DiagnosticSeverity, NeuroParser, NeuroParserExt, ParseDiagnostic, ParseError,
+    normalize, NeuroParser, NeuroParserExt, ParseError,
 };
 
-use std::collections::HashMap;
 
-use tree_sitter::{Node, Parser, Tree};
+use tree_sitter::{Node, Parser};
 
 //           Erros
 
@@ -561,7 +560,7 @@ impl<'src> CVisitor<'src> {
                 }
             }
 
-            kind => {
+            _kind => {
                 let text = self.text(node);
 
                 // Heur  stica final: se cont  m operadores l  gicos/relacionais e n  o foi capturado, tenta decompor

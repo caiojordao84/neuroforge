@@ -32,7 +32,6 @@ use crate::plugins::core::GeneratorOutput;
 
 use crate::plugins::plc::st_generator::StGenerator;
 
-use crate::plugins::plc::st_parser::StParser;
 
 use crate::plugins::python::python_generator::PythonGenerator;
 

@@ -1,7 +1,7 @@
 // Connection Colors Store
 // Loads and manages CSS variables from connection-colors.toon
 
-import { writable, derived } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { resolveResource } from '@tauri-apps/api/path';
 
@@ -52,18 +52,14 @@ export const connectionColorCssVars = derived(
 
 // Helper to get color by type - returns hex color
 export function getConnectionColor(type: ConnectionType): string {
-  let colors: ConnectionColor[] = [];
-  connectionColors.subscribe(c => colors = c)();
-  
+  const colors = get(connectionColors);
   const found = colors.find(c => c.key === type);
   return found?.hex ?? '#6B7280'; // Default to reserved color
 }
 
 // Helper to get CSS variable name for type
 export function getConnectionColorVar(type: ConnectionType): string {
-  let colors: ConnectionColor[] = [];
-  connectionColors.subscribe(c => colors = c)();
-  
+  const colors = get(connectionColors);
   const found = colors.find(c => c.key === type);
   return found?.cssVar ?? '--color-wire-reserved';
 }
@@ -88,12 +84,15 @@ export async function loadConnectionColors() {
       if (varMatches) {
         const parsedColors: ConnectionColor[] = [];
         
+        // Get current defaults for name lookup
+        const currentColors = get(connectionColors);
+        
         for (const match of varMatches) {
           const [cssVar, hex] = match.split(/:\s*/);
           const key = cssVar.replace('--color-wire-', '') as ConnectionType;
           
           // Get human-readable name from the store default
-          const defaultColor = connectionColors.subscribe(c => c.find(cc => cc.key === key))();
+          const defaultColor = currentColors.find(cc => cc.key === key);
           
           if (defaultColor) {
             parsedColors.push({

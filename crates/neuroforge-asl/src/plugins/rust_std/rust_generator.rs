@@ -9,8 +9,7 @@
 
 use crate::plugins::core::generator::GeneratorOutput;
 use crate::types::asl_types::{
-    AslBinary, AslCall, AslExpr, AslProgram, AslReturn, AslStatement, AslTask, BinaryOp,
-    PinModeKind, UnaryOp,
+    AslExpr, AslProgram, AslStatement, AslTask, BinaryOp,
 };
 use std::collections::{HashMap, HashSet};
 
@@ -198,7 +197,7 @@ impl RustGenerator {
         }
     }
 
-    fn generate_globals(&self, program: &AslProgram, code: &mut String) {
+    fn generate_globals(&self, program: &AslProgram, _code: &mut String) {
         for g in &program.globals {
             if g.scope != "const" {
                 // No modelo monolítico main, variáveis de setup/loop podem ser locais ao main
