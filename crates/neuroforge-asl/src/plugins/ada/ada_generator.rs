@@ -24,7 +24,7 @@
 //!   DigitalWrite     GPIO port write
 //!   DigitalRead      GPIO port read
 
-use crate::types::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement, PinModeKind};
+use crate::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement, PinModeKind};
 
 use crate::plugins::core::{AslGenerator, GeneratorOutput};
 
@@ -364,7 +364,7 @@ impl AdaGenerator {
             }
 
             AslStatement::For(s) => match s.as_ref() {
-                crate::types::asl_types::AslFor::Range(r) => {
+                crate::asl_types::AslFor::Range(r) => {
                     let step = self.gen_expr(&r.step);
                     let mut out = format!(
                         "{}for {} in {} .. {} loop\n",

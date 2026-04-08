@@ -76,7 +76,7 @@
 
 //!     else                         FunctionCall (gen  rico)
 
-use crate::types::asl_types::{
+use crate::asl_types::{
     AslAnalogOutput, AslAssign, AslBinary, AslCall, AslDeclare, AslDelay, AslDigitalInput,
     AslDigitalOutput, AslDoWhile, AslDuration, AslExpr, AslExpressionStmt, AslFunction, AslIf,
     AslMetadata, AslParam, AslPinMode, AslPrint, AslProgram, AslReturn, AslSerialBegin,
@@ -228,7 +228,7 @@ impl<'src> CVisitor<'src> {
                 "declaration" => {
                     if let Some(stmt) = self.visit_declaration(child) {
                         if let AslStatement::Declare(d) = &stmt {
-                            globals.push(crate::types::asl_types::AslGlobalVar {
+                            globals.push(crate::asl_types::AslGlobalVar {
                                 name: d.name.clone(),
 
                                 r#type: d.r#type.clone(),

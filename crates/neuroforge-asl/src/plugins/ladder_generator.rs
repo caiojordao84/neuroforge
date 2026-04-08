@@ -18,7 +18,7 @@
 
 use thiserror::Error;
 
-use crate::types::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement, BinaryOp, UnaryOp};
+use crate::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement, BinaryOp, UnaryOp};
 
 /// Errors that can occur during ladder generation
 #[derive(Debug, Error)]
@@ -139,7 +139,7 @@ impl LadderGenerator {
     }
 
     /// Generate a POU for a task
-    fn generate_task_pou(&mut self, task: &crate::types::asl_types::AslTask) -> String {
+    fn generate_task_pou(&mut self, task: &crate::asl_types::AslTask) -> String {
         let mut output = String::new();
 
         output.push_str(&format!(
@@ -405,7 +405,7 @@ pub fn generate_from_asl(program: &AslProgram) -> Result<String, LadderGenerator
 mod tests {
     use super::*;
 
-    use crate::types::asl_types::{
+    use crate::asl_types::{
         AslAssign, AslBinary, AslFunction, AslMetadata, AslStatement, AslUnary, AslVarRef,
         BinaryOp, UnaryOp,
     };

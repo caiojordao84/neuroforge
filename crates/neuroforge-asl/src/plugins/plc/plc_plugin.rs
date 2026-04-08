@@ -14,7 +14,7 @@
 
 //!   Sfc     Sequential FC     (PLCopen XML)
 
-use crate::types::asl_types::AslProgram;
+use crate::asl_types::AslProgram;
 
 use crate::parser::neuro_parser::NeuroParser;
 
@@ -101,7 +101,7 @@ mod tests {
 
     use super::*;
 
-    use crate::types::asl_types::{
+    use crate::asl_types::{
         AslAssign, AslBinary, AslFunction, AslMetadata, AslProgram, AslStatement, AslVarRef,
         BinaryOp,
     };
@@ -117,7 +117,7 @@ mod tests {
         })
     }
 
-    use crate::types::asl_types::AslExpr;
+    use crate::asl_types::AslExpr;
 
     fn binary_prog(name: &str, op: BinaryOp) -> AslProgram {
         AslProgram {

@@ -22,7 +22,7 @@
 //!   DigitalWrite     PORT write
 //!   DigitalRead      PIN read
 
-use crate::types::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement, PinModeKind};
+use crate::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement, PinModeKind};
 
 use crate::plugins::core::{AslGenerator, GeneratorOutput};
 
@@ -390,7 +390,7 @@ impl AsmGenerator {
             }
 
             AslStatement::For(s) => match s.as_ref() {
-                crate::types::asl_types::AslFor::Range(r) => {
+                crate::asl_types::AslFor::Range(r) => {
                     let loop_label = self.next_label("for");
                     let end_label = self.next_label("endfor");
 

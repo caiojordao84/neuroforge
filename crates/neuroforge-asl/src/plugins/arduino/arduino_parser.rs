@@ -7,7 +7,7 @@
 
 use crate::plugins::c::c_parser::CParser;
 
-use crate::types::asl_types::AslProgram;
+use crate::asl_types::AslProgram;
 
 use crate::parser::neuro_parser::{NeuroParser, ParseError};
 

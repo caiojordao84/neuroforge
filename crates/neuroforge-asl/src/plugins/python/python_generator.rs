@@ -40,7 +40,7 @@
 
 //!   Expr                 expr
 
-use crate::types::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement};
+use crate::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement};
 
 use crate::plugins::core::{AslGenerator, GeneratorOutput};
 
@@ -428,7 +428,7 @@ impl PythonGenerator {
             }
 
             AslStatement::For(s) => match s.as_ref() {
-                crate::types::asl_types::AslFor::Range(r) => {
+                crate::asl_types::AslFor::Range(r) => {
                     let mut out = format!(
                         "{}for {} in range({}, {}, {}):\n",
                         ind,
@@ -443,7 +443,7 @@ impl PythonGenerator {
                     out
                 }
 
-                crate::types::asl_types::AslFor::Each(e) => {
+                crate::asl_types::AslFor::Each(e) => {
                     let mut out =
                         format!("{}for {} in {}:\n", ind, e.var, self.gen_expr(&e.iterable));
 
@@ -452,7 +452,7 @@ impl PythonGenerator {
                     out
                 }
 
-                crate::types::asl_types::AslFor::CStyle(c) => {
+                crate::asl_types::AslFor::CStyle(c) => {
                     let mut out = String::new();
 
                     for stmt in &c.init {
@@ -500,11 +500,11 @@ impl PythonGenerator {
 
             AslStatement::PinMode(p) => {
                 let mode = match p.mode {
-                    crate::types::asl_types::PinModeKind::Output => "Pin.OUT",
+                    crate::asl_types::PinModeKind::Output => "Pin.OUT",
 
-                    crate::types::asl_types::PinModeKind::Input => "Pin.IN",
+                    crate::asl_types::PinModeKind::Input => "Pin.IN",
 
-                    crate::types::asl_types::PinModeKind::InputPullup => "Pin.IN, Pin.PULL_UP",
+                    crate::asl_types::PinModeKind::InputPullup => "Pin.IN, Pin.PULL_UP",
 
                     _ => "Pin.IN",
                 };

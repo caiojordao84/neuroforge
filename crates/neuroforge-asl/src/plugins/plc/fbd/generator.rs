@@ -32,7 +32,7 @@
 
 #![allow(dead_code)]
 
-use crate::types::asl_types::{AslExpr, AslProgram, AslStatement, BinaryOp, UnaryOp};
+use crate::asl_types::{AslExpr, AslProgram, AslStatement, BinaryOp, UnaryOp};
 
 pub struct FbdGenerator;
 
@@ -556,9 +556,7 @@ mod tests {
 
     use super::*;
 
-    use crate::types::asl_types::{
-        AslAssign, AslCall, AslFunction, AslMetadata, AslStatement, AslVarRef,
-    };
+    use crate::asl_types::{AslAssign, AslCall, AslFunction, AslMetadata, AslStatement, AslVarRef};
 
     fn prog_passthrough() -> AslProgram {
         AslProgram {
@@ -656,7 +654,7 @@ mod tests {
     }
 
     fn prog_ton() -> AslProgram {
-        use crate::types::asl_types::AslTimerTon;
+        use crate::asl_types::AslTimerTon;
 
         AslProgram {
             asl_version: "4.0.0".to_string(),

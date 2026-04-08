@@ -3,13 +3,13 @@
 //! Generates Zig code targeting embedded systems using the microzig framework.
 //! Supports pin operations, timing, UART/I2C/SPI via machine abstractions.
 
-use crate::types::asl_types::*;
+use crate::asl_types::*;
 
 use crate::plugins::core::{AslGenerator, GeneratorOutput, SourceMapEntry};
 
 use crate::plugins::core::{ShimDefinition, ShimLanguage, ShimManager};
 
-use crate::types::asl_types::core::operators::{BinaryOp, UnaryOp};
+use crate::asl_types::core::operators::{BinaryOp, UnaryOp};
 
 pub struct ZigGenerator {
     source_map: Vec<SourceMapEntry>,

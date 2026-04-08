@@ -36,7 +36,7 @@
 
 //!     else                    AslStatement::Expr
 
-use crate::types::asl_types::{
+use crate::asl_types::{
     AslAssign, AslDelay, AslDigitalOutput, AslDuration, AslExpr, AslExpressionStmt, AslFunction,
     AslIf, AslLog, AslMetadata, AslParam, AslPinMode, AslPrint, AslProgram, AslReturn,
     AslStatement, AslTask, AslWhile, PinModeKind,
@@ -175,7 +175,7 @@ impl<'src> PythonVisitor<'src> {
                     for stmt in self.visit_statement(child) {
                         match &stmt {
                             AslStatement::Declare(d) => {
-                                globals.push(crate::types::asl_types::AslGlobalVar {
+                                globals.push(crate::asl_types::AslGlobalVar {
                                     name: d.name.clone(),
 
                                     r#type: d.r#type.clone(),
@@ -534,7 +534,7 @@ impl<'src> PythonVisitor<'src> {
             }),
 
             _ => AslStatement::Expr(AslExpressionStmt {
-                expr: AslExpr::Call(Box::new(crate::types::asl_types::AslCall {
+                expr: AslExpr::Call(Box::new(crate::asl_types::AslCall {
                     callee: func_text,
 
                     args,
@@ -691,8 +691,8 @@ impl<'src> PythonVisitor<'src> {
             .map(|b| self.visit_block(b))
             .unwrap_or_default();
 
-        AslStatement::For(Box::new(crate::types::asl_types::AslFor::Each(
-            crate::types::asl_types::AslForEach {
+        AslStatement::For(Box::new(crate::asl_types::AslFor::Each(
+            crate::asl_types::AslForEach {
                 var: var_name,
 
                 iterable,

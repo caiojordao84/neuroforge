@@ -210,14 +210,11 @@ pub struct LadderCounterCtud {
     /// Preset Value
     pub pv: AslExpr,
     /// Output QU (up counter >= preset)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub out_qu: Option<String>,
+    pub out_qu: Option<AslExpr>,
     /// Output QD (down counter <= 0)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub out_qd: Option<String>,
+    pub out_qd: Option<AslExpr>,
     /// Output CV (current value)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub out_cv: Option<String>,
+    pub out_cv: Option<AslExpr>,
     /// Optional comment
     pub comment: Option<String>,
 }

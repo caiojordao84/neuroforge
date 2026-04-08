@@ -10,7 +10,7 @@ use pest::Parser;
 
 use pest_derive::Parser;
 
-use crate::types::asl_types::{
+use crate::asl_types::{
     AslAssign, AslBinary, AslExpr, AslExpressionStmt, AslFunction, AslMetadata, AslParam,
     AslProgram, AslReturn, AslStatement, AslUnary, BinaryOp, UnaryOp,
 };
@@ -529,26 +529,24 @@ impl IlParser {
                                 cond_expr
                             };
 
-                            stmts.push(AslStatement::If(Box::new(
-                                crate::types::asl_types::AslIf {
-                                    condition: cond_final,
+                            stmts.push(AslStatement::If(Box::new(crate::asl_types::AslIf {
+                                condition: cond_final,
 
-                                    then_body: vec![AslStatement::Return(AslReturn {
-                                        value: None,
-                                        ..Default::default()
-                                    })],
+                                then_body: vec![AslStatement::Return(AslReturn {
+                                    value: None,
+                                    ..Default::default()
+                                })],
 
-                                    else_if: vec![],
+                                else_if: vec![],
 
-                                    else_body: None,
-                                },
-                            )));
+                                else_body: None,
+                            })));
                         }
                     }
                 },
 
                 IlOp::Cal { name, cond } => {
-                    let call_expr = AslExpr::Call(Box::new(crate::types::asl_types::AslCall {
+                    let call_expr = AslExpr::Call(Box::new(crate::asl_types::AslCall {
                         callee: name.clone(),
                         args: vec![],
                     }));
@@ -566,17 +564,15 @@ impl IlParser {
                                     cond_expr
                                 };
 
-                                stmts.push(AslStatement::If(Box::new(
-                                    crate::types::asl_types::AslIf {
-                                        condition: cond_final,
+                                stmts.push(AslStatement::If(Box::new(crate::asl_types::AslIf {
+                                    condition: cond_final,
 
-                                        then_body: vec![stmt],
+                                    then_body: vec![stmt],
 
-                                        else_if: vec![],
+                                    else_if: vec![],
 
-                                        else_body: None,
-                                    },
-                                )));
+                                    else_body: None,
+                                })));
                             }
                         }
                     }
@@ -624,7 +620,7 @@ mod tests {
 
     use super::*;
 
-    use crate::types::asl_types::{AslExpr, AslStatement, BinaryOp};
+    use crate::asl_types::{AslExpr, AslStatement, BinaryOp};
 
     const SIMPLE_PROGRAM: &str = r#"
 

@@ -5,7 +5,7 @@
 //!
 //! RT-11: completa    o     XOR/XORN, CALC/CALCN, RETC/RETCN, 10 testes.
 
-use crate::types::asl_types::{
+use crate::asl_types::{
     AslBinary, AslExpr, AslFunction, AslProgram, AslStatement, BinaryOp, UnaryOp,
 };
 
@@ -201,8 +201,8 @@ impl Default for IlGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::asl_types::*;
     use crate::plugins::plc::il::parser::IlParser;
-    use crate::types::asl_types::*;
 
     //           helpers
 

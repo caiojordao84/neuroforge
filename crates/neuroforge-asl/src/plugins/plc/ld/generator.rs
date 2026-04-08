@@ -36,7 +36,7 @@
 
 #![allow(dead_code)]
 
-use crate::types::asl_types::{AslExpr, AslProgram, AslStatement, BinaryOp, UnaryOp};
+use crate::asl_types::{AslExpr, AslProgram, AslStatement, BinaryOp, UnaryOp};
 
 pub struct LdGenerator;
 
@@ -461,7 +461,7 @@ mod tests {
 
     use super::*;
 
-    use crate::types::asl_types::{
+    use crate::asl_types::{
         AslAssign, AslBinary, AslFunction, AslMetadata, AslStatement, AslUnary, AslVarRef,
         BinaryOp, UnaryOp,
     };

@@ -42,7 +42,7 @@
 //!   IF...THEN       - conditional
 //!   IF...ELSE...THEN - if-else
 
-use crate::types::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement};
+use crate::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement};
 
 use crate::plugins::core::{AslGenerator, GeneratorOutput};
 
@@ -356,7 +356,7 @@ impl ForthGenerator {
             }
 
             AslStatement::For(s) => match s.as_ref() {
-                crate::types::asl_types::AslFor::Range(r) => {
+                crate::asl_types::AslFor::Range(r) => {
                     let from = self.gen_expr(&r.from);
                     let to = self.gen_expr(&r.to);
                     let mut out = format!("{}do\n", ind);
@@ -400,8 +400,8 @@ impl ForthGenerator {
             AslStatement::PinMode(p) => {
                 let pin = self.gen_expr(&p.pin);
                 let mode = match p.mode {
-                    crate::types::asl_types::PinModeKind::Output => "OUTPUT",
-                    crate::types::asl_types::PinModeKind::Input => "INPUT",
+                    crate::asl_types::PinModeKind::Output => "OUTPUT",
+                    crate::asl_types::PinModeKind::Input => "INPUT",
                     _ => "INPUT",
                 };
                 format!("{} {} {} pin-mode!", ind, pin, mode)

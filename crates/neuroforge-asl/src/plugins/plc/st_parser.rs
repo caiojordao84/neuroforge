@@ -14,7 +14,7 @@
 
 #![allow(unused_imports)]
 
-use crate::types::asl_types::{
+use crate::asl_types::{
     AslAssign, AslBinary, AslCall, AslDoWhile, AslDuration, AslElseIf, AslExpr, AslExpressionStmt,
     AslFbField, AslFor, AslForRange, AslFunction, AslFunctionBlock, AslIf, AslLiteral, AslMetadata,
     AslParam, AslProgram, AslReturn, AslStatement, AslSwitch, AslSwitchCase, AslTask, AslType,
@@ -645,7 +645,7 @@ mod tests {
 
     use super::*;
 
-    use crate::types::asl_types::{AslExpr, AslStatement, BinaryOp, UnaryOp};
+    use crate::asl_types::{AslExpr, AslStatement, BinaryOp, UnaryOp};
 
     // Helpers: encontra o primeiro Assign/For no body (independente do   ndice)
 
@@ -661,11 +661,11 @@ mod tests {
             .expect("esperado pelo menos um Assign no body")
     }
 
-    fn first_for_range(body: &[AslStatement]) -> &crate::types::asl_types::AslForRange {
+    fn first_for_range(body: &[AslStatement]) -> &crate::asl_types::AslForRange {
         body.iter()
             .find_map(|s| {
                 if let AslStatement::For(f) = s {
-                    if let crate::types::asl_types::AslFor::Range(r) = f.as_ref() {
+                    if let crate::asl_types::AslFor::Range(r) = f.as_ref() {
                         Some(r)
                     } else {
                         None

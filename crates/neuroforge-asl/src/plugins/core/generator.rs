@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::types::asl_types::AslProgram;
+use crate::asl_types::AslProgram;
 
 /// Mapeamento de linha gerada -> linha fonte.
 

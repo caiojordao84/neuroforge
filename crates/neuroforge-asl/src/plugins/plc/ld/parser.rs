@@ -81,7 +81,7 @@
 
 use std::collections::HashMap;
 
-use crate::types::asl_types::{
+use crate::asl_types::{
     AslAssign, AslBinary, AslExpr, AslFunction, AslLiteral, AslMetadata, AslProgram, AslStatement,
     AslUnary, BinaryOp, UnaryOp,
 };
@@ -304,7 +304,7 @@ impl LdParser {
         match nodes.get(&node_id) {
             None => AslExpr::var(&format!("_ld_unknown_{node_id}")),
 
-            Some(LdNode::LeftRail) => AslExpr::Literal(crate::types::asl_types::AslLiteral {
+            Some(LdNode::LeftRail) => AslExpr::Literal(crate::asl_types::AslLiteral {
                 value: serde_json::json!(true),
             }),
 
@@ -320,7 +320,7 @@ impl LdParser {
                 let inputs = inputs.clone();
 
                 let input_expr = if inputs.is_empty() {
-                    AslExpr::Literal(crate::types::asl_types::AslLiteral {
+                    AslExpr::Literal(crate::asl_types::AslLiteral {
                         value: serde_json::json!(true),
                     })
                 } else {
@@ -333,7 +333,7 @@ impl LdParser {
                 };
 
                 let var_expr = if negated {
-                    AslExpr::Unary(Box::new(crate::types::asl_types::AslUnary {
+                    AslExpr::Unary(Box::new(crate::asl_types::AslUnary {
                         op: UnaryOp::Not,
 
                         expr: AslExpr::var(&var),
@@ -345,7 +345,7 @@ impl LdParser {
                 if Self::is_true_lit(&input_expr) {
                     var_expr
                 } else {
-                    AslExpr::Binary(Box::new(crate::types::asl_types::AslBinary {
+                    AslExpr::Binary(Box::new(crate::asl_types::AslBinary {
                         op: BinaryOp::And,
 
                         left: input_expr,
@@ -367,7 +367,7 @@ impl LdParser {
 
     fn or_exprs(mut exprs: Vec<AslExpr>) -> AslExpr {
         if exprs.is_empty() {
-            return AslExpr::Literal(crate::types::asl_types::AslLiteral {
+            return AslExpr::Literal(crate::asl_types::AslLiteral {
                 value: serde_json::json!(false),
             });
         }
@@ -375,7 +375,7 @@ impl LdParser {
         let first = exprs.remove(0);
 
         exprs.into_iter().fold(first, |acc, e| {
-            AslExpr::Binary(Box::new(crate::types::asl_types::AslBinary {
+            AslExpr::Binary(Box::new(crate::asl_types::AslBinary {
                 op: BinaryOp::Or,
 
                 left: acc,
@@ -446,7 +446,7 @@ mod tests {
 
     use super::*;
 
-    use crate::types::asl_types::{AslExpr, AslStatement, BinaryOp, UnaryOp};
+    use crate::asl_types::{AslExpr, AslStatement, BinaryOp, UnaryOp};
 
     //        XMLs de teste
 

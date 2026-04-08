@@ -31,7 +31,7 @@
 //!   SpiTransfer       SPI.send(data)
 //!   Expr              expr
 
-use crate::types::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement};
+use crate::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement};
 
 use crate::plugins::core::{AslGenerator, GeneratorOutput};
 
@@ -405,7 +405,7 @@ impl EspruinoGenerator {
             }
 
             AslStatement::For(s) => match s.as_ref() {
-                crate::types::asl_types::AslFor::Range(r) => {
+                crate::asl_types::AslFor::Range(r) => {
                     let mut out = format!(
                         "{}for (var {} = {}; {} < {}; {} += {}) {{\n",
                         ind,
@@ -421,7 +421,7 @@ impl EspruinoGenerator {
                     out
                 }
 
-                crate::types::asl_types::AslFor::Each(e) => {
+                crate::asl_types::AslFor::Each(e) => {
                     let mut out = format!(
                         "{}for (var {} in {}) {{\n",
                         ind,
@@ -433,7 +433,7 @@ impl EspruinoGenerator {
                     out
                 }
 
-                crate::types::asl_types::AslFor::CStyle(c) => {
+                crate::asl_types::AslFor::CStyle(c) => {
                     let mut out = String::new();
 
                     for stmt in &c.init {
@@ -485,12 +485,10 @@ impl EspruinoGenerator {
 
             AslStatement::PinMode(p) => {
                 let mode = match p.mode {
-                    crate::types::asl_types::PinModeKind::Output => "DigitalPin.OUTPUT",
-                    crate::types::asl_types::PinModeKind::Input => "DigitalPin.INPUT",
-                    crate::types::asl_types::PinModeKind::InputPullup => "DigitalPin.INPUT_PULLUP",
-                    crate::types::asl_types::PinModeKind::InputPulldown => {
-                        "DigitalPin.INPUT_PULLDOWN"
-                    }
+                    crate::asl_types::PinModeKind::Output => "DigitalPin.OUTPUT",
+                    crate::asl_types::PinModeKind::Input => "DigitalPin.INPUT",
+                    crate::asl_types::PinModeKind::InputPullup => "DigitalPin.INPUT_PULLUP",
+                    crate::asl_types::PinModeKind::InputPulldown => "DigitalPin.INPUT_PULLDOWN",
                     _ => "DigitalPin.INPUT",
                 };
 

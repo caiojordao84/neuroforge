@@ -8,7 +8,7 @@
 //! - Uses `time.monotonic()` for timing
 //! - Uses `adafruit_*` libraries for sensors
 
-use crate::types::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement};
+use crate::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement};
 
 use crate::plugins::core::{AslGenerator, GeneratorOutput};
 
@@ -425,7 +425,7 @@ impl CircuitPythonGenerator {
             }
 
             AslStatement::For(s) => match s.as_ref() {
-                crate::types::asl_types::AslFor::Range(r) => {
+                crate::asl_types::AslFor::Range(r) => {
                     let mut out = format!(
                         "{}for {} in range({}, {}, {}):\n",
                         ind,
@@ -438,14 +438,14 @@ impl CircuitPythonGenerator {
                     out
                 }
 
-                crate::types::asl_types::AslFor::Each(e) => {
+                crate::asl_types::AslFor::Each(e) => {
                     let mut out =
                         format!("{}for {} in {}:\n", ind, e.var, self.gen_expr(&e.iterable));
                     out.push_str(&self.gen_block(&e.body, level + 1));
                     out
                 }
 
-                crate::types::asl_types::AslFor::CStyle(c) => {
+                crate::asl_types::AslFor::CStyle(c) => {
                     let mut out = String::new();
 
                     for stmt in &c.init {
@@ -491,9 +491,9 @@ impl CircuitPythonGenerator {
             AslStatement::PinMode(p) => {
                 // CircuitPython uses digitalio.DigitalInOut with direction
                 let direction = match p.mode {
-                    crate::types::asl_types::PinModeKind::Output => "OUT",
-                    crate::types::asl_types::PinModeKind::Input => "IN",
-                    crate::types::asl_types::PinModeKind::InputPullup => "IN",
+                    crate::asl_types::PinModeKind::Output => "OUT",
+                    crate::asl_types::PinModeKind::Input => "IN",
+                    crate::asl_types::PinModeKind::InputPullup => "IN",
                     _ => "IN",
                 };
 

@@ -2,7 +2,7 @@
 
 //! Migrado para a Arquitetura NeuroForge Fase 1C (Consome ASL JSON Tree Omni-direcional).
 
-use crate::types::asl_types::*;
+use crate::asl_types::*;
 
 use crate::plugins::core::{AslGenerator, GeneratorOutput, SourceMapEntry};
 

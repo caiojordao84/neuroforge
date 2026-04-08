@@ -93,7 +93,7 @@
 
 use std::collections::HashMap;
 
-use crate::types::asl_types::{
+use crate::asl_types::{
     AslAssign, AslBinary, AslCall, AslCounterCtd, AslCounterCtu, AslExpr, AslExpressionStmt,
     AslFunction, AslLatchRs, AslLatchSr, AslLiteral, AslMetadata, AslProgram, AslStatement,
     AslTimerTof, AslTimerTon, AslTimerTp, AslTrigF, AslTrigR, AslUnary, BinaryOp, UnaryOp,
@@ -650,7 +650,7 @@ mod tests {
 
     use super::*;
 
-    use crate::types::asl_types::{AslExpr, AslStatement};
+    use crate::asl_types::{AslExpr, AslStatement};
 
     //           XMLs de teste
 

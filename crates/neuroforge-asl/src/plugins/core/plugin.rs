@@ -3,8 +3,8 @@
 //! P1.4: Defines the trait that all language plugins must implement
 //! for parsing, generation, and metadata.
 
+use crate::asl_types::AslProgram;
 use crate::parser::language_registry::LanguageMeta;
-use crate::types::asl_types::AslProgram;
 
 /// Result type for plugin operations.
 pub type PluginResult<T> = Result<T, PluginError>;

@@ -26,7 +26,7 @@
 
 //!   FunctionCall       name(args);
 
-use crate::types::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement, AslType};
+use crate::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement, AslType};
 
 use crate::plugins::core::{AslGenerator, GeneratorOutput};
 
@@ -371,11 +371,11 @@ impl StGenerator {
 
             AslStatement::PinMode(p) => {
                 let mode = match p.mode {
-                    crate::types::asl_types::PinModeKind::Output => "OUTPUT",
+                    crate::asl_types::PinModeKind::Output => "OUTPUT",
 
-                    crate::types::asl_types::PinModeKind::Input => "INPUT",
+                    crate::asl_types::PinModeKind::Input => "INPUT",
 
-                    crate::types::asl_types::PinModeKind::InputPullup => "INPUT_PULLUP",
+                    crate::asl_types::PinModeKind::InputPullup => "INPUT_PULLUP",
 
                     _ => "INPUT",
                 };

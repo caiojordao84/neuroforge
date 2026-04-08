@@ -7,8 +7,8 @@
 //! - Variáveis locais (se possível)
 //! - Suporte a Tasks via Spawner (opcional)
 
+use crate::asl_types::{AslExpr, AslProgram, AslStatement, AslTask, BinaryOp};
 use crate::plugins::core::generator::GeneratorOutput;
-use crate::types::asl_types::{AslExpr, AslProgram, AslStatement, AslTask, BinaryOp};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Default)]
@@ -204,7 +204,7 @@ impl RustGenerator {
         }
     }
 
-    fn generate_function(&self, func: &crate::types::asl_types::AslFunction) -> String {
+    fn generate_function(&self, func: &crate::asl_types::AslFunction) -> String {
         let mut s = format!("fn {}(", func.name);
         // ... (simplified params)
         s.push_str(") {\n");

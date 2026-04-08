@@ -26,7 +26,7 @@
 //!   DigitalWrite      gpio.write(pin, value)
 //!   DigitalRead       gpio.read(pin)
 
-use crate::types::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement};
+use crate::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement};
 
 use crate::plugins::core::{AslGenerator, GeneratorOutput};
 
@@ -390,7 +390,7 @@ impl LuaGenerator {
             }
 
             AslStatement::For(s) => match s.as_ref() {
-                crate::types::asl_types::AslFor::Range(r) => {
+                crate::asl_types::AslFor::Range(r) => {
                     let step = self.gen_expr(&r.step);
                     let mut out = format!(
                         "{}for {} = {}, {}, {} do\n",
@@ -405,7 +405,7 @@ impl LuaGenerator {
                     out
                 }
 
-                crate::types::asl_types::AslFor::Each(e) => {
+                crate::asl_types::AslFor::Each(e) => {
                     let mut out = format!(
                         "{}for _, {} in pairs({}) do\n",
                         ind,
@@ -417,7 +417,7 @@ impl LuaGenerator {
                     out
                 }
 
-                crate::types::asl_types::AslFor::CStyle(c) => {
+                crate::asl_types::AslFor::CStyle(c) => {
                     let mut out = String::new();
                     // Lua doesn't have C-style for, convert to while
                     for stmt in &c.init {
@@ -463,10 +463,10 @@ impl LuaGenerator {
 
             AslStatement::PinMode(p) => {
                 let mode = match p.mode {
-                    crate::types::asl_types::PinModeKind::Output => "gpio.OUTPUT",
-                    crate::types::asl_types::PinModeKind::Input => "gpio.INPUT",
-                    crate::types::asl_types::PinModeKind::InputPullup => "gpio.INPUT_PULLUP",
-                    crate::types::asl_types::PinModeKind::InputPulldown => "gpio.INPUT_PULLDOWN",
+                    crate::asl_types::PinModeKind::Output => "gpio.OUTPUT",
+                    crate::asl_types::PinModeKind::Input => "gpio.INPUT",
+                    crate::asl_types::PinModeKind::InputPullup => "gpio.INPUT_PULLUP",
+                    crate::asl_types::PinModeKind::InputPulldown => "gpio.INPUT_PULLDOWN",
                     _ => "gpio.INPUT",
                 };
                 let pin_expr = self.gen_expr(&p.pin);

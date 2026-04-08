@@ -36,9 +36,7 @@
 
 #![allow(dead_code)]
 
-use crate::types::asl_types::{
-    AslExpr, AslProgram, AslStateMachine, AslStatement, BinaryOp, UnaryOp,
-};
+use crate::asl_types::{AslExpr, AslProgram, AslStateMachine, AslStatement, BinaryOp, UnaryOp};
 
 pub struct SfcGenerator;
 

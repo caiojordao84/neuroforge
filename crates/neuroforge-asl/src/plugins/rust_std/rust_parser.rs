@@ -70,7 +70,7 @@
 
 use tree_sitter::{Node, Parser};
 
-use crate::types::asl_types::{
+use crate::asl_types::{
     AslAssign, AslBinary, AslCall, AslDeclare, AslDelay, AslDigitalOutput, AslDuration, AslExpr,
     AslExpressionStmt, AslFunction, AslIf, AslMetadata, AslParam, AslPinMode, AslPrint, AslProgram,
     AslPwmInit, AslPwmSetDuty, AslPwmSetFreq, AslPwmStop, AslReturn, AslStatement, AslSwitch,
@@ -212,7 +212,7 @@ impl<'src> RustVisitor<'src> {
 
                 "const_item" | "static_item" => {
                     if let Some(AslStatement::Declare(d)) = self.visit_let(child) {
-                        globals.push(crate::types::asl_types::AslGlobalVar {
+                        globals.push(crate::asl_types::AslGlobalVar {
                             name: d.name,
                             r#type: d.r#type,
                             value: d.value,
@@ -966,8 +966,8 @@ impl<'src> RustVisitor<'src> {
             .map(|b| self.visit_block(b))
             .unwrap_or_default();
 
-        AslStatement::For(Box::new(crate::types::asl_types::AslFor::Each(
-            crate::types::asl_types::AslForEach {
+        AslStatement::For(Box::new(crate::asl_types::AslFor::Each(
+            crate::asl_types::AslForEach {
                 var: var_name,
 
                 iterable,
@@ -1036,7 +1036,7 @@ impl<'src> RustVisitor<'src> {
             }
             AslStatement::For(ref f) => {
                 // Recurse into for loops
-                if let crate::types::asl_types::AslFor::Each(ref each) = f.as_ref() {
+                if let crate::asl_types::AslFor::Each(ref each) = f.as_ref() {
                     for inner in &each.body {
                         self.extract_loop_body(inner, loop_body);
                     }
