@@ -12,6 +12,8 @@ pub enum ShimLanguage {
     Python,
 
     Rust,
+
+    Zig,
 }
 
 impl ShimLanguage {
@@ -22,6 +24,8 @@ impl ShimLanguage {
             ShimLanguage::Python => "python",
 
             ShimLanguage::Rust => "rust",
+
+            ShimLanguage::Zig => "zig",
         }
     }
 }

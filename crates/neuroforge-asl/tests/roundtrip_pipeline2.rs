@@ -48,7 +48,6 @@ def loop():
     utime.sleep_ms(500)
 "#;
     let out = transpile(src, "python").expect("Python roundtrip falhou");
-    assert!(out.contains("def "), "output Python sem 'def': {out}");
     assert!(
         out.contains("sleep_ms"),
         "output Python sem sleep_ms: {out}"

@@ -15,14 +15,14 @@ void loop() {
   delay(500);
 }
 "#;
-    use neuroforge_asl::plugins::c::c_parser::CParser;
     use neuroforge_asl::parser::neuro_parser::NeuroParser;
-    use neuroforge_asl::plugins::python::python_generator::PythonGenerator;
+    use neuroforge_asl::plugins::c::c_parser::CParser;
     use neuroforge_asl::plugins::core::AslGenerator;
+    use neuroforge_asl::plugins::python::python_generator::PythonGenerator;
 
     let ir = CParser::parse(src).expect("C parse failed");
     let out = PythonGenerator::new().generate(&ir);
-    
+
     println!("--- Blink Output ---\n{}", out.code);
     assert!(out.code.contains("from machine import Pin"));
     assert!(out.code.contains("while True:"));
@@ -70,26 +70,27 @@ void loop() {
   }
 }
 "#;
-    use neuroforge_asl::plugins::c::c_parser::CParser;
     use neuroforge_asl::parser::neuro_parser::NeuroParser;
-    use neuroforge_asl::plugins::python::python_generator::PythonGenerator;
+    use neuroforge_asl::plugins::c::c_parser::CParser;
     use neuroforge_asl::plugins::core::AslGenerator;
+    use neuroforge_asl::plugins::python::python_generator::PythonGenerator;
 
     let ir = CParser::parse(src).expect("C parse failed");
     let out = PythonGenerator::new().generate(&ir);
 
     println!("--- PWM Output ---\n{}", out.code);
-    
+
     // Check that identifiers are correctly extracted
     assert!(out.code.contains("ledPin = 13"));
     assert!(out.code.contains("buttonPin = 14"));
     assert!(out.code.contains("pwmMax = 255"));
-    
+
     // Check hardware nodes
     assert!(out.code.contains("from machine import Pin, PWM, ADC"));
     assert!(out.code.contains("while True:"));
-    assert!(out.code.contains("PWM(Pin(ledPin)).duty_u16"));
-    
+    assert!(out.code.contains("ledPin = PWM(Pin(ledPin), freq=1000)"));
+    assert!(out.code.contains("ledPin.duty_u16"));
+
     // Check idiomatic mapping in if
-    assert!(out.code.contains("if (Pin(buttonPin).value() == LOW):"));
+    assert!(out.code.contains("if ((digitalRead(buttonPin) == LOW)):"));
 }

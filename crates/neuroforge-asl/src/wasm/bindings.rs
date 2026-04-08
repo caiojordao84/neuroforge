@@ -1,27 +1,15 @@
-//! Fase 1D     Bindings WASM para o browser.
-
+//! Fase 1D - Bindings WASM para o browser.
 //!
-
-//! Fun    es expostas ao JavaScript via `wasm-bindgen`:
-
+//! Funções expostas ao JavaScript via `wasm-bindgen`:
 //!
-
 //! ```js
-
 //! import init, { wasm_transpile, wasm_transpile_with_map } from './neuroforge_asl';
-
 //! await init();
-
 //!
-
 //! const python = wasm_transpile('void setup(){}', 'c', 'python');
-
 //! const { output, source_map } = JSON.parse(
-
 //!     wasm_transpile_with_map('void setup(){}', 'c', 'python')
-
 //! );
-
 //! ```
 
 #![allow(dead_code, unused_imports)]
@@ -33,78 +21,60 @@ use crate::parser::neuro_parser::NeuroParser;
 #[cfg(target_arch = "wasm32")]
 use crate::transpile::{transpile, transpile_with_map};
 
-//           helpers
+use crate::executor::TargetLanguage;
+use crate::plugins::core::AslGenerator;
+
+// ============================================================================
+// Helpers
+// ============================================================================
 
 /// Converte um `Result<T, String>` num `Result<T, JsValue>` para o boundary WASM.
-
-/// `JsValue::from_str` s   existe em wasm32     esta fun    o    compilada apenas nesse target.
+/// `JsValue::from_str` só existe em wasm32 - esta função é compilada apenas nesse target.
 
 #[cfg(target_arch = "wasm32")]
 #[inline]
-
 fn to_js_err(e: String) -> JsValue {
     JsValue::from_str(&e)
 }
 
-//           API p  blica
+// ============================================================================
+// API Pública - Existing Transpile Functions
+// ============================================================================
 
 /// Transpila `source` da linguagem `from_lang` para `to_lang`.
-
 ///
-
 /// Linguagens aceites em `from_lang` / `to_lang`:
-
 /// `c`, `c++`, `cpp`, `arduino`, `rust`, `python`, `py`,
-
-/// `micropython`, `upython`, `st`, `iec61131`, `plc`.
-
+/// `micropython`, `upython`, `st`, `iec61131`, `plc`, `ladder`.
 ///
-
 /// Em caso de erro devolve uma `Error` JavaScript com a mensagem.
-
 ///
-
 /// # Exemplo JS
-
 /// ```js
-
 /// const code = wasm_transpile('void setup(){}\nvoid loop(){}', 'c', 'python');
-
 /// ```
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
-
 pub fn wasm_transpile(source: &str, from_lang: &str, to_lang: &str) -> Result<String, JsValue> {
-    let _ = from_lang; // reservado para futura detec    o expl  cita da l  ngua fonte
-
+    let _ = from_lang;
     transpile(source, to_lang).map_err(to_js_err)
 }
 
 /// Transpila e devolve um objecto JSON com a forma:
-
 /// ```json
-
 /// { "output": "...", "source_map": [[1,1],[2,3], ...] }
-
 /// ```
-
-/// `source_map`    um array de pares `[linha_fonte, linha_destino]`.
-
-/// Para linguagens que ainda n  o geram source-map    `[]`.
-
+/// `source_map` é um array de pares `[linha_fonte, linha_destino]`.
+/// Para linguagens que ainda não geram source-map é `[]`.
 ///
-
 /// Em caso de erro devolve uma `Error` JavaScript com a mensagem.
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
-
 pub fn wasm_transpile_with_map(
     source: &str,
-
     from_lang: &str,
-
     to_lang: &str,
 ) -> Result<String, JsValue> {
     let _ = from_lang;
@@ -125,54 +95,20 @@ pub fn wasm_transpile_with_map(
     Ok(json)
 }
 
-/// Transpila    o cross-linguagem: parse com `from_lang`, gera com `to_lang`.
-
-///
-
-/// Diferente de `wasm_transpile` que ignora `from_lang`, esta fun    o
-
+/// Transpilação cross-linguagem: parse com `from_lang`, gera com `to_lang`.
+/// Diferente de `wasm_transpile` que ignora `from_lang`, esta função
 /// usa o parser correcto para a linguagem fonte e o generator correcto
-
 /// para a linguagem destino.
-
-///
-
-/// Pipeline: source    (from_lang parser)    AslProgram    (to_lang generator)    c  digo
-
-///
-
-/// Suporta todas as combina    es onde o target tem AslGenerator:
-
-///   - Python, MicroPython, ST, PLC (aceitam AslProgram directamente)
-
-///   - C/C++/Arduino, Rust (via convers  o AslProgram     BaseNode interna)
-
-///
-
-/// # Exemplo JS
-
-/// ```js
-
-/// const python = wasm_cross_transpile(cCode, 'cpp', 'python');
-
-/// ```
+/// Pipeline: source -> (from_lang parser) -> AslProgram -> (to_lang generator) -> código
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
-
 pub fn wasm_cross_transpile(
     source: &str,
-
     from_lang: &str,
-
     to_lang: &str,
 ) -> Result<String, JsValue> {
-    use crate::executor::TargetLanguage;
-
-    use crate::plugins::core::AslGenerator;
-
     // 1. Resolve linguagens
-
     let src_target = TargetLanguage::parse(from_lang)
         .ok_or_else(|| JsValue::from_str(&format!("Unknown source language: {from_lang}")))?;
 
@@ -180,17 +116,14 @@ pub fn wasm_cross_transpile(
         .ok_or_else(|| JsValue::from_str(&format!("Unknown target language: {to_lang}")))?;
 
     // 2. Se fonte == destino, usar o pipeline normal
-
     if src_target == dst_target {
         return crate::transpile::transpile(source, to_lang).map_err(to_js_err);
     }
 
-    // 3. Parse source     AslProgram (usando parser da lang fonte)
-
+    // 3. Parse source -> AslProgram (usando parser da lang fonte)
     let asl_program = parse_to_asl_program(source, &src_target).map_err(to_js_err)?;
 
-    // 4. Generate de AslProgram     c  digo na lang destino
-
+    // 4. Generate de AslProgram -> código na lang destino
     let output = match dst_target {
         TargetLanguage::Python | TargetLanguage::MicroPython => {
             crate::plugins::python::python_generator::PythonGenerator::new().generate(&asl_program)
@@ -208,6 +141,11 @@ pub fn wasm_cross_transpile(
             crate::plugins::rust_std::rust_generator::RustGenerator::new().generate(&asl_program)
         }
 
+        TargetLanguage::Ld => {
+            // Ladder Diagram - generate PLCopen XML
+            crate::plugins::plc::ld::generator::LdGenerator::new().generate(&asl_program)
+        }
+
         _ => {
             return Err(JsValue::from_str(&format!(
                 "Target language '{}' not supported for cross-transpilation",
@@ -219,50 +157,131 @@ pub fn wasm_cross_transpile(
     Ok(output.code)
 }
 
-/// Devolve a vers  o do crate como string,   til para diagn  stico.
-
-/// Dispon  vel em todos os targets (n  o usa JsValue).
+/// Devolve a versão do crate como string, útil para diagnóstico.
+/// Disponível em todos os targets (não usa JsValue).
 
 #[wasm_bindgen]
-
 pub fn wasm_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
-/// Devolve as linguagens suportadas separadas por v  rgula.
-
-/// Dispon  vel em todos os targets (n  o usa JsValue).
+/// Devolve as linguagens suportadas separadas por vírgula.
+/// Disponível em todos os targets (não usa JsValue).
 
 #[wasm_bindgen]
-
 pub fn wasm_supported_langs() -> String {
-    "c,c++,cpp,arduino,rust,python,py,micropython,upython,st,iec61131,plc".to_string()
+    "c,c++,cpp,arduino,rust,python,py,micropython,upython,st,iec61131,plc,ladder,il,fbd".to_string()
 }
 
-//
+// ============================================================================
+// Ladder-specific WASM API (P1.5)
+// ============================================================================
 
-// Fun    es de an  lise WASM     adicionadas na Fase 1C
+/// Parse Ladder Diagram (XML) and convert to ASL Program
+/// Input: PLCopen XML format
+/// Output: ASL Program JSON
 
-//
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn wasm_parse_ld_to_asl(xml_source: &str) -> Result<String, JsValue> {
+    use crate::plugins::plc::ld::parser::LdParser;
 
-/// Verifica tipos no c  digo fonte e devolve JSON com lista de diagn  sticos.
+    let program = LdParser::parse(xml_source).map_err(to_js_err)?;
 
-///
+    serde_json::to_string(&program).map_err(|e| JsValue::from_str(&e.to_string()))
+}
 
+/// Parse ASL Program and generate Ladder Diagram (PLCopen XML)
+/// Input: ASL Program JSON
+/// Output: PLCopen XML
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn wasm_asl_to_ld(asl_json: &str) -> Result<String, JsValue> {
+    use crate::plugins::plc::ld::generator::LdGenerator;
+
+    let program: crate::types::asl_types::AslProgram = serde_json::from_str(asl_json)
+        .map_err(|e| JsValue::from_str(&format!("Invalid ASL JSON: {}", e)))?;
+
+    let output = LdGenerator::new().generate(&program);
+
+    Ok(output.code)
+}
+
+/// Parse ST (Structured Text) and convert to Ladder Diagram
+/// Input: ST source code
+/// Output: PLCopen XML
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn wasm_st_to_ld(st_source: &str) -> Result<String, JsValue> {
+    // Parse ST to ASL
+    let program = crate::plugins::plc::st_parser::StParser::parse(st_source).map_err(to_js_err)?;
+
+    // Generate LD from ASL
+    use crate::plugins::plc::ld::generator::LdGenerator;
+    let output = LdGenerator::new().generate(&program);
+
+    Ok(output.code)
+}
+
+/// Cross-transpile to Ladder Diagram
+/// Parse from any supported language and generate Ladder XML
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn wasm_to_ld(source: &str, from_lang: &str) -> Result<String, JsValue> {
+    let src_target = TargetLanguage::parse(from_lang)
+        .ok_or_else(|| JsValue::from_str(&format!("Unknown source language: {from_lang}")))?;
+
+    // Parse source to ASL Program
+    let asl_program = parse_to_asl_program(source, &src_target).map_err(to_js_err)?;
+
+    // Generate Ladder Diagram
+    use crate::plugins::plc::ld::generator::LdGenerator;
+    let output = LdGenerator::new().generate(&asl_program);
+
+    Ok(output.code)
+}
+
+/// Validate Ladder Diagram and return diagnostics
+/// Input: PLCopen XML
+/// Output: JSON array of diagnostics
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn wasm_validate_ld(xml_source: &str) -> Result<String, JsValue> {
+    use crate::plugins::plc::ld::parser::LdParser;
+
+    // Parse to check for validation errors
+    match LdParser::parse(xml_source) {
+        Ok(_) => Ok("[]".to_string()),
+        Err(e) => {
+            let diag = serde_json::json!([
+                {
+                    "severity": "error",
+                    "context": "ld_parser",
+                    "message": e.to_string()
+                }
+            ]);
+            Ok(diag.to_string())
+        }
+    }
+}
+
+// ============================================================================
+// Analysis Functions
+// ============================================================================
+
+/// Verifica tipos no código fonte e devolve JSON com lista de diagnósticos.
 /// Formato de retorno:
-
 /// ```json
-
 /// [{"severity":"error","context":"fn_name","message":"..."}]
-
 /// ```
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
-
 pub fn wasm_check_types(source: &str, lang: &str) -> Result<String, JsValue> {
-    use crate::executor::TargetLanguage;
-
     let target = TargetLanguage::parse(lang)
         .ok_or_else(|| JsValue::from_str(&format!("Linguagem desconhecida: {lang}")))?;
 
@@ -272,24 +291,11 @@ pub fn wasm_check_types(source: &str, lang: &str) -> Result<String, JsValue> {
     Ok("[]".to_string())
 }
 
-/// Devolve diagn  sticos completos (type + scope) em JSON.
-
-///
-
-/// Formato de retorno:
-
-/// ```json
-
-/// [{"severity":"warning","context":"fn_name","message":"..."}]
-
-/// ```
+/// Devolve diagnóstivos completos (type + scope) em JSON.
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
-
 pub fn wasm_get_diagnostics(source: &str, lang: &str) -> Result<String, JsValue> {
-    use crate::executor::TargetLanguage;
-
     let target = TargetLanguage::parse(lang)
         .ok_or_else(|| JsValue::from_str(&format!("Linguagem desconhecida: {lang}")))?;
 
@@ -299,18 +305,11 @@ pub fn wasm_get_diagnostics(source: &str, lang: &str) -> Result<String, JsValue>
     Ok("[]".to_string())
 }
 
-/// Converte o c  digo fonte para ASL IR em JSON (dev mode / debug no editor).
-
-///
-
-/// Formato de retorno: JSON serializado de `AslProgram`.
+/// Converte o código fonte para ASL IR em JSON (dev mode / debug no editor).
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
-
 pub fn wasm_parse_to_asl(source: &str, lang: &str) -> Result<String, JsValue> {
-    use crate::executor::TargetLanguage;
-
     let target = TargetLanguage::parse(lang)
         .ok_or_else(|| JsValue::from_str(&format!("Linguagem desconhecida: {lang}")))?;
 
@@ -319,30 +318,23 @@ pub fn wasm_parse_to_asl(source: &str, lang: &str) -> Result<String, JsValue> {
     serde_json::to_string(&prog).map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
-//        helpers internos
+// ============================================================================
+// Internal Helpers
+// ============================================================================
 
 /// Faz parse do source para AslProgram usando o parser correcto para o lang.
-
-///
-
 /// Mapeamento confirmado:
-
-///   C | Cpp | Arduino     CParser::parse()     ProgramNode     ast_to_asl(&prog, Language::Cpp)
-
-///   Rust                   RustParser::parse()     ProgramNode     ast_to_asl(&prog, Language::Rust)
-
-///   Python | MicroPython     PythonParser::parse()     AslProgram directamente
-
-///   St                     StParser::parse()     AslProgram directamente
+///   C | Cpp | Arduino -> CParser::parse() -> ProgramNode -> ast_to_asl(&prog, Language::Cpp)
+///   Rust -> RustParser::parse() -> ProgramNode -> ast_to_asl(&prog, Language::Rust)
+///   Python | MicroPython -> PythonParser::parse() -> AslProgram directamente
+///   St -> StParser::parse() -> AslProgram directamente
+///   Ld -> LdParser::parse() -> AslProgram directamente
 
 fn parse_to_asl_program(
     source: &str,
-
     target: &crate::executor::TargetLanguage,
 ) -> Result<crate::types::asl_types::AslProgram, String> {
     use crate::executor::TargetLanguage::*;
-
-    // Deprecated imports removed. parse_to_asl_program now consumes AslProgram directly.
 
     use crate::transforms::context::Language;
 
@@ -355,21 +347,25 @@ fn parse_to_asl_program(
             .map_err(|e| format!("RustParser: {e}")),
 
         Python | MicroPython => {
-            // PythonParser::parse() j   devolve AslProgram
-
+            // PythonParser::parse() já devolve AslProgram
             crate::plugins::python::python_parser::PythonParser::parse(source)
                 .map_err(|e| format!("PythonParser: {e}"))
         }
 
         St => {
-            // StParser::parse() j   devolve AslProgram
-
+            // StParser::parse() já devolve AslProgram
             crate::plugins::plc::st_parser::StParser::parse(source)
                 .map_err(|e| format!("StParser: {e}"))
         }
 
+        Ld => {
+            // Ladder Parser returns AslProgram
+            crate::plugins::plc::ld::parser::LdParser::parse(source)
+                .map_err(|e| format!("LdParser: {e}"))
+        }
+
         _ => Err(format!(
-            "parse_to_asl_program: linguagem {target:?} n  o suportada em an  lise"
+            "parse_to_asl_program: linguagem {target:?} não suportada em análise"
         )),
     }
 }
@@ -378,24 +374,27 @@ fn diags_to_json(_diags: &[serde_json::Value]) -> String {
     "[]".to_string()
 }
 
-//           Testes
+// ============================================================================
+// Tests
+// ============================================================================
 
 #[cfg(test)]
-
 mod tests {
-
     use super::*;
 
     #[test]
-
     fn version_not_empty() {
         assert!(!wasm_version().is_empty());
     }
 
     #[test]
-
     fn supported_langs_contains_rust() {
         assert!(wasm_supported_langs().contains("rust"));
+    }
+
+    #[test]
+    fn supported_langs_contains_ladder() {
+        assert!(wasm_supported_langs().contains("ladder"));
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -403,7 +402,6 @@ mod tests {
 
     #[cfg(target_arch = "wasm32")]
     #[wasm_bindgen_test]
-
     fn transpile_c_to_python() {
         let src = "void setup() { pinMode(13, OUTPUT); }\nvoid loop() { digitalWrite(13, HIGH); }";
 
@@ -416,7 +414,6 @@ mod tests {
 
     #[cfg(target_arch = "wasm32")]
     #[wasm_bindgen_test]
-
     fn transpile_with_map_returns_json() {
         let src = "void setup() {}\nvoid loop() {}";
 
@@ -433,7 +430,6 @@ mod tests {
 
     #[cfg(target_arch = "wasm32")]
     #[wasm_bindgen_test]
-
     fn transpile_unknown_lang_returns_err() {
         let result = wasm_transpile("x", "c", "vhdl");
 
@@ -442,7 +438,6 @@ mod tests {
 
     #[cfg(target_arch = "wasm32")]
     #[wasm_bindgen_test]
-
     fn cross_transpile_c_to_python_returns_valid() {
         let src = "void setup() { }\nvoid loop() { digitalWrite(13, HIGH); }";
 
@@ -459,7 +454,6 @@ mod tests {
 
     #[cfg(target_arch = "wasm32")]
     #[wasm_bindgen_test]
-
     fn cross_transpile_rust_to_st_returns_valid() {
         let src = "fn setup() {}\nfn loop() { digitalRead(11); }";
 
@@ -476,7 +470,6 @@ mod tests {
 
     #[cfg(target_arch = "wasm32")]
     #[wasm_bindgen_test]
-
     fn parse_to_asl_returns_serializeable_json() {
         let src = "void setup() { delay(100); }\nvoid loop() { }";
 
@@ -497,7 +490,6 @@ mod tests {
 
     #[cfg(target_arch = "wasm32")]
     #[wasm_bindgen_test]
-
     fn cross_transpile_c_to_rust_works() {
         let src = "void setup() {}\nvoid loop(){ digitalWrite(13, HIGH); }";
 

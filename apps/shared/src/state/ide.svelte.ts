@@ -5,10 +5,12 @@ const langExtMap: Record<string, string> = {
   cpp: 'cpp', c: 'c', arduino: 'ino',
   rust: 'rs', python: 'py', micropython: 'py',
   upython: 'py', st: 'st', iec61131: 'st', plc: 'st',
+  zig: 'zig', lua: 'lua', ada: 'adb', forth: 'f',
+  asm: 'asm', espruino: 'js', circuitpython: 'py',
 };
 
 /** Canonical display languages for the selector (subset of what WASM supports) */
-const DEFAULT_LANGUAGES = ['cpp', 'python', 'rust', 'st'];
+const DEFAULT_LANGUAGES = ['cpp', 'python', 'rust', 'st', 'arduino', 'zig', 'lua', 'circuitpython', 'espruino', 'ada', 'forth', 'asm'];
 
 /** Display labels for each language */
 export const langDisplayNames: Record<string, string> = {
@@ -19,6 +21,14 @@ export const langDisplayNames: Record<string, string> = {
   c: 'C',
   arduino: 'Arduino',
   micropython: 'MicroPython',
+  zig: 'Zig',
+  lua: 'Lua',
+  circuitpython: 'CircuitPython',
+  espruino: 'Espruino',
+  ada: 'Ada',
+  forth: 'Forth',
+  asm: 'Assembly',
+  ld: 'Ladder (LD)',
 };
 
 export type ActiveTab = 'main' | 'asl' | 'library';

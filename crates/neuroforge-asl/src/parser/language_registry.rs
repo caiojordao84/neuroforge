@@ -166,6 +166,103 @@ impl LanguageRegistry {
                 is_asl_supported: true,
                 is_parser_supported: false, // Fase 6
             },
+            // P1.2: New target languages for embedded systems
+            LanguageMeta {
+                id: "arduino".into(),
+                display_name: "Arduino (C++)".into(),
+
+                extension: ".ino".into(),
+                monaco_language: "cpp".into(),
+
+                category: LanguageCategory::Mcu,
+
+                is_asl_supported: true,
+                is_parser_supported: false, // Uses cpp parser
+            },
+            LanguageMeta {
+                id: "zig".into(),
+                display_name: "Zig".into(),
+
+                extension: ".zig".into(),
+                monaco_language: "zig".into(),
+
+                category: LanguageCategory::Mcu,
+
+                is_asl_supported: true,
+                is_parser_supported: false,
+            },
+            LanguageMeta {
+                id: "circuitpython".into(),
+                display_name: "CircuitPython".into(),
+
+                extension: ".py".into(),
+                monaco_language: "python".into(),
+
+                category: LanguageCategory::Mcu,
+
+                is_asl_supported: true,
+                is_parser_supported: false, // Uses python parser
+            },
+            LanguageMeta {
+                id: "espruino".into(),
+                display_name: "Espruino (JavaScript)".into(),
+
+                extension: ".js".into(),
+                monaco_language: "javascript".into(),
+
+                category: LanguageCategory::Mcu,
+
+                is_asl_supported: true,
+                is_parser_supported: false,
+            },
+            LanguageMeta {
+                id: "lua".into(),
+                display_name: "Lua".into(),
+
+                extension: ".lua".into(),
+                monaco_language: "lua".into(),
+
+                category: LanguageCategory::Scripting,
+
+                is_asl_supported: true,
+                is_parser_supported: false,
+            },
+            LanguageMeta {
+                id: "ada".into(),
+                display_name: "Ada".into(),
+
+                extension: ".ada".into(),
+                monaco_language: "ada".into(),
+
+                category: LanguageCategory::Mcu,
+
+                is_asl_supported: true,
+                is_parser_supported: false,
+            },
+            LanguageMeta {
+                id: "forth".into(),
+                display_name: "Forth".into(),
+
+                extension: ".fth".into(),
+                monaco_language: "plaintext".into(),
+
+                category: LanguageCategory::Mcu,
+
+                is_asl_supported: true,
+                is_parser_supported: false,
+            },
+            LanguageMeta {
+                id: "asm".into(),
+                display_name: "Assembly (AVR/ARM)".into(),
+
+                extension: ".asm".into(),
+                monaco_language: "asm".into(),
+
+                category: LanguageCategory::Mcu,
+
+                is_asl_supported: false,
+                is_parser_supported: false, // Low-level output only
+            },
         ];
 
         for lang in langs {
