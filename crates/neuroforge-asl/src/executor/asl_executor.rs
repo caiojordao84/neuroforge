@@ -260,20 +260,19 @@ impl AslExecutor {
             }
 
             TargetLanguage::Il => {
-                Err("IL (Instruction List) ainda n  o implementado     Fase 2 PLC".to_string())
+                Err("IL (Instruction List) not yet implemented -- Phase 2 PLC".to_string())
             }
 
             TargetLanguage::Ld => {
-                Err("LD (Ladder Diagram) ainda n  o implementado     Fase 2 PLC".to_string())
+                Err("LD (Ladder Diagram) not yet implemented -- Phase 2 PLC".to_string())
             }
 
-            TargetLanguage::Fbd => Err(
-                "FBD (Function Block Diagram) ainda n  o implementado     Fase 2 PLC".to_string(),
-            ),
+            TargetLanguage::Fbd => {
+                Err("FBD (Function Block Diagram) not yet implemented -- Phase 2 PLC".to_string())
+            }
 
             TargetLanguage::Sfc => Err(
-                "SFC (Sequential Function Chart) ainda n  o implementado     Fase 2 PLC"
-                    .to_string(),
+                "SFC (Sequential Function Chart) not yet implemented -- Phase 2 PLC".to_string(),
             ),
         }
     }
@@ -325,7 +324,7 @@ impl AslExecutor {
             "ld" | "ladder" => Ok(TargetLanguage::Ld),
             "fbd" | "functionblock" => Ok(TargetLanguage::Fbd),
             "sfc" | "sequentialfunction" => Ok(TargetLanguage::Sfc),
-            _ => Err(format!("Plataforma n  o suportada: {}", platform)),
+            _ => Err(format!("Platform not supported: {}", platform)),
         }
     }
 
@@ -356,20 +355,19 @@ impl AslExecutor {
             }
 
             TargetLanguage::Il => {
-                Err("IL (Instruction List) ainda n  o implementado     Fase 2 PLC".to_string())
+                Err("IL (Instruction List) not yet implemented -- Phase 2 PLC".to_string())
             }
 
             TargetLanguage::Ld => {
-                Err("LD (Ladder Diagram) ainda n  o implementado     Fase 2 PLC".to_string())
+                Err("LD (Ladder Diagram) not yet implemented -- Phase 2 PLC".to_string())
             }
 
-            TargetLanguage::Fbd => Err(
-                "FBD (Function Block Diagram) ainda n  o implementado     Fase 2 PLC".to_string(),
-            ),
+            TargetLanguage::Fbd => {
+                Err("FBD (Function Block Diagram) not yet implemented -- Phase 2 PLC".to_string())
+            }
 
             TargetLanguage::Sfc => Err(
-                "SFC (Sequential Function Chart) ainda n  o implementado     Fase 2 PLC"
-                    .to_string(),
+                "SFC (Sequential Function Chart) not yet implemented -- Phase 2 PLC".to_string(),
             ),
         }
     }
@@ -426,7 +424,7 @@ void loop() {
 
         let out = AslExecutor::run(src, &TargetLanguage::Arduino).expect("falhou Arduino alias");
 
-        assert!(!out.code.is_empty(), "output n  o deve estar vazio");
+        assert!(!out.code.is_empty(), "output should not be empty");
     }
 
     //        Rust

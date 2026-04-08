@@ -98,10 +98,26 @@ graph TD
 - Function blocks - structured text inline within ladder
 
 ### 3.3 Integrated Hardware Specialist (neuroforge-specialist)
-The following consolidated **Pro Power Skills** have been activated for the specialized agent:
+
+The specialist agent operates in 5 modes (TRANSPILER, DEBUG, EXTEND, VERIFY, OPTIMIZE) with 10 core skills:
+
+**Domain Knowledge:**
 - **asl-logic-pro**: Unified grammar, fundamentals, and semantic mapping core.
-- **asl-hardware-pro**: consolidated components (I2C, SPI, RGB, Motors, Storage).
+- **asl-hardware-pro**: Consolidated components (I2C, SPI, RGB, Motors, Storage).
 - **asl-transpiler-pro**: High-fidelity generation for Arduino, MicroPython, and Rust Embassy.
+
+**Development Tools:**
+- **transpiler-development**: AST transformation, visitor pattern, plugin architecture.
+- **transpiler-testing**: Test framework, reference implementations, round-trip validation.
+- **st-iec61131-pro**: IEC 61131-3 PLC languages (ST, LD, FBD, SFC).
+- **rust-pro**: Rust idioms, Embassy async, `no_std` environments.
+
+**Code Generation:**
+- **ast-design**: AST node types, type system, IR design patterns.
+- **code-generation**: Visitor pattern, shim management, source maps.
+- **embedded-code-generation**: Hardware-specific output via `agent_skills/` prompt library.
+
+**On-Demand (contextual loading):** `avr-family`, `esp32-family`, `rp2040-family`, `wasm-development`, `tree-sitter-development`.
 
 ---
 
