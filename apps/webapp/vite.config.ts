@@ -35,5 +35,10 @@ export default defineConfig({
   },
   ssr: {
     noExternal: ['@neuroforge/shared']
+  },
+  build: {
+    rollupOptions: {
+      external: ['neuroforge_asl', 'neuroforge_asl.js', 'neuroforge_asl_bg.wasm']
+    }
   }
 });

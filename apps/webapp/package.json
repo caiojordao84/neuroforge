@@ -10,6 +10,7 @@
   "dependencies": {
     "@google/genai": "^1.49.0",
     "@neuroforge/shared": "workspace:*",
+    "@opencode-ai/sdk": "^1.4.3",
     "lucide-svelte": "^1.0.1"
   },
   "devDependencies": {

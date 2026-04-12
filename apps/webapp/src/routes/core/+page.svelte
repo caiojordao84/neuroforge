@@ -3,8 +3,11 @@
   import TopBar from '$lib/components/desktop/TopBar.svelte';
   import { type TranspileRequest, type TranspileResult, SupportedLanguage, LANGUAGES } from '$lib/types';
   import { DEFAULT_SOURCE_CODE } from '$lib/constants';
-  import { transpileCode } from '$lib/services/gemini';
+  import { orchestrator } from '$lib/ai/orchestration';
+  import { initWasm } from '$lib/wasm/index';
   import CodeEditor from '@neuroforge/shared/components/CodeEditor.svelte';
+  import ProviderSettings from '$lib/components/provider/ProviderSettings.svelte';
+  import { providerState } from '$lib/ai/state/provider.svelte';
 
   let sourceCode = $state(DEFAULT_SOURCE_CODE);
   let sourceLang = $state<string>(SupportedLanguage.ARDUINO);
@@ -16,6 +19,7 @@
   let transpileResult = $state<TranspileResult | null>(null);
   let copied = $state(false);
   let isBrowser = $state(false);
+  let showProviderSettings = $state(false);
 
   const platformOptions = [
     { value: 'STM32F4', label: 'STM32 F4 Series' },
@@ -33,7 +37,18 @@
     { value: 'Generic IEC 61131-3 PLC', label: 'Generic IEC 61131-3 PLC' },
   ];
 
-  onMount(() => { isBrowser = true; });
+  let wasmReady = $state(false);
+
+  onMount(async () => { 
+    isBrowser = true; 
+    // Initialize WASM in background
+    try {
+      await initWasm();
+      wasmReady = true;
+    } catch (e) {
+      console.warn('WASM initialization failed:', e);
+    }
+  });
 
   async function handleProcess() {
     if (!sourceCode.trim()) {
@@ -46,12 +61,14 @@
     transpileResult = null;
 
     try {
-      transpileResult = await transpileCode({
+      // Use orchestrator with auto mode - tries server API first, falls back to WASM
+      // Server-side API key config is independent of client-side localStorage
+      transpileResult = await orchestrator.transpile({
         sourceLang,
         targetLang,
         targetPlatform: platform,
         code: sourceCode
-      });
+      }, 'auto');
     } catch (err) {
       error = err instanceof Error ? err.message : "An unexpected error occurred.";
     } finally {
@@ -139,6 +156,20 @@
             {/each}
           </select>
         </div>
+
+        <!-- Provider Status (Clickable) -->
+        <button 
+          onclick={() => showProviderSettings = !showProviderSettings}
+          class="self-end flex items-center gap-2 px-2 py-1 rounded bg-black/20 hover:bg-black/30 transition-colors cursor-pointer"
+          title="Click to configure AI provider"
+        >
+          <span class="material-symbols-outlined text-xs {$providerState.type !== 'none' && $providerState.apiKey ? 'text-green-400' : 'text-primary-container'}">
+            {$providerState.type !== 'none' && $providerState.apiKey ? 'psychology' : 'memory'}
+          </span>
+          <span class="text-[9px] font-mono {$providerState.type !== 'none' && $providerState.apiKey ? 'text-green-400' : 'text-primary-container/80'}">
+            {$providerState.type !== 'none' && $providerState.apiKey ? 'AI' : 'WASM'}
+          </span>
+        </button>
 
         <!-- Transpile Button -->
         <button 
@@ -237,60 +268,75 @@
           {/if}
         </div>
       </div>
-    </div>
 
-    <!-- Analysis Panels (shown after transpilation) -->
-    {#if transpileResult}
-      <div class="border-t border-white/5 bg-[#131221]">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-px bg-white/5">
-          <!-- Translation Notes -->
-          <div class="bg-[#131221] p-4">
-            <h3 class="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-2 flex items-center gap-2">
-              <span class="material-symbols-outlined text-xs text-blue-400">info</span>
-              Translation Notes
-            </h3>
-            <div class="bg-black/30 rounded p-3 text-[10px] font-mono text-white/60 max-h-32 overflow-y-auto whitespace-pre-wrap custom-scrollbar">
-              {transpileResult.notes || "No specific notes generated."}
+      <!-- Provider Settings Modal (outside conditionals) -->
+      {#if showProviderSettings}
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={() => showProviderSettings = false}>
+          <div onclick={(e) => e.stopPropagation()} class="bg-surface-container-high border border-white/10 rounded-lg p-6 max-w-md w-full mx-4">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-bold text-white">AI Provider Settings</h2>
+              <button onclick={() => showProviderSettings = false} class="text-white/50 hover:text-white">
+                <span class="material-symbols-outlined">close</span>
+              </button>
             </div>
+            <ProviderSettings />
           </div>
-          
-          <!-- Verification -->
-          <div class="bg-[#131221] p-4">
-            <h3 class="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-2 flex items-center gap-2">
-              <span class="material-symbols-outlined text-xs text-green-400">check_circle</span>
-              Verification & Hardware Check
-            </h3>
-            <div class="bg-black/30 rounded p-3 text-[10px] font-mono text-white/60 max-h-32 overflow-y-auto whitespace-pre-wrap custom-scrollbar">
-              {transpileResult.verification || "Verification pending hardware test."}
-            </div>
-          </div>
-
-          {#if transpileResult.optimizations}
-            <div class="bg-[#131221] p-4 md:col-span-2">
-              <h3 class="text-[10px] font-bold uppercase tracking-widest text-primary-container mb-2 flex items-center gap-2">
-                <span class="material-symbols-outlined text-xs">bolt</span>
-                Optimization Applied
-              </h3>
-              <div class="bg-black/30 rounded p-3 text-[10px] font-mono text-primary-container/80 max-h-32 overflow-y-auto whitespace-pre-wrap custom-scrollbar">
-                {transpileResult.optimizations}
-              </div>
-            </div>
-          {/if}
-
-          {#if transpileResult.warnings}
-            <div class="bg-[#131221] p-4 md:col-span-2">
-              <h3 class="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-2 flex items-center gap-2">
-                <span class="material-symbols-outlined text-xs">warning</span>
-                Warnings
-              </h3>
-              <div class="bg-black/30 rounded p-3 text-[10px] font-mono text-amber-400/80 max-h-32 overflow-y-auto whitespace-pre-wrap custom-scrollbar">
-                {transpileResult.warnings}
-              </div>
-            </div>
-          {/if}
         </div>
-      </div>
-    {/if}
+      {/if}
+
+      <!-- Analysis Panels (shown after transpilation) -->
+      {#if transpileResult}
+        <div class="border-t border-white/5 bg-[#131221]">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-px bg-white/5">
+            <!-- Translation Notes -->
+            <div class="bg-[#131221] p-4">
+              <h3 class="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-2 flex items-center gap-2">
+                <span class="material-symbols-outlined text-xs text-blue-400">info</span>
+                Translation Notes
+              </h3>
+              <div class="bg-black/30 rounded p-3 text-[10px] font-mono text-white/60 max-h-32 overflow-y-auto whitespace-pre-wrap custom-scrollbar">
+                {transpileResult.notes || "No specific notes generated."}
+              </div>
+            </div>
+            
+            <!-- Verification -->
+            <div class="bg-[#131221] p-4">
+              <h3 class="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-2 flex items-center gap-2">
+                <span class="material-symbols-outlined text-xs text-green-400">check_circle</span>
+                Verification & Hardware Check
+              </h3>
+              <div class="bg-black/30 rounded p-3 text-[10px] font-mono text-white/60 max-h-32 overflow-y-auto whitespace-pre-wrap custom-scrollbar">
+                {transpileResult.verification || "Verification pending hardware test."}
+              </div>
+            </div>
+
+            {#if transpileResult.optimizations}
+              <div class="bg-[#131221] p-4 md:col-span-2">
+                <h3 class="text-[10px] font-bold uppercase tracking-widest text-primary-container mb-2 flex items-center gap-2">
+                  <span class="material-symbols-outlined text-xs">bolt</span>
+                  Optimizations Applied
+                </h3>
+                <div class="bg-black/30 rounded p-3 text-[10px] font-mono text-primary-container/80 max-h-32 overflow-y-auto whitespace-pre-wrap custom-scrollbar">
+                  {transpileResult.optimizations}
+                </div>
+              </div>
+            {/if}
+
+            {#if transpileResult.warnings}
+              <div class="bg-[#131221] p-4 md:col-span-2">
+                <h3 class="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-2 flex items-center gap-2">
+                  <span class="material-symbols-outlined text-xs">warning</span>
+                  Warnings
+                </h3>
+                <div class="bg-black/30 rounded p-3 text-[10px] font-mono text-amber-400/80 max-h-32 overflow-y-auto whitespace-pre-wrap custom-scrollbar">
+                  {transpileResult.warnings}
+                </div>
+              </div>
+            {/if}
+          </div>
+        </div>
+      {/if}
+    </div>
   </div>
 </div>
 
