@@ -49,6 +49,12 @@ class AslState {
     return JSON.parse(this.#mod.wasm_parse_to_asl(source, lang));
   }
 
+  parseToToon(source: string, lang: string): string {
+    if (!this.#mod) throw new Error('WASM não inicializado');
+    // @ts-ignore
+    return this.#mod.wasm_parse_to_toon(source, lang);
+  }
+
   /** Cross-language transpilation: parses with fromLang parser, generates with toLang generator */
   crossTranspile(source: string, fromLang: string, toLang: string): string {
     if (!this.#mod) throw new Error('WASM não inicializado');

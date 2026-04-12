@@ -120,6 +120,6 @@
   }
   
   .toolbox-item:hover {
-    border-left: 2px solid theme('colors.primary-container');
+    border-left: 2px solid var(--color-primary-container);
   }
 </style>

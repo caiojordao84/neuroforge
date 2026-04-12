@@ -68,7 +68,7 @@
       {#if ideState.isAslView}
         <CodeEditor 
           height="100%"
-          language="json" 
+          language="rust" 
           readOnly={true}
           value={ideState.transpiledAsl}
         />

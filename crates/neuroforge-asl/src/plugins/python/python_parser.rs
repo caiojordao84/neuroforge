@@ -529,9 +529,21 @@ impl<'src> PythonVisitor<'src> {
 
             "print" => AslStatement::Print(AslPrint {
                 args,
-
                 newline: true,
             }),
+
+            f if f.ends_with(".irq") || f.ends_with(".attach_interrupt") => {
+                // Heurística para capturar o pino e o handler
+                let pin_name = f.split('.').next().unwrap_or("unknown");
+                crate::asl_types::AslStatement::AttachInterrupt(crate::asl_types::AslAttachInterrupt {
+                    pin: AslExpr::var(pin_name),
+                    handler: args.iter().find_map(|a| match a {
+                        AslExpr::Var(v) => Some(v.name.clone()),
+                        _ => None
+                    }).unwrap_or_else(|| "unknown".to_string()),
+                    trigger: "CHANGE".to_string(),
+                })
+            }
 
             _ => AslStatement::Expr(AslExpressionStmt {
                 expr: AslExpr::Call(Box::new(crate::asl_types::AslCall {

@@ -1,7 +1,7 @@
 pub mod shim_manager;
 
 pub mod generator;
-
+pub mod toon_generator;
 pub mod plugin;
 
 pub use shim_manager::{ShimDefinition, ShimLanguage, ShimManager};

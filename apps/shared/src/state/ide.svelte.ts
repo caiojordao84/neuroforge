@@ -133,10 +133,9 @@ class IDEState {
       return;
     }
     try {
-      const parsed = asl.parseToAsl(this.code, this.language);
-      this.transpiledAsl = JSON.stringify(parsed, null, 2);
+      this.transpiledAsl = asl.parseToToon(this.code, this.language);
       this.activeTab = 'asl';
-      this.addLog('ASL IR generated successfully.', 'success');
+      this.addLog('ASL IR (TOON) generated successfully.', 'success');
     } catch (e) {
       this.addLog('ASL parse failed: ' + String(e), 'error');
     }

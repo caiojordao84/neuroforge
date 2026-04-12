@@ -8,7 +8,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@neuroforge/shared": "workspace:*"
+    "@google/genai": "^1.49.0",
+    "@neuroforge/shared": "workspace:*",
+    "lucide-svelte": "^1.0.1"
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "^7.0.1",

@@ -8,9 +8,9 @@
       </span>
     </div>
     <nav class="hidden md:flex items-center gap-4 ml-4">
-      <a class="text-primary-container border-b-2 border-primary-container pb-1 text-xs font-mono font-medium uppercase" href="/">Project</a>
+      <a class="text-primary-container border-b-2 border-primary-container pb-1 text-xs font-mono font-medium uppercase" href="/">Simulation</a>
+      <a class="text-on-surface-variant hover:text-on-surface text-xs font-mono font-medium uppercase transition-all duration-300" href="/plc">PLC</a>
       <a class="text-on-surface-variant hover:text-on-surface text-xs font-mono font-medium uppercase transition-all duration-300" href="/core">Core</a>
-      <a class="text-on-surface-variant hover:text-on-surface text-xs font-mono font-medium uppercase transition-all duration-300" href="/sim">Sim_v1</a>
     </nav>
   </div>
   

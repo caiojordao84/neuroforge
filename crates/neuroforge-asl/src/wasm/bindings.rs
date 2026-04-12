@@ -22,7 +22,7 @@ use crate::parser::neuro_parser::NeuroParser;
 use crate::transpile::{transpile, transpile_with_map};
 
 use crate::executor::TargetLanguage;
-use crate::plugins::core::AslGenerator;
+use crate::plugins::core::{AslGenerator, GeneratorOutput};
 
 // ============================================================================
 // Helpers
@@ -142,8 +142,8 @@ pub fn wasm_cross_transpile(
         }
 
         TargetLanguage::Ld => {
-            // Ladder Diagram - generate PLCopen XML
-            crate::plugins::plc::ld::generator::LdGenerator::new().generate(&asl_program)
+            // Ladder Diagram - generate PLCopen XML (String -> GeneratorOutput)
+            GeneratorOutput::new(crate::plugins::plc::ld::generator::LdGenerator::new().generate(&asl_program))
         }
 
         _ => {
@@ -186,7 +186,7 @@ pub fn wasm_supported_langs() -> String {
 pub fn wasm_parse_ld_to_asl(xml_source: &str) -> Result<String, JsValue> {
     use crate::plugins::plc::ld::parser::LdParser;
 
-    let program = LdParser::parse(xml_source).map_err(to_js_err)?;
+    let program = LdParser::parse(xml_source).map_err(|e| to_js_err(e.to_string()))?;
 
     serde_json::to_string(&program).map_err(|e| JsValue::from_str(&e.to_string()))
 }
@@ -205,7 +205,7 @@ pub fn wasm_asl_to_ld(asl_json: &str) -> Result<String, JsValue> {
 
     let output = LdGenerator::new().generate(&program);
 
-    Ok(output.code)
+    Ok(output)
 }
 
 /// Parse ST (Structured Text) and convert to Ladder Diagram
@@ -216,13 +216,14 @@ pub fn wasm_asl_to_ld(asl_json: &str) -> Result<String, JsValue> {
 #[wasm_bindgen]
 pub fn wasm_st_to_ld(st_source: &str) -> Result<String, JsValue> {
     // Parse ST to ASL
-    let program = crate::plugins::plc::st_parser::StParser::parse(st_source).map_err(to_js_err)?;
+    let program = crate::plugins::plc::st_parser::StParser::parse(st_source)
+        .map_err(|e| to_js_err(e.to_string()))?;
 
     // Generate LD from ASL
     use crate::plugins::plc::ld::generator::LdGenerator;
     let output = LdGenerator::new().generate(&program);
 
-    Ok(output.code)
+    Ok(output)
 }
 
 /// Cross-transpile to Ladder Diagram
@@ -241,7 +242,7 @@ pub fn wasm_to_ld(source: &str, from_lang: &str) -> Result<String, JsValue> {
     use crate::plugins::plc::ld::generator::LdGenerator;
     let output = LdGenerator::new().generate(&asl_program);
 
-    Ok(output.code)
+    Ok(output)
 }
 
 /// Validate Ladder Diagram and return diagnostics
@@ -318,6 +319,22 @@ pub fn wasm_parse_to_asl(source: &str, lang: &str) -> Result<String, JsValue> {
     serde_json::to_string(&prog).map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
+/// Converte o código fonte para ASL IR em formato TOON (human-readable).
+/// Usa `serde_toon` para serialização determinística e legível.
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn wasm_parse_to_toon(source: &str, lang: &str) -> Result<String, JsValue> {
+    let target = TargetLanguage::parse(lang)
+        .ok_or_else(|| JsValue::from_str(&format!("Linguagem desconhecida: {lang}")))?;
+
+    let prog = parse_to_asl_program(source, &target).map_err(to_js_err)?;
+
+    use crate::plugins::core::toon_generator::ToonGenerator;
+    let mut gen = ToonGenerator::new();
+    Ok(gen.generate_to_string(&prog))
+}
+
 // ============================================================================
 // Internal Helpers
 // ============================================================================
@@ -333,7 +350,7 @@ pub fn wasm_parse_to_asl(source: &str, lang: &str) -> Result<String, JsValue> {
 fn parse_to_asl_program(
     source: &str,
     target: &crate::executor::TargetLanguage,
-) -> Result<crate::types::asl_types::AslProgram, String> {
+) -> Result<crate::asl_types::AslProgram, String> {
     use crate::executor::TargetLanguage::*;
 
     use crate::transforms::context::Language;
