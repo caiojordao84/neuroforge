@@ -3,7 +3,7 @@
 //! These types define the target board configuration and pin mapping.
 
 use serde::{Deserialize, Serialize};
-use serde_toon::{from_str, to_string};
+use serde_toon::{from_str, to_string, Value as ToonValue};
 use std::collections::HashMap;
 
 use super::validation::ValidationError;
@@ -181,9 +181,9 @@ pub struct AslTarget {
     pub agent_skill: Option<String>,
     /// Minimum confidence level required for automatic transpilation
     pub confidence_floor: Option<f64>,
-    /// Custom ASL extensions
+    /// Custom ASL extensions (arbitrary TOON values)
     #[serde(default)]
-    pub extensions: HashMap<String, serde_json::Value>,
+    pub extensions: HashMap<String, ToonValue>,
 }
 
 /// Pin map defining logical to physical pin associations.
@@ -428,37 +428,9 @@ impl BoardProfile {
             }
             // Check physical pin reference exists
             if self.pin_map.find_physical(&pin.physical_name).is_none() {
-                errors.push(ValidationError::InvalidPhysicalReference {
+                errors.push(ValidationError::OrphanedLogicalPin {
                     logical: pin.name.clone(),
                     physical: pin.physical_name.clone(),
-                });
-            }
-        }
-
-        // Check for duplicate physical pin names
-        let mut physical_names = std::collections::HashSet::new();
-        for pin in &self.pin_map.physical_pins {
-            if !physical_names.insert(&pin.name) {
-                errors.push(ValidationError::DuplicatePhysicalPin {
-                    pin: pin.pin_number.unwrap_or(0),
-                });
-            }
-        }
-
-        // Validate clock frequency (if present, must be positive)
-        if let Some(clock) = self.clock_hz {
-            if clock == 0 {
-                errors.push(ValidationError::InvalidClockFrequency {
-                    value: clock as i64,
-                });
-            }
-        }
-
-        // Validate voltage (if present, must be positive)
-        if let Some(voltage) = self.voltage_mv {
-            if voltage == 0 {
-                errors.push(ValidationError::InvalidVoltage {
-                    value: voltage as i64,
                 });
             }
         }
