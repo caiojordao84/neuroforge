@@ -32,7 +32,7 @@
   }
 </script>
 
-<div class="h-screen w-full flex flex-col overflow-hidden bg-background">
+<div class="h-screen w-full flex flex-col overflow-hidden bg-background pt-14">
   <!-- Toolbar -->
   <div class="h-10 bg-white/[0.02] border-b border-white/5 flex items-center justify-between px-4">
     <div class="flex items-center gap-2">

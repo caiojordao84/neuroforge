@@ -248,43 +248,11 @@
         </div>
       </div>
 
-      <!-- 4. Language Selector (right side) -->
-      <div class="relative h-full flex items-center">
-        <button
-          class="flex items-center gap-1 px-3 h-full text-[10px] font-mono text-on-surface-variant uppercase tracking-wider hover:text-white transition-colors"
-          onclick={(e: Event) => {
-            e.stopPropagation();
-            showLangMenu = !showLangMenu;
-            showLibMenu = false;
-            showMainMenu = false;
-          }}
-        >
+      <!-- 4. Language Indicator (Read-only on Simulation) -->
+      <div class="h-full flex items-center px-3 border-l border-white/5">
+        <span class="text-[9px] font-mono text-primary-container/70 bg-primary-container/10 px-2 py-0.5 rounded uppercase tracking-wider">
           {ideState.language}
-          <span class="material-symbols-outlined text-[10px]">expand_more</span>
-        </button>
-
-        {#if showLangMenu}
-          <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-          <div
-            role="menu"
-            tabindex="-1"
-            class="absolute top-10 right-0 w-40 glass-panel shadow-2xl z-50 py-1 bg-[#131221] border border-white/10 rounded"
-            onclick={(e: Event) => e.stopPropagation()}
-          >
-            {#each ideState.availableLanguages as lang}
-              <button
-                role="menuitem"
-                class="w-full text-left px-3 py-1.5 text-[10px] hover:bg-primary-container/20 transition-colors flex items-center justify-between {ideState.language === lang ? 'text-primary-container font-bold' : 'text-on-surface-variant'}"
-                onclick={() => selectLang(lang)}
-              >
-                <span>{langDisplayNames[lang] ?? lang}</span>
-                {#if ideState.language === lang}
-                  <span class="material-symbols-outlined text-xs text-primary-container">check</span>
-                {/if}
-              </button>
-            {/each}
-          </div>
-        {/if}
+        </span>
       </div>
     </div>
 

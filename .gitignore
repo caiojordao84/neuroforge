@@ -87,6 +87,16 @@ metadata.json
 # Temporary files
 tmp/
 temp/
+*.txt
+*.log
+!README.md
+!DOCS/*.md
+!docs/**/*.md
+!ARCHITECTURE.md
+!CODEBASE.md
+!GEMINI.md
+!AGENTS.md
+!orphans_check.txt
 
 # Google Drive
 .tmp.driveupload
@@ -114,3 +124,12 @@ apps/shared/src/lib/wasm/
 .agent/
 .opencode/
 opencode/
+.gemini/
+.snapshots/
+
+# Graphify & Discovery
+graphify-out/
+.ruff_cache/
+
+# User-specific workspaces
+*.code-workspace

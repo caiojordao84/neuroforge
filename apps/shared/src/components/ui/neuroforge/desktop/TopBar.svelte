@@ -1,4 +1,8 @@
-<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 h-14 bg-[#131221] shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.08)]">
+<script lang="ts">
+  import { page } from '$app/stores';
+</script>
+
+<header class="fixed top-0 left-0 w-full z-50 hidden lg:flex justify-between items-center px-6 h-14 bg-[#131221] shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.08)]">
   <div class="flex items-center gap-6">
     <div class="flex items-center gap-2">
       <span class="text-2xl font-black italic text-primary-container tracking-tighter">NeuroForge</span>
@@ -7,10 +11,25 @@
         ESP32_MAIN_LOOP
       </span>
     </div>
-    <nav class="hidden md:flex items-center gap-4 ml-4">
-      <a class="text-primary-container border-b-2 border-primary-container pb-1 text-xs font-mono font-medium uppercase" href="/">Simulation</a>
-      <a class="text-on-surface-variant hover:text-on-surface text-xs font-mono font-medium uppercase transition-all duration-300" href="/plc">PLC</a>
-      <a class="text-on-surface-variant hover:text-on-surface text-xs font-mono font-medium uppercase transition-all duration-300" href="/core">Core</a>
+    <nav class="flex items-center gap-4 ml-4">
+      <a 
+        class="text-xs font-mono font-medium uppercase transition-all duration-300 pb-1 {$page.url.pathname === '/' ? 'text-primary-container border-b-2 border-primary-container' : 'text-on-surface-variant hover:text-on-surface'}" 
+        href="/"
+      >
+        Simulation
+      </a>
+      <a 
+        class="text-xs font-mono font-medium uppercase transition-all duration-300 pb-1 {$page.url.pathname === '/plc' ? 'text-primary-container border-b-2 border-primary-container' : 'text-on-surface-variant hover:text-on-surface'}" 
+        href="/plc"
+      >
+        PLC
+      </a>
+      <a 
+        class="text-xs font-mono font-medium uppercase transition-all duration-300 pb-1 {$page.url.pathname === '/core' ? 'text-primary-container border-b-2 border-primary-container' : 'text-on-surface-variant hover:text-on-surface'}" 
+        href="/core"
+      >
+        Core
+      </a>
     </nav>
   </div>
   

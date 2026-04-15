@@ -2,6 +2,7 @@
   import '../app.css'; // This imports "@neuroforge/shared/styles/neuroforge.css"
   import { onMount } from 'svelte';
   import { asl } from '@neuroforge/shared/state/asl.svelte.ts';
+  import { NeuroForgeTopBar } from '@neuroforge/shared';
 
   let { children } = $props();
 
@@ -16,5 +17,7 @@
 <svelte:head>
   <title>NeuroForge IDE</title>
 </svelte:head>
+
+<NeuroForgeTopBar />
 
 {@render children()}

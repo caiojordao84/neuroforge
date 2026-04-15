@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import TopBar from '$lib/components/desktop/TopBar.svelte';
   import { type TranspileRequest, type TranspileResult, SupportedLanguage, LANGUAGES } from '$lib/types';
   import { DEFAULT_SOURCE_CODE } from '$lib/constants';
   import { orchestrator } from '$lib/ai/orchestration';
@@ -92,7 +91,6 @@
 </script>
 
 <div class="h-screen w-full flex flex-col overflow-hidden bg-background">
-  <TopBar />
   
   <!-- Main content below topbar -->
   <div class="flex-1 flex flex-col overflow-auto pt-14">

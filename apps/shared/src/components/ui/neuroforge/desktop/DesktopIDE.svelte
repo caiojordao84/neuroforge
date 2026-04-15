@@ -8,8 +8,7 @@
   import Footer from './Footer.svelte';
 </script>
 
-<div class="h-screen w-full flex flex-col overflow-hidden bg-background">
-  <TopBar />
+<div class="h-screen w-full flex flex-col overflow-hidden bg-background pt-14">
   <SecondaryToolbar />
   
   <main class="flex-1 relative flex overflow-hidden">
