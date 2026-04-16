@@ -1,0 +1,180 @@
+{
+  "main": {
+    "id": "588b67fd372ea27d",
+    "type": "split",
+    "children": [
+      {
+        "id": "4ad6e5b0af215aca",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "bbcb7d344e8f4de7",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "graphify/GRAPH_REPORT.md",
+                "mode": "source",
+                "source": false,
+                "backlinks": false
+              },
+              "icon": "lucide-file",
+              "title": "GRAPH_REPORT"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "83ba28a9e1d214c3",
+    "type": "split",
+    "children": [
+      {
+        "id": "c0ebb384cf043cdd",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "b1fcb7a25f633b32",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": true
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Explorador de ficheiros"
+            }
+          },
+          {
+            "id": "e0549847c20dcecd",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Procurar"
+            }
+          },
+          {
+            "id": "19534eae31353bd5",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Marcadores"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "80164d116fa2ec86",
+    "type": "split",
+    "children": [
+      {
+        "id": "8f4afed1590daa5d",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "f893a8fd73a3891b",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "Todas as propriedades"
+            }
+          },
+          {
+            "id": "581f01aad13dfe60",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "graphify/GRAPH_REPORT.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Índice de GRAPH_REPORT"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Abrir Quick Switcher": false,
+      "graph:Abrir Visualização de diagrama de grafo": false,
+      "canvas:Criar novo Canvas": false,
+      "daily-notes:Abrir nota de hoje": false,
+      "templates:Inserir templates": false,
+      "command-palette:Abrir paleta de comando": false,
+      "markdown-importer:Importador de Open Markdown": false,
+      "bases:Criar nova base": false
+    }
+  },
+  "active": "bbcb7d344e8f4de7",
+  "lastOpenFiles": [
+    "Rules/BRAIN_PROTOCOL.md",
+    "Brain/_COMMUNITY_Community 10.md",
+    "Rules/REMOTE_ACCESS.md",
+    "Brain/_COMMUNITY_Community 135.md",
+    "Brain/_COMMUNITY_Community 33.md",
+    "Timeline/2026-04-16.md",
+    "Sem título.canvas",
+    "graphify/cache/ff50548865d10df4210a9a53f697dd27f03369499efb29ce4e951c2ba3d3cf6f.json",
+    "graphify/cache/fec37b2598052389b6a43bd73d80910fac0396dae6c55e8c6e03057e308ef69c.json",
+    "graphify/cache/fdc38442847e9d03a6279c4d1a2d431d4869212c33315e013fc6a983883b7117.json",
+    "graphify/cache/fd5238c085f85bf90f85f619d1aa724dec7f23cce3ed5e39dea095f8420563ef.json",
+    "graphify/cache/fce9f1454dfef75cbaf85b69adcf1e969b0049e0b86bd949026c6a53a36ad792.json",
+    "graphify/cache/fc0ba352ffe00422929607d5fe4744b559d1fbd6eff02f725bd1ef6347a4e0d6.json",
+    "graphify/cache/fbf89ad4704d49978bb02bdd46775b2cbe7a96dd92ade2f70f7e3d66e506d8b2.json",
+    "graphify/cache/fbcc2c559713b8aae499654c0f14e5fb98df4ee42a93a8b283aa1e3914a90c44.json",
+    "graphify/cache/faf7314d36a60b2ca40f1de1fa028776688977a2886a57b9819ac550078c1b94.json",
+    "graphify/cache/f9a21f35d75a1c1bc7955bf6f074f42387c22e7f77f8d97c3e504941616242c2.json",
+    "graphify/GRAPH_REPORT.md",
+    "graphify/wiki/WASM_Bindings_&_IDE_State.md",
+    "graphify/wiki/ST_Parser_&_Functional_Blocks.md",
+    "graphify/wiki/Shared_Transpiler_Engine.md",
+    "graphify/wiki/SchemaSmith_&_UI_Synchronization.md",
+    "graphify/wiki/Rust_Embassy_&_SVG_Extraction.md",
+    "graphify/wiki/PLC_Language_Parsing_(ST,_LD,_FBD).md",
+    "graphify/wiki/PLC_Code_Generation.md",
+    "graphify/wiki/Parser.md",
+    "graphify/wiki/Legacy_C-C++_Transpiler_Logic.md",
+    "graphify/wiki/Ladder_Logic_Type_System.md",
+    "graphify/wiki/index.md",
+    "graphify/wiki/C_Parser_Subsystem.md",
+    "graphify/wiki/Confidence_&_Validation_Engine.md",
+    "graphify/wiki/Community_99.md",
+    "graphify/wiki/Community_98.md",
+    "graphify/wiki/Community_97.md",
+    "graphify/wiki/Community_96.md",
+    "graphify/wiki/Community_95.md",
+    "graphify/wiki/Community_94.md"
+  ]
+}

@@ -130,6 +130,7 @@ opencode/
 # Graphify & Discovery
 graphify-out/
 .ruff_cache/
+notes/graphify
 
 # User-specific workspaces
 *.code-workspace

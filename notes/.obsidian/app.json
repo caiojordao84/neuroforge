@@ -1,0 +1,10 @@
+{
+  "attachmentFolderPath": "Brain/Attachments",
+  "showInlineTitle": true,
+  "readableLineLength": true,
+  "showLineNumber": true,
+  "newFileLocation": "folder",
+  "newFileFolderPath": "Brain",
+  "alwaysUpdateLinks": true,
+  "showUnsupportedFiles": true
+}
