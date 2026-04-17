@@ -248,11 +248,40 @@
         </div>
       </div>
 
-      <!-- 4. Language Indicator (Read-only on Simulation) -->
-      <div class="h-full flex items-center px-3 border-l border-white/5">
-        <span class="text-[9px] font-mono text-primary-container/70 bg-primary-container/10 px-2 py-0.5 rounded uppercase tracking-wider">
-          {ideState.language}
-        </span>
+      <!-- 4. Language Selector -->
+      <div class="relative h-full flex items-center px-2 border-l border-white/5">
+        <button
+          class="flex items-center gap-1.5 px-2 py-1 text-[9px] font-mono text-primary-container/70 hover:text-primary-container hover:bg-primary-container/10 transition-colors rounded uppercase tracking-wider"
+          onclick={(e: Event) => {
+            e.stopPropagation();
+            showLangMenu = !showLangMenu;
+            showLibMenu = false;
+            showMainMenu = false;
+          }}
+        >
+          {langDisplayNames[ideState.language] ?? ideState.language}
+          <span class="material-symbols-outlined text-[10px]">expand_more</span>
+        </button>
+
+        {#if showLangMenu}
+          <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+          <div
+            role="menu"
+            tabindex="-1"
+            class="absolute top-10 right-0 w-32 glass-panel shadow-2xl z-50 bg-[#131221] border border-white/10 rounded overflow-hidden"
+            onclick={(e: Event) => e.stopPropagation()}
+          >
+            {#each Object.entries(langDisplayNames) as [langKey, langName]}
+              <button
+                role="menuitem"
+                class="w-full text-left px-3 py-2 text-[10px] font-mono transition-colors {ideState.language === langKey ? 'text-primary-container bg-primary-container/10' : 'text-on-surface-variant hover:bg-primary-container/20 hover:text-primary-container'}"
+                onclick={() => selectLang(langKey)}
+              >
+                {langName}
+              </button>
+            {/each}
+          </div>
+        {/if}
       </div>
     </div>
 

@@ -271,8 +271,19 @@
 
       <!-- Provider Settings Modal (outside conditionals) -->
       {#if showProviderSettings}
-        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={() => showProviderSettings = false}>
-          <div onclick={(e) => e.stopPropagation()} class="bg-surface-container-high border border-white/10 rounded-lg p-6 max-w-md w-full mx-4">
+        <div 
+          class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 cursor-pointer" 
+          role="button"
+          tabindex="0"
+          onclick={() => showProviderSettings = false}
+          onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') showProviderSettings = false; }}
+        >
+          <div 
+            role="presentation"
+            onclick={(e) => e.stopPropagation()} 
+            onkeydown={(e) => e.stopPropagation()}
+            class="bg-surface-container-high border border-white/10 rounded-lg p-6 max-w-md w-full mx-4 cursor-default"
+          >
             <div class="flex items-center justify-between mb-4">
               <h2 class="text-lg font-bold text-white">AI Provider Settings</h2>
               <button onclick={() => showProviderSettings = false} class="text-white/50 hover:text-white">

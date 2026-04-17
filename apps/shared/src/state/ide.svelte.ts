@@ -1,4 +1,5 @@
-import { asl } from './asl.svelte.ts';
+import { asl, type WorkspaceInput, type LibraryInput } from './asl.svelte.ts';
+import { library } from './library.svelte.ts';
 
 /** Maps internal language IDs to file extensions */
 const langExtMap: Record<string, string> = {
@@ -95,26 +96,25 @@ class IDEState {
   async setLanguage(newLang: string) {
     if (newLang === this.language) return;
 
-    const oldLang = this.language;
     this.language = newLang;
+    this.addLog(`Contextual switched to ${(langDisplayNames[newLang] ?? newLang).toUpperCase()}. File changed to ${this.mainFileName}`, 'info');
+  }
 
-    if (!asl.ready) {
-      this.addLog(`Switched to ${(langDisplayNames[newLang] ?? newLang).toUpperCase()} (engine not ready, code unchanged)`, 'info');
-      return;
-    }
+  /**
+   * Builds a serializable VFS workspace object including main code and all libraries.
+   */
+  buildWorkspace(): WorkspaceInput {
+    // Collect all libraries that match the current language or are generic enough (h, hpp, etc.)
+    // For now, we include all libraries in the workspace and let the linker sort it out.
+    const libraries: LibraryInput[] = library.libraries.map(lib => ({
+      name: lib.name,
+      source: lib.content
+    }));
 
-    try {
-      const transpiled = asl.crossTranspile(this.code, oldLang, newLang);
-      this.code = transpiled;
-      this.addLog(`Transpiled ${oldLang} → ${newLang} successfully.`, 'success');
-    } catch (e) {
-      const msg = String(e);
-      if (msg.includes('not yet supported') || msg.includes('not supported')) {
-        this.addLog(`Switched to ${(langDisplayNames[newLang] ?? newLang).toUpperCase()} (auto-transpile to this target not yet available)`, 'info');
-      } else {
-        this.addLog(`Transpilation error: ${msg}`, 'error');
-      }
-    }
+    return {
+      main_source: this.code,
+      libraries
+    };
   }
 
   /** Navigate to Main tab */
@@ -133,7 +133,15 @@ class IDEState {
       return;
     }
     try {
-      this.transpiledAsl = asl.parseToToon(this.code, this.language);
+      const workspace = this.buildWorkspace();
+      
+      if (workspace.libraries.length > 0) {
+        this.addLog(`Linking workspace with ${workspace.libraries.length} libraries...`, 'info');
+        this.transpiledAsl = asl.parseWorkspaceToToon(workspace, this.language);
+      } else {
+        this.transpiledAsl = asl.parseToToon(this.code, this.language);
+      }
+
       this.activeTab = 'asl';
       this.addLog('ASL IR (TOON) generated successfully.', 'success');
     } catch (e) {
@@ -161,8 +169,16 @@ class IDEState {
     }
 
     try {
-      // Transpile to the same language to validate syntax
-      asl.transpile(this.code, this.language, this.language);
+      const workspace = this.buildWorkspace();
+      
+      if (workspace.libraries.length > 0) {
+        this.addLog(`Compiling multi-file workspace...`, 'info');
+        asl.transpileWorkspace(workspace, this.language, this.language);
+      } else {
+        // Transpile to the same language to validate syntax
+        asl.transpile(this.code, this.language, this.language);
+      }
+      
       this.addLog('Simulation build successful.', 'success');
       this.addLog('Running on virtual target...', 'info');
     } catch (e) {

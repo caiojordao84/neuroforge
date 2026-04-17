@@ -10,10 +10,8 @@
 
 use crate::asl_types::{
     AslExpr, AslProgram, AslStatement, AslDuration,
-    AslPinMode, AslDigitalOutput, AslDelay, AslPrint, AslAssign, AslDeclare,
-    AslIf, AslWhile, PinModeKind,
+    AslFor, PinModeKind,
 };
-use crate::parser::neuro_parser::NeuroParser;
 use crate::plugins::core::generator::{AslGenerator, GeneratorOutput};
 
 #[derive(Default)]
@@ -121,7 +119,7 @@ impl ToonGenerator {
             out.push_str("[Events]\n");
             for ai in interrupts {
                 out.push_str(&format!("on_change({}):\n", self.gen_expr(&ai.pin)));
-                out.push_str("  - // IRQ logic\n");
+                out.push_str(&format!("  - {}()\n", ai.handler));
             }
         }
     }
@@ -139,7 +137,13 @@ impl ToonGenerator {
             AslStatement::Declare(d) => {
                 let mut decl = if d.mutable { "let " } else { "const " }.to_string();
                 decl.push_str(&d.name);
-                if let Some(v) = &d.value { decl.push_str(" = "); decl.push_str(&self.gen_expr(v)); }
+                if let Some(s) = &d.size {
+                    decl.push_str(&format!("[{}]", self.gen_expr(s)));
+                }
+                if let Some(v) = &d.value {
+                    decl.push_str(" = ");
+                    decl.push_str(&self.gen_expr(v));
+                }
                 out.push_str(&decl);
             }
             AslStatement::If(if_stmt) => {
@@ -147,11 +151,19 @@ impl ToonGenerator {
                 self.push_indent();
                 for s in &if_stmt.then_body { out.push_str(&self.get_indent()); out.push_str("- "); self.generate_statement(s, out); out.push_str("\n"); }
                 self.pop_indent();
-                if let Some(eb) = &if_stmt.else_body {
-                    out.push_str(&self.get_indent()); out.push_str("else:\n");
+                for eif in &if_stmt.else_if {
+                    out.push_str(&self.get_indent()); out.push_str(&format!("else if {}:\n", self.gen_expr(&eif.condition)));
                     self.push_indent();
-                    for s in eb { out.push_str(&self.get_indent()); out.push_str("- "); self.generate_statement(s, out); out.push_str("\n"); }
+                    for s in &eif.body { out.push_str(&self.get_indent()); out.push_str("- "); self.generate_statement(s, out); out.push_str("\n"); }
                     self.pop_indent();
+                }
+                if let Some(eb) = &if_stmt.else_body {
+                    if !eb.is_empty() {
+                        out.push_str(&self.get_indent()); out.push_str("else:\n");
+                        self.push_indent();
+                        for s in eb { out.push_str(&self.get_indent()); out.push_str("- "); self.generate_statement(s, out); out.push_str("\n"); }
+                        self.pop_indent();
+                    }
                 }
             }
             AslStatement::While(while_stmt) => {
@@ -160,22 +172,96 @@ impl ToonGenerator {
                 for s in &while_stmt.body { out.push_str(&self.get_indent()); out.push_str("- "); self.generate_statement(s, out); out.push_str("\n"); }
                 self.pop_indent();
             }
+            AslStatement::Return(ret) => {
+                out.push_str("return");
+                if let Some(val) = &ret.value {
+                    out.push_str(" ");
+                    out.push_str(&self.gen_expr(val));
+                }
+            }
+            AslStatement::Break => out.push_str("break"),
+            AslStatement::Continue => out.push_str("continue"),
+            AslStatement::For(for_enum) => {
+                match &**for_enum {
+                    AslFor::Range(r) => {
+                        out.push_str(&format!("for ({} from {} to {} step {}):\n", r.var, self.gen_expr(&r.from), self.gen_expr(&r.to), self.gen_expr(&r.step)));
+                        self.push_indent();
+                        for s in &r.body { out.push_str(&self.get_indent()); out.push_str("- "); self.generate_statement(s, out); out.push_str("\n"); }
+                        self.pop_indent();
+                    }
+                    AslFor::Each(e) => {
+                        out.push_str(&format!("for ({} in {}):\n", e.var, self.gen_expr(&e.iterable)));
+                        self.push_indent();
+                        for s in &e.body { out.push_str(&self.get_indent()); out.push_str("- "); self.generate_statement(s, out); out.push_str("\n"); }
+                        self.pop_indent();
+                    }
+                    AslFor::CStyle(c) => {
+                        out.push_str(&format!("for ({}):\n", self.gen_expr(&c.condition)));
+                        self.push_indent();
+                        for s in &c.body { out.push_str(&self.get_indent()); out.push_str("- "); self.generate_statement(s, out); out.push_str("\n"); }
+                        self.pop_indent();
+                    }
+                }
+            }
+            AslStatement::DoWhile(dw) => {
+                out.push_str("do:\n");
+                self.push_indent();
+                for s in &dw.body { out.push_str(&self.get_indent()); out.push_str("- "); self.generate_statement(s, out); out.push_str("\n"); }
+                self.pop_indent();
+                out.push_str(&format!("while {}", self.gen_expr(&dw.condition)));
+            }
+            AslStatement::Switch(sw) => {
+                out.push_str(&format!("switch {}:\n", self.gen_expr(&sw.discriminant)));
+                self.push_indent();
+                for case in &sw.cases {
+                    out.push_str(&self.get_indent());
+                    if let Some(val) = &case.test {
+                        out.push_str(&format!("case {}:\n", self.gen_expr(val)));
+                    } else {
+                        out.push_str("default:\n");
+                    }
+                    self.push_indent();
+                    for s in &case.body { out.push_str(&self.get_indent()); out.push_str("- "); self.generate_statement(s, out); out.push_str("\n"); }
+                    self.pop_indent();
+                }
+                self.pop_indent();
+            }
+            AslStatement::AnalogOutput(ao) => out.push_str(&format!("analogOutput({}, {})", self.gen_expr(&ao.pin), self.gen_expr(&ao.value))),
+            AslStatement::AnalogInput(ai) => out.push_str(&format!("analogInput({})", self.gen_expr(&ai.pin))),
+            AslStatement::DigitalInput(di) => out.push_str(&format!("digitalInput({})", self.gen_expr(&di.pin))),
+            AslStatement::SerialBegin(sb) => out.push_str(&format!("serialBegin({})", self.gen_expr(&sb.baud))),
+            AslStatement::SerialWrite(sw) => out.push_str(&format!("serialWrite({})", self.gen_expr(&sw.data))),
+            AslStatement::Comment(c) => out.push_str(&format!("// {}", c.text)),
             AslStatement::Expr(e) => out.push_str(&self.gen_expr(&e.expr)),
-            _ => out.push_str("// [unsupported statement]"),
+            _ => out.push_str(&format!("// [unsupported statement: {:?}]", stmt)),
         }
     }
 
     fn gen_expr(&self, expr: &AslExpr) -> String {
         match expr {
-            AslExpr::Literal(l) => l.value.to_string(),
+            AslExpr::Literal(l) => {
+                if l.value.is_string() {
+                    format!("\"{}\"", l.value.as_str().unwrap())
+                } else if l.value.is_null() {
+                    "null".to_string()
+                } else {
+                    l.value.to_string()
+                }
+            }
             AslExpr::Var(v) => v.name.clone(),
             AslExpr::Binary(b) => format!("({} {} {})", self.gen_expr(&b.left), b.op.to_symbol(), self.gen_expr(&b.right)),
+            AslExpr::Unary(u) => format!("{}{}", u.op.to_symbol(), self.gen_expr(&u.expr)),
             AslExpr::Call(c) => {
                 let args: Vec<String> = c.args.iter().map(|a| self.gen_expr(a)).collect();
                 format!("{}({})", c.callee, args.join(", "))
             }
             AslExpr::Member(m) => format!("{}.{}", self.gen_expr(&m.target), m.property),
             AslExpr::Index(i) => format!("{}[{}]", self.gen_expr(&i.target), self.gen_expr(&i.index)),
+            AslExpr::Conditional(c) => format!("({} ? {} : {})", self.gen_expr(&c.condition), self.gen_expr(&c.when_true), self.gen_expr(&c.when_false)),
+            AslExpr::Cast(c) => format!("({}){}", c.target_type, self.gen_expr(&c.expr)),
+            AslExpr::Array(a) => format!("{{ {} }}", a.elements.iter().map(|e| self.gen_expr(e)).collect::<Vec<_>>().join(", ")),
+            AslExpr::PostfixInc(v) => format!("{}++", v),
+            AslExpr::PostfixDec(v) => format!("{}--", v),
             _ => "expr".to_string(),
         }
     }
@@ -213,6 +299,7 @@ impl AslGenerator for ToonGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parser::neuro_parser::NeuroParser;
     use crate::plugins::python::python_parser::PythonParser;
 
     #[test]

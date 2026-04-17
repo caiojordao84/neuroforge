@@ -615,6 +615,15 @@ impl AslDuration {
         }
     }
 
+    pub fn as_ms(&self) -> u64 {
+        let mut total = (self.days as u64) * 86_400_000;
+        total += (self.hours as u64) * 3_600_000;
+        total += (self.minutes as u64) * 60_000;
+        total += (self.seconds as u64) * 1_000;
+        total += self.milliseconds as u64;
+        total
+    }
+
     pub fn from_secs(s: u64) -> Self {
         Self::from_us(s * 1_000_000)
     }

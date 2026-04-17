@@ -1,11 +1,17 @@
 /**
  * ASL State with WASM transpiler integration
- * 
- * Provides:
- * - Ladder Diagram (LD) ↔ ASL conversion
- * - Cross-language transpilation
- * - Type checking and diagnostics
  */
+
+export interface LibraryInput {
+  name: string;
+  source: string;
+}
+
+export interface WorkspaceInput {
+  main_source: string;
+  libraries: LibraryInput[];
+}
+
 class AslState {
   ready    = $state(false);
   error    = $state<string | null>(null);
@@ -60,6 +66,20 @@ class AslState {
     if (!this.#mod) throw new Error('WASM não inicializado');
     // @ts-ignore
     return this.#mod.wasm_cross_transpile(source, fromLang, toLang);
+  }
+
+  /** VFS Workspace: Transpile multi-file workspace */
+  transpileWorkspace(workspace: WorkspaceInput, fromLang: string, toLang: string): string {
+    if (!this.#mod) throw new Error('WASM não inicializado');
+    // @ts-ignore
+    return this.#mod.wasm_cross_transpile_workspace(JSON.stringify(workspace), fromLang, toLang);
+  }
+
+  /** VFS Workspace: Parse multi-file to TOON */
+  parseWorkspaceToToon(workspace: WorkspaceInput, lang: string): string {
+    if (!this.#mod) throw new Error('WASM não inicializado');
+    // @ts-ignore
+    return this.#mod.wasm_parse_workspace_to_toon(JSON.stringify(workspace), lang);
   }
 
   getDiagnostics(source: string, lang: string): Array<{ severity: string; context: string; message: string }> {

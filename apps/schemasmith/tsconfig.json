@@ -1,6 +1,6 @@
 {
-  "extends": "./.svelte-kit/tsconfig.json",
   "compilerOptions": {
+    "module": "esnext",
     "allowJs": true,
     "checkJs": true,
     "esModuleInterop": true,
@@ -10,5 +10,9 @@
     "sourceMap": true,
     "strict": true,
     "moduleResolution": "bundler"
-  }
+  },
+  "exclude": [
+    "svelte.config.js",
+    "vite.config.ts"
+  ]
 }

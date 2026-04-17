@@ -230,18 +230,33 @@ impl<'src> CVisitor<'src> {
                         if let AslStatement::Declare(d) = &stmt {
                             globals.push(crate::asl_types::AslGlobalVar {
                                 name: d.name.clone(),
-
                                 r#type: d.r#type.clone(),
-
                                 value: d.value.clone(),
-
                                 struct_type: d.subtype.clone(),
-
+                                mutable: d.mutable,
+                                scope: d.scope.clone(),
+                                lifecycle: d.lifecycle.clone(),
                                 ..Default::default()
                             });
                         } else {
                             setup_body.push(stmt);
                         }
+                    }
+                }
+
+                "preproc_def" | "preproc_function_def" => {
+                    let name = child.child_by_field_name("name").map(|n| self.text(n).to_string());
+                    // Preproc value is often a Raw node or just text
+                    let value_node = child.child_by_field_name("value");
+                    let value = value_node.map(|v| self.visit_expr(v));
+                    
+                    if let (Some(n), Some(v)) = (name, value) {
+                        globals.push(crate::asl_types::AslGlobalVar {
+                            name: n,
+                            value: Some(v),
+                            scope: "const".into(),
+                            ..Default::default()
+                        });
                     }
                 }
 
@@ -556,6 +571,17 @@ impl<'src> CVisitor<'src> {
                 }
             }
 
+            "initializer_list" => {
+                let mut elements = vec![];
+                let mut cursor = node.walk();
+                for child in node.children(&mut cursor) {
+                    if child.is_named() {
+                        elements.push(self.visit_expr(child));
+                    }
+                }
+                AslExpr::Array(Box::new(crate::asl_types::AslArray { elements }))
+            }
+
             _kind => {
                 let text = self.text(node);
 
@@ -776,15 +802,38 @@ impl<'src> CVisitor<'src> {
 
         let declarator = node.child_by_field_name("declarator");
 
-        if let Some(d) = declarator {
-            let name = if d.kind() == "init_declarator" {
-                self.text(d.child_by_field_name("declarator").unwrap())
-                    .to_string()
-            } else {
-                self.text(d).to_string()
-            };
+        if let Some(mut d) = declarator {
+            let outer_d = d;
+            let mut constructor_args = None;
+            
+            while d.kind() == "init_declarator" || d.kind() == "function_declarator" || d.kind() == "array_declarator" || d.kind() == "parenthesized_declarator" {
+                 if d.kind() == "function_declarator" {
+                     if let Some(params) = d.child_by_field_name("parameters") {
+                         let args = self.collect_args(params);
+                         if !args.is_empty() {
+                             constructor_args = Some(args);
+                         }
+                     }
+                 }
+                 if let Some(inner) = d.child_by_field_name("declarator") {
+                     d = inner;
+                 } else {
+                     break;
+                 }
+            }
+            let name = self.text(d).to_string();
 
-            let value = d.child_by_field_name("value").map(|v| self.visit_expr(v));
+            let mut value = outer_d.child_by_field_name("value").map(|v| self.visit_expr(v));
+            
+            // If we have constructor args but no explicit value, use the constructor call as value
+            if value.is_none() {
+                if let Some(args) = constructor_args {
+                    value = Some(AslExpr::Call(Box::new(AslCall {
+                        callee: type_name.clone(), 
+                        args,
+                    })));
+                }
+            }
 
             Some(AslStatement::Declare(AslDeclare {
                 name,
@@ -918,7 +967,7 @@ impl<'src> CVisitor<'src> {
 
     fn visit_switch(&mut self, node: Node) -> AslStatement {
         let discriminant = node
-            .child_by_field_name("value")
+            .child_by_field_name("condition")
             .map(|v| self.visit_expr(v))
             .unwrap_or_else(|| AslExpr::int(0));
 

@@ -15,7 +15,7 @@
   let searchQuery = "";
 </script>
 
-<aside class="fixed left-6 top-32 w-64 glass-panel rounded-lg flex flex-col z-40 h-[calc(100vh-10rem)] shadow-2xl">
+<aside class="w-64 bg-[#131221] border-r border-white/5 flex flex-col z-20 shrink-0 h-full">
   <div class="p-4 border-b border-white/5">
     <div class="flex items-center justify-between mb-2">
       <span class="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-primary-container">COMPONENTS</span>

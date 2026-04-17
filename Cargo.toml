@@ -5,7 +5,7 @@ members = [
     "crates/neuroforge-firmware",
     "apps/desktop/src-tauri",
     "apps/mobile/src-tauri",
-    "apps/schemasmith/src-tauri",
+    "apps/schemasmith/src-tauri", "crates/neuroforge-sim",
 ]
 resolver = "2"
 

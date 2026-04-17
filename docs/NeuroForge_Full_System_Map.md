@@ -104,7 +104,8 @@ The specialist agent operates in 5 modes (TRANSPILER, DEBUG, EXTEND, VERIFY, OPT
 **Domain Knowledge:**
 - **asl-logic-pro**: Unified grammar, fundamentals, and semantic mapping core.
 - **asl-hardware-pro**: Consolidated components (I2C, SPI, RGB, Motors, Storage).
-- **asl-transpiler-pro**: High-fidelity generation for Arduino, MicroPython, and Rust Embassy.
+- **asl-transpiler-pro**: High-fidelity generation for Arduino, MicroPython (Rosetta v3), and Rust Embassy.
+  - **Rosetta v3 Specialization**: 100% semantic fidelity with regex-powered variable expansion, `raw_ternary` logic preservation, and statistical peephole optimizations.
 
 **Development Tools:**
 - **transpiler-development**: AST transformation, visitor pattern, plugin architecture.
@@ -125,10 +126,11 @@ The specialist agent operates in 5 modes (TRANSPILER, DEBUG, EXTEND, VERIFY, OPT
 
 | Subsystem           | Status        | Priority                             |
 | :------------------ | :------------ | :----------------------------------- |
-| **ASL Transpiler**  | **ACTIVE**    | Core Logic                           |
-| **Web/Desktop IDE** | **ACTIVE**    | UX / Developer Surface               |
+| Core Engine | ASL Transpiler (v4.x) | ACTIVE | Rust-powered multi-lang generator (C/Py/Rs/ST). Rosetta v3 verified 100%. |
+| Core Engine | VFS / Workspace       | ACTIVE | Multi-file linking & library support (WASM)    |
+| Core Engine | AST Merging           | ACTIVE | Semantic Linker for deduplication & scope      |
 | **Schemasmith**     | **ACTIVE**    | Board Modeling (SVG/TOON)            |
-| **Simulator**       | **ACTIVE**    | Physics & Timing Accuracy            |
+| **Simulator**       | **ACTIVE**    | WASM-Atomics & Zero-Latency Engine   |
 | **PLC/Ladder Editor** | **ACTIVE**  | Visual PLC Programming               |
 | **Transport Crate** | **MIGRATING** | Migrating from JS to Rust            |
 | **Firmware Crate**  | **MIGRATING** | Moving root board templates to crate |

@@ -17,13 +17,13 @@
 use wasm_bindgen::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct LibraryInput {
     pub name: String,
     pub source: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct WorkspaceInput {
     pub main_source: String,
     pub libraries: Vec<LibraryInput>,
@@ -612,17 +612,28 @@ mod tests {
         assert!(json.contains("\"delay\""));
     }
 
-    #[cfg(target_arch = "wasm32")]
-    #[wasm_bindgen_test]
-    fn cross_transpile_c_to_rust_works() {
-        let src = "void setup() {}\nvoid loop(){ digitalWrite(13, HIGH); }";
-
-        let result = wasm_cross_transpile(src, "cpp", "rust");
-
-        assert!(result.is_ok(), "{:?}", result);
-
-        let code = result.unwrap();
-
-        assert!(code.contains("gpio_set"));
+    #[test]
+    fn test_parse_workspace_merges_functions() {
+        let input = WorkspaceInput {
+            main_source: "void setup() { my_lib_func(); }\nvoid loop(){}".to_string(),
+            libraries: vec![LibraryInput {
+                name: "mylib.cpp".to_string(),
+                source: "void my_lib_func() { delay(10); }".to_string(),
+            }],
+        };
+        let target = crate::executor::TargetLanguage::Cpp;
+        let json = serde_json::to_string(&input).unwrap();
+        
+        let result = parse_workspace_to_asl_program(&json, &target);
+        assert!(result.is_ok(), "Error: {:?}", result.err());
+        
+        let prog = result.unwrap();
+        // Should have tasks from main and function merged from library
+        assert!(prog.functions.iter().any(|f| f.name == "my_lib_func"), "my_lib_func not found in merged program");
+        assert!(prog.tasks.iter().any(|t| t.name == "setup"), "setup task not found");
+        
+        // Verify body of my_lib_func contains the delay
+        let lib_func = prog.functions.iter().find(|f| f.name == "my_lib_func").unwrap();
+        assert!(!lib_func.body.is_empty(), "my_lib_func body should not be empty");
     }
 }

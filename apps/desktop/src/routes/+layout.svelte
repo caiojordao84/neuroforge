@@ -2,6 +2,7 @@
   import '../app.css';
   import { onMount } from 'svelte';
   import { asl } from '@neuroforge/shared/state/asl.svelte.ts';
+  import { NeuroForgeTopBar } from '@neuroforge/shared';
 
   let { children } = $props();
 
@@ -12,5 +13,7 @@
     });
   });
 </script>
+
+<NeuroForgeTopBar />
 
 {@render children()}
