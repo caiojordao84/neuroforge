@@ -11,15 +11,10 @@
             "id": "bbcb7d344e8f4de7",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "graphify/GRAPH_REPORT.md",
-                "mode": "source",
-                "source": false,
-                "backlinks": false
-              },
-              "icon": "lucide-file",
-              "title": "GRAPH_REPORT"
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Visualização de diagrama de grafo"
             }
           }
         ]
@@ -109,13 +104,12 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "graphify/GRAPH_REPORT.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Índice de GRAPH_REPORT"
+              "title": "Índice"
             }
           }
         ]
@@ -139,17 +133,19 @@
   },
   "active": "bbcb7d344e8f4de7",
   "lastOpenFiles": [
+    "graphify/GRAPH_REPORT.md",
+    "Brain/_COMMUNITY_Community 10.md",
+    "Timeline/2026-04-16.md",
+    "Rules/REMOTE_ACCESS.md",
+    "Index.md",
+    "Timeline/Index.md",
+    "Rules/BRAIN_PROTOCOL.md",
     "graphify/cache/cf8efbb38288bb117a3424e502a9732342595ea31b41208cf9e99ad93b6e3a2f.json",
     "graphify/cache/c8de0d521d849fc364a2076020418bb46d651622ba068b565e2214d552544c17.json",
     "Brain/NeuroForge_Architecture.md",
-    "graphify/GRAPH_REPORT.md",
     "graphify/cache/4f0437175d838824d7b2454647dcbcd14d925686f8d27e729a8287db1428073f.json",
-    "Rules/BRAIN_PROTOCOL.md",
-    "Brain/_COMMUNITY_Community 10.md",
-    "Rules/REMOTE_ACCESS.md",
     "Brain/_COMMUNITY_Community 135.md",
     "Brain/_COMMUNITY_Community 33.md",
-    "Timeline/2026-04-16.md",
     "Sem título.canvas",
     "graphify/cache/ff50548865d10df4210a9a53f697dd27f03369499efb29ce4e951c2ba3d3cf6f.json",
     "graphify/cache/fec37b2598052389b6a43bd73d80910fac0396dae6c55e8c6e03057e308ef69c.json",
@@ -158,7 +154,6 @@
     "graphify/cache/fce9f1454dfef75cbaf85b69adcf1e969b0049e0b86bd949026c6a53a36ad792.json",
     "graphify/cache/fc0ba352ffe00422929607d5fe4744b559d1fbd6eff02f725bd1ef6347a4e0d6.json",
     "graphify/cache/fbf89ad4704d49978bb02bdd46775b2cbe7a96dd92ade2f70f7e3d66e506d8b2.json",
-    "graphify/cache/fbcc2c559713b8aae499654c0f14e5fb98df4ee42a93a8b283aa1e3914a90c44.json",
     "graphify/wiki/WASM_Bindings_&_IDE_State.md",
     "graphify/wiki/ST_Parser_&_Functional_Blocks.md",
     "graphify/wiki/Shared_Transpiler_Engine.md",
@@ -174,7 +169,6 @@
     "graphify/wiki/Confidence_&_Validation_Engine.md",
     "graphify/wiki/Community_99.md",
     "graphify/wiki/Community_98.md",
-    "graphify/wiki/Community_97.md",
-    "graphify/wiki/Community_96.md"
+    "graphify/wiki/Community_97.md"
   ]
 }
