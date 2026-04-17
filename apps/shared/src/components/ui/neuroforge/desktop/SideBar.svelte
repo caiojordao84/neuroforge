@@ -44,7 +44,18 @@
         
         <div class="mt-1 space-y-0.5">
           {#each category.items as item}
-            <div class="px-3 py-1.5 hover:bg-white/5 rounded cursor-grab text-[11px] text-on-surface flex items-center gap-2">
+            <div 
+              class="px-3 py-1.5 hover:bg-white/5 rounded cursor-grab text-[11px] text-on-surface flex items-center gap-2 transition-colors active:cursor-grabbing"
+              draggable="true"
+              role="button"
+              tabindex="0"
+              ondragstart={(e) => {
+                if (e.dataTransfer) {
+                  e.dataTransfer.setData('application/svelteflow', JSON.stringify({ type: 'component', componentType: item }));
+                  e.dataTransfer.effectAllowed = 'move';
+                }
+              }}
+            >
               <div class="w-1.5 h-1.5 rounded-full bg-white/20"></div> 
               {item}
             </div>
