@@ -7,7 +7,7 @@
 
 import type { TranspileRequest, TranspileResult } from '$lib/types';
 import type { TranspileMode } from '$lib/ai/provider/types';
-import { transpile as wasmTranspile } from '$lib/wasm/index';
+import { transpile as wasmTranspile, crossTranspileWorkspace } from '$lib/wasm/index';
 import { get } from 'svelte/store';
 import { providerState } from '$lib/ai/state/provider.svelte';
 
@@ -131,10 +131,19 @@ export class TranspilationOrchestrator {
     const toLang = this.normalizeLanguage(request.targetLang);
     
     try {
-      const code = wasmTranspile(request.code, fromLang, toLang);
+      let code = "";
+      if (request.libraries && request.libraries.length > 0) {
+        const workspace = {
+          main_source: request.code,
+          libraries: request.libraries
+        };
+        code = crossTranspileWorkspace(workspace, fromLang, toLang);
+      } else {
+        code = wasmTranspile(request.code, fromLang, toLang);
+      }
       return {
         code,
-        notes: 'Transpiled using WASM (neuroforge-asl)',
+        notes: `Transpiled using WASM (neuroforge-asl)${request.libraries && request.libraries.length > 0 ? ' with VFS' : ''}`,
         verification: '',
         raw: code
       };

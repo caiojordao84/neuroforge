@@ -20,6 +20,9 @@ import init, {
     wasm_transpile_with_map,
     wasm_version,
     wasm_supported_langs,
+    wasm_cross_transpile_workspace,
+    wasm_parse_workspace_to_asl,
+    wasm_parse_workspace_to_toon
 } from './neuroforge_asl';
 
 // ─── Estado interno ────────────────────────────────────────────────────────────
@@ -93,4 +96,41 @@ export function aslVersion(): string {
 export function supportedLangs(): string[] {
     assertReady();
     return wasm_supported_langs().split(',');
+}
+
+// ─── Virtual File System (VFS) / Multi-file ────────────────────────────────────
+
+export interface LibraryInput {
+    name: string;
+    source: string;
+}
+
+export interface WorkspaceInput {
+    main_source: string;
+    libraries: LibraryInput[];
+}
+
+/**
+ * Transpiles a multi-file workspace (VFS) to the target language.
+ * Uses the ASL Linker to merge libraries.
+ */
+export function crossTranspileWorkspace(workspace: WorkspaceInput, fromLang: string, toLang: string): string {
+    assertReady();
+    return wasm_cross_transpile_workspace(JSON.stringify(workspace), fromLang, toLang);
+}
+
+/**
+ * Parses a multi-file workspace into an ASL IR JSON string.
+ */
+export function parseWorkspaceToAsl(workspace: WorkspaceInput, lang: string): string {
+    assertReady();
+    return wasm_parse_workspace_to_asl(JSON.stringify(workspace), lang);
+}
+
+/**
+ * Parses a multi-file workspace into a TOON format string.
+ */
+export function parseWorkspaceToToon(workspace: WorkspaceInput, lang: string): string {
+    assertReady();
+    return wasm_parse_workspace_to_toon(JSON.stringify(workspace), lang);
 }

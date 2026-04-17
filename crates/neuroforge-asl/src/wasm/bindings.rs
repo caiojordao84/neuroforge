@@ -15,6 +15,19 @@
 #![allow(dead_code, unused_imports)]
 
 use wasm_bindgen::prelude::*;
+use serde::{Deserialize, Serialize};
+
+#[derive(Deserialize)]
+pub struct LibraryInput {
+    pub name: String,
+    pub source: String,
+}
+
+#[derive(Deserialize)]
+pub struct WorkspaceInput {
+    pub main_source: String,
+    pub libraries: Vec<LibraryInput>,
+}
 
 use crate::parser::neuro_parser::NeuroParser;
 
@@ -146,6 +159,49 @@ pub fn wasm_cross_transpile(
             GeneratorOutput::new(crate::plugins::plc::ld::generator::LdGenerator::new().generate(&asl_program))
         }
 
+        _ => {
+            return Err(JsValue::from_str(&format!(
+                "Target language '{}' not supported for cross-transpilation",
+                to_lang
+            )))
+        }
+    };
+
+    Ok(output.code)
+}
+
+/// Transpilação multi-ficheiro (VFS) com AST Linker.
+/// Recebe um JSON WorkspaceInput e gera o ficheiro final compilado.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn wasm_cross_transpile_workspace(
+    workspace_json: &str,
+    from_lang: &str,
+    to_lang: &str,
+) -> Result<String, JsValue> {
+    let src_target = TargetLanguage::parse(from_lang)
+        .ok_or_else(|| JsValue::from_str(&format!("Unknown source language: {from_lang}")))?;
+    let dst_target = TargetLanguage::parse(to_lang)
+        .ok_or_else(|| JsValue::from_str(&format!("Unknown target language: {to_lang}")))?;
+
+    let asl_program = parse_workspace_to_asl_program(workspace_json, &src_target).map_err(to_js_err)?;
+
+    let output = match dst_target {
+        TargetLanguage::Python | TargetLanguage::MicroPython => {
+            crate::plugins::python::python_generator::PythonGenerator::new().generate(&asl_program)
+        }
+        TargetLanguage::St => {
+            crate::plugins::plc::st_generator::StGenerator::new().generate(&asl_program)
+        }
+        TargetLanguage::C | TargetLanguage::Cpp | TargetLanguage::Arduino => {
+            crate::plugins::c::c_generator::CGenerator::new().generate(&asl_program)
+        }
+        TargetLanguage::Rust => {
+            crate::plugins::rust_std::rust_generator::RustGenerator::new().generate(&asl_program)
+        }
+        TargetLanguage::Ld => {
+            GeneratorOutput::new(crate::plugins::plc::ld::generator::LdGenerator::new().generate(&asl_program))
+        }
         _ => {
             return Err(JsValue::from_str(&format!(
                 "Target language '{}' not supported for cross-transpilation",
@@ -335,6 +391,30 @@ pub fn wasm_parse_to_toon(source: &str, lang: &str) -> Result<String, JsValue> {
     Ok(gen.generate_to_string(&prog))
 }
 
+/// Parse VFS workspace to ASL IR JSON.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn wasm_parse_workspace_to_asl(workspace_json: &str, lang: &str) -> Result<String, JsValue> {
+    let target = TargetLanguage::parse(lang)
+        .ok_or_else(|| JsValue::from_str(&format!("Linguagem desconhecida: {lang}")))?;
+
+    let prog = parse_workspace_to_asl_program(workspace_json, &target).map_err(to_js_err)?;
+    serde_json::to_string(&prog).map_err(|e| JsValue::from_str(&e.to_string()))
+}
+
+/// Parse VFS workspace to TOON format.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn wasm_parse_workspace_to_toon(workspace_json: &str, lang: &str) -> Result<String, JsValue> {
+    let target = TargetLanguage::parse(lang)
+        .ok_or_else(|| JsValue::from_str(&format!("Linguagem desconhecida: {lang}")))?;
+
+    let prog = parse_workspace_to_asl_program(workspace_json, &target).map_err(to_js_err)?;
+    use crate::plugins::core::toon_generator::ToonGenerator;
+    let mut gen = ToonGenerator::new();
+    Ok(gen.generate_to_string(&prog))
+}
+
 // ============================================================================
 // Internal Helpers
 // ============================================================================
@@ -385,6 +465,33 @@ fn parse_to_asl_program(
             "parse_to_asl_program: linguagem {target:?} não suportada em análise"
         )),
     }
+}
+
+/// Parses a full VFS workspace (JSON) into a single linked ASL Program.
+fn parse_workspace_to_asl_program(
+    workspace_json: &str,
+    target: &crate::executor::TargetLanguage,
+) -> Result<crate::asl_types::AslProgram, String> {
+    let input: WorkspaceInput = serde_json::from_str(workspace_json)
+        .map_err(|e| format!("Invalid JSON workspace: {}", e))?;
+
+    // Parse main source
+    let mut main_program = parse_to_asl_program(&input.main_source, target)?;
+
+    // Parse libraries
+    let mut lib_programs = Vec::new();
+    for lib in input.libraries {
+        match parse_to_asl_program(&lib.source, target) {
+            Ok(prog) => lib_programs.push(prog),
+            // Attribute error to specific library file
+            Err(e) => return Err(format!("Error in '{}': {}", lib.name, e)),
+        }
+    }
+
+    // Link libraries into the main ASL graph
+    main_program.link(lib_programs);
+
+    Ok(main_program)
 }
 
 fn diags_to_json(_diags: &[serde_json::Value]) -> String {

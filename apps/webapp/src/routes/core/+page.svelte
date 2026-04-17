@@ -7,6 +7,7 @@
   import CodeEditor from '@neuroforge/shared/components/CodeEditor.svelte';
   import ProviderSettings from '$lib/components/provider/ProviderSettings.svelte';
   import { providerState } from '$lib/ai/state/provider.svelte';
+  import { library } from '@neuroforge/shared/state/library.svelte';
 
   let sourceCode = $state(DEFAULT_SOURCE_CODE);
   let sourceLang = $state<string>(SupportedLanguage.ARDUINO);
@@ -66,7 +67,8 @@
         sourceLang,
         targetLang,
         targetPlatform: platform,
-        code: sourceCode
+        code: sourceCode,
+        libraries: library.libraries.map(l => ({ name: l.name, source: l.content }))
       }, 'auto');
     } catch (err) {
       error = err instanceof Error ? err.message : "An unexpected error occurred.";

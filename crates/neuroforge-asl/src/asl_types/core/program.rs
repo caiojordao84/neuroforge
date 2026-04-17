@@ -60,6 +60,75 @@ impl Default for AslProgram {
     }
 }
 
+impl AslProgram {
+    /// Merges an array of library programs into this main program.
+    /// This acts as the ASL Linker, deduplicating symbols (functions, globals, etc.)
+    /// to simulate a full VFS/multi-file compilation context.
+    pub fn link(&mut self, libraries: Vec<AslProgram>) {
+        for lib in libraries {
+            // Includes (simple dedup)
+            for inc in lib.includes {
+                if !self.includes.contains(&inc) {
+                    self.includes.push(inc);
+                }
+            }
+
+            // Structs dedup by name
+            for s in lib.structs {
+                if !self.structs.iter().any(|existing| existing.name == s.name) {
+                    self.structs.push(s);
+                }
+            }
+
+            // Enums dedup by name
+            for e in lib.enums {
+                if !self.enums.iter().any(|existing| existing.name == e.name) {
+                    self.enums.push(e);
+                }
+            }
+
+            // Globals dedup by name
+            for global in lib.globals {
+                if !self.globals.iter().any(|g| g.name == global.name) {
+                    self.globals.push(global);
+                }
+            }
+
+            // Functions dedup and body resolution (replace empty forward declarations)
+            for func in lib.functions {
+                let existing_idx = self.functions.iter().position(|f| f.name == func.name);
+                if let Some(idx) = existing_idx {
+                    // If existing function is a forward declaration (empty body) and new one has code, replace it
+                    if self.functions[idx].body.is_empty() && !func.body.is_empty() {
+                        self.functions[idx] = func;
+                    }
+                } else {
+                    self.functions.push(func);
+                }
+            }
+
+            // Function Blocks dedup by name
+            for fb in lib.function_blocks {
+                if !self.function_blocks.iter().any(|f| f.name == fb.name) {
+                    self.function_blocks.push(fb);
+                }
+            }
+
+            // Tasks dedup
+            for task in lib.tasks {
+                let existing_idx = self.tasks.iter().position(|t| t.name == task.name);
+                if let Some(idx) = existing_idx {
+                    if self.tasks[idx].body.is_empty() && !task.body.is_empty() {
+                        self.tasks[idx] = task;
+                    }
+                } else {
+                    self.tasks.push(task);
+                }
+            }
+        }
+    }
+}
+
 /// Variável global – segue semântica de `declare` (9.1).
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]

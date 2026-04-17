@@ -36,6 +36,31 @@ def brain_search(query: str, include_graphify: bool = True) -> str:
     return "\n\n".join(results[:15]) if results else f"No results for '{query}'."
 
 @mcp.tool()
+def brain_read_file(filename: str) -> str:
+    """
+    Read the full content of a specific note/neuron in the Digital Brain.
+    You can pass the exact filename (e.g., 'NeuroForge_Architecture.md') or relative path.
+    """
+    # Try exact match first, then walk to find it
+    if os.path.isabs(filename):
+        target_path = filename
+    else:
+        target_path = None
+        for root, _, files in os.walk(NOTES_DIR):
+            for file in files:
+                if file.lower() == filename.lower() or file.endswith(filename):
+                    target_path = os.path.join(root, file)
+                    break
+            if target_path:
+                break
+    
+    if target_path and os.path.exists(target_path):
+        with open(target_path, "r", encoding="utf-8", errors="ignore") as f:
+            return f.read()
+    
+    return f"Error: Note '{filename}' not found in the vault."
+
+@mcp.tool()
 def brain_log_session(summary: str, decisions: Optional[List[str]] = None, next_steps: Optional[List[str]] = None) -> str:
     """Add a structured entry to today's Timeline log."""
     today = datetime.date.today().isoformat()
@@ -81,11 +106,55 @@ def main():
     args = parser.parse_args()
 
     if args.transport == "sse":
-        print(f"Starting Neuro-Brain MCP in SSE mode on port {args.port}...")
-        # Note: In a production environment, we should verify the token in a middleware.
-        # For simplicity in this v1, the token is passed to the run command if supported,
-        # otherwise we'll wrap it in the next iteration if user needs stricter security.
-        mcp.run(transport="sse", port=args.port)
+        from fastapi import FastAPI, Request, Response
+        from fastapi.responses import JSONResponse
+        from fastapi.middleware.cors import CORSMiddleware
+        import uvicorn
+
+        from contextlib import asynccontextmanager
+
+        # Get the MCP internal app
+        mcp_app = mcp.http_app()
+
+        @asynccontextmanager
+        async def custom_lifespan(app):
+            async with mcp_app.lifespan(mcp_app):
+                yield
+
+        # Create a clean FastAPI app with the properly wrapped MCP lifespan
+        server = FastAPI(lifespan=custom_lifespan)
+        
+        # Add CORS for external accessibility
+        server.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
+        # Simple Auth Check
+        @server.middleware("http")
+        async def mcp_auth_middleware(request: Request, call_next):
+            if request.method == "OPTIONS":
+                return await call_next(request)
+            
+            # Check for token in Query OR Authorization header
+            token = request.query_params.get("token")
+            auth_header = request.headers.get("Authorization")
+            
+            if args.token:
+                is_valid = (token == args.token) or (auth_header == f"Bearer {args.token}")
+                if not is_valid:
+                    return JSONResponse({"error": "Unauthorized"}, status_code=401)
+            
+            return await call_next(request)
+
+        # Mount the MCP internal app
+        server.mount("/", mcp_app)
+
+        print(f"Starting Neuro-Brain MCP on port {args.port}...")
+        print(f"Endpoint: /mcp (Streamable HTTP)")
+        uvicorn.run(server, host="0.0.0.0", port=args.port, log_level="info")
     else:
         mcp.run(transport="stdio")
 

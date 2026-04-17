@@ -33,6 +33,10 @@ pub enum ValidationError {
     #[error("Logical pin '{logical}' references non-existent physical pin '{physical}'")]
     InvalidPhysicalReference { logical: String, physical: String },
 
+    /// Orphaned logical pin
+    #[error("Orphaned logical pin '{logical}' references missing physical pin '{physical}'")]
+    OrphanedLogicalPin { logical: String, physical: String },
+
     /// ASL target missing required field
     #[error("ASL target '{target}' missing required field: {field}")]
     MissingAslTargetField { target: String, field: String },

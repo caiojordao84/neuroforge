@@ -29,9 +29,12 @@ export interface TranspileResult {
   raw: string;
 }
 
+import type { LibraryInput } from './wasm/index';
+
 export interface TranspileRequest {
   sourceLang: string;
   targetLang: string;
   targetPlatform: string;
   code: string;
+  libraries?: LibraryInput[];
 }
