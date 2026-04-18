@@ -5,7 +5,7 @@ This project has a graphify knowledge graph at notes/graphify/.
 Rules:
 - Before answering architecture or codebase questions, read notes/graphify/GRAPH_REPORT.md for god nodes and community structure
 - If notes/graphify/wiki/index.md exists, navigate it instead of reading raw files
-- After modifying code files in this session, run `graphify update .` to keep the graph current (AST-only, no API cost)
+- After modifying code files in this session, run `.\scripts\update-brain.ps1` to keep the graph current (AST-only, no API cost)
 
 ## Digital Brain (Obsidian Vault)
 
