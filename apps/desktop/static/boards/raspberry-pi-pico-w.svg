@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="100%" height="100%" viewBox="0 0 300 700" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;">
+    <defs>
+        <style>
+            .pin { fill: #2563eb; stroke: #1e40af; stroke-width: 0.5; }
+            .pin-power { fill: #dc2626; stroke: #991b1b; stroke-width: 0.5; }
+            .pin-ground { fill: #171717; stroke: #000; stroke-width: 0.5; }
+            .pin-reserved { fill: #6b7280; stroke: #4b5563; stroke-width: 0.5; }
+            .pin-adc { fill: #ca8a04; stroke: #a16207; stroke-width: 0.5; }
+            .pin-pwm { fill: #ea580c; stroke: #c2410c; stroke-width: 0.5; }
+            .pin-i2c { fill: #16a34a; stroke: #15803d; stroke-width: 0.5; }
+            .pin-spi { fill: #7c3aed; stroke: #5b21b6; stroke-width: 0.5; }
+            .pin-analog { fill: #ca8a04; stroke: #a16207; stroke-width: 0.5; }
+            .board-body { fill: #0891b2; }
+            .board-label { fill: #fff; font-family: 'Roboto Mono', monospace; font-size: 12px; }
+            .header-label { fill: #fff; font-family: 'Roboto', sans-serif; font-size: 10px; font-weight: bold; }
+            .pin-label { fill: #fff; font-family: 'Roboto Mono', monospace; font-size: 6px; }
+            .chip-label { fill: #fff; font-family: 'Roboto Mono', monospace; font-size: 8px; }
+            .warning-text { fill: #dc2626; font-family: 'Roboto', sans-serif; font-size: 6px; }
+        </style>
+    </defs>
+
+    <!-- BOARD BODY -->
+    <g id="board">
+        <rect class="board-body" x="20" y="20" width="260" height="660" rx="8"/>
+        <text class="board-label" x="150" y="50" text-anchor="middle">Raspberry Pi Pico W</text>
+    </g>
+
+    <!-- USB CONNECTOR -->
+    <g id="usb-connector">
+        <rect x="110" y="5" width="80" height="25" fill="#374151" rx="2"/>
+        <rect x="130" y="10" width="40" height="15" fill="#1f2937" rx="1"/>
+    </g>
+
+    <!-- RP2040 CHIP -->
+    <g id="rp2040-chip">
+        <rect x="80" y="100" width="140" height="100" fill="#1f2937" rx="4"/>
+        <rect x="90" y="110" width="120" height="80" fill="#374151" rx="2"/>
+        <text class="chip-label" x="150" y="155" text-anchor="middle">RP2040</text>
+    </g>
+
+    <!-- CYW43439 WiFi/BT MODULE -->
+    <g id="wifi-module">
+        <rect x="80" y="220" width="140" height="50" fill="#1f2937" rx="4"/>
+        <text class="chip-label" x="150" y="250" text-anchor="middle">CYW43439</text>
+    </g>
+
+    <!-- LEFT HEADER - PINS (GP0-GP19) -->
+    <g id="header-left">
+        <text x="40" y="90" class="header-label" text-anchor="middle">GPIO</text>
+
+        <!-- GP0 -->
+        <circle id="pin-gp0" class="pin pin-pwm" data-pin="0" data-pwm="true" data-interrupt="true" cx="40" cy="100" r="6"/>
+        <text x="25" y="105" class="pin-label">GP0</text>
+
+        <!-- GP1 -->
+        <circle id="pin-gp1" class="pin pin-pwm" data-pin="1" data-pwm="true" data-interrupt="true" cx="40" cy="130" r="6"/>
+        <text x="25" y="135" class="pin-label">GP1</text>
+
+        <!-- GP2 -->
+        <circle id="pin-gp2" class="pin pin-pwm" data-pin="2" data-pwm="true" data-interrupt="true" cx="40" cy="160" r="6"/>
+        <text x="25" y="165" class="pin-label">GP2</text>
+
+        <!-- GP3 -->
+        <circle id="pin-gp3" class="pin pin-pwm" data-pin="3" data-pwm="true" data-interrupt="true" cx="40" cy="190" r="6"/>
+        <text x="25" y="195" class="pin-label">GP3</text>
+
+        <!-- GP4 (I2C SDA) -->
+        <circle id="pin-gp4" class="pin pin-pwm pin-i2c" data-pin="4" data-pwm="true" data-interrupt="true" data-i2c="SDA" cx="40" cy="220" r="6"/>
+        <text x="25" y="225" class="pin-label">GP4</text>
+
+        <!-- GP5 (I2C SCL) -->
+        <circle id="pin-gp5" class="pin pin-pwm pin-i2c" data-pin="5" data-pwm="true" data-interrupt="true" data-i2c="SCL" cx="40" cy="250" r="6"/>
+        <text x="25" y="255" class="pin-label">GP5</text>
+
+        <!-- GP6 -->
+        <circle id="pin-gp6" class="pin pin-pwm" data-pin="6" data-pwm="true" data-interrupt="true" cx="40" cy="280" r="6"/>
+        <text x="25" y="285" class="pin-label">GP6</text>
+
+        <!-- GP7 -->
+        <circle id="pin-gp7" class="pin pin-pwm" data-pin="7" data-pwm="true" data-interrupt="true" cx="40" cy="310" r="6"/>
+        <text x="25" y="315" class="pin-label">GP7</text>
+
+        <!-- GP8 -->
+        <circle id="pin-gp8" class="pin pin-pwm" data-pin="8" data-pwm="true" data-interrupt="true" cx="40" cy="340" r="6"/>
+        <text x="25" y="345" class="pin-label">GP8</text>
+
+        <!-- GP9 -->
+        <circle id="pin-gp9" class="pin pin-pwm" data-pin="9" data-pwm="true" data-interrupt="true" cx="40" cy="370" r="6"/>
+        <text x="25" y="375" class="pin-label">GP9</text>
+
+        <!-- GP10 -->
+        <circle id="pin-gp10" class="pin pin-pwm" data-pin="10" data-pwm="true" data-interrupt="true" cx="40" cy="400" r="6"/>
+        <text x="25" y="405" class="pin-label">GP10</text>
+
+        <!-- GP11 -->
+        <circle id="pin-gp11" class="pin pin-pwm" data-pin="11" data-pwm="true" data-interrupt="true" cx="40" cy="430" r="6"/>
+        <text x="25" y="435" class="pin-label">GP11</text>
+
+        <!-- GP12 -->
+        <circle id="pin-gp12" class="pin pin-pwm" data-pin="12" data-pwm="true" data-interrupt="true" cx="40" cy="460" r="6"/>
+        <text x="25" y="465" class="pin-label">GP12</text>
+
+        <!-- GP13 -->
+        <circle id="pin-gp13" class="pin pin-pwm" data-pin="13" data-pwm="true" data-interrupt="true" cx="40" cy="490" r="6"/>
+        <text x="25" y="495" class="pin-label">GP13</text>
+
+        <!-- GP14 -->
+        <circle id="pin-gp14" class="pin pin-pwm" data-pin="14" data-pwm="true" data-interrupt="true" cx="40" cy="520" r="6"/>
+        <text x="25" y="525" class="pin-label">GP14</text>
+
+        <!-- GP15 -->
+        <circle id="pin-gp15" class="pin pin-pwm" data-pin="15" data-pwm="true" data-interrupt="true" cx="40" cy="550" r="6"/>
+        <text x="25" y="555" class="pin-label">GP15</text>
+
+        <!-- GP16 (SPI MISO) -->
+        <circle id="pin-gp16" class="pin pin-pwm pin-spi" data-pin="16" data-pwm="true" data-interrupt="true" data-spi="MISO" cx="40" cy="580" r="6"/>
+        <text x="25" y="585" class="pin-label">GP16</text>
+
+        <!-- GP17 (SPI CS) -->
+        <circle id="pin-gp17" class="pin pin-pwm pin-spi" data-pin="17" data-pwm="true" data-interrupt="true" data-spi="CS" cx="40" cy="610" r="6"/>
+        <text x="25" y="615" class="pin-label">GP17</text>
+
+        <!-- GP18 (SPI SCK) -->
+        <circle id="pin-gp18" class="pin pin-pwm pin-spi" data-pin="18" data-pwm="true" data-interrupt="true" data-spi="SCK" cx="40" cy="640" r="6"/>
+        <text x="25" y="645" class="pin-label">GP18</text>
+
+        <!-- GP19 (SPI MOSI) -->
+        <circle id="pin-gp19" class="pin pin-pwm pin-spi" data-pin="19" data-pwm="true" data-interrupt="true" data-spi="MOSI" cx="40" cy="670" r="6"/>
+        <text x="25" y="675" class="pin-label">GP19</text>
+    </g>
+
+    <!-- RIGHT HEADER - PINS (GP20-GP28 + Power) -->
+    <g id="header-right">
+        <text x="260" y="90" class="header-label" text-anchor="middle">GPIO</text>
+
+        <!-- GP20 -->
+        <circle id="pin-gp20" class="pin pin-pwm" data-pin="20" data-pwm="true" data-interrupt="true" cx="260" cy="100" r="6"/>
+        <text x="275" y="105" class="pin-label">GP20</text>
+
+        <!-- GP21 -->
+        <circle id="pin-gp21" class="pin pin-pwm" data-pin="21" data-pwm="true" data-interrupt="true" cx="260" cy="130" r="6"/>
+        <text x="275" y="135" class="pin-label">GP21</text>
+
+        <!-- GP22 -->
+        <circle id="pin-gp22" class="pin pin-pwm" data-pin="22" data-pwm="true" data-interrupt="true" cx="260" cy="160" r="6"/>
+        <text x="275" y="165" class="pin-label">GP22</text>
+
+        <!-- WL_REG (Reserved for WiFi) -->
+        <circle id="pin-wifi-gp" class="pin pin-reserved" data-pin="WL_REG" data-warning="Reserved for WiFi/BT" cx="260" cy="190" r="6"/>
+        <text x="275" y="195" class="pin-label">WL</text>
+
+        <!-- WL_GPIO (Reserved for WiFi) -->
+        <circle id="pin-wifi-gp2" class="pin pin-reserved" data-pin="WL_GPIO" data-warning="Reserved for WiFi/BT" cx="260" cy="220" r="6"/>
+        <text x="275" y="225" class="pin-label">WL</text>
+
+        <!-- GP25 (LED) -->
+        <circle id="pin-led" class="pin pin-pwm" data-pin="25" data-pwm="true" data-warning="Onboard LED" cx="260" cy="250" r="6"/>
+        <text x="275" y="255" class="pin-label">LED</text>
+
+        <!-- GP26 (ADC0) -->
+        <circle id="pin-gp26" class="pin pin-analog pin-pwm" data-pin="26" data-pwm="true" data-interrupt="true" data-adc="true" cx="260" cy="280" r="6"/>
+        <text x="275" y="285" class="pin-label">A0</text>
+
+        <!-- GP27 (ADC1) -->
+        <circle id="pin-gp27" class="pin pin-analog pin-pwm" data-pin="27" data-pwm="true" data-interrupt="true" data-adc="true" cx="260" cy="310" r="6"/>
+        <text x="275" y="315" class="pin-label">A1</text>
+
+        <!-- GP28 (ADC2) -->
+        <circle id="pin-gp28" class="pin pin-analog pin-pwm" data-pin="28" data-pwm="true" data-interrupt="true" data-adc="true" cx="260" cy="340" r="6"/>
+        <text x="275" y="345" class="pin-label">A2</text>
+
+        <!-- AGND -->
+        <circle id="pin-agnd" class="pin pin-ground" data-pin="AGND" cx="260" cy="370" r="6"/>
+        <text x="275" y="375" class="pin-label">AGND</text>
+
+        <!-- VSYS -->
+        <circle id="pin-vsys" class="pin pin-power" data-pin="VSYS" data-voltage="5.0" cx="260" cy="400" r="6"/>
+        <text x="275" y="405" class="pin-label">VSYS</text>
+
+        <!-- 3V3 -->
+        <circle id="pin-3v3" class="pin pin-power" data-pin="3V3" data-voltage="3.3" cx="260" cy="430" r="6"/>
+        <text x="275" y="435" class="pin-label">3V3</text>
+
+        <!-- 3V3_EN -->
+        <circle id="pin-3v3-en" class="pin pin-power" data-pin="3V3_EN" data-voltage="3.3" cx="260" cy="460" r="6"/>
+        <text x="275" y="465" class="pin-label">EN</text>
+
+        <!-- GND1 -->
+        <circle id="pin-gnd1" class="pin pin-ground" data-pin="GND" cx="260" cy="490" r="6"/>
+        <text x="275" y="495" class="pin-label">GND</text>
+
+        <!-- GND2 -->
+        <circle id="pin-gnd2" class="pin pin-ground" data-pin="GND" cx="260" cy="520" r="6"/>
+        <text x="275" y="525" class="pin-label">GND</text>
+
+        <!-- VBUS -->
+        <circle id="pin-vbus" class="pin pin-power" data-pin="VBUS" data-voltage="5.0" cx="260" cy="550" r="6"/>
+        <text x="275" y="555" class="pin-label">VBUS</text>
+    </g>
+
+    <!-- WARNINGS -->
+    <g id="warnings">
+        <text x="150" y="650" class="warning-text" text-anchor="middle">⚠ Reserved: GP23, GP24 (WiFi/BT)</text>
+    </g>
+
+</svg>

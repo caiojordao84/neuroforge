@@ -12,7 +12,8 @@ export default defineConfig({
       '@neuroforge/shared/components': resolve(__dirname, '../shared/src/components'),
       '@neuroforge/shared/state': resolve(__dirname, '../shared/src/state'),
       '@neuroforge/shared/styles': resolve(__dirname, '../shared/src/styles'),
-      '@neuroforge/shared': resolve(__dirname, '../shared/src')
+      '@neuroforge/shared': resolve(__dirname, '../shared/src'),
+      '@shared': resolve(__dirname, '../shared/src')
     }
   },
   plugins: [
@@ -32,11 +33,23 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Origin-Agent-Cluster": "?1"
+    },
     fs: {
       allow: [
         resolve(__dirname, '..'),   // apps/ (inclui shared/)
         resolve(__dirname, '../..') // raíz do monorepo (node_modules, etc.)
       ]
+    }
+  },
+  preview: {
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Origin-Agent-Cluster": "?1"
     }
   },
   envPrefix: ['VITE_', 'TAURI_'],

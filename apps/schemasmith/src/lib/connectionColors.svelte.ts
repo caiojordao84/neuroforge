@@ -69,7 +69,7 @@ export async function loadConnectionColors() {
   try {
     // Try to load from docs/boards/connection-colors.toon
     // This uses Tauri's file system API
-    const resourcePath = await resolveResource('docs/boards/connection-colors.toon');
+    const resourcePath = await resolveResource('shared/static/boards/connection-colors.toon');
     const content = await readFile(resourcePath);
     
     // Parse the TOON content - look for cssVariables section

@@ -1,0 +1,38 @@
+id: arduino-nano-every
+name: "Arduino Nano Every"
+manufacturer: "Generic"
+mcu: "ATmega4809"
+category: "maker"
+image: "/boards/arduino-nano-every.svg"
+bootloader: "serial"
+languages: [2]: "rust","arduino-cpp"
+flashMemory: 49152
+sram: 6144
+clock_hz: 20000000
+voltage_mv: 3300
+neuroforge:
+  boardFamilySkillId: "avr-family"
+  boardProfileId: "arduino-nano-every"
+peripherals:
+  serial:
+    uarts: 1
+    pins: [2]: 0,1
+  i2c:
+    channels: 1
+    sda: 2
+    scl: 3
+  spi:
+    channels: 1
+    mosi: 11
+    miso: 12
+    sck: 13
+    ss: 10
+gpio: [8]{pin,label,type,pwm,adc,interrupt}:
+  0,D0,digital,true,false,true
+  1,D1,digital,true,false,true
+  2,D2,digital,false,false,true
+  3,D3,digital,false,false,true
+  4,D4,digital,false,false,false
+  5,D5,digital,true,false,false
+  6,D6,digital,true,false,false
+  14,A0,analog,false,true,false

@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <!-- CODESYS Virtual PLC - Minimal Board Representation -->
+  <style>
+    .board { fill: #1a365d; stroke: #2d5a87; stroke-width: 2; }
+    .label { font-family: Arial, sans-serif; font-size: 12px; fill: #cbd5e0; }
+    .title { font-family: Arial, sans-serif; font-size: 16px; fill: #ffffff; font-weight: bold; }
+    .plc-input { fill: #48bb78; }
+    .plc-output { fill: #f56565; }
+    .io-label { font-family: monospace; font-size: 10px; fill: #ffffff; }
+  </style>
+  
+  <!-- Board outline -->
+  <rect x="20" y="20" width="360" height="260" rx="8" class="board"/>
+  
+  <!-- Title -->
+  <text x="200" y="45" text-anchor="middle" class="title">CODESYS Virtual PLC</text>
+  <text x="200" y="65" text-anchor="middle" class="label">IEC-61131-3 | Full Support</text>
+  
+  <!-- Digital Inputs (left side) -->
+  <text x="35" y="55" class="label">DI</text>
+  <g data-io="input" class="plc-input">
+    <circle cx="40" cy="75" r="8"/>
+    <text x="55" cy="78" class="io-label">I0</text>
+  </g>
+  <g data-io="input" class="plc-input">
+    <circle cx="40" cy="105" r="8"/>
+    <text x="55" cy="108" class="io-label">I1</text>
+  </g>
+  <g data-io="input" class="plc-input">
+    <circle cx="40" cy="135" r="8"/>
+    <text x="55" cy="138" class="io-label">I2</text>
+  </g>
+  <g data-io="input" class="plc-input">
+    <circle cx="40" cy="165" r="8"/>
+    <text x="55" cy="168" class="io-label">I3</text>
+  </g>
+  <g data-io="input" class="plc-input">
+    <circle cx="40" cy="195" r="8"/>
+    <text x="55" cy="198" class="io-label">I4</text>
+  </g>
+  <g data-io="input" class="plc-input">
+    <circle cx="40" cy="225" r="8"/>
+    <text x="55" cy="228" class="io-label">I5</text>
+  </g>
+  <g data-io="input" class="plc-input">
+    <circle cx="40" cy="255" r="8"/>
+    <text x="55" cy="258" class="io-label">I6</text>
+  </g>
+  <g data-io="input" class="plc-input">
+    <circle cx="40" cy="270" r="8"/>
+    <text x="55" cy="273" class="io-label">I7</text>
+  </g>
+  
+  <!-- Digital Outputs (right side) -->
+  <text x="345" y="55" class="label">DO</text>
+  <g data-io="output" class="plc-output">
+    <circle cx="360" cy="75" r="8"/>
+    <text x="320" cy="78" class="io-label">Q0</text>
+  </g>
+  <g data-io="output" class="plc-output">
+    <circle cx="360" cy="105" r="8"/>
+    <text x="320" cy="108" class="io-label">Q1</text>
+  </g>
+  <g data-io="output" class="plc-output">
+    <circle cx="360" cy="135" r="8"/>
+    <text x="320" cy="138" class="io-label">Q2</text>
+  </g>
+  <g data-io="output" class="plc-output">
+    <circle cx="360" cy="165" r="8"/>
+    <text x="320" cy="168" class="io-label">Q3</text>
+  </g>
+  <g data-io="output" class="plc-output">
+    <circle cx="360" cy="195" r="8"/>
+    <text x="320" cy="198" class="io-label">Q4</text>
+  </g>
+  <g data-io="output" class="plc-output">
+    <circle cx="360" cy="225" r="8"/>
+    <text x="320" cy="228" class="io-label">Q5</text>
+  </g>
+  <g data-io="output" class="plc-output">
+    <circle cx="360" cy="255" r="8"/>
+    <text x="320" cy="258" class="io-label">Q6</text>
+  </g>
+  <g data-io="output" class="plc-output">
+    <circle cx="360" cy="270" r="8"/>
+    <text x="320" cy="273" class="io-label">Q7</text>
+  </g>
+  
+  <!-- Status indicators -->
+  <circle cx="120" cy="245" r="6" fill="#48bb78"/>
+  <text x="135" y="248" class="label">RUN</text>
+  <circle cx="180" cy="245" r="6" fill="#ecc94b"/>
+  <text x="195" y="248" class="label">ERR</text>
+  <circle cx="240" cy="245" r="6" fill="#38a169"/>
+  <text x="255" y="248" class="label">ETH</text>
+</svg>

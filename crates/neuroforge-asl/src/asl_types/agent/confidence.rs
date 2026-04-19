@@ -415,7 +415,8 @@ impl BoardConfidenceReport {
         let estimated_size = Self::estimate_program_size(program);
 
         // Check flash memory
-        if let Some(flash) = board.flash_bytes {
+        if board.flash_bytes > 0 {
+            let flash = board.flash_bytes;
             // Apply 50% safety margin for bootloader and filesystem
             let available = (flash as f64 * 0.5) as u32;
             if estimated_size > available {
@@ -430,7 +431,8 @@ impl BoardConfidenceReport {
         // Estimate RAM usage
         let estimated_ram = Self::estimate_ram_usage(program);
 
-        if let Some(sram) = board.sram_bytes {
+        if board.sram_bytes > 0 {
+            let sram = board.sram_bytes;
             if estimated_ram > sram as u32 {
                 deductions.push(Deduction::MemoryInsufficient {
                     required: estimated_ram,
@@ -494,12 +496,7 @@ impl BoardConfidenceReport {
         _warnings: &mut Vec<String>,
     ) {
         // Only check for ESP32 boards
-        if !board
-            .mcu
-            .as_ref()
-            .map(|m| m.contains("ESP32"))
-            .unwrap_or(false)
-        {
+        if !board.mcu.contains("ESP32") {
             return;
         }
 
@@ -568,7 +565,7 @@ impl BoardConfidenceReport {
         deductions: &mut Vec<Deduction>,
         warnings: &mut Vec<String>,
     ) {
-        let board_voltage = board.voltage_mv.unwrap_or(3300);
+        let board_voltage = if board.voltage_mv > 0 { board.voltage_mv } else { 3300 };
 
         for component in components {
             // Check voltage compatibility

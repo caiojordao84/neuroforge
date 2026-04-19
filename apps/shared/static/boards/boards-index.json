@@ -1,0 +1,973 @@
+{
+  "version": 1,
+  "boards": [
+    {
+      "id": "arduino-uno-r3",
+      "name": "Arduino Uno R3",
+      "path": "/boards/arduino-uno-r3.toon",
+      "family": "avr-family",
+      "boardProfileId": "arduino-uno-r3",
+      "category": "maker"
+    },
+    {
+      "id": "arduino-mkr-wifi-1010",
+      "name": "Arduino MKR WiFi 1010",
+      "path": "/boards/arduino-mkr-wifi-1010.toon",
+      "family": "samd-family",
+      "boardProfileId": "arduino-mkr-wifi-1010",
+      "category": "maker"
+    },
+    {
+      "id": "esp32-devkitc-v4",
+      "name": "ESP32 DevKitC V4",
+      "path": "/boards/esp32-devkitc-v4.toon",
+      "family": "esp32-family",
+      "boardProfileId": "esp32-devkitc-v4",
+      "category": "maker"
+    },
+    {
+      "id": "esp8266-nodemcu",
+      "name": "ESP8266 NodeMCU",
+      "path": "/boards/esp8266-nodemcu.toon",
+      "family": "esp8266-family",
+      "boardProfileId": "esp8266-nodemcu",
+      "category": "maker"
+    },
+    {
+      "id": "raspberry-pi-pico",
+      "name": "Raspberry Pi Pico",
+      "path": "/boards/raspberry-pi-pico.toon",
+      "family": "rp2040-family",
+      "boardProfileId": "raspberry-pi-pico",
+      "category": "maker"
+    },
+    {
+      "id": "raspberry-pi-pico-w",
+      "name": "Raspberry Pi Pico W",
+      "path": "/boards/raspberry-pi-pico-w.toon",
+      "family": "rp2040-family",
+      "boardProfileId": "raspberry-pi-pico-w",
+      "category": "maker"
+    },
+    {
+      "id": "siemens-s7-1200",
+      "name": "Siemens S7-1200",
+      "path": "/boards/siemens-s7-1200.toon",
+      "family": "s7-family",
+      "boardProfileId": "siemens-s7-1200",
+      "category": "industrial"
+    },
+    {
+      "id": "allen-bradley-micro820",
+      "name": "Allen-Bradley Micro820",
+      "path": "/boards/allen-bradley-micro820.toon",
+      "family": "micro800-family",
+      "boardProfileId": "allen-bradley-micro820",
+      "category": "industrial"
+    },
+    {
+      "id": "codesys-virtual",
+      "name": "Codesys Virtual PLC",
+      "path": "/boards/codesys-virtual.toon",
+      "family": "ipc-family",
+      "boardProfileId": "codesys-virtual",
+      "category": "industrial"
+    },
+    {
+      "id": "stm32f4",
+      "name": "STM32 F4 Series (Stub)",
+      "path": "/boards/stm32f4.toon",
+      "family": "stm32-family",
+      "boardProfileId": "stm32f4",
+      "category": "maker"
+    },
+    {
+      "id": "beckhoff-twincat",
+      "name": "Beckhoff TwinCAT (Stub)",
+      "path": "/boards/beckhoff-twincat.toon",
+      "family": "ipc-family",
+      "boardProfileId": "twincat",
+      "category": "industrial"
+    },
+    {
+      "id": "arduino-mega-2560",
+      "name": "Arduino Mega 2560",
+      "path": "/boards/arduino-mega-2560.toon",
+      "family": "avr-family",
+      "boardProfileId": "arduino-mega-2560",
+      "category": "maker"
+    },
+    {
+      "id": "arduino-leonardo",
+      "name": "Arduino Leonardo",
+      "path": "/boards/arduino-leonardo.toon",
+      "family": "avr-family",
+      "boardProfileId": "arduino-leonardo",
+      "category": "maker"
+    },
+    {
+      "id": "arduino-micro",
+      "name": "Arduino Micro",
+      "path": "/boards/arduino-micro.toon",
+      "family": "avr-family",
+      "boardProfileId": "arduino-micro",
+      "category": "maker"
+    },
+    {
+      "id": "arduino-nano",
+      "name": "Arduino Nano",
+      "path": "/boards/arduino-nano.toon",
+      "family": "avr-family",
+      "boardProfileId": "arduino-nano",
+      "category": "maker"
+    },
+    {
+      "id": "arduino-pro-mini",
+      "name": "Arduino Pro Mini",
+      "path": "/boards/arduino-pro-mini.toon",
+      "family": "avr-family",
+      "boardProfileId": "arduino-pro-mini",
+      "category": "maker"
+    },
+    {
+      "id": "arduino-nano-every",
+      "name": "Arduino Nano Every",
+      "path": "/boards/arduino-nano-every.toon",
+      "family": "avr-family",
+      "boardProfileId": "arduino-nano-every",
+      "category": "maker"
+    },
+    {
+      "id": "arduino-due",
+      "name": "Arduino Due",
+      "path": "/boards/arduino-due.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "arduino-due",
+      "category": "maker"
+    },
+    {
+      "id": "arduino-zero",
+      "name": "Arduino Zero",
+      "path": "/boards/arduino-zero.toon",
+      "family": "samd-family",
+      "boardProfileId": "arduino-zero",
+      "category": "maker"
+    },
+    {
+      "id": "arduino-m0",
+      "name": "Arduino M0",
+      "path": "/boards/arduino-m0.toon",
+      "family": "samd-family",
+      "boardProfileId": "arduino-m0",
+      "category": "maker"
+    },
+    {
+      "id": "arduino-nano-rp2040-connect",
+      "name": "Arduino Nano RP2040 Connect",
+      "path": "/boards/arduino-nano-rp2040-connect.toon",
+      "family": "rp2040-family",
+      "boardProfileId": "arduino-nano-rp2040-connect",
+      "category": "maker"
+    },
+    {
+      "id": "arduino-nano-esp32",
+      "name": "Arduino Nano ESP32",
+      "path": "/boards/arduino-nano-esp32.toon",
+      "family": "esp32-family",
+      "boardProfileId": "arduino-nano-esp32",
+      "category": "maker"
+    },
+    {
+      "id": "arduino-uno-r4-wifi",
+      "name": "Arduino UNO R4 WiFi",
+      "path": "/boards/arduino-uno-r4-wifi.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "arduino-uno-r4-wifi",
+      "category": "maker"
+    },
+    {
+      "id": "nodemcu-esp8266",
+      "name": "NodeMCU ESP8266",
+      "path": "/boards/nodemcu-esp8266.toon",
+      "family": "esp8266-family",
+      "boardProfileId": "nodemcu-esp8266",
+      "category": "maker"
+    },
+    {
+      "id": "wemos-d1-mini",
+      "name": "Wemos D1 Mini",
+      "path": "/boards/wemos-d1-mini.toon",
+      "family": "esp8266-family",
+      "boardProfileId": "wemos-d1-mini",
+      "category": "maker"
+    },
+    {
+      "id": "esp32-devkit-v1",
+      "name": "ESP32 DevKit V1",
+      "path": "/boards/esp32-devkit-v1.toon",
+      "family": "esp32-family",
+      "boardProfileId": "esp32-devkit-v1",
+      "category": "maker"
+    },
+    {
+      "id": "esp32-wrover-dev",
+      "name": "ESP32 WROVER Dev",
+      "path": "/boards/esp32-wrover-dev.toon",
+      "family": "esp32-family",
+      "boardProfileId": "esp32-wrover-dev",
+      "category": "maker"
+    },
+    {
+      "id": "esp32-s2-devkit",
+      "name": "ESP32-S2 DevKit",
+      "path": "/boards/esp32-s2-devkit.toon",
+      "family": "esp32-family",
+      "boardProfileId": "esp32-s2-devkit",
+      "category": "maker"
+    },
+    {
+      "id": "esp32-s3-devkit",
+      "name": "ESP32-S3 DevKit",
+      "path": "/boards/esp32-s3-devkit.toon",
+      "family": "esp32-family",
+      "boardProfileId": "esp32-s3-devkit",
+      "category": "maker"
+    },
+    {
+      "id": "esp32-c3-devkit",
+      "name": "ESP32-C3 DevKit",
+      "path": "/boards/esp32-c3-devkit.toon",
+      "family": "esp32-family",
+      "boardProfileId": "esp32-c3-devkit",
+      "category": "maker"
+    },
+    {
+      "id": "esp32-c6-devkit",
+      "name": "ESP32-C6 DevKit",
+      "path": "/boards/esp32-c6-devkit.toon",
+      "family": "esp32-family",
+      "boardProfileId": "esp32-c6-devkit",
+      "category": "maker"
+    },
+    {
+      "id": "raspberry-pi-pico-2",
+      "name": "Raspberry Pi Pico 2",
+      "path": "/boards/raspberry-pi-pico-2.toon",
+      "family": "rp2040-family",
+      "boardProfileId": "raspberry-pi-pico-2",
+      "category": "maker"
+    },
+    {
+      "id": "raspberry-pi-pico-2-w",
+      "name": "Raspberry Pi Pico 2 W",
+      "path": "/boards/raspberry-pi-pico-2-w.toon",
+      "family": "rp2040-family",
+      "boardProfileId": "raspberry-pi-pico-2-w",
+      "category": "maker"
+    },
+    {
+      "id": "arduino-nano-rp2040",
+      "name": "Arduino Nano RP2040",
+      "path": "/boards/arduino-nano-rp2040.toon",
+      "family": "rp2040-family",
+      "boardProfileId": "arduino-nano-rp2040",
+      "category": "maker"
+    },
+    {
+      "id": "seeed-studio-xiao-rp2040",
+      "name": "Seeed Studio XIAO RP2040",
+      "path": "/boards/seeed-studio-xiao-rp2040.toon",
+      "family": "rp2040-family",
+      "boardProfileId": "seeed-studio-xiao-rp2040",
+      "category": "maker"
+    },
+    {
+      "id": "sparkfun-pro-micro",
+      "name": "SparkFun Pro Micro",
+      "path": "/boards/sparkfun-pro-micro.toon",
+      "family": "rp2040-family",
+      "boardProfileId": "sparkfun-pro-micro",
+      "category": "maker"
+    },
+    {
+      "id": "adafruit-feather-rp2040",
+      "name": "Adafruit Feather RP2040",
+      "path": "/boards/adafruit-feather-rp2040.toon",
+      "family": "rp2040-family",
+      "boardProfileId": "adafruit-feather-rp2040",
+      "category": "maker"
+    },
+    {
+      "id": "blue-pill",
+      "name": "Blue Pill",
+      "path": "/boards/blue-pill.toon",
+      "family": "stm32-family",
+      "boardProfileId": "blue-pill",
+      "category": "maker"
+    },
+    {
+      "id": "black-pill",
+      "name": "Black Pill",
+      "path": "/boards/black-pill.toon",
+      "family": "stm32-family",
+      "boardProfileId": "black-pill",
+      "category": "maker"
+    },
+    {
+      "id": "nucleo-f103rb",
+      "name": "Nucleo-F103RB",
+      "path": "/boards/nucleo-f103rb.toon",
+      "family": "stm32-family",
+      "boardProfileId": "nucleo-f103rb",
+      "category": "maker"
+    },
+    {
+      "id": "nucleo-f401re",
+      "name": "Nucleo-F401RE",
+      "path": "/boards/nucleo-f401re.toon",
+      "family": "stm32-family",
+      "boardProfileId": "nucleo-f401re",
+      "category": "maker"
+    },
+    {
+      "id": "nucleo-g0b1re",
+      "name": "Nucleo-G0B1RE",
+      "path": "/boards/nucleo-g0b1re.toon",
+      "family": "stm32-family",
+      "boardProfileId": "nucleo-g0b1re",
+      "category": "maker"
+    },
+    {
+      "id": "nucleo-l476rg",
+      "name": "Nucleo-L476RG",
+      "path": "/boards/nucleo-l476rg.toon",
+      "family": "stm32-family",
+      "boardProfileId": "nucleo-l476rg",
+      "category": "maker"
+    },
+    {
+      "id": "discovery-f4",
+      "name": "Discovery F4",
+      "path": "/boards/discovery-f4.toon",
+      "family": "stm32-family",
+      "boardProfileId": "discovery-f4",
+      "category": "maker"
+    },
+    {
+      "id": "discovery-f7",
+      "name": "Discovery F7",
+      "path": "/boards/discovery-f7.toon",
+      "family": "stm32-family",
+      "boardProfileId": "discovery-f7",
+      "category": "maker"
+    },
+    {
+      "id": "pickit-low-pin-demo",
+      "name": "PICkit Low-Pin Demo",
+      "path": "/boards/pickit-low-pin-demo.toon",
+      "family": "pic-family",
+      "boardProfileId": "pickit-low-pin-demo",
+      "category": "maker"
+    },
+    {
+      "id": "curiosity-hpc",
+      "name": "Curiosity HPC",
+      "path": "/boards/curiosity-hpc.toon",
+      "family": "pic-family",
+      "boardProfileId": "curiosity-hpc",
+      "category": "maker"
+    },
+    {
+      "id": "curiosity-nano--pic18",
+      "name": "Curiosity Nano (PIC18)",
+      "path": "/boards/curiosity-nano--pic18.toon",
+      "family": "pic-family",
+      "boardProfileId": "curiosity-nano--pic18",
+      "category": "maker"
+    },
+    {
+      "id": "curiosity-nano--pic16",
+      "name": "Curiosity Nano (PIC16)",
+      "path": "/boards/curiosity-nano--pic16.toon",
+      "family": "pic-family",
+      "boardProfileId": "curiosity-nano--pic16",
+      "category": "maker"
+    },
+    {
+      "id": "avr-xplained-mini--328p",
+      "name": "AVR Xplained Mini (328P)",
+      "path": "/boards/avr-xplained-mini--328p.toon",
+      "family": "avr-family",
+      "boardProfileId": "avr-xplained-mini--328p",
+      "category": "maker"
+    },
+    {
+      "id": "avr-xplained-mini--168pb",
+      "name": "AVR Xplained Mini (168PB)",
+      "path": "/boards/avr-xplained-mini--168pb.toon",
+      "family": "avr-family",
+      "boardProfileId": "avr-xplained-mini--168pb",
+      "category": "maker"
+    },
+    {
+      "id": "msp430-launchpad",
+      "name": "MSP430 LaunchPad",
+      "path": "/boards/msp430-launchpad.toon",
+      "family": "msp430-family",
+      "boardProfileId": "msp430-launchpad",
+      "category": "maker"
+    },
+    {
+      "id": "tiva-c-launchpad-tm4c123",
+      "name": "Tiva C LaunchPad TM4C123",
+      "path": "/boards/tiva-c-launchpad-tm4c123.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "tiva-c-launchpad-tm4c123",
+      "category": "maker"
+    },
+    {
+      "id": "tiva-c-launchpad-tm4c129",
+      "name": "Tiva C LaunchPad TM4C129",
+      "path": "/boards/tiva-c-launchpad-tm4c129.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "tiva-c-launchpad-tm4c129",
+      "category": "maker"
+    },
+    {
+      "id": "lpcxpresso-lpc1769",
+      "name": "LPCXpresso LPC1769",
+      "path": "/boards/lpcxpresso-lpc1769.toon",
+      "family": "lpc-family",
+      "boardProfileId": "lpcxpresso-lpc1769",
+      "category": "maker"
+    },
+    {
+      "id": "lpcxpresso-lpc11u68",
+      "name": "LPCXpresso LPC11U68",
+      "path": "/boards/lpcxpresso-lpc11u68.toon",
+      "family": "lpc-family",
+      "boardProfileId": "lpcxpresso-lpc11u68",
+      "category": "maker"
+    },
+    {
+      "id": "teensy-3-2",
+      "name": "Teensy 3.2",
+      "path": "/boards/teensy-3-2.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "teensy-3-2",
+      "category": "maker"
+    },
+    {
+      "id": "teensy-3-5",
+      "name": "Teensy 3.5",
+      "path": "/boards/teensy-3-5.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "teensy-3-5",
+      "category": "maker"
+    },
+    {
+      "id": "teensy-3-6",
+      "name": "Teensy 3.6",
+      "path": "/boards/teensy-3-6.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "teensy-3-6",
+      "category": "maker"
+    },
+    {
+      "id": "nrf52-dk",
+      "name": "nRF52 DK",
+      "path": "/boards/nrf52-dk.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "nrf52-dk",
+      "category": "maker"
+    },
+    {
+      "id": "nrf52840-dongle",
+      "name": "nRF52840 Dongle",
+      "path": "/boards/nrf52840-dongle.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "nrf52840-dongle",
+      "category": "maker"
+    },
+    {
+      "id": "efm32-giant-gecko-kit",
+      "name": "EFM32 Giant Gecko Kit",
+      "path": "/boards/efm32-giant-gecko-kit.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "efm32-giant-gecko-kit",
+      "category": "maker"
+    },
+    {
+      "id": "efr32-blue-gecko-kit",
+      "name": "EFR32 Blue Gecko Kit",
+      "path": "/boards/efr32-blue-gecko-kit.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "efr32-blue-gecko-kit",
+      "category": "maker"
+    },
+    {
+      "id": "xmc2go",
+      "name": "XMC2Go",
+      "path": "/boards/xmc2go.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "xmc2go",
+      "category": "maker"
+    },
+    {
+      "id": "xmc1100-boot-kit",
+      "name": "XMC1100 Boot Kit",
+      "path": "/boards/xmc1100-boot-kit.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "xmc1100-boot-kit",
+      "category": "maker"
+    },
+    {
+      "id": "xmc4500-relax-kit",
+      "name": "XMC4500 Relax Kit",
+      "path": "/boards/xmc4500-relax-kit.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "xmc4500-relax-kit",
+      "category": "maker"
+    },
+    {
+      "id": "openplc--arduino",
+      "name": "OpenPLC (Arduino)",
+      "path": "/boards/openplc--arduino.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "openplc--arduino",
+      "category": "maker"
+    },
+    {
+      "id": "openplc--esp32",
+      "name": "OpenPLC (ESP32)",
+      "path": "/boards/openplc--esp32.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "openplc--esp32",
+      "category": "maker"
+    },
+    {
+      "id": "openplc--raspberry-pi",
+      "name": "OpenPLC (Raspberry Pi)",
+      "path": "/boards/openplc--raspberry-pi.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "openplc--raspberry-pi",
+      "category": "maker"
+    },
+    {
+      "id": "revolution-pi-core-3",
+      "name": "Revolution Pi Core 3",
+      "path": "/boards/revolution-pi-core-3.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "revolution-pi-core-3",
+      "category": "maker"
+    },
+    {
+      "id": "revolution-pi-connect",
+      "name": "Revolution Pi Connect+",
+      "path": "/boards/revolution-pi-connect.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "revolution-pi-connect",
+      "category": "maker"
+    },
+    {
+      "id": "revolution-pi-compact",
+      "name": "Revolution Pi Compact",
+      "path": "/boards/revolution-pi-compact.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "revolution-pi-compact",
+      "category": "maker"
+    },
+    {
+      "id": "wago-pfc100",
+      "name": "Wago PFC100",
+      "path": "/boards/wago-pfc100.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "wago-pfc100",
+      "category": "maker"
+    },
+    {
+      "id": "wago-pfc200",
+      "name": "Wago PFC200",
+      "path": "/boards/wago-pfc200.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "wago-pfc200",
+      "category": "maker"
+    },
+    {
+      "id": "wago-cc100",
+      "name": "Wago CC100",
+      "path": "/boards/wago-cc100.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "wago-cc100",
+      "category": "maker"
+    },
+    {
+      "id": "beckhoff-cx9020",
+      "name": "Beckhoff CX9020",
+      "path": "/boards/beckhoff-cx9020.toon",
+      "family": "ipc-family",
+      "boardProfileId": "beckhoff-cx9020",
+      "category": "industrial"
+    },
+    {
+      "id": "beckhoff-cx5120",
+      "name": "Beckhoff CX5120",
+      "path": "/boards/beckhoff-cx5120.toon",
+      "family": "ipc-family",
+      "boardProfileId": "beckhoff-cx5120",
+      "category": "industrial"
+    },
+    {
+      "id": "beckhoff-cx2020",
+      "name": "Beckhoff CX2020",
+      "path": "/boards/beckhoff-cx2020.toon",
+      "family": "ipc-family",
+      "boardProfileId": "beckhoff-cx2020",
+      "category": "industrial"
+    },
+    {
+      "id": "opto22-groov-epic-pr1",
+      "name": "Opto22 groov EPIC PR1",
+      "path": "/boards/opto22-groov-epic-pr1.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "opto22-groov-epic-pr1",
+      "category": "maker"
+    },
+    {
+      "id": "opto22-snap-pac-r1",
+      "name": "Opto22 SNAP PAC R1",
+      "path": "/boards/opto22-snap-pac-r1.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "opto22-snap-pac-r1",
+      "category": "maker"
+    },
+    {
+      "id": "unitronics-unistream-usp",
+      "name": "Unitronics UniStream USP",
+      "path": "/boards/unitronics-unistream-usp.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "unitronics-unistream-usp",
+      "category": "maker"
+    },
+    {
+      "id": "unitronics-unistream-b10",
+      "name": "Unitronics UniStream B10",
+      "path": "/boards/unitronics-unistream-b10.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "unitronics-unistream-b10",
+      "category": "maker"
+    },
+    {
+      "id": "berghof-b-ipc",
+      "name": "Berghof B-IPC",
+      "path": "/boards/berghof-b-ipc.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "berghof-b-ipc",
+      "category": "maker"
+    },
+    {
+      "id": "berghof-b-x20",
+      "name": "Berghof B-X20",
+      "path": "/boards/berghof-b-x20.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "berghof-b-x20",
+      "category": "maker"
+    },
+    {
+      "id": "industrial-shields-m-din-arduino",
+      "name": "Industrial Shields M-DIN Arduino",
+      "path": "/boards/industrial-shields-m-din-arduino.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "industrial-shields-m-din-arduino",
+      "category": "maker"
+    },
+    {
+      "id": "industrial-shields-m-din-esp32",
+      "name": "Industrial Shields M-DIN ESP32",
+      "path": "/boards/industrial-shields-m-din-esp32.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "industrial-shields-m-din-esp32",
+      "category": "maker"
+    },
+    {
+      "id": "industrial-shields-rpi-plc",
+      "name": "Industrial Shields RPI PLC",
+      "path": "/boards/industrial-shields-rpi-plc.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "industrial-shields-rpi-plc",
+      "category": "maker"
+    },
+    {
+      "id": "controllino-mini",
+      "name": "Controllino Mini",
+      "path": "/boards/controllino-mini.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "controllino-mini",
+      "category": "maker"
+    },
+    {
+      "id": "controllino-maxi",
+      "name": "Controllino Maxi",
+      "path": "/boards/controllino-maxi.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "controllino-maxi",
+      "category": "maker"
+    },
+    {
+      "id": "controllino-mega",
+      "name": "Controllino Mega",
+      "path": "/boards/controllino-mega.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "controllino-mega",
+      "category": "maker"
+    },
+    {
+      "id": "arduino-opta",
+      "name": "Arduino Opta",
+      "path": "/boards/arduino-opta.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "arduino-opta",
+      "category": "maker"
+    },
+    {
+      "id": "portenta-machine-control",
+      "name": "Portenta Machine Control",
+      "path": "/boards/portenta-machine-control.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "portenta-machine-control",
+      "category": "maker"
+    },
+    {
+      "id": "siemens-logo--8-3",
+      "name": "Siemens LOGO! 8.3",
+      "path": "/boards/siemens-logo--8-3.toon",
+      "family": "s7-family",
+      "boardProfileId": "siemens-logo--8-3",
+      "category": "industrial"
+    },
+    {
+      "id": "siemens-s7-1200-cpu-1211c",
+      "name": "Siemens S7-1200 CPU 1211C",
+      "path": "/boards/siemens-s7-1200-cpu-1211c.toon",
+      "family": "s7-family",
+      "boardProfileId": "siemens-s7-1200-cpu-1211c",
+      "category": "industrial"
+    },
+    {
+      "id": "siemens-s7-1200-cpu-1212c",
+      "name": "Siemens S7-1200 CPU 1212C",
+      "path": "/boards/siemens-s7-1200-cpu-1212c.toon",
+      "family": "s7-family",
+      "boardProfileId": "siemens-s7-1200-cpu-1212c",
+      "category": "industrial"
+    },
+    {
+      "id": "siemens-s7-1200-cpu-1214c",
+      "name": "Siemens S7-1200 CPU 1214C",
+      "path": "/boards/siemens-s7-1200-cpu-1214c.toon",
+      "family": "s7-family",
+      "boardProfileId": "siemens-s7-1200-cpu-1214c",
+      "category": "industrial"
+    },
+    {
+      "id": "siemens-s7-1500-cpu-1511c",
+      "name": "Siemens S7-1500 CPU 1511C",
+      "path": "/boards/siemens-s7-1500-cpu-1511c.toon",
+      "family": "s7-family",
+      "boardProfileId": "siemens-s7-1500-cpu-1511c",
+      "category": "industrial"
+    },
+    {
+      "id": "siemens-s7-1500-cpu-1513c",
+      "name": "Siemens S7-1500 CPU 1513C",
+      "path": "/boards/siemens-s7-1500-cpu-1513c.toon",
+      "family": "s7-family",
+      "boardProfileId": "siemens-s7-1500-cpu-1513c",
+      "category": "industrial"
+    },
+    {
+      "id": "siemens-s7-1500-cpu-1515c",
+      "name": "Siemens S7-1500 CPU 1515C",
+      "path": "/boards/siemens-s7-1500-cpu-1515c.toon",
+      "family": "s7-family",
+      "boardProfileId": "siemens-s7-1500-cpu-1515c",
+      "category": "industrial"
+    },
+    {
+      "id": "siemens-s7-1500-cpu-1516c",
+      "name": "Siemens S7-1500 CPU 1516C",
+      "path": "/boards/siemens-s7-1500-cpu-1516c.toon",
+      "family": "s7-family",
+      "boardProfileId": "siemens-s7-1500-cpu-1516c",
+      "category": "industrial"
+    },
+    {
+      "id": "micrologix-1000",
+      "name": "MicroLogix 1000",
+      "path": "/boards/micrologix-1000.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "micrologix-1000",
+      "category": "maker"
+    },
+    {
+      "id": "micrologix-1100",
+      "name": "MicroLogix 1100",
+      "path": "/boards/micrologix-1100.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "micrologix-1100",
+      "category": "maker"
+    },
+    {
+      "id": "micrologix-1400",
+      "name": "MicroLogix 1400",
+      "path": "/boards/micrologix-1400.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "micrologix-1400",
+      "category": "maker"
+    },
+    {
+      "id": "compactlogix-5370",
+      "name": "CompactLogix 5370",
+      "path": "/boards/compactlogix-5370.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "compactlogix-5370",
+      "category": "maker"
+    },
+    {
+      "id": "compactlogix-5380",
+      "name": "CompactLogix 5380",
+      "path": "/boards/compactlogix-5380.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "compactlogix-5380",
+      "category": "maker"
+    },
+    {
+      "id": "controllogix-5570",
+      "name": "ControlLogix 5570",
+      "path": "/boards/controllogix-5570.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "controllogix-5570",
+      "category": "maker"
+    },
+    {
+      "id": "controllogix-5580",
+      "name": "ControlLogix 5580",
+      "path": "/boards/controllogix-5580.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "controllogix-5580",
+      "category": "maker"
+    },
+    {
+      "id": "modicon-m221",
+      "name": "Modicon M221",
+      "path": "/boards/modicon-m221.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "modicon-m221",
+      "category": "maker"
+    },
+    {
+      "id": "modicon-m241",
+      "name": "Modicon M241",
+      "path": "/boards/modicon-m241.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "modicon-m241",
+      "category": "maker"
+    },
+    {
+      "id": "modicon-m251",
+      "name": "Modicon M251",
+      "path": "/boards/modicon-m251.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "modicon-m251",
+      "category": "maker"
+    },
+    {
+      "id": "modicon-m340",
+      "name": "Modicon M340",
+      "path": "/boards/modicon-m340.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "modicon-m340",
+      "category": "maker"
+    },
+    {
+      "id": "omron-cp1e",
+      "name": "Omron CP1E",
+      "path": "/boards/omron-cp1e.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "omron-cp1e",
+      "category": "maker"
+    },
+    {
+      "id": "omron-cp1l",
+      "name": "Omron CP1L",
+      "path": "/boards/omron-cp1l.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "omron-cp1l",
+      "category": "maker"
+    },
+    {
+      "id": "omron-cp1h",
+      "name": "Omron CP1H",
+      "path": "/boards/omron-cp1h.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "omron-cp1h",
+      "category": "maker"
+    },
+    {
+      "id": "omron-nx1p2",
+      "name": "Omron NX1P2",
+      "path": "/boards/omron-nx1p2.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "omron-nx1p2",
+      "category": "maker"
+    },
+    {
+      "id": "omron-nj501",
+      "name": "Omron NJ501",
+      "path": "/boards/omron-nj501.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "omron-nj501",
+      "category": "maker"
+    },
+    {
+      "id": "mitsubishi-fx3u",
+      "name": "Mitsubishi FX3U",
+      "path": "/boards/mitsubishi-fx3u.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "mitsubishi-fx3u",
+      "category": "maker"
+    },
+    {
+      "id": "mitsubishi-fx5u",
+      "name": "Mitsubishi FX5U",
+      "path": "/boards/mitsubishi-fx5u.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "mitsubishi-fx5u",
+      "category": "maker"
+    },
+    {
+      "id": "mitsubishi-iq-r-r04",
+      "name": "Mitsubishi iQ-R R04",
+      "path": "/boards/mitsubishi-iq-r-r04.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "mitsubishi-iq-r-r04",
+      "category": "maker"
+    },
+    {
+      "id": "mitsubishi-iq-r-r08",
+      "name": "Mitsubishi iQ-R R08",
+      "path": "/boards/mitsubishi-iq-r-r08.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "mitsubishi-iq-r-r08",
+      "category": "maker"
+    },
+    {
+      "id": "mitsubishi-iq-r-r16",
+      "name": "Mitsubishi iQ-R R16",
+      "path": "/boards/mitsubishi-iq-r-r16.toon",
+      "family": "generic-mcu",
+      "boardProfileId": "mitsubishi-iq-r-r16",
+      "category": "maker"
+    }
+  ]
+}

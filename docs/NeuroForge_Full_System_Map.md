@@ -145,3 +145,17 @@ The specialist agent operates in 5 modes (TRANSPILER, DEBUG, EXTEND, VERIFY, OPT
 
 ---
 *Document consolidated and finalized based on physical repository audit on April 8, 2026.*
+
+
+---
+
+## ?? 6. The Sovereign Engine Protocol (NeuroForge v5)
+
+To resolve systemic monorepo resolution loops and path corruption crises, the simulation architecture follows the **Sovereign Engine Protocol**:
+
+1. **Binary Sovereignty**: The WASM motor (
+euroforge_asl.js) and shims (env.js) MUST be served from pps/webapp/src/lib/wasm/. **NEVER** import from shared wasm packages.
+2. **State Sovereignty**: All simulation state (sl) MUST be initialized in pps/webapp/src/lib/state/asl.svelte.ts.
+3. **Vite Global Aliasing**: The webapp config MUST alias legancy/shared imports to the local sovereign loader.
+4. **Shim Integrity**: env.js MUST include C-stdlib callables (iswspace, etc.) to satisfy WASM linking.
+5. **Ghost Purge**: Manual deletion of .vite and .svelte-kit is **MANDATORY** after any simulation logic change.

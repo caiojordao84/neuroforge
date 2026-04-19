@@ -16,7 +16,7 @@
   };
 
   // Provide some initial data replacing the mock
-  let nodes = $state<Node[]>([
+  let nodes = $state.raw<Node[]>([
     {
       id: 'mcu-1',
       type: 'board',
@@ -31,7 +31,7 @@
     }
   ]);
 
-  let edges = $state<Edge[]>([
+  let edges = $state.raw<Edge[]>([
     { 
       id: 'e1-2', 
       source: 'mcu-1', 

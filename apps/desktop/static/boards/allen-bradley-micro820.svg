@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 250">
+  <!-- Allen Bradley Micro820 - Minimal Board Representation -->
+  <style>
+    .board { fill: #1a365d; stroke: #2c5282; stroke-width: 2; }
+    .label { font-family: Arial, sans-serif; font-size: 12px; fill: #cbd5e0; }
+    .title { font-family: Arial, sans-serif; font-size: 14px; fill: #ffffff; font-weight: bold; }
+    .plc-input { fill: #48bb78; }
+    .plc-output { fill: #f56565; }
+    .io-label { font-family: monospace; font-size: 9px; fill: #ffffff; }
+  </style>
+  
+  <!-- Board outline -->
+  <rect x="10" y="20" width="280" height="210" rx="6" class="board"/>
+  
+  <!-- Title -->
+  <text x="150" y="40" text-anchor="middle" class="title">Allen Bradley Micro820</text>
+  <text x="150" y="55" text-anchor="middle" class="label">1762-Micro820 | 20 I/O</text>
+  
+  <!-- Digital Inputs (left side) -->
+  <text x="18" y="75" class="label">IN</text>
+  <g data-io="input" class="plc-input">
+    <circle cx="25" cy="90" r="6"/>
+    <text x="38" y="93" class="io-label">I:0</text>
+  </g>
+  <g data-io="input" class="plc-input">
+    <circle cx="25" cy="110" r="6"/>
+    <text x="38" y="113" class="io-label">I:1</text>
+  </g>
+  <g data-io="input" class="plc-input">
+    <circle cx="25" cy="130" r="6"/>
+    <text x="38" y="133" class="io-label">I:2</text>
+  </g>
+  <g data-io="input" class="plc-input">
+    <circle cx="25" cy="150" r="6"/>
+    <text x="38" y="153" class="io-label">I:3</text>
+  </g>
+  <g data-io="input" class="plc-input">
+    <circle cx="25" cy="170" r="6"/>
+    <text x="38" y="173" class="io-label">I:4</text>
+  </g>
+  <g data-io="input" class="plc-input">
+    <circle cx="25" cy="190" r="6"/>
+    <text x="38" y="193" class="io-label">I:5</text>
+  </g>
+  <g data-io="input" class="plc-input">
+    <circle cx="25" cy="210" r="6"/>
+    <text x="38" y="213" class="io-label">I:6</text>
+  </g>
+  
+  <!-- Digital Outputs (right side) -->
+  <text x="270" y="75" class="label">OUT</text>
+  <g data-io="output" class="plc-output">
+    <circle cx="275" cy="90" r="6"/>
+    <text x="250" y="93" class="io-label">O:0</text>
+  </g>
+  <g data-io="output" class="plc-output">
+    <circle cx="275" cy="110" r="6"/>
+    <text x="250" y="113" class="io-label">O:1</text>
+  </g>
+  <g data-io="output" class="plc-output">
+    <circle cx="275" cy="130" r="6"/>
+    <text x="250" y="133" class="io-label">O:2</text>
+  </g>
+  <g data-io="output" class="plc-output">
+    <circle cx="275" cy="150" r="6"/>
+    <text x="250" y="153" class="io-label">O:3</text>
+  </g>
+  <g data-io="output" class="plc-output">
+    <circle cx="275" cy="170" r="6"/>
+    <text x="250" y="173" class="io-label">O:4</text>
+  </g>
+  <g data-io="output" class="plc-output">
+    <circle cx="275" cy="190" r="6"/>
+    <text x="250" y="193" class="io-label">O:5</text>
+  </g>
+  <g data-io="output" class="plc-output">
+    <circle cx="275" cy="210" r="6"/>
+    <text x="250" y="213" class="io-label">O:6</text>
+  </g>
+  
+  <!-- Status indicators -->
+  <circle cx="90" cy="200" r="5" fill="#48bb78"/>
+  <text x="105" y="203" class="label">PWR</text>
+  <circle cx="140" cy="200" r="5" fill="#48bb78"/>
+  <text x="155" y="203" class="label">RUN</text>
+  <circle cx="190" cy="200" r="5" fill="#ecc94b"/>
+  <text x="205" y="203" class="label">COM</text>
+</svg>

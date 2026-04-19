@@ -1,0 +1,273 @@
+/**
+ * ASL State with WASM transpiler integration
+ */
+
+export interface LibraryInput {
+  name: string;
+  source: string;
+}
+
+export interface WorkspaceInput {
+  main_source: string;
+  libraries: LibraryInput[];
+}
+
+class AslState {
+  ready    = $state(false);
+  error    = $state<string | null>(null);
+  #mod: any = null;
+
+  async init() {
+    if (this.ready) return;
+    try {
+      // @ts-ignore - uses the standardized workspace export for reliable monorepo resolution
+      const mod = await import("./pkg/neuroforge_asl.js");
+      await mod.default(); // calls init() from wasm-bindgen
+      this.#mod = mod;
+      this.ready = true;
+      console.log('[AslState] WASM Initialized successfully DEF-V5-STABLE');
+      console.log('[NeuroForge] Motor ASL inicializado v' + this.version());
+    } catch (e) {
+      console.error('WASM Init Error:', e);
+      this.error = String(e);
+    }
+  }
+
+  private assertReady() {
+    if (!this.ready || !this.#mod) {
+      throw new Error('[neuroforge-asl] WASM não inicializado. Chama asl.init() primeiro.');
+    }
+  }
+
+  version(): string {
+    return this.#mod?.wasm_version() ?? '—';
+  }
+
+  supportedLangs(): string[] {
+    return (this.#mod?.wasm_supported_langs() ?? '').split(',').filter(Boolean);
+  }
+
+  /**
+   * Converte TOON para JSON
+   */
+  toonToJson(toonContent: string): string {
+    this.assertReady();
+    return this.#mod.wasm_toon_to_json(toonContent);
+  }
+
+  transpile(source: string, fromLang: string, toLang: string): string {
+    this.assertReady();
+    return this.#mod.wasm_transpile(source, fromLang, toLang);
+  }
+
+  transpileWithMap(source: string, fromLang: string, toLang: string): { output: string; source_map: [number, number][] } {
+    this.assertReady();
+    return JSON.parse(this.#mod.wasm_transpile_with_map(source, fromLang, toLang));
+  }
+
+  parseToAsl(source: string, lang: string): unknown {
+    this.assertReady();
+    // @ts-ignore
+    return JSON.parse(this.#mod.wasm_parse_to_asl(source, lang));
+  }
+
+  parseToToon(source: string, lang: string): string {
+    this.assertReady();
+    // @ts-ignore
+    return this.#mod.wasm_parse_to_toon(source, lang);
+  }
+
+  /** Cross-language transpilation */
+  crossTranspile(source: string, fromLang: string, toLang: string): string {
+    this.assertReady();
+    // @ts-ignore
+    return this.#mod.wasm_cross_transpile(source, fromLang, toLang);
+  }
+
+  /** VFS Workspace: Transpile multi-file workspace */
+  transpileWorkspace(workspace: WorkspaceInput, fromLang: string, toLang: string): string {
+    this.assertReady();
+    // @ts-ignore
+    return this.#mod.wasm_cross_transpile_workspace(JSON.stringify(workspace), fromLang, toLang);
+  }
+
+  /** VFS Workspace: Parse multi-file to TOON */
+  parseWorkspaceToToon(workspace: WorkspaceInput, lang: string): string {
+    this.assertReady();
+    // @ts-ignore
+    return this.#mod.wasm_parse_workspace_to_toon(JSON.stringify(workspace), lang);
+  }
+
+  getDiagnostics(source: string, lang: string): Array<{ severity: string; context: string; message: string }> {
+    this.assertReady();
+    // @ts-ignore
+    return JSON.parse(this.#mod.wasm_get_diagnostics(source, lang));
+  }
+
+  // ===== Ladder Diagram (LD) Support =====
+
+  /**
+   * Parse Ladder Diagram (LD) to ASL IR
+   * Uses the LD parser built into the transpiler
+   */
+  parseLdToAsl(ldSource: string): unknown {
+    if (!this.#mod) throw new Error('WASM não inicializado');
+    try {
+      // @ts-ignore
+      return JSON.parse(this.#mod.wasm_parse_to_asl(ldSource, 'ld'));
+    } catch {
+      // If 'ld' parser doesn't exist, return manual conversion
+      return this.manualLdToAsl(ldSource);
+    }
+  }
+
+  /**
+   * Generate Ladder Diagram (LD) from ASL IR
+   */
+  aslToLd(aslSource: string): string {
+    if (!this.#mod) throw new Error('WASM não inicializado');
+    try {
+      // @ts-ignore - try cross transpile ASL -> LD
+      return this.#mod.wasm_cross_transpile(aslSource, 'asl', 'ld');
+    } catch {
+      // Fallback: manual conversion
+      return this.manualAslToLd(aslSource);
+    }
+  }
+
+  /**
+   * Manual LD to ASL conversion (fallback when WASM doesn't support LD)
+   */
+  private manualLdToAsl(ldSource: string): object {
+    const lines = ldSource.split('\n').filter(l => l.trim());
+    const elements: Array<{ type: string; ref: string; preset?: number }> = [];
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      // NO Contact: |X|
+      const noContactMatch = trimmed.match(/\|([A-Z0-9_.]+)\|/);
+      if (noContactMatch) {
+        elements.push({ type: 'contact_no', ref: noContactMatch[1] });
+        continue;
+      }
+
+      // NC Contact: |/X|
+      const ncContactMatch = trimmed.match(/\|\/([A-Z0-9_.]+)\|/);
+      if (ncContactMatch) {
+        elements.push({ type: 'contact_nc', ref: ncContactMatch[1] });
+        continue;
+      }
+
+      // Output Coil: (X)
+      const coilMatch = trimmed.match(/\(([A-Z0-9_.]+)\)/);
+      if (coilMatch) {
+        elements.push({ type: 'coil_output', ref: coilMatch[1] });
+        continue;
+      }
+
+      // Set Coil: (S X)
+      const setMatch = trimmed.match(/\(S\s+([A-Z0-9_.]+)\)/);
+      if (setMatch) {
+        elements.push({ type: 'coil_set', ref: setMatch[1] });
+        continue;
+      }
+
+      // Reset Coil: (R X)
+      const resetMatch = trimmed.match(/\(R\s+([A-Z0-9_.]+)\)/);
+      if (resetMatch) {
+        elements.push({ type: 'coil_reset', ref: resetMatch[1] });
+        continue;
+      }
+
+      // Timer: [TON X PT:=Y]
+      const tonMatch = trimmed.match(/\[TON\s+([A-Z0-9_.]+)\s+PT:=(\d+)\]/);
+      if (tonMatch) {
+        elements.push({ type: 'ton', ref: tonMatch[1], preset: parseInt(tonMatch[2], 10) });
+        continue;
+      }
+
+      // Counter: [CTU X PV:=Y]
+      const ctuMatch = trimmed.match(/\[CTU\s+([A-Z0-9_.]+)\s+PV:=(\d+)\]/);
+      if (ctuMatch) {
+        elements.push({ type: 'ctu', ref: ctuMatch[1], preset: parseInt(ctuMatch[2], 10) });
+        continue;
+      }
+    }
+
+    return {
+      program: {
+        variables: [...new Set(elements.map(e => e.ref))].map(ref => ({
+          name: ref,
+          type: 'BOOL',
+          initialValue: false
+        })),
+        rungs: [{
+          id: 'rung-0',
+          elements
+        }]
+      }
+    };
+  }
+
+  /**
+   * Manual ASL to LD conversion (fallback when WASM doesn't support LD generation)
+   */
+  private manualAslToLd(aslSource: string): string {
+    try {
+      const parsed = JSON.parse(aslSource);
+      const lines: string[] = [];
+
+      if (parsed.program?.rungs) {
+        for (const rung of parsed.program.rungs) {
+          if (rung.elements) {
+            for (const el of rung.elements) {
+              switch (el.type) {
+                case 'contact_no':
+                  lines.push(`|${el.ref}|`);
+                  break;
+                case 'contact_nc':
+                  lines.push(`|/${el.ref}|`);
+                  break;
+                case 'coil_output':
+                  lines.push(`(${el.ref})`);
+                  break;
+                case 'coil_set':
+                  lines.push(`(S ${el.ref})`);
+                  break;
+                case 'coil_reset':
+                  lines.push(`(R ${el.ref})`);
+                  break;
+                case 'ton':
+                  lines.push(`[TON ${el.ref} PT:=${el.preset ?? 1000}]`);
+                  break;
+                case 'tof':
+                  lines.push(`[TOF ${el.ref} PT:=${el.preset ?? 1000}]`);
+                  break;
+                case 'tp':
+                  lines.push(`[TP ${el.ref} PT:=${el.preset ?? 1000}]`);
+                  break;
+                case 'ctu':
+                  lines.push(`[CTU ${el.ref} PV:=${el.preset ?? 0}]`);
+                  break;
+                case 'ctd':
+                  lines.push(`[CTD ${el.ref} PV:=${el.preset ?? 0}]`);
+                  break;
+              }
+            }
+          }
+        }
+      }
+
+      return lines.join('\n');
+    } catch {
+      return '';
+    }
+  }
+}
+
+export const asl = new AslState();
+
+
+
+

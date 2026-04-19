@@ -78,55 +78,27 @@ class IDEState {
     }
   }
 
-  /**
-   * Change language — transpile code via WASM pipeline:
-   * 1. Parse current code to ASL IR (using current language parser)
-   * 2. Generate new code from ASL IR (using target language generator)
-   *
-   * The WASM `transpile(source, to_lang)` only parses source using the TARGET
-   * parser, so we can't use it for cross-language transpilation.
-   * Instead, we use the `transpile(source, to_lang)` called twice:
-   * The WASM API now exposes `wasm_cross_transpile(source, from, to)` which:
-   *   1. Parses source with the `from` language parser → AslProgram
-   *   2. Generates code with the `to` language generator
-   *
-   * Supported targets: python, st. For C/Rust targets, cross-transpilation
-   * is not yet supported (AslProgram→BaseNode conversion needed).
-   */
   async setLanguage(newLang: string) {
     if (newLang === this.language) return;
-
     this.language = newLang;
     this.addLog(`Contextual switched to ${(langDisplayNames[newLang] ?? newLang).toUpperCase()}. File changed to ${this.mainFileName}`, 'info');
   }
 
-  /**
-   * Builds a serializable VFS workspace object including main code and all libraries.
-   */
   buildWorkspace(): WorkspaceInput {
-    // Collect all libraries that match the current language or are generic enough (h, hpp, etc.)
-    // For now, we include all libraries in the workspace and let the linker sort it out.
     const libraries: LibraryInput[] = library.libraries.map(lib => ({
       name: lib.name,
       source: lib.content
     }));
-
     return {
       main_source: this.code,
       libraries
     };
   }
 
-  /** Navigate to Main tab */
   showMain() {
     this.activeTab = 'main';
   }
 
-  /**
-   * Navigate to ASL tab — parse current code to ASL IR using parseToAsl.
-   * This uses `wasm_parse_to_asl(source, lang)` which correctly parses
-   * the source with the right parser for the current language.
-   */
   async showAsl() {
     if (!asl.ready) {
       this.addLog('WASM Engine not ready yet...', 'error');
@@ -134,14 +106,12 @@ class IDEState {
     }
     try {
       const workspace = this.buildWorkspace();
-      
       if (workspace.libraries.length > 0) {
         this.addLog(`Linking workspace with ${workspace.libraries.length} libraries...`, 'info');
         this.transpiledAsl = asl.parseWorkspaceToToon(workspace, this.language);
       } else {
         this.transpiledAsl = asl.parseToToon(this.code, this.language);
       }
-
       this.activeTab = 'asl';
       this.addLog('ASL IR (TOON) generated successfully.', 'success');
     } catch (e) {
@@ -149,12 +119,10 @@ class IDEState {
     }
   }
 
-  /** Navigate to library tab */
   showLibrary() {
     this.activeTab = 'library';
   }
 
-  /** Replace Main code content (for import) */
   replaceMainCode(content: string, sourceName?: string) {
     this.code = content;
     this.activeTab = 'main';
@@ -167,18 +135,14 @@ class IDEState {
       this.addLog('Wait for engine initialization...', 'error');
       return;
     }
-
     try {
       const workspace = this.buildWorkspace();
-      
       if (workspace.libraries.length > 0) {
         this.addLog(`Compiling multi-file workspace...`, 'info');
         asl.transpileWorkspace(workspace, this.language, this.language);
       } else {
-        // Transpile to the same language to validate syntax
         asl.transpile(this.code, this.language, this.language);
       }
-      
       this.addLog('Simulation build successful.', 'success');
       this.addLog('Running on virtual target...', 'info');
     } catch (e) {
@@ -188,3 +152,5 @@ class IDEState {
 }
 
 export const ideState = new IDEState();
+
+

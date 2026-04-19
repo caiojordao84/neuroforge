@@ -57,6 +57,7 @@ impl From<BoardValidationError> for BoardValidationErrorDto {
             BoardValidationError::InvalidConfidence { .. } => "InvalidConfidence",
             BoardValidationError::InvalidPowerPin { .. } => "InvalidPowerPin",
             BoardValidationError::InvalidPhysicalReference { .. } => "InvalidPhysicalReference",
+            BoardValidationError::OrphanedLogicalPin { .. } => "OrphanedLogicalPin",
             BoardValidationError::MissingAslTargetField { .. } => "MissingAslTargetField",
             BoardValidationError::DuplicateAslTarget { .. } => "DuplicateAslTarget",
             BoardValidationError::PinConflict { .. } => "PinConflict",

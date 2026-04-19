@@ -1,6 +1,6 @@
 [package]
 name    = "neuroforge-asl"
-version = "4.0.0"
+version = "4.1.0"
 edition = "2021"
 
 [lib]
@@ -44,6 +44,7 @@ roxmltree = "0.19"
 
 # ── TOON serialization (for deterministic hashing) ────────────────────────────
 serde_toon = "0.2"
+serde_yaml = "0.9"
 
 # ── Runtime async — feature-flagged para não puxar tokio no WASM ─────────────
 tokio = { version = "1", features = ["rt", "time"], optional = true }

@@ -415,6 +415,20 @@ pub fn wasm_parse_workspace_to_toon(workspace_json: &str, lang: &str) -> Result<
     Ok(gen.generate_to_string(&prog))
 }
 
+/// Converte uma BoardProfile em formato TOON para JSON.
+/// Útil para o frontend ler ficheiros .toon e processá-los como objectos JS.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn wasm_toon_to_json(toon_content: &str) -> Result<String, JsValue> {
+    use crate::asl_types::board::board_profile::BoardProfile;
+    
+    let profile = BoardProfile::from_toon_str(toon_content)
+        .map_err(|e| JsValue::from_str(&format!("Failed to parse TOON: {}", e)))?;
+        
+    serde_json::to_string(&profile)
+        .map_err(|e| JsValue::from_str(&format!("Failed to serialize to JSON: {}", e)))
+}
+
 // ============================================================================
 // Internal Helpers
 // ============================================================================

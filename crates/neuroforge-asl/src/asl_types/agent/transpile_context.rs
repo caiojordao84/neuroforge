@@ -28,6 +28,10 @@ pub struct TranspileContext {
     pub asl_version: String,
     /// Component profiles
     pub components: Vec<ComponentProfile>,
+    /// Board family skill ID for agent hints
+    pub board_family_skill_id: Option<String>,
+    /// Default language skill IDs for agent hints
+    pub default_language_skill_ids: Vec<String>,
 }
 
 /// Error type for TOON serialization operations.
@@ -79,6 +83,9 @@ impl TranspileContext {
         components: Vec<ComponentProfile>,
     ) -> Self {
         let ir_hash = compute_ir_hash(&asl_program);
+        let board_family_skill_id = board_profile.neuroforge.board_family_skill_id.clone();
+        let default_language_skill_ids = board_profile.neuroforge.default_language_skills.clone();
+        
         Self {
             asl_program,
             board_profile,
@@ -86,6 +93,8 @@ impl TranspileContext {
             ir_hash,
             asl_version: "4.0.0".to_string(),
             components,
+            board_family_skill_id,
+            default_language_skill_ids,
         }
     }
 

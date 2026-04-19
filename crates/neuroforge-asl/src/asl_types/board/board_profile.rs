@@ -3,7 +3,8 @@
 //! These types define the target board configuration and pin mapping.
 
 use serde::{Deserialize, Serialize};
-use serde_toon::{from_str, to_string, Value as ToonValue};
+use serde_json::Value as ToonValue;
+use serde_toon::to_string;
 use std::collections::HashMap;
 
 use super::validation::ValidationError;
@@ -22,6 +23,19 @@ pub enum BoardToonError {
     Serialize(String),
 }
 
+/// NeuroForge-specific integration metadata.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct NeuroForgeMetadata {
+    /// ID of the board family skill (e.g., "avr-family")
+    pub board_family_skill_id: Option<String>,
+    /// Rust BoardProfile identifier (e.g., "arduino-uno")
+    pub board_profile_id: Option<String>,
+    /// Preferred language skill IDs
+    #[serde(default)]
+    pub default_language_skills: Vec<String>,
+}
+
 /// Complete board profile loaded from TOON schema.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -31,39 +45,87 @@ pub struct BoardProfile {
     /// Human-readable board name
     pub name: String,
     /// Board manufacturer
-    pub manufacturer: Option<String>,
+    #[serde(default)]
+    pub manufacturer: String,
     /// Microcontroller family (e.g., "ATmega328P", "ESP32")
-    pub mcu: Option<String>,
+    #[serde(default)]
+    pub mcu: String,
     /// CPU architecture
-    pub architecture: Option<String>,
+    #[serde(default)]
+    pub architecture: String,
     /// Board family for skill selection (e.g., "avr-family", "rp2040-family", "esp32-family")
-    pub board_family: Option<String>,
+    #[serde(default)]
+    pub board_family: String,
     /// Clock frequency in Hz
-    pub clock_hz: Option<u32>,
+    #[serde(default)]
+    pub clock_hz: u32,
     /// Flash memory size in bytes
-    pub flash_bytes: Option<u64>,
+    #[serde(alias = "flashMemory", default)]
+    pub flash_bytes: u64,
     /// SRAM size in bytes
-    pub sram_bytes: Option<u64>,
+    #[serde(alias = "sram", default)]
+    pub sram_bytes: u64,
     /// EEPROM size in bytes
-    pub eeprom_bytes: Option<u64>,
-    /// Operating voltage in mV
-    pub voltage_mv: Option<u32>,
-    /// Pin mapping configuration
+    #[serde(default)]
+    pub eeprom_bytes: u64,
+    /// Voltage in mV
+    #[serde(default)]
+    pub voltage_mv: u32,
+    /// Category (e.g., "maker", "plc")
+    #[serde(default)]
+    pub category: String,
+    /// Family (e.g., "avr-family")
+    #[serde(default)]
+    pub family: String,
+    /// Image path
+    #[serde(default)]
+    pub image: String,
+    /// URL
+    #[serde(default)]
+    pub url: String,
+    /// Specifications
+    pub specs: Option<ToonValue>,
+    /// Dimensions
+    pub dimensions: Option<ToonValue>,
+    /// I/O config
+    pub io: Option<ToonValue>,
+    /// GPIO table/map
+    pub gpio: Option<ToonValue>,
+    /// Peripherals
+    pub peripherals: Option<ToonValue>,
+    /// PLC-specific features
+    #[serde(rename = "plcFeatures")]
+    pub plc_features: Option<ToonValue>,
+    /// PLC profile
+    #[serde(rename = "plcProfile")]
+    pub plc_profile: Option<ToonValue>,
+    
+    /// Legacy/Internal: Pin mapping configuration
+    #[serde(default)]
     pub pin_map: PinMap,
-    /// Pin capabilities by logical name
+    /// Legacy/Internal: Pin capabilities by logical name
     #[serde(default)]
     pub pin_capabilities: HashMap<String, PinCapabilities>,
-    /// Boot configuration warnings
+    /// Legacy/Internal: Boot configuration warnings
     #[serde(default)]
     pub boot_warnings: Vec<BootWarning>,
-    /// Current limits per power rail
+    /// Legacy/Internal: Current limits per power rail
     #[serde(default)]
     pub current_limits: HashMap<String, CurrentLimit>,
+
     /// ASL target configuration
-    pub asl_target: AslTarget,
-    /// Supported languages for this board (e.g., ["arduino", "esp32"])
+    #[serde(rename = "aslProfile", alias = "asl_target", default)]
+    pub asl_profile: AslProfile,
+
+    /// Languages supported
     #[serde(default)]
     pub languages: Vec<String>,
+    /// Bootloader info
+    #[serde(default)]
+    pub bootloader: String,
+    /// NeuroForge-specific integration metadata
+    #[serde(default)]
+    pub neuroforge: NeuroForgeMetadata,
     /// SVG map for visual representation
     pub svg_map: Option<SvgMap>,
 }
@@ -86,9 +148,15 @@ pub struct PinCapabilities {
     pub interrupt: Option<InterruptCapability>,
     /// Associated hardware peripheral
     pub peripheral: Option<String>,
+    /// Logical roles this pin can serve
+    #[serde(default)]
+    pub roles: Vec<String>,
     /// Custom hints for ASL generation
     #[serde(default)]
     pub hints: Vec<PinHint>,
+    /// Vendor-specific metadata
+    #[serde(default)]
+    pub meta: HashMap<String, ToonValue>,
 }
 
 /// Supported pin mode.
@@ -102,6 +170,8 @@ pub enum PinModeCapability {
     Analog,
     #[serde(rename = "openDrain")]
     OpenDrain,
+    Ground,
+    Special,
 }
 
 /// PWM configuration for a pin.
@@ -164,8 +234,17 @@ pub struct PinHint {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct AslTarget {
-    /// Target platform (e.g., "arduino", "esp32", "stm32")
+    /// Target platform (e.g., "arduino", "esp32", "micropython")
+    #[serde(alias = "language", alias = "platform")]
     pub platform: String,
+    /// Path to the agent skill for this target
+    #[serde(alias = "agentSkill")]
+    pub agent_skill: String,
+    /// Confidence floor for this target
+    #[serde(alias = "confidenceFloor")]
+    pub confidence_floor: Option<f64>,
+    /// Hardware Abstraction Layer used
+    pub hal: Option<String>,
     /// Framework version
     pub version: Option<String>,
     /// Default includes
@@ -177,13 +256,17 @@ pub struct AslTarget {
     /// Board-specific pin mappings (logical to physical)
     #[serde(default)]
     pub pin_aliases: HashMap<String, String>,
-    /// Agent skill file to use (e.g., "languages/arduino-cpp-avr.md")
-    pub agent_skill: Option<String>,
-    /// Minimum confidence level required for automatic transpilation
-    pub confidence_floor: Option<f64>,
     /// Custom ASL extensions (arbitrary TOON values)
     #[serde(default)]
     pub extensions: HashMap<String, ToonValue>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AslProfile {
+    /// List of supported targets
+    #[serde(default)]
+    pub targets: Vec<AslTarget>,
 }
 
 /// Pin map defining logical to physical pin associations.
@@ -252,6 +335,9 @@ pub struct PhysicalPin {
     pub package: Option<String>,
     /// Pin number in package
     pub pin_number: Option<u32>,
+    /// Alternate functions available
+    #[serde(default)]
+    pub alt_functions: Vec<String>,
 }
 
 /// Restrictions on pin usage.
@@ -301,8 +387,13 @@ pub struct CurrentLimit {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SvgMap {
+    /// Content of SVG or path to SVG file
+    #[serde(alias = "file", alias = "svg_file")]
     pub svg_content: String,
+    /// SVG viewBox
     pub view_box: Option<String>,
+    /// Pin anchors on the board image
+    #[serde(rename = "pins", alias = "pin_anchors")]
     pub pin_anchors: Vec<SvgPinAnchor>,
 }
 
@@ -310,13 +401,37 @@ pub struct SvgMap {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SvgPinAnchor {
+    /// SVG element ID
+    pub id: String,
+    /// Logical pin name connecting to this anchor
+    #[serde(alias = "logicalPin")]
     pub pin: String,
+    /// X coordinate in SVG
+    #[serde(alias = "cx")]
     pub x: f64,
+    /// Y coordinate in SVG
+    #[serde(alias = "cy")]
     pub y: f64,
+    /// Visual label
     pub label: Option<String>,
+    /// Physical side (top, bottom, left, right)
+    pub side: Option<String>,
 }
 
 impl BoardProfile {
+    /// Get the primary ASL target for backward compatibility.
+    pub fn asl_target(&self) -> &AslTarget {
+        self.asl_profile.targets.first().expect("BoardProfile must have at least one ASL target")
+    }
+
+    /// Get the primary ASL target for mutation (backward compatibility).
+    pub fn asl_target_mut(&mut self) -> &mut AslTarget {
+        if self.asl_profile.targets.is_empty() {
+            self.asl_profile.targets.push(AslTarget::default());
+        }
+        &mut self.asl_profile.targets[0]
+    }
+
     /// Get pin capabilities by logical name.
     pub fn get_pin_capabilities(&self, pin_name: &str) -> Option<&PinCapabilities> {
         self.pin_capabilities.get(pin_name)
@@ -338,22 +453,24 @@ impl BoardProfile {
 
     /// Get the board family, deriving from mcu if not explicitly set.
     pub fn get_board_family(&self) -> Option<&str> {
-        if let Some(family) = &self.board_family {
-            return Some(family);
+        if !self.board_family.is_empty() {
+            return Some(&self.board_family);
         }
         // Derive from MCU if board_family not set
-        self.mcu.as_deref().map(|mcu| {
-            let mcu_lower = mcu.to_lowercase();
-            if mcu_lower.contains("atmega") || mcu_lower.contains("attiny") {
-                "avr-family"
-            } else if mcu_lower.contains("rp2040") || mcu_lower.contains("rp2350") {
-                "rp2040-family"
-            } else if mcu_lower.contains("esp32") {
-                "esp32-family"
-            } else {
-                "unknown-family"
-            }
-        })
+        if self.mcu.is_empty() {
+            return None;
+        }
+        
+        let mcu = &self.mcu;
+        if mcu.starts_with("ATmega") {
+            Some("avr-family")
+        } else if mcu.starts_with("ESP32") {
+            Some("esp32-family")
+        } else if mcu.starts_with("RP2040") {
+            Some("rp2040-family")
+        } else {
+            Some("generic-mcu")
+        }
     }
 
     /// Load a BoardProfile from a TOON file.
@@ -364,7 +481,156 @@ impl BoardProfile {
 
     /// Parse a BoardProfile from a TOON string.
     pub fn from_toon_str(content: &str) -> ToonResult<Self> {
-        from_str(content).map_err(|e| BoardToonError::Parse(e.to_string()))
+        let cleaned = Self::preprocess_toon(content);
+        let mut profile: Self = serde_toon::from_str(&cleaned).map_err(|e| BoardToonError::Parse(e.to_string()))?;
+        profile.sync_v3();
+        Ok(profile)
+    }
+
+    /// Synchronize v3 fields (gpio, svgMap) to legacy fields (pinMap, pinCapabilities)
+    pub fn sync_v3(&mut self) {
+        // 1. Sync GPIO table to logical_pins
+        if let Some(gpio_val) = &self.gpio {
+            if let Some(gpio_array) = gpio_val.as_array() {
+                if self.pin_map.logical_pins.is_empty() {
+                    for item in gpio_array {
+                        if let Some(pin_num) = item.get("pin").and_then(|v| v.as_u64().or_else(|| v.as_str().and_then(|s| s.parse().ok()))) {
+                            let label = item.get("label").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                            let physical = item.get("physicalPin").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                            
+                            self.pin_map.logical_pins.push(LogicalPin {
+                                name: pin_num.to_string(),
+                                physical_name: physical.clone(),
+                                default_mode: Some("digital".to_string()),
+                                restrictions: None,
+                                signal_type: None,
+                            });
+
+                            // Add to physical pins if it has a physical pin
+                            if !physical.is_empty() && self.pin_map.find_physical(&physical).is_none() {
+                                self.pin_map.physical_pins.push(PhysicalPin {
+                                    name: physical.clone(),
+                                    package: None,
+                                    pin_number: Some(pin_num as u32),
+                                    alt_functions: Vec::new(),
+                                });
+                            }
+
+                            // Sync capabilities
+                            let mut caps = PinCapabilities::default();
+                            
+                            // PWM
+                            if item.get("pwm").and_then(|v| v.as_bool()).unwrap_or(false) {
+                                caps.pwm = Some(PwmCapability {
+                                    min_freq_hz: None,
+                                    max_freq_hz: None,
+                                    resolution_bits: Some(8), // Default PWM resolution
+                                    timer: None,
+                                });
+                            }
+
+                            // ADC
+                            if item.get("adc").and_then(|v| v.as_bool()).unwrap_or(false) {
+                                caps.adc = Some(AdcCapability {
+                                    resolution_bits: 10, // Default 10-bit ADC
+                                    ref_voltage_mv: None,
+                                    channel: None,
+                                });
+                            }
+
+                            // Interrupt
+                            if item.get("interrupt").and_then(|v| v.as_bool()).unwrap_or(false) {
+                                caps.interrupt = Some(InterruptCapability {
+                                    triggers: vec![InterruptTrigger::Rising, InterruptTrigger::Falling, InterruptTrigger::Change],
+                                    exti_line: None,
+                                });
+                            }
+                            
+                            self.pin_capabilities.insert(pin_num.to_string(), caps);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Sync SvgMap side to PinCapabilities (physical hint)
+        if let Some(svg) = &self.svg_map {
+            for anchor in &svg.pin_anchors {
+                if let Some(caps) = self.pin_capabilities.get_mut(&anchor.pin) {
+                    // Update meta or physical hints based on side
+                }
+            }
+        }
+    }
+
+    /// Pre-process TOON string to make it compatible with YAML parser.
+    /// Strips comments and converts pipe tables to YAML lists.
+    fn preprocess_toon(content: &str) -> String {
+        let mut result = String::new();
+        let mut in_table = false;
+        let mut headers: Vec<String> = Vec::new();
+
+        for line in content.lines() {
+            let trimmed = line.trim();
+            
+            // Skip comments and empty lines (DON'T reset table state yet)
+            if trimmed.is_empty() || trimmed.starts_with('#') {
+                continue;
+            }
+
+            // Handle pipe tables
+            if trimmed.starts_with('|') && trimmed.ends_with('|') {
+                let parts: Vec<String> = trimmed[1..trimmed.len()-1]
+                    .split('|')
+                    .map(|s| s.trim().to_string())
+                    .collect();
+
+                if !in_table {
+                    // Start of table: first line is headers
+                    headers = parts;
+                    in_table = true;
+                } else if parts == headers {
+                    // Skip repeated header rows
+                    continue;
+                } else {
+                    // Row of data
+                    result.push_str("  - ");
+                    for (i, val) in parts.iter().enumerate() {
+                        if i < headers.len() {
+                            let key = &headers[i];
+                            if !key.is_empty() {
+                                // Decide whether to quote
+                                let should_quote = !(val.parse::<f64>().is_ok() || val == "true" || val == "false" || val.is_empty());
+                                
+                                if i == 0 {
+                                    if should_quote {
+                                        result.push_str(&format!("{}: \"{}\"\n", key, val));
+                                    } else {
+                                        let final_val = if val.is_empty() { "null" } else { val };
+                                        result.push_str(&format!("{}: {}\n", key, final_val));
+                                    }
+                                } else {
+                                    if should_quote {
+                                        result.push_str(&format!("    {}: \"{}\"\n", key, val));
+                                    } else {
+                                        let final_val = if val.is_empty() { "null" } else { val };
+                                        result.push_str(&format!("    {}: {}\n", key, final_val));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                continue;
+            }
+
+            // Regular YAML key-value or other (RESET table state here)
+            in_table = false;
+            headers.clear();
+            result.push_str(line);
+            result.push('\n');
+        }
+        result
     }
 
     /// Serialize this BoardProfile to a TOON string.
@@ -389,26 +655,27 @@ impl BoardProfile {
                 field: "name".to_string(),
             });
         }
-        if self.mcu.is_none() {
+        if self.mcu.is_empty() {
             errors.push(ValidationError::MissingField {
                 field: "mcu".to_string(),
             });
         }
 
-        // Validate ASL target
-        if self.asl_target.platform.is_empty() {
+        // Validate ASL target (using the primary one for now)
+        let target = self.asl_target();
+        if target.platform.is_empty() {
             errors.push(ValidationError::MissingAslTargetField {
-                target: self.asl_target.platform.clone(),
+                target: target.platform.clone(),
                 field: "platform".to_string(),
             });
         }
 
         // Validate confidence floor if present
-        if let Some(confidence) = self.asl_target.confidence_floor {
+        if let Some(confidence) = target.confidence_floor {
             if !(0.0..=1.0).contains(&confidence) {
                 errors.push(ValidationError::InvalidConfidence {
                     value: confidence as f32,
-                    target: self.asl_target.platform.clone(),
+                    target: target.platform.clone(),
                 });
             }
         }

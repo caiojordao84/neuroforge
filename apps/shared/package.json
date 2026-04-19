@@ -21,6 +21,10 @@
     },
     "./styles/*": {
       "import": "./src/styles/*.css"
+    },
+    "./wasm": {
+      "types": "./src/lib/wasm/neuroforge_asl.d.ts",
+      "import": "./src/lib/wasm/neuroforge_asl.js"
     }
   },
   "scripts": {

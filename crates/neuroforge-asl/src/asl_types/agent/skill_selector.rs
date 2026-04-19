@@ -52,9 +52,9 @@ impl SkillSelector {
     /// Returns the path to the appropriate skill file relative to skill_base_path.
     /// e.g., "languages/arduino-cpp-avr.md"
     pub fn select(&self, board: &BoardProfile, target: &AslTarget) -> String {
-        // 1. If target.agent_skill is set, use that directly
-        if let Some(agent_skill) = &target.agent_skill {
-            return agent_skill.clone();
+        // If specific agent skill is requested, use it
+        if !target.agent_skill.is_empty() {
+            return target.agent_skill.clone();
         }
 
         // 2. Check confidence floor - if below threshold, use base skill
@@ -298,7 +298,7 @@ mod tests {
     fn test_select_derives_from_platform_and_family() {
         let selector = SkillSelector::new("agent_skills".to_string());
         let board = create_test_board("avr-family", "ATmega328P");
-        let target = board.asl_target.clone();
+        let target = board.asl_target().clone();
 
         let result = selector.select(&board, &target);
         assert_eq!(result, "languages/arduino-cpp-avr.md");
@@ -308,8 +308,8 @@ mod tests {
     fn test_select_derives_rp2040_circuitpython() {
         let selector = SkillSelector::new("agent_skills".to_string());
         let mut board = create_test_board("rp2040-family", "RP2040");
-        board.asl_target.platform = "circuitpython".to_string();
-        let target = board.asl_target.clone();
+        board.asl_target_mut().platform = "circuitpython".to_string();
+        let target = board.asl_target().clone();
 
         let result = selector.select(&board, &target);
         assert_eq!(result, "languages/circuitpython-rp2040.md");

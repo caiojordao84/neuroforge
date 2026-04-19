@@ -30,6 +30,12 @@
       >
         Core
       </a>
+      <a 
+        class="text-xs font-mono font-medium uppercase transition-all duration-300 pb-1 {$page.url.pathname === '/schemasmith' ? 'text-primary-container border-b-2 border-primary-container' : 'text-on-surface-variant hover:text-on-surface'}" 
+        href="/schemasmith"
+      >
+        Schemasmith
+      </a>
     </nav>
   </div>
   

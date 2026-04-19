@@ -1,0 +1,38 @@
+id: lpcxpresso-lpc11u68
+name: "LPCXpresso LPC11U68"
+manufacturer: "Generic"
+mcu: "LPC11U68"
+category: "maker"
+image: "/boards/lpcxpresso-lpc11u68.svg"
+bootloader: "serial"
+languages: [2]: "rust","arduino-cpp"
+flashMemory: 262144
+sram: 36864
+clock_hz: 50000000
+voltage_mv: 3300
+neuroforge:
+  boardFamilySkillId: "avr-family"
+  boardProfileId: "lpcxpresso-lpc11u68"
+peripherals:
+  serial:
+    uarts: 1
+    pins: [2]: 0,1
+  i2c:
+    channels: 1
+    sda: 2
+    scl: 3
+  spi:
+    channels: 1
+    mosi: 11
+    miso: 12
+    sck: 13
+    ss: 10
+gpio: [8]{pin,label,type,pwm,adc,interrupt}:
+  0,D0,digital,true,false,true
+  1,D1,digital,true,false,true
+  2,D2,digital,false,false,true
+  3,D3,digital,false,false,true
+  4,D4,digital,false,false,false
+  5,D5,digital,true,false,false
+  6,D6,digital,true,false,false
+  14,A0,analog,false,true,false

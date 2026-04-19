@@ -131,6 +131,7 @@ opencode/
 graphify-out/
 .ruff_cache/
 notes/graphify
+notes/logseq
 
 # User-specific workspaces
 *.code-workspace

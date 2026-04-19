@@ -1,0 +1,29 @@
+{
+    "id": "stm32f4",
+    "name": "STM32 F4 Series",
+    "manufacturer": "STMicroelectronics",
+    "mcu": "STM32F405/407",
+    "category": "maker",
+    "image": "/boards/arduino-uno-r3.svg",
+    "specs": {
+        "flashMemory": 1048576,
+        "sram": 196608,
+        "eeprom": 0,
+        "clockSpeed": 168000000,
+        "voltage": 3.3
+    },
+    "neuroforge": {
+        "boardFamilySkillId": "stm32-family",
+        "boardProfileId": "stm32f4"
+    },
+    "gpio": [
+        { "pin": 0, "type": "special", "pwm": false, "label": "PA0/RESET" }
+    ],
+    "peripherals": {
+        "serial": { "uarts": 6 },
+        "i2c": { "channels": 3 },
+        "spi": { "channels": 3 }
+    },
+    "languages": ["arduino-cpp", "rust", "assembly"],
+    "bootloader": "ST-LINK"
+}
