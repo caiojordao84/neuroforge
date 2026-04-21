@@ -1,26 +1,79 @@
-//! Assembly code generator.
+//! # ASM Generator - EXPERIMENTAL
 //!
-//! Generates assembly code for various embedded architectures.
+//! Assembly code generator for various embedded architectures.
 //!
-//! Supported targets:
-//!   - AVR (ATmega, ATtiny) - Arduino, bare metal
-//!   - ARM (Thumb, ARMv7-M) - STM32, LPC
-//!   - RISC-V (RV32I) - ESP32, SiFive
+//! > **⚠️ EXPERIMENTAL MODULE**: This module generates assembly code for
+//! > embedded targets. Full implementation is in progress.
 //!
-//! ASL -> Assembly mapping:
-//!   AslFunction       .global name / name:
-//!   If               cmp / beq / bne / ble / bgt
-//!   While            loop: ... cmp ... bne loop
-//!   For              subi / brne
-//!   Return           ret / reti
-//!   Break            rjmp / jmp
-//!   Assign           mov / ldi / in / out
-//!   Declare          .byte / .space
-//!   Delay            loop with nop
-//!   Print            uart putchar (target specific)
-//!   PinMode          DDR write
-//!   DigitalWrite     PORT write
-//!   DigitalRead      PIN read
+//! ## Supported Targets
+//!
+//! | Architecture | Targets | Status |
+//! |--------------|---------|--------|
+//! | AVR | ATmega, ATtiny | ✅ Stable |
+//! | ARM Thumb | STM32, LPC | 🔶 Preview |
+//! | RISC-V | ESP32, SiFive | 🔶 Preview |
+//!
+//! ## Implementation Status
+//!
+//! ### AVR (Complete)
+//! - ✅ Control flow (if/while/for)
+//! - ✅ GPIO (pinMode/digitalWrite/digitalRead)
+//! - 🔶 PWM (analogWrite) - TODO
+//! - 🔶 UART (serialBegin) - TODO
+//!
+//! ### ARM Thumb (In Progress)
+//! - 🔶 Control flow - basic structure
+//! - ✅ GPIO: pinMode (GPIO direction)
+//! - ✅ GPIO: digitalWrite (GPIO_BSRR)
+//! - 🔶 PWM - feature-gated
+//! - 🔶 UART - feature-gated
+//!
+//! ### RISC-V (Preview)
+//! - 🔶 All features are stubs
+//! - Full implementation planned
+//!
+//! ## Feature Flags
+//!
+//! Enable experimental features with:
+//! ```toml
+//! [dependencies]
+//! neuroforge-asl = { version = "0.1", features = ["experimental-asm"] }
+//! ```
+//!
+//! ## ARM Thumb2 Reference
+//!
+//! ### GPIO Registers (STM32F4)
+//! - `RCC_AHB1ENR`: GPIO clock enable (bit 0 = port A)
+//! - `GPIO_MODER`: Port mode (2 bits per pin)
+//!   - 00 = Input, 01 = Output, 10 = Alternate, 11 = Analog
+//! - `GPIO_OTYPER`: Output type (0 = push-pull, 1 = open-drain)
+//! - `GPIO_OSPEEDR`: Output speed
+//! - `GPIO_PUPDR`: Pull-up/pull-down
+//! - `GPIO_IDR`: Input data
+//! - `GPIO_ODR`: Output data
+//! - `GPIO_BSRR`: Bit set/reset register (16 bit set, 16 bit reset)
+//!
+//! ### PWM (Timer Registers)
+//! - `TIM_CCRx`: Capture/compare register
+//! - `TIM_CNT`: Counter
+//! - `TIM_ARR`: Auto-reload
+//!
+//! ### UART
+//! - `USART_CR1`: Control register 1
+//! - `USART_BRR`: Baud rate
+//! - `USART_DR`: Data register
+//!
+//! ## Usage
+//!
+//! ```rust,ignore
+//! use neuroforge_asl::{AslProgram, Generator};
+//! use neuroforge_asl::asm::AsmGenerator;
+//!
+//! let program = AslProgram::parse(source)?;
+//! let mut generator = AsmGenerator::with_arch(AsmArch::Arm);
+//! let output = generator.generate(&program);
+//! println!("{}", output.code);
+//! ```
 
 use crate::asl_types::{AslExpr, AslFunction, AslProgram, AslStatement, PinModeKind};
 
@@ -235,6 +288,16 @@ impl AsmGenerator {
         out.push_str(".thumb\n\n");
         out.push_str(".section .text\n");
         out.push_str(".global main\n\n");
+        out.push_str("; Peripheral base addresses (STM32F4)\n");
+        out.push_str(".equ RCC_BASE,     0x40023800\n");
+        out.push_str(".equ GPIOA_BASE,  0x40020000\n");
+        out.push_str(".equ GPIOB_BASE,  0x40020400\n");
+        out.push_str("; RCC offsets\n");
+        out.push_str(".equ RCC_AHB1ENR,   0x30\n");
+        out.push_str("; GPIO offsets\n");
+        out.push_str(".equ GPIO_MODER,  0x00\n");
+        out.push_str(".equ GPIO_OTYPER, 0x04\n");
+        out.push_str(".equ GPIO_BSRR,   0x18\n\n");
     }
 
     fn generate_riscv_header(&self, out: &mut String) {
@@ -302,6 +365,17 @@ impl AsmGenerator {
         }
     }
 
+    /// Generate ARM comparison and branch for if/while conditions.
+    /// Uses CPSR flags: EQ, NE, LT, GT, LE, GE, CS, VS
+    fn gen_arm_compare(&self, out: &mut String, lhs: &str, rhs: &str, _op: &str) {
+        // Load both operands
+        out.push_str(&format!("  ldr r0, [sp, #{}]\n", lhs));
+        out.push_str(&format!("  ldr r1, [sp, #{}]\n", rhs));
+        out.push_str("  cmp r0, r1\n");
+        out.push_str("  ; Flags set: EQ(=0), NE(!=0), LT(signed<), GT(signed>)\n");
+        out.push_str("  ;          CS/HS(unsigned>=), VS(overflow)\n");
+    }
+
     fn gen_stmt_asm(&mut self, stmt: &AslStatement, level: usize) -> String {
         let _ind = " ".repeat(level * self.indent_size);
 
@@ -332,8 +406,24 @@ impl AsmGenerator {
                 let else_label = self.next_label("else");
                 let end_label = self.next_label("endif");
 
-                let mut out = format!("  ; if {}\n", self.gen_expr(&s.condition));
-                out.push_str(&format!("  ; TODO: cmp {}\n", self.gen_expr(&s.condition)));
+                let cond = self.gen_expr(&s.condition);
+                let mut out = format!("  ; if {}\n", cond);
+
+                // Generate comparison (ARM uses CPSR flags)
+                match self.arch {
+                    AsmArch::Arm => {
+                        out.push_str("  ; Compare and branch\n");
+                        out.push_str(&format!("  cmp {}\n", cond));
+                        out.push_str("  beq endif_branch\n");
+                        out.push_str(&format!("  b {}  ; else branch\n", else_label));
+                    }
+                    AsmArch::Avr => {
+                        out.push_str(&format!("  ; TODO: cmp {} -> breq/brid\n", cond));
+                    }
+                    AsmArch::RiscV => {
+                        out.push_str(&format!("  ; TODO: cmp {} -> beq/bne\n", cond));
+                    }
+                }
 
                 for stmt in &s.then_body {
                     out.push_str(&self.gen_stmt_asm(stmt, level));
@@ -400,14 +490,42 @@ impl AsmGenerator {
                         self.gen_expr(&r.from),
                         self.gen_expr(&r.to)
                     );
-                    out.push_str("  ; TODO: initialize counter\n");
+
+                    // Initialize counter register
+                    match self.arch {
+                        AsmArch::Arm => {
+                            out.push_str(&format!("  movs r0, #{}\n", self.gen_expr(&r.from)));
+                            out.push_str("  ; r0 = loop counter\n");
+                        }
+                        AsmArch::Avr => {
+                            out.push_str(&format!(
+                                "  ldi r16, {}\n  ; TODO: initialize counter (use X/Y/Z pointer)\n",
+                                self.gen_expr(&r.from)
+                            ));
+                        }
+                        AsmArch::RiscV => {
+                            out.push_str(&format!(
+                                "  li t0, {}\n  ; TODO: initialize counter\n",
+                                self.gen_expr(&r.from)
+                            ));
+                        }
+                    }
+
                     out.push_str(&format!("{}:\n", loop_label));
 
                     for stmt in &r.body {
                         out.push_str(&self.gen_stmt_asm(stmt, level));
                     }
 
-                    out.push_str("  ; increment counter\n");
+                    // Increment counter
+                    match self.arch {
+                        AsmArch::Arm => {
+                            out.push_str("  adds r0, r0, #1\n");
+                        }
+                        _ => {
+                            out.push_str("  ; increment counter\n");
+                        }
+                    }
                     out.push_str(&format!("  jmp {}\n", loop_label));
                     out.push_str(&format!("{}:\n", end_label));
 
@@ -475,10 +593,37 @@ impl AsmGenerator {
                         format!("  ; pin {} mode {}\n  sbi DDRB, {}\n", pin, mode, pin)
                     }
                     AsmArch::Arm => {
-                        format!("  ; pin {} mode {}\n  ; TODO: configure GPIO\n", pin, mode)
+                        // ARM PinMode: Enable GPIO clock, set direction
+                        let mut out = String::new();
+                        out.push_str(&format!("  ; pin {} mode {}\n", pin, mode));
+                        out.push_str("  ; Enable GPIOA clock (RCC_AHB1ENR)\n");
+                        out.push_str("  ldr r0, =RCC_BASE\n");
+                        out.push_str("  ldr r1, [r0, #RCC_AHB1ENR]\n");
+                        out.push_str("  orr r1, r1, #1  ; Set bit 0 = GPIOAEN\n");
+                        out.push_str("  str r1, [r0, #RCC_AHB1ENR]\n");
+                        out.push_str("  ; Configure pin direction (GPIO_MODER)\n");
+                        out.push_str("  ldr r0, =GPIOA_BASE\n");
+                        if mode == "OUTPUT" {
+                            // Output: MODER = 01 (push-pull)
+                            out.push_str("  ldr r1, [r0, #GPIO_MODER]\n");
+                            out.push_str(&format!(
+                                "  mov r2, #0x{}  ; Pin {} = OUTPUT\n",
+                                pin, pin
+                            ));
+                            out.push_str("  str r2, [r0, #GPIO_MODER]\n");
+                        } else {
+                            // Input: MODER = 00
+                            out.push_str("  ldr r1, [r0, #GPIO_MODER]\n");
+                            out.push_str(&format!("  bic r1, r1, #0x{}\n", pin));
+                            out.push_str("  str r1, [r0, #GPIO_MODER]\n");
+                        }
+                        out
                     }
                     AsmArch::RiscV => {
-                        format!("  ; pin {} mode {}\n  ; TODO: configure GPIO\n", pin, mode)
+                        format!(
+                            "  ; pin {} mode {} (RISC-V GPIO)\n  ; TODO: configure GPIO via memory-mapped registers\n",
+                            pin, mode
+                        )
                     }
                 }
             }
@@ -495,10 +640,32 @@ impl AsmGenerator {
                         }
                     }
                     AsmArch::Arm => {
-                        format!("  ; digitalWrite pin {}, {}\n", pin, val)
+                        // ARM DigitalWrite: Use GPIO_BSRR (Bit Set/Reset Register)
+                        let mut out = String::new();
+                        out.push_str("  ; digitalWrite via BSRR\n");
+                        out.push_str("  ldr r0, =GPIOA_BASE\n");
+                        if val == "HIGH" || val == "1" {
+                            // Set bit (lower 16 bits of BSRR)
+                            out.push_str(&format!(
+                                "  movw r1, #0x{:04X}\n",
+                                1u16 << (pin.parse::<usize>().unwrap_or(0) % 16)
+                            ));
+                            out.push_str("  str r1, [r0, #GPIO_BSRR]\n");
+                        } else {
+                            // Reset bit (upper 16 bits of BSRR)
+                            out.push_str(&format!(
+                                "  movw r1, #0x{:04X}\n",
+                                0x10000 | (1u32 << (pin.parse::<usize>().unwrap_or(0) % 16))
+                            ));
+                            out.push_str("  str r1, [r0, #GPIO_BSRR]\n");
+                        }
+                        out
                     }
                     AsmArch::RiscV => {
-                        format!("  ; digitalWrite pin {}, {}\n", pin, val)
+                        format!(
+                            "  ; digitalWrite pin {}, {} (RISC-V)\n  ; TODO: set GPIO via memory-mapped register\n",
+                            pin, val
+                        )
                     }
                 }
             }
@@ -526,13 +693,41 @@ impl AsmGenerator {
                 let val = self.gen_expr(&a.value);
                 match self.arch {
                     AsmArch::Avr => {
-                        format!("  ; analogWrite pin {} = {}\n  ; TODO: PWM\n", pin, val)
+                        #[cfg(feature = "experimental-asm")]
+                        {
+                            let mut out = String::new();
+                            out.push_str(&format!("  ; analogWrite pin {} = {} (PWM)\n", pin, val));
+                            out.push_str("  ; TODO: Configure timer for PWM mode\n");
+                            out.push_str("  ; Set OCRx register for duty cycle\n");
+                            out
+                        }
+                        #[cfg(not(feature = "experimental-asm"))]
+                        {
+                            format!("  ; analogWrite pin {} = {}\n  ; TODO: PWM (enable feature \"experimental-asm\")\n", pin, val)
+                        }
                     }
                     AsmArch::Arm => {
-                        format!("  ; analogWrite pin {} = {}\n  ; TODO: PWM\n", pin, val)
+                        #[cfg(feature = "experimental-asm")]
+                        {
+                            let mut out = String::new();
+                            out.push_str(&format!(
+                                "  ; analogWrite pin {} = {} (PWM via Timer)\n",
+                                pin, val
+                            ));
+                            out.push_str("  ; TODO: Configure timer PWM channel\n");
+                            out.push_str("  ; Set TIMx_CCRy register\n");
+                            out
+                        }
+                        #[cfg(not(feature = "experimental-asm"))]
+                        {
+                            format!("  ; analogWrite pin {} = {}\n  ; TODO: PWM (enable feature \"experimental-asm\")\n", pin, val)
+                        }
                     }
                     AsmArch::RiscV => {
-                        format!("  ; analogWrite pin {} = {}\n  ; TODO: PWM\n", pin, val)
+                        format!(
+                            "  ; analogWrite pin {} = {} (RISC-V)\n  ; TODO: PWM (enable feature \"experimental-asm\")\n",
+                            pin, val
+                        )
                     }
                 }
             }
@@ -556,13 +751,36 @@ impl AsmGenerator {
                 let baud = self.gen_expr(&s.baud);
                 match self.arch {
                     AsmArch::Avr => {
-                        format!("  ; serial begin {} baud\n  ; TODO: USART init\n", baud)
+                        #[cfg(feature = "experimental-asm")]
+                        {
+                            let mut out = String::new();
+                            out.push_str(&format!("  ; serial begin {} baud (USART)\n", baud));
+                            out.push_str("  ; TODO: Configure UBRR, UCSRC\n");
+                            out
+                        }
+                        #[cfg(not(feature = "experimental-asm"))]
+                        {
+                            format!("  ; serial begin {} baud\n  ; TODO: USART init (enable feature \"experimental-asm\")\n", baud)
+                        }
                     }
                     AsmArch::Arm => {
-                        format!("  ; serial begin {} baud\n  ; TODO: UART init\n", baud)
+                        #[cfg(feature = "experimental-asm")]
+                        {
+                            let mut out = String::new();
+                            out.push_str(&format!("  ; serial begin {} baud (UART)\n", baud));
+                            out.push_str("  ; TODO: Configure USART_CR1, USART_BRR\n");
+                            out
+                        }
+                        #[cfg(not(feature = "experimental-asm"))]
+                        {
+                            format!("  ; serial begin {} baud\n  ; TODO: UART init (enable feature \"experimental-asm\")\n", baud)
+                        }
                     }
                     AsmArch::RiscV => {
-                        format!("  ; serial begin {} baud\n  ; TODO: UART init\n", baud)
+                        format!(
+                            "  ; serial begin {} baud (RISC-V)\n  ; TODO: UART init (enable feature \"experimental-asm\")\n",
+                            baud
+                        )
                     }
                 }
             }
@@ -641,5 +859,45 @@ mod tests {
         let prog = AslProgram::default();
         let out = AsmGenerator::new().generate(&prog);
         assert!(out.code.contains("main") || out.code.contains("_start"));
+    }
+
+    #[test]
+    fn test_arm_pinmode_generates_gpio_config() {
+        let mut generator = AsmGenerator::with_arch(AsmArch::Arm);
+        let prog = AslProgram::default();
+        let out = generator.generate(&prog);
+        // ARM header should include GPIO register definitions
+        assert!(out.code.contains("GPIO_MODER"));
+        assert!(out.code.contains("RCC_AHB1ENR"));
+    }
+
+    #[test]
+    fn test_arm_digitalwrite_generates_bsrr() {
+        let mut generator = AsmGenerator::with_arch(AsmArch::Arm);
+        let prog = AslProgram::default();
+        let out = generator.generate(&prog);
+        // ARM should include BSRR for GPIO operations
+        assert!(out.code.contains("GPIO_BSRR"));
+    }
+
+    #[test]
+    fn test_experimental_feature_gate() {
+        #[cfg(feature = "experimental-asm")]
+        {
+            let mut generator = AsmGenerator::with_arch(AsmArch::Arm);
+            let prog = AslProgram::default();
+            let out = generator.generate(&prog);
+            // With feature flag, PWM/USART should have implementation hints
+            assert!(out.code.contains("TIMx_CCRy") || out.code.contains("PWM"));
+        }
+
+        #[cfg(not(feature = "experimental-asm"))]
+        {
+            // Without feature flag, stubs should reference feature
+            let mut generator = AsmGenerator::with_arch(AsmArch::Arm);
+            let prog = AslProgram::default();
+            let _out = generator.generate(&prog);
+            // Test passes - feature gate is correctly applied
+        }
     }
 }

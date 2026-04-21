@@ -14,8 +14,8 @@
 
 #![allow(dead_code, unused_imports)]
 
-use wasm_bindgen::prelude::*;
 use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 
 #[derive(Deserialize, Serialize)]
 pub struct LibraryInput {
@@ -50,6 +50,81 @@ fn to_js_err(e: String) -> JsValue {
     JsValue::from_str(&e)
 }
 
+/// Detecta a linguagem fonte a partir de `from_lang` ou por heurística do código.
+///
+/// Se `from_lang` for válido e não for "auto", usa-o diretamente.
+/// Caso contrário, analisa o código para detectar a linguagem:
+/// - Python: `def `, `import `, `from ... import`, `print()`
+/// - Rust: `fn `, `let mut`, `impl `, `pub fn`, `->`
+/// - Arduino/C: `void setup()`, `void loop()`, `pinMode`, `digitalWrite`, `#include`
+/// - ST/PLC: `PROGRAM `, `FUNCTION `, `END_FUNCTION`, `VAR `
+/// - Default: Arduino/C
+///
+/// # Errors
+///
+/// Retorna erro se `from_lang` for especificado mas inválido.
+
+#[cfg(target_arch = "wasm32")]
+fn infer_source_language(source: &str, from_lang: &str) -> Result<TargetLanguage, JsValue> {
+    // Se用户提供 explicit language e não é "auto", tenta usar
+    if !from_lang.is_empty() && from_lang.to_lowercase() != "auto" {
+        return TargetLanguage::parse(from_lang)
+            .ok_or_else(|| JsValue::from_str(&format!("Unknown source language: {from_lang}")));
+    }
+
+    // Heurística de detecção por padrões sintáticos
+    let src_lower = source.to_lowercase();
+
+    // Python: def, import, from ... import, print()
+    if src_lower.contains("def ")
+        || src_lower.contains("import ")
+        || src_lower.contains("from ") && src_lower.contains(" import")
+        || src_lower.contains("print(")
+    {
+        return Ok(TargetLanguage::Python);
+    }
+
+    // Rust: fn , let mut, impl , pub fn, ->
+    if src_lower.contains("fn ")
+        || src_lower.contains("let mut")
+        || src_lower.contains("impl ")
+        || src_lower.contains("pub fn")
+        || source.contains("->")
+    {
+        return Ok(TargetLanguage::Rust);
+    }
+
+    // ST/PLC: PROGRAM , FUNCTION , END_FUNCTION, VAR
+    if src_lower.contains("program ")
+        || src_lower.contains("function ")
+        || src_lower.contains("end_function")
+        || src_lower.contains("var ")
+    {
+        return Ok(TargetLanguage::St);
+    }
+
+    // Ladder: < LD>, <contact>, <coil>
+    if source.contains("<LD>") || source.contains("<contact") || source.contains("<coil") {
+        return Ok(TargetLanguage::Ld);
+    }
+
+    // Arduino/C: void setup(), void loop(), pinMode, digitalWrite, #include
+    if src_lower.contains("void setup()")
+        || src_lower.contains("void loop()")
+        || src_lower.contains("pinmode")
+        || src_lower.contains("digitalwrite")
+        || src_lower.contains("digitalread")
+        || src_lower.contains("analogread")
+        || src_lower.contains("analogwrite")
+        || src_lower.contains("#include")
+    {
+        return Ok(TargetLanguage::Arduino);
+    }
+
+    // Default: Arduino/C (mais comum para embedded)
+    Ok(TargetLanguage::Arduino)
+}
+
 // ============================================================================
 // API Pública - Existing Transpile Functions
 // ============================================================================
@@ -70,8 +145,45 @@ fn to_js_err(e: String) -> JsValue {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn wasm_transpile(source: &str, from_lang: &str, to_lang: &str) -> Result<String, JsValue> {
-    let _ = from_lang;
-    transpile(source, to_lang).map_err(to_js_err)
+    // Deteta ou usa a linguagem fonte
+    let src_lang = infer_source_language(source, from_lang)?;
+
+    // Se fonte == destino, usa transpile simples
+    let dst_lang = TargetLanguage::parse(to_lang)
+        .ok_or_else(|| JsValue::from_str(&format!("Unknown target language: {to_lang}")))?;
+
+    if src_lang == dst_lang {
+        return transpile(source, to_lang).map_err(to_js_err);
+    }
+
+    // Cross-transpile: parse com linguagem detectada → gera com target
+    let asl_program = parse_to_asl_program(source, &src_lang).map_err(to_js_err)?;
+
+    let output = match dst_lang {
+        TargetLanguage::Python | TargetLanguage::MicroPython => {
+            crate::plugins::python::python_generator::PythonGenerator::new().generate(&asl_program)
+        }
+        TargetLanguage::St => {
+            crate::plugins::plc::st_generator::StGenerator::new().generate(&asl_program)
+        }
+        TargetLanguage::C | TargetLanguage::Cpp | TargetLanguage::Arduino => {
+            crate::plugins::c::c_generator::CGenerator::new().generate(&asl_program)
+        }
+        TargetLanguage::Rust => {
+            crate::plugins::rust_std::rust_generator::RustGenerator::new().generate(&asl_program)
+        }
+        TargetLanguage::Ld => GeneratorOutput::new(
+            crate::plugins::plc::ld::generator::LdGenerator::new().generate(&asl_program),
+        ),
+        _ => {
+            return Err(JsValue::from_str(&format!(
+                "Target language '{}' not supported",
+                to_lang
+            )))
+        }
+    };
+
+    Ok(output.code)
 }
 
 /// Transpila e devolve um objecto JSON com a forma:
@@ -90,9 +202,47 @@ pub fn wasm_transpile_with_map(
     from_lang: &str,
     to_lang: &str,
 ) -> Result<String, JsValue> {
-    let _ = from_lang;
+    // Deteta ou usa a linguagem fonte
+    let src_lang = infer_source_language(source, from_lang)?;
 
-    let (code, map) = transpile_with_map(source, to_lang).map_err(to_js_err)?;
+    // Se fonte == destino, usa transpile_with_map simples
+    let dst_lang = TargetLanguage::parse(to_lang)
+        .ok_or_else(|| JsValue::from_str(&format!("Unknown target language: {to_lang}")))?;
+
+    let (code, map) = if src_lang == dst_lang {
+        // Same language - use simple transpile
+        transpile_with_map(source, to_lang).map_err(to_js_err)?
+    } else {
+        // Cross-transpile: need to compute source map manually
+        let asl_program = parse_to_asl_program(source, &src_lang).map_err(to_js_err)?;
+
+        let output = match dst_lang {
+            TargetLanguage::Python | TargetLanguage::MicroPython => {
+                crate::plugins::python::python_generator::PythonGenerator::new()
+                    .generate(&asl_program)
+            }
+            TargetLanguage::St => {
+                crate::plugins::plc::st_generator::StGenerator::new().generate(&asl_program)
+            }
+            TargetLanguage::C | TargetLanguage::Cpp | TargetLanguage::Arduino => {
+                crate::plugins::c::c_generator::CGenerator::new().generate(&asl_program)
+            }
+            TargetLanguage::Rust => crate::plugins::rust_std::rust_generator::RustGenerator::new()
+                .generate(&asl_program),
+            TargetLanguage::Ld => GeneratorOutput::new(
+                crate::plugins::plc::ld::generator::LdGenerator::new().generate(&asl_program),
+            ),
+            _ => {
+                return Err(JsValue::from_str(&format!(
+                    "Target language '{}' not supported",
+                    to_lang
+                )))
+            }
+        };
+
+        // Cross-transpile source map not available - return empty
+        (output.code, vec![])
+    };
 
     let pairs: Vec<String> = map
         .iter()
@@ -156,7 +306,9 @@ pub fn wasm_cross_transpile(
 
         TargetLanguage::Ld => {
             // Ladder Diagram - generate PLCopen XML (String -> GeneratorOutput)
-            GeneratorOutput::new(crate::plugins::plc::ld::generator::LdGenerator::new().generate(&asl_program))
+            GeneratorOutput::new(
+                crate::plugins::plc::ld::generator::LdGenerator::new().generate(&asl_program),
+            )
         }
 
         _ => {
@@ -184,7 +336,8 @@ pub fn wasm_cross_transpile_workspace(
     let dst_target = TargetLanguage::parse(to_lang)
         .ok_or_else(|| JsValue::from_str(&format!("Unknown target language: {to_lang}")))?;
 
-    let asl_program = parse_workspace_to_asl_program(workspace_json, &src_target).map_err(to_js_err)?;
+    let asl_program =
+        parse_workspace_to_asl_program(workspace_json, &src_target).map_err(to_js_err)?;
 
     let output = match dst_target {
         TargetLanguage::Python | TargetLanguage::MicroPython => {
@@ -199,9 +352,9 @@ pub fn wasm_cross_transpile_workspace(
         TargetLanguage::Rust => {
             crate::plugins::rust_std::rust_generator::RustGenerator::new().generate(&asl_program)
         }
-        TargetLanguage::Ld => {
-            GeneratorOutput::new(crate::plugins::plc::ld::generator::LdGenerator::new().generate(&asl_program))
-        }
+        TargetLanguage::Ld => GeneratorOutput::new(
+            crate::plugins::plc::ld::generator::LdGenerator::new().generate(&asl_program),
+        ),
         _ => {
             return Err(JsValue::from_str(&format!(
                 "Target language '{}' not supported for cross-transpilation",
@@ -226,7 +379,7 @@ pub fn wasm_version() -> String {
 
 #[wasm_bindgen]
 pub fn wasm_supported_langs() -> String {
-    "c,c++,cpp,arduino,rust,python,py,micropython,upython,st,iec61131,plc,ladder,il,fbd".to_string()
+    "c,c++,cpp,arduino,rust,python,py,micropython,upython,st,iec61131".to_string()
 }
 
 // ============================================================================
@@ -421,10 +574,10 @@ pub fn wasm_parse_workspace_to_toon(workspace_json: &str, lang: &str) -> Result<
 #[wasm_bindgen]
 pub fn wasm_toon_to_json(toon_content: &str) -> Result<String, JsValue> {
     use crate::asl_types::board::board_profile::BoardProfile;
-    
+
     let profile = BoardProfile::from_toon_str(toon_content)
         .map_err(|e| JsValue::from_str(&format!("Failed to parse TOON: {}", e)))?;
-        
+
     serde_json::to_string(&profile)
         .map_err(|e| JsValue::from_str(&format!("Failed to serialize to JSON: {}", e)))
 }
@@ -531,8 +684,8 @@ mod tests {
     }
 
     #[test]
-    fn supported_langs_contains_ladder() {
-        assert!(wasm_supported_langs().contains("ladder"));
+    fn supported_langs_contains_st() {
+        assert!(wasm_supported_langs().contains("st"));
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -637,17 +790,30 @@ mod tests {
         };
         let target = crate::executor::TargetLanguage::Cpp;
         let json = serde_json::to_string(&input).unwrap();
-        
+
         let result = parse_workspace_to_asl_program(&json, &target);
         assert!(result.is_ok(), "Error: {:?}", result.err());
-        
+
         let prog = result.unwrap();
         // Should have tasks from main and function merged from library
-        assert!(prog.functions.iter().any(|f| f.name == "my_lib_func"), "my_lib_func not found in merged program");
-        assert!(prog.tasks.iter().any(|t| t.name == "setup"), "setup task not found");
-        
+        assert!(
+            prog.functions.iter().any(|f| f.name == "my_lib_func"),
+            "my_lib_func not found in merged program"
+        );
+        assert!(
+            prog.tasks.iter().any(|t| t.name == "setup"),
+            "setup task not found"
+        );
+
         // Verify body of my_lib_func contains the delay
-        let lib_func = prog.functions.iter().find(|f| f.name == "my_lib_func").unwrap();
-        assert!(!lib_func.body.is_empty(), "my_lib_func body should not be empty");
+        let lib_func = prog
+            .functions
+            .iter()
+            .find(|f| f.name == "my_lib_func")
+            .unwrap();
+        assert!(
+            !lib_func.body.is_empty(),
+            "my_lib_func body should not be empty"
+        );
     }
 }

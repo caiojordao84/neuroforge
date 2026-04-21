@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "neuroforge_desktop_lib"
+name = "neuroforge_mobile_lib"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

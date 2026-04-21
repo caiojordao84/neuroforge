@@ -73,7 +73,8 @@ class IDEState {
       if (canonical.length > 0) {
         this.availableLanguages = canonical;
       }
-    } catch {
+} catch (e) {
+      console.error('[IdeState] Failed to load languages:', e);
       // keep defaults
     }
   }
@@ -114,7 +115,8 @@ class IDEState {
       }
       this.activeTab = 'asl';
       this.addLog('ASL IR (TOON) generated successfully.', 'success');
-    } catch (e) {
+} catch (e) {
+      console.error('[IdeState] Failed to parse:', e);
       this.addLog('ASL parse failed: ' + String(e), 'error');
     }
   }
@@ -145,7 +147,8 @@ class IDEState {
       }
       this.addLog('Simulation build successful.', 'success');
       this.addLog('Running on virtual target...', 'info');
-    } catch (e) {
+} catch (e) {
+      console.error('[IdeState] Simulation failed:', e);
       this.addLog('Simulation error: ' + String(e), 'error');
     }
   }

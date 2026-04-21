@@ -17,7 +17,7 @@
 
 use thiserror::Error;
 
-use crate::asl_types::{LadderCoil, LadderContact, LadderElement, LadderProgram, LadderRung};
+use crate::asl_types::{LadderElement, LadderProgram, LadderRung};
 
 /// Errors that can occur during ladder-to-ST conversion
 #[derive(Debug, Error)]

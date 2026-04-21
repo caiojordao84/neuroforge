@@ -12,16 +12,58 @@ export interface WorkspaceInput {
   libraries: LibraryInput[];
 }
 
+/**
+ * Interface for the neuroforge-asl WASM module
+ * Based on Rust WASM bindings in crates/neuroforge-asl/src/wasm/bindings.rs
+ */
+interface WasmModule {
+  // Version and info
+  wasm_version(): string;
+  wasm_supported_langs(): string;
+
+  // Core transpilation
+  wasm_transpile(source: string, from_lang: string, to_lang: string): string;
+  wasm_transpile_with_map(source: string, from_lang: string, to_lang: string): string;
+
+  // Cross-language transpilation
+  wasm_cross_transpile(source: string, from_lang: string, to_lang: string): string;
+  wasm_cross_transpile_workspace(workspace_json: string, from_lang: string, to_lang: string): string;
+
+  // Parsing to ASL IR
+  wasm_parse_to_asl(source: string, lang: string): string;
+  wasm_parse_to_toon(source: string, lang: string): string;
+
+  // Workspace parsing
+  wasm_parse_workspace_to_toon(workspace_json: string, lang: string): string;
+  wasm_parse_workspace_to_asl(workspace_json: string, lang: string): string;
+
+  // Diagnostics
+  wasm_get_diagnostics(source: string, lang: string): string;
+  wasm_check_types(source: string, lang: string): string;
+
+  // TOON format
+  wasm_toon_to_json(toon_content: string): string;
+
+  // Ladder Diagram (LD) support
+  wasm_parse_ld_to_asl(xml_source: string): string;
+  wasm_asl_to_ld(asl_json: string): string;
+  wasm_st_to_ld(st_source: string): string;
+  wasm_to_ld(source: string, from_lang: string): string;
+  wasm_validate_ld(xml_source: string): string;
+
+  // Default init function from wasm-bindgen
+  default(): Promise<unknown>;
+}
+
 class AslState {
   ready    = $state(false);
   error    = $state<string | null>(null);
-  #mod: any = null;
+  #mod: WasmModule | null = null;
 
   async init() {
     if (this.ready) return;
     try {
-      // @ts-ignore - uses the standardized workspace export for reliable monorepo resolution
-      const mod = await import("./pkg/neuroforge_asl.js");
+      const mod = await import("./pkg/neuroforge_asl.js") as WasmModule;
       await mod.default(); // calls init() from wasm-bindgen
       this.#mod = mod;
       this.ready = true;
@@ -52,56 +94,50 @@ class AslState {
    */
   toonToJson(toonContent: string): string {
     this.assertReady();
-    return this.#mod.wasm_toon_to_json(toonContent);
+    return this.#mod!.wasm_toon_to_json(toonContent);
   }
 
   transpile(source: string, fromLang: string, toLang: string): string {
     this.assertReady();
-    return this.#mod.wasm_transpile(source, fromLang, toLang);
+    return this.#mod!.wasm_transpile(source, fromLang, toLang);
   }
 
   transpileWithMap(source: string, fromLang: string, toLang: string): { output: string; source_map: [number, number][] } {
     this.assertReady();
-    return JSON.parse(this.#mod.wasm_transpile_with_map(source, fromLang, toLang));
+    return JSON.parse(this.#mod!.wasm_transpile_with_map(source, fromLang, toLang));
   }
 
   parseToAsl(source: string, lang: string): unknown {
     this.assertReady();
-    // @ts-ignore
-    return JSON.parse(this.#mod.wasm_parse_to_asl(source, lang));
+    return JSON.parse(this.#mod!.wasm_parse_to_asl(source, lang));
   }
 
   parseToToon(source: string, lang: string): string {
     this.assertReady();
-    // @ts-ignore
-    return this.#mod.wasm_parse_to_toon(source, lang);
+    return this.#mod!.wasm_parse_to_toon(source, lang);
   }
 
   /** Cross-language transpilation */
   crossTranspile(source: string, fromLang: string, toLang: string): string {
     this.assertReady();
-    // @ts-ignore
-    return this.#mod.wasm_cross_transpile(source, fromLang, toLang);
+    return this.#mod!.wasm_cross_transpile(source, fromLang, toLang);
   }
 
   /** VFS Workspace: Transpile multi-file workspace */
   transpileWorkspace(workspace: WorkspaceInput, fromLang: string, toLang: string): string {
     this.assertReady();
-    // @ts-ignore
-    return this.#mod.wasm_cross_transpile_workspace(JSON.stringify(workspace), fromLang, toLang);
+    return this.#mod!.wasm_cross_transpile_workspace(JSON.stringify(workspace), fromLang, toLang);
   }
 
   /** VFS Workspace: Parse multi-file to TOON */
   parseWorkspaceToToon(workspace: WorkspaceInput, lang: string): string {
     this.assertReady();
-    // @ts-ignore
-    return this.#mod.wasm_parse_workspace_to_toon(JSON.stringify(workspace), lang);
+    return this.#mod!.wasm_parse_workspace_to_toon(JSON.stringify(workspace), lang);
   }
 
   getDiagnostics(source: string, lang: string): Array<{ severity: string; context: string; message: string }> {
     this.assertReady();
-    // @ts-ignore
-    return JSON.parse(this.#mod.wasm_get_diagnostics(source, lang));
+    return JSON.parse(this.#mod!.wasm_get_diagnostics(source, lang));
   }
 
   // ===== Ladder Diagram (LD) Support =====
@@ -113,8 +149,7 @@ class AslState {
   parseLdToAsl(ldSource: string): unknown {
     if (!this.#mod) throw new Error('WASM não inicializado');
     try {
-      // @ts-ignore
-      return JSON.parse(this.#mod.wasm_parse_to_asl(ldSource, 'ld'));
+      return JSON.parse(this.#mod!.wasm_parse_to_asl(ldSource, 'ld'));
     } catch {
       // If 'ld' parser doesn't exist, return manual conversion
       return this.manualLdToAsl(ldSource);
@@ -127,8 +162,7 @@ class AslState {
   aslToLd(aslSource: string): string {
     if (!this.#mod) throw new Error('WASM não inicializado');
     try {
-      // @ts-ignore - try cross transpile ASL -> LD
-      return this.#mod.wasm_cross_transpile(aslSource, 'asl', 'ld');
+      return this.#mod!.wasm_cross_transpile(aslSource, 'asl', 'ld');
     } catch {
       // Fallback: manual conversion
       return this.manualAslToLd(aslSource);

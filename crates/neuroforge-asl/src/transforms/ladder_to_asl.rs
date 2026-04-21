@@ -331,7 +331,7 @@ impl AslToLadderGenerator {
     fn expr_to_contacts(
         expr: &crate::types::asl_types::AslExpr,
     ) -> Vec<crate::asl_types::LadderElement> {
-        use crate::types::asl_types::{AslBinary, AslExpr, AslUnary, BinaryOp, UnaryOp};
+        use crate::types::asl_types::{AslExpr, BinaryOp, UnaryOp};
 
         let mut contacts = Vec::new();
 

@@ -355,19 +355,19 @@ impl AslExecutor {
             }
 
             TargetLanguage::Il => {
-                Err("IL (Instruction List) not yet implemented -- Phase 2 PLC".to_string())
+                Err("IL (Instruction List) not implemented. Supported: c, cpp, arduino, rust, python, micropython, st. See Phase 2 PLC roadmap.".to_string())
             }
 
             TargetLanguage::Ld => {
-                Err("LD (Ladder Diagram) not yet implemented -- Phase 2 PLC".to_string())
+                Err("LD (Ladder Diagram) not implemented. Supported: c, cpp, arduino, rust, python, micropython, st. See Phase 2 PLC roadmap.".to_string())
             }
 
             TargetLanguage::Fbd => {
-                Err("FBD (Function Block Diagram) not yet implemented -- Phase 2 PLC".to_string())
+                Err("FBD (Function Block Diagram) not implemented. Supported: c, cpp, arduino, rust, python, micropython, st. See Phase 2 PLC roadmap.".to_string())
             }
 
             TargetLanguage::Sfc => Err(
-                "SFC (Sequential Function Chart) not yet implemented -- Phase 2 PLC".to_string(),
+                "SFC (Sequential Function Chart) not implemented. Supported: c, cpp, arduino, rust, python, micropython, st. See Phase 2 PLC roadmap.".to_string(),
             ),
         }
     }

@@ -1,3 +1,3 @@
-﻿fn main() {
-    neuroforge_desktop_lib::run()
+fn main() {
+    neuroforge_mobile_lib::run()
 }
