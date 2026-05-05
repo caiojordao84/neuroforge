@@ -8,22 +8,22 @@ Este documento é o guia operacional da migração. Cada item é accionável e s
 
 ### O que existe em Rust (a migrar)
 
-| Crate | Módulos principais | Estado |
-|-------|-------------------|--------|
-| `crates/dendriforge-asl` | parser/, generator/, executor/, asl_types/, plugins/ (14 linguagens), optimizer/, transforms/, flow/ | ✅ Funcional |
-| `crates/dendriforge-sim` | Motor de simulação de hardware | ⚠️ Parcial |
-| `crates/dendriforge-firmware` | Firmware embarcado Embassy | 🔄 Base |
-| `crates/dendriforge-transport` | Serial + WebSocket transport | ✅ Protocolo definido |
+| Crate                          | Módulos principais                                                                                   | Estado               |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------- | -------------------- |
+| `crates/dendriforge-asl`       | parser/, generator/, executor/, asl_types/, plugins/ (14 linguagens), optimizer/, transforms/, flow/ | ✅ Funcional          |
+| `crates/dendriforge-sim`       | Motor de simulação de hardware                                                                       | ⚠️ Parcial            |
+| `crates/dendriforge-firmware`  | Firmware embarcado Embassy                                                                           | 🔄 Base               |
+| `crates/dendriforge-transport` | Serial + WebSocket transport                                                                         | ✅ Protocolo definido |
 
 ### O que existe em TypeScript (manter/adaptar)
 
-| App | Conteúdo | Decisão |
-|-----|----------|----------|
-| `apps/webapp` | SvelteKit, rotas `/transpile`, `/plc`, `/schemasmith` | ✅ Manter — adaptar para consumir API Python |
-| `apps/shared` | Componentes, tipos, `static/boards/` (>100 .toon) | ✅ Manter intacto |
-| `apps/schemasmith` | Editor de schemas | ✅ Manter |
-| `apps/desktop` | Tauri scaffold | ⏳ Adiar para pós v1.0 |
-| `apps/mobile` | App scaffold | ⏳ Adiar para pós v1.0 |
+| App                | Conteúdo                                              | Decisão                                     |
+| ------------------ | ----------------------------------------------------- | ------------------------------------------- |
+| `apps/webapp`      | SvelteKit, rotas `/transpile`, `/plc`, `/schemasmith` | ✅ Manter — adaptar para consumir API Python |
+| `apps/shared`      | Componentes, tipos, `static/boards/` (>100 .toon)     | ✅ Manter intacto                            |
+| `apps/schemasmith` | Editor de schemas                                     | ✅ Manter                                    |
+| `apps/desktop`     | Tauri scaffold                                        | ⏳ Adiar para pós v1.0                       |
+| `apps/mobile`      | App scaffold                                          | ⏳ Adiar para pós v1.0                       |
 
 ### O que vai ser eliminado
 
@@ -308,4 +308,4 @@ Os seguintes ficheiros nos crates são casos de teste reais para validar a imple
 - `crates/dendriforge-asl/` — `st_result.txt` (output ST esperado)
 - `docs/serial-gpio-protocol.md` — protocolo de comunicação série
 - `docs/boards-documentation.md` — specs das boards
-- `apps/shared/static/boards/*.toon` — >100 boards reais para testar o loader
+- `core/boards/*.toon` — >100 boards reais para usar no simulador, agente IA e testar o loader
