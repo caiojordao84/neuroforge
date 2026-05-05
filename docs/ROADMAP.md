@@ -1,6 +1,6 @@
-# NeuroForge — Roadmap
+# DendriForge — Roadmap
 
-Este roadmap descreve as fases de migração do NeuroForge de Rust para Python e o desenvolvimento subsequente de todas as funcionalidades planeadas. Sem datas — o progresso é medido por marcos.
+Este roadmap descreve as fases de migração do DendriForge de Rust para Python e o desenvolvimento subsequente de todas as funcionalidades planeadas. Sem datas — o progresso é medido por marcos.
 
 ---
 
@@ -22,24 +22,34 @@ Este roadmap descreve as fases de migração do NeuroForge de Rust para Python e
 
 ## Fase 1 — Python Core: ASL Engine 🔄
 
-**Objectivo:** Migrar o `neuroforge-asl` (Rust) para Python puro. Este é o coração do sistema — tudo depende disto.
+**Objectivo:** Migrar o `dendriforge-asl` (Rust) para Python puro. Este é o coração do sistema — tudo depende disto.
 
 ### Milestone 1.1 — Tipos e IR
-- [ ] Criar `neuroforge/core/asl/types.py` — `AslProgram`, `AslExpr`, `AslLiteral`, `AslStatement` como Pydantic models
+- [ ] Criar `dendriforge/core/asl/types.py` — `AslProgram`, `AslExpr`, `AslLiteral`, `AslStatement` como Pydantic models
 - [ ] Validar contra os `ir_debug.json` e `st_result.txt` existentes nos crates (são casos de teste reais)
-- [ ] Criar `neuroforge/core/asl/normalize.py` — `bool_like()`, `is_canonical_op()`, helpers
+- [ ] Criar `dendriforge/core/asl/normalize.py` — `bool_like()`, `is_canonical_op()`, helpers
 
 ### Milestone 1.2 — Executor e Dispatcher
-- [ ] Criar `neuroforge/core/asl/executor.py` — `AslExecutor` com heurísticas de detecção de linguagem
+- [ ] Criar `dendriforge/core/asl/executor.py` — `AslExecutor` com heurísticas de detecção de linguagem
 - [ ] Implementar `detect_language(source: str) -> Language` (porta do `asl_executor.rs`)
-- [ ] Criar `neuroforge/core/asl/optimizer.py` — dead code elimination, constant folding
+- [ ] Criar `dendriforge/core/asl/optimizer.py` — dead code elimination, constant folding
 
 ### Milestone 1.3 — Parsers
 - [ ] `base.py` — `NeuroParser` ABC
-- [ ] `st_parser.py` — Structured Text (IEC 61131-3) via Lark
 - [ ] `c_parser.py` — C embarcado via Lark
-- [ ] `python_parser.py` — Python/MicroPython/CircuitPython via AST stdlib
-- [ ] `rust_parser.py` — Rust std via Lark
+- [ ] `python_parser.py` — Python/MicroPython
+- [ ] `arduino_parser.py` — Arduino C++
+- [ ] `rust_parser.py` — Rust std
+- [ ] `st_parser.py` — Structured Text (IEC 61131-3) via Lark
+- [ ] `lua_parser.py` — NodeMCU/Lua
+- [ ] `zig_parser.py` — Zig
+- [ ] `ada_parser.py` — Ada
+- [ ] `asm_parser.py` — AVR Assembly
+- [ ] `forth_parser.py` — Forth
+- [ ] `espruino_parser.py` — Espruino JS
+- [ ] `circuitpython_parser.py` — CircuitPython
+- [ ] `toon_parser.py` — Formato TOON
+- [ ] `ladder_parser.py` — Ladder Diagram PLC
 - [ ] Testes unitários para cada parser com exemplos reais
 
 ### Milestone 1.4 — Generators (linguagens de saída)
@@ -68,11 +78,11 @@ Este roadmap descreve as fases de migração do NeuroForge de Rust para Python e
 ### Milestone 2.1 — Estrutura do projecto Python
 - [ ] Criar `pyproject.toml` com todas as dependências (nicegui, fastapi, uvicorn, lark, pydantic, pyserial, pyspice, python-dotenv, pytest)
 - [ ] Criar `main.py` com `ui.run_with(app)` — NiceGUI + FastAPI no mesmo processo
-- [ ] Criar estrutura de pastas `neuroforge/ui/`, `neuroforge/api/`, `neuroforge/core/`
+- [ ] Criar estrutura de pastas `dendriforge/ui/`, `dendriforge/api/`, `dendriforge/core/`
 
 ### Milestone 2.2 — FastAPI Routers
 - [ ] `POST /transpile` — recebe código fonte + linguagem origem + linguagem destino + board, retorna código transpilado
-- [ ] `GET /boards` — lista boards disponíveis (lê `.toon` de `apps/shared/static/boards/`)
+- [ ] `GET /boards` — lista boards disponíveis (lê `.toon` de `dendriforge/core/boards/`)
 - [ ] `GET /boards/{id}` — detalhes de um board
 - [ ] `WS /sim/run` — WebSocket para simulação em tempo real
 
@@ -88,23 +98,23 @@ Este roadmap descreve as fases de migração do NeuroForge de Rust para Python e
 **Objectivo:** Implementar simulação comportamental de MCUs e PLCs, substituindo o QEMU por um motor próprio em Python + SPICE para circuitos.
 
 ### Milestone 3.1 — Board Model
-- [ ] `neuroforge/core/sim/board.py` — modelo abstracto de board: GPIO (digital/PWM), ADC, UART, I2C, SPI, timers
+- [ ] `dendriforge/core/sim/board.py` — modelo abstracto de board: GPIO (digital/PWM), ADC, UART, I2C, SPI, timers
 - [ ] Carregar definição de board a partir de `.toon`
 - [ ] Implementar GPIO virtual com estado observável (para UI)
 
 ### Milestone 3.2 — Simulation Engine
-- [ ] `neuroforge/core/sim/engine.py` — loop de simulação com tick configurável
+- [ ] `dendriforge/core/sim/engine.py` — loop de simulação com tick configurável
 - [ ] Execução do código transpilado (Python) dentro do motor de simulação
 - [ ] Eventos: interrupts, timers, ADC reads, Serial in/out
 - [ ] Output em tempo real via WebSocket
 
 ### Milestone 3.3 — PLC / TOON Runtime
-- [ ] `neuroforge/core/sim/plc.py` — runtime para PLCs usando boards TOON
+- [ ] `dendriforge/core/sim/plc.py` — runtime para PLCs usando boards TOON
 - [ ] Suporte a ciclos de scan IEC 61131-3
 - [ ] Simulação de I/O digital e analógico PLC
 
 ### Milestone 3.4 — SPICE Bridge
-- [ ] `neuroforge/core/sim/spice.py` — bridge PySpice + ngspice para simulação de circuitos
+- [ ] `dendriforge/core/sim/spice.py` — bridge PySpice + ngspice para simulação de circuitos
 - [ ] Netlist gerada a partir da definição TOON do board
 - [ ] Integração com o motor de simulação (circuito analógico ↔ GPIO virtual)
 
@@ -115,13 +125,13 @@ Este roadmap descreve as fases de migração do NeuroForge de Rust para Python e
 **Objectivo:** Dashboard de simulação e editor de transpilação em NiceGUI.
 
 ### Milestone 4.1 — Página de Simulação
-- [ ] `neuroforge/ui/pages/simulation.py` — visualização em tempo real do board
-- [ ] `neuroforge/ui/components/board_view.py` — representação visual dos pinos e estados
-- [ ] `neuroforge/ui/components/console.py` — output serial, logs, eventos
+- [ ] `dendriforge/ui/pages/simulation.py` — visualização em tempo real do board
+- [ ] `dendriforge/ui/components/board_view.py` — representação visual dos pinos e estados
+- [ ] `dendriforge/ui/components/console.py` — output serial, logs, eventos
 - [ ] Controlo de simulação: start/stop/step/reset
 
 ### Milestone 4.2 — Página de Transpilação
-- [ ] `neuroforge/ui/pages/transpiler.py` — editor de código com syntax highlight
+- [ ] `dendriforge/ui/pages/transpiler.py` — editor de código com syntax highlight
 - [ ] Selector de linguagem origem + destino + board
 - [ ] Visualização de ASL IR (debug mode)
 - [ ] Output do código transpilado com copy/download
@@ -133,8 +143,8 @@ Este roadmap descreve as fases de migração do NeuroForge de Rust para Python e
 **Objectivo:** Comunicação com hardware físico via protocolo serial-gpio.
 
 ### Milestone 5.1 — Transport Layer
-- [ ] `neuroforge/core/transport/serial.py` — pyserial com protocolo serial-gpio-protocol.md
-- [ ] `neuroforge/core/transport/ws.py` — WebSocket transport para comunicação remota
+- [ ] `dendriforge/core/transport/serial.py` — pyserial com protocolo serial-gpio-protocol.md
+- [ ] `dendriforge/core/transport/ws.py` — WebSocket transport para comunicação remota
 - [ ] Auto-detecção de porta serial e tipo de board
 - [ ] Flash de firmware (invoca avrdude/esptool conforme board)
 
@@ -144,7 +154,7 @@ Este roadmap descreve as fases de migração do NeuroForge de Rust para Python e
 
 **Pré-requisito:** Python core 100% funcional e estável.
 
-**Objectivo:** Empacotar o NeuroForge como aplicação nativa para Windows, Linux, Android e iOS.
+**Objectivo:** Empacotar o DendriForge como aplicação nativa para Windows, Linux, Android e iOS.
 
 ### Desktop (Windows + Linux)
 - [ ] Avaliar: PyWebView vs Tauri (com API Python como backend) vs Electron
@@ -164,7 +174,7 @@ Este roadmap descreve as fases de migração do NeuroForge de Rust para Python e
 
 **Objectivo:** Integração LLM para transpilação assistida por IA quando o parser determinístico falha.
 
-- [ ] `neuroforge/core/asl/ai_transpiler.py` — fallback LLM para código complexo
+- [ ] `dendriforge/core/asl/ai_transpiler.py` — fallback LLM para código complexo
 - [ ] Suporte a OpenAI, Anthropic, Ollama (local)
 - [ ] Interface na UI para corrigir/aprovar sugestões do LLM
 - [ ] BYOK (Bring Your Own Key)

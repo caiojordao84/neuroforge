@@ -1,4 +1,4 @@
-# NeuroForge — Plano de Migração Rust → Python
+# DendriForge — Plano de Migração Rust → Python
 
 Este documento é o guia operacional da migração. Cada item é accionável e segue a ordem do ROADMAP.
 
@@ -10,10 +10,10 @@ Este documento é o guia operacional da migração. Cada item é accionável e s
 
 | Crate | Módulos principais | Estado |
 |-------|-------------------|--------|
-| `crates/neuroforge-asl` | parser/, generator/, executor/, asl_types/, plugins/ (14 linguagens), optimizer/, transforms/, flow/ | ✅ Funcional |
-| `crates/neuroforge-sim` | Motor de simulação de hardware | ⚠️ Parcial |
-| `crates/neuroforge-firmware` | Firmware embarcado Embassy | 🔄 Base |
-| `crates/neuroforge-transport` | Serial + WebSocket transport | ✅ Protocolo definido |
+| `crates/dendriforge-asl` | parser/, generator/, executor/, asl_types/, plugins/ (14 linguagens), optimizer/, transforms/, flow/ | ✅ Funcional |
+| `crates/dendriforge-sim` | Motor de simulação de hardware | ⚠️ Parcial |
+| `crates/dendriforge-firmware` | Firmware embarcado Embassy | 🔄 Base |
+| `crates/dendriforge-transport` | Serial + WebSocket transport | ✅ Protocolo definido |
 
 ### O que existe em TypeScript (manter/adaptar)
 
@@ -27,7 +27,7 @@ Este documento é o guia operacional da migração. Cada item é accionável e s
 
 ### O que vai ser eliminado
 
-- `crates/neuroforge-asl/src/wasm/` — desnecessário sem WASM
+- `crates/dendriforge-asl/src/wasm/` — desnecessário sem WASM
 - `verify_wasm.mjs`, `test_wasm_frontend_integration.mjs` — obsoletos
 - `pnpm-workspace.yaml`, `tsconfig.json`, `package.json` raiz — obsoletos (o TS fica em `apps/`)
 - `Cargo.toml` / `Cargo.lock` raiz — obsoletos após migração
@@ -53,7 +53,7 @@ Este documento é o guia operacional da migração. Cada item é accionável e s
     - pytest-asyncio
 
 [ ] Criar estrutura de pastas:
-    neuroforge/
+    dendriforge/
     ├── __init__.py
     ├── ui/
     │   ├── __init__.py
@@ -75,7 +75,7 @@ Este documento é o guia operacional da migração. Cada item é accionável e s
     ui.run_with(app, host="0.0.0.0", port=8080)
 ```
 
-### 1.2 Tipos ASL (neuroforge/core/asl/types.py)
+### 1.2 Tipos ASL (dendriforge/core/asl/types.py)
 
 ```
 [ ] Portar AslProgram de asl_types/ (Rust) para Pydantic BaseModel
@@ -85,7 +85,7 @@ Este documento é o guia operacional da migração. Cada item é accionável e s
 [ ] Escrever test_asl_types.py
 ```
 
-### 1.3 Executor (neuroforge/core/asl/executor.py)
+### 1.3 Executor (dendriforge/core/asl/executor.py)
 
 ```
 [ ] Portar AslExecutor de executor/ (Rust)
@@ -101,14 +101,21 @@ Este documento é o guia operacional da migração. Cada item é accionável e s
 Ordem de prioridade (do mais testado ao menos):
 
 ```
-[ ] st_parser.py     — Structured Text (IEC 61131-3) via Lark
-                       Referência: crates/neuroforge-asl/src/parser/
-[ ] c_parser.py      — C embarcado via Lark
-[ ] python_parser.py — Python/MicroPython usando ast stdlib
-                       (circuitpython é variante — reutilizar)
-[ ] rust_parser.py   — Rust std via Lark
-[ ] Restantes: arduino, lua, zig, ada, asm, forth, espruino
-                       (portar da mesma estrutura)
+[ ] base.py              — NeuroParser ABC
+[ ] c_parser.py          — C embarcado via Lark
+[ ] python_parser.py     — Python/MicroPython usando ast stdlib
+[ ] arduino_parser.py    — Arduino C++
+[ ] rust_parser.py       — Rust std via Lark
+[ ] st_parser.py         — Structured Text (IEC 61131-3) via Lark
+[ ] lua_parser.py        — NodeMCU/Lua
+[ ] zig_parser.py        — Zig
+[ ] ada_parser.py        — Ada
+[ ] asm_parser.py        — AVR Assembly
+[ ] forth_parser.py      — Forth
+[ ] espruino_parser.py   — Espruino JS
+[ ] circuitpython_parser.py
+[ ] toon_parser.py       — Formato TOON
+[ ] ladder_parser.py     — Ladder Diagram PLC
 ```
 
 ### 1.5 Generators
@@ -137,16 +144,16 @@ Ordem de prioridade:
 ## Fase 2 — API FastAPI
 
 ```
-[ ] neuroforge/api/transpiler.py
+[ ] dendriforge/api/transpiler.py
     POST /transpile
     Body: { source: str, from_lang: str, to_lang: str, board_id: str }
     Response: { result: str, ir: AslProgram | None }
 
-[ ] neuroforge/api/boards.py
+[ ] dendriforge/api/boards.py
     GET /boards          → lista de boards disponíveis (lê static/boards/*.toon)
     GET /boards/{id}     → detalhes de board
 
-[ ] neuroforge/api/simulation.py
+[ ] dendriforge/api/simulation.py
     WS /sim/run          → WebSocket com eventos de simulação em tempo real
 
 [ ] Integrar os 3 routers no main.py via app.include_router()
@@ -157,21 +164,21 @@ Ordem de prioridade:
 ## Fase 3 — Motor de Simulação
 
 ```
-[ ] neuroforge/core/sim/board.py
+[ ] dendriforge/core/sim/board.py
     - Classe Board com pins: Dict[str, PinState]
     - PinState: { mode: INPUT|OUTPUT|PWM, value: float, pull: NONE|UP|DOWN }
     - Carregar board a partir de .toon (referência: docs/boards-documentation.md)
 
-[ ] neuroforge/core/sim/engine.py
+[ ] dendriforge/core/sim/engine.py
     - SimEngine com tick rate configurável (default: 1ms)
     - Executar ASL transpilado (Python output) em ambiente isolado
     - Emitir eventos GPIO via WebSocket
 
-[ ] neuroforge/core/sim/plc.py
+[ ] dendriforge/core/sim/plc.py
     - PLCRuntime com scan cycle IEC 61131-3
     - Carregar programa ST → transpile → executar
 
-[ ] neuroforge/core/sim/spice.py
+[ ] dendriforge/core/sim/spice.py
     - SpiceBridge usando PySpice
     - Gerar netlist a partir de .toon
     - Chamar ngspice como subprocesso
@@ -183,7 +190,7 @@ Ordem de prioridade:
 ## Fase 4 — NiceGUI UI
 
 ```
-[ ] neuroforge/ui/pages/simulation.py
+[ ] dendriforge/ui/pages/simulation.py
     - Dashboard principal
     - Selector de board (dropdown alimentado por GET /boards)
     - Editor de código (ui.codemirror ou ui.textarea)
@@ -191,16 +198,16 @@ Ordem de prioridade:
     - Visualização de pinos em tempo real
     - Console serial
 
-[ ] neuroforge/ui/pages/transpiler.py
+[ ] dendriforge/ui/pages/transpiler.py
     - Editor duplo: código fonte / código transpilado
     - Selector de linguagem origem + destino
     - Visualização opcional da ASL IR (para debug)
 
-[ ] neuroforge/ui/components/board_view.py
+[ ] dendriforge/ui/components/board_view.py
     - SVG ou canvas com representação do board
     - Pinos com cores por estado (HIGH=verde, LOW=cinza, PWM=amarelo)
 
-[ ] neuroforge/ui/components/console.py
+[ ] dendriforge/ui/components/console.py
     - Output série em tempo real
     - Filtros por tipo de mensagem
 ```
@@ -210,13 +217,13 @@ Ordem de prioridade:
 ## Fase 5 — Transport
 
 ```
-[ ] neuroforge/core/transport/serial.py
+[ ] dendriforge/core/transport/serial.py
     - Protocolo: docs/serial-gpio-protocol.md
     - Auto-scan de portas COM/tty
     - Detecção de tipo de board
     - Flash: avrdude (AVR), esptool (ESP32), picotool (RP2040)
 
-[ ] neuroforge/core/transport/ws.py
+[ ] dendriforge/core/transport/ws.py
     - WebSocket server para comunicação remota
     - Mesmo protocolo que serial mas sobre rede
 ```
@@ -251,6 +258,32 @@ Ordem de prioridade:
 
 ---
 
+## Fase 0.1 — Realocação de Recursos (CRÍTICO) ✅
+
+[x] Mover `apps/shared/static/boards/` para `dendriforge/core/boards/`
+    - Actualizar imports e caminhos de leitura na API
+    - Garantir que o frontend consome via `GET /boards`
+
+---
+
+## Fase 7 — AI Transpiler
+
+```
+[ ] dendriforge/core/asl/ai_transpiler.py
+    - Integrar `agent_skills/` como base de conhecimento para prompts
+    - Integrar `dendriforge/core/boards/` para contexto de hardware no LLM
+    - Implementar client para OpenAI, Anthropic e Ollama
+    - Fallback logic: se o parser falhar, enviar para LLM com prompt de sistema ASL
+    - Sistema de cache para evitar chamadas repetidas (API cost)
+
+[ ] Integração na UI
+    - Mostrar aviso "Transpilado via IA" quando o fallback é activado
+    - Botão para "Verificar/Corrigir" código gerado por IA
+    - Configuração de chaves API (BYOK)
+```
+
+---
+
 ## Limpar codebase após migração completa
 
 ```
@@ -271,8 +304,8 @@ Ordem de prioridade:
 
 Os seguintes ficheiros nos crates são casos de teste reais para validar a implementação Python:
 
-- `crates/neuroforge-asl/` — `ir_debug.json` (ASL IR de exemplo)
-- `crates/neuroforge-asl/` — `st_result.txt` (output ST esperado)
+- `crates/dendriforge-asl/` — `ir_debug.json` (ASL IR de exemplo)
+- `crates/dendriforge-asl/` — `st_result.txt` (output ST esperado)
 - `docs/serial-gpio-protocol.md` — protocolo de comunicação série
 - `docs/boards-documentation.md` — specs das boards
 - `apps/shared/static/boards/*.toon` — >100 boards reais para testar o loader

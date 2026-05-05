@@ -1,12 +1,12 @@
-# NeuroForge
+# DendriForge
 
-**NeuroForge** é uma plataforma open-source de programação, simulação e transpilação para microcontroladores (MCU) e controladores lógicos programáveis (PLC). O seu objectivo é permitir que um programador escreva código uma vez — em qualquer linguagem suportada — e o sistema transpila, simula e valida esse código para qualquer hardware-alvo.
+**DendriForge** é uma plataforma open-source de programação, simulação e transpilação para microcontroladores (MCU) e controladores lógicos programáveis (PLC). O seu objectivo é permitir que um programador escreva código uma vez — em qualquer linguagem suportada — e o sistema transpila, simula e valida esse código para qualquer hardware-alvo.
 
 ---
 
 ## O que é o ASL
 
-**ASL (Abstract Semantic Language)** é a linguagem intermédia central do NeuroForge. Funciona como uma IR (Intermediate Representation) universal — toda a lógica de transpilação passa por aqui:
+**ASL (Abstract Semantic Language)** é a linguagem intermédia central do DendriForge. Funciona como uma IR (Intermediate Representation) universal — toda a lógica de transpilação passa por aqui:
 
 ```
 [código fonte] → [parser] → [ASL IR] → [generator] → [código alvo]
@@ -36,18 +36,18 @@ As mesmas linguagens acima — o ASL é bidirecional. Um programa C pode ser tra
 
 ### Formato TOON
 
-**TOON** é o formato de definição de boards/PLCs usado pelo NeuroForge. É um JSON estruturado que descreve os pinos, periféricos, capacidades e mapeamentos de hardware de cada placa. Os ficheiros `.toon` estão em `apps/shared/static/boards/` e são consumidos pelo transpiler, simulador e frontend.
+**TOON** é o formato de definição de boards/PLCs usado pelo DendriForge. É um JSON estruturado que descreve os pinos, periféricos, capacidades e mapeamentos de hardware de cada placa. Os ficheiros `.toon` estão em `apps/shared/static/boards/` e são consumidos pelo transpiler, simulador e frontend.
 
 ---
 
 ## Arquitectura do Sistema
 
 ```
-neuroforge/
+dendriforge/
 ├── main.py                        # Entry point: NiceGUI + FastAPI no mesmo processo
 ├── pyproject.toml                 # Dependências Python (uv/pip)
 │
-├── neuroforge/                    # Pacote Python principal
+├── dendriforge/                    # Pacote Python principal
 │   ├── ui/                        # NiceGUI — interface web
 │   │   ├── pages/
 │   │   │   ├── simulation.py      # Dashboard de simulação (PRIORIDADE)
@@ -62,17 +62,29 @@ neuroforge/
 │   │   └── boards.py              # GET /boards
 │   │
 │   ├── core/                      # Lógica pura — sem UI, sem HTTP
-│   │   ├── asl/                   # Motor ASL (migrado de neuroforge-asl Rust)
+│   │   ├── boards/                # Definições de hardware TOON (realocadas de apps/shared)
+│   │   ├── asl/                   # Motor ASL (migrado de dendriforge-asl Rust)
 │   │   │   ├── types.py           # AslProgram, AslExpr, AslLiteral (Pydantic)
 │   │   │   ├── executor.py        # AslExecutor — dispatcher central
 │   │   │   ├── normalize.py       # bool_like(), canonical ops
 │   │   │   ├── optimizer.py       # optimizações de AST
+│   │   │   ├── ai_transpiler.py   # Fallback LLM (conhecimento: agent_skills + boards)
 │   │   │   ├── parser/            # Parsers por linguagem
 │   │   │   │   ├── base.py
 │   │   │   │   ├── c_parser.py
 │   │   │   │   ├── python_parser.py
+│   │   │   │   ├── arduino_parser.py
 │   │   │   │   ├── rust_parser.py
-│   │   │   │   └── st_parser.py
+│   │   │   │   ├── st_parser.py
+│   │   │   │   ├── lua_parser.py
+│   │   │   │   ├── zig_parser.py
+│   │   │   │   ├── ada_parser.py
+│   │   │   │   ├── asm_parser.py
+│   │   │   │   ├── forth_parser.py
+│   │   │   │   ├── espruino_parser.py
+│   │   │   │   ├── circuitpython_parser.py
+│   │   │   │   ├── toon_parser.py
+│   │   │   │   └── ladder_parser.py
 │   │   │   └── generator/         # Generators por linguagem
 │   │   │       ├── base.py
 │   │   │       ├── c_generator.py
@@ -90,13 +102,13 @@ neuroforge/
 │   │   │       ├── toon_generator.py
 │   │   │       └── ladder_generator.py
 │   │   │
-│   │   ├── sim/                   # Motor de simulação (migrado de neuroforge-sim)
+│   │   ├── sim/                   # Motor de simulação (migrado de dendriforge-sim)
 │   │   │   ├── engine.py          # Loop de simulação
 │   │   │   ├── board.py           # Modelo de board (GPIO, ADC, UART…)
 │   │   │   ├── plc.py             # Modelo PLC / TOON runtime
 │   │   │   └── spice.py           # Bridge PySpice / ngspice
 │   │   │
-│   │   └── transport/             # Comunicação (migrado de neuroforge-transport)
+│   │   └── transport/             # Comunicação (migrado de dendriforge-transport)
 │   │       ├── serial.py          # pyserial — serial-gpio-protocol
 │   │       └── ws.py              # WebSocket
 │   │
@@ -149,6 +161,12 @@ As definições de hardware estão em `apps/shared/static/boards/`. O formato pr
 
 - **MCU**: Arduino Uno/Mega/Nano, ESP32 (múltiplas variantes), ESP8266, Raspberry Pi Pico (RP2040), STM32F4, ATtiny85, nRF52840, SAMD21
 - **PLC**: Siemens S7-1200/S7-300, Allen-Bradley MicroLogix, Omron CP1L, Schneider M221, Mitsubishi FX3U e muitos outros
+
+---
+
+## AI Transpiler
+
+O DendriForge inclui um **AI Transpiler** (Fase 7) que actua como um motor de *fallback*. Quando os parsers determinísticos baseados em Lark/AST não conseguem processar um código complexo ou mal-formado, o sistema pode recorrer a LLMs (OpenAI, Anthropic ou Ollama local) para tentar inferir a semântica ASL e completar a transpilação.
 
 ---
 
