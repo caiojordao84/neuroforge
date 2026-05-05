@@ -24,6 +24,11 @@ Este roadmap descreve as fases de migração do DendriForge de Rust para Python 
 
 **Objectivo:** Migrar o `dendriforge-asl` (Rust) para Python puro. Este é o coração do sistema — tudo depende disto.
 
+### Milestone 1.0 — Infraestrutura Base ✅
+- [x] Inicialização do projecto via `uv` com Python 3.13 (Ambiente isolado perfeito)
+- [x] Configuração do `pyproject.toml` (FastAPI, NiceGUI, PySpice, pytest, Ruff, Pyright)
+- [x] Scaffold da arquitectura (`main.py`, `dendriforge/core`, `api`, `ui`)
+
 ### Milestone 1.1 — Tipos e IR
 - [ ] Criar `dendriforge/core/asl/types.py` — `AslProgram`, `AslExpr`, `AslLiteral`, `AslStatement` como Pydantic models
 - [ ] Validar contra os `ir_debug.json` e `st_result.txt` existentes nos crates (são casos de teste reais)

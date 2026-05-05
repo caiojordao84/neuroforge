@@ -129,6 +129,8 @@ dendriforge/
 
 | Componente | Tecnologia | Motivo |
 |-----------|------------|--------|
+| Motor Core | **Python 3.13+** | Performance nativa aprimorada, gestão avançada de AST e GIL release features |
+| Gestão de Ambiente | **uv** | Instalação de dependências ultrarrápida, substituição total de pip/poetry/virtualenv |
 | UI | **NiceGUI** | Python puro, WebSockets nativos, ideal para dashboards de simulação em tempo real |
 | API | **FastAPI + Uvicorn** | REST + WebSocket; corre no mesmo processo que o NiceGUI via `ui.run_with(app)` |
 | ASL Parser | **Lark (PEG/EBNF)** | Muito mais limpo que parsers manuais; gramáticas declarativas |
@@ -137,7 +139,7 @@ dendriforge/
 | Comunicação série | **pyserial** | Protocolo serial-gpio documentado em `docs/serial-gpio-protocol.md` |
 | Boards | **TOON (.toon)** | Formato JSON próprio; >100 boards em `dendriforge/core/boards/` |
 | Configuração | **python-dotenv + Pydantic Settings** | Substitui `.env` do Node |
-| Testes | **pytest** | Standard Python |
+| Testes e Qualidade | **pytest + ruff + pyright** | Standard Python ultra-rápido (ruff) e segurança de tipos (pyright) |
 
 ---
 

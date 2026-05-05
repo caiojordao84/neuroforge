@@ -40,7 +40,7 @@ Este documento é o guia operacional da migração. Cada item é accionável e s
 ### 1.1 Setup do projecto Python
 
 ```
-[ ] Criar pyproject.toml na raiz com:
+[x] Criar pyproject.toml na raiz com:
     - nicegui
     - fastapi
     - uvicorn[standard]
@@ -52,7 +52,7 @@ Este documento é o guia operacional da migração. Cada item é accionável e s
     - pytest
     - pytest-asyncio
 
-[ ] Criar estrutura de pastas:
+[x] Criar estrutura de pastas:
     dendriforge/
     ├── __init__.py
     ├── ui/
@@ -68,7 +68,7 @@ Este documento é o guia operacional da migração. Cada item é accionável e s
         ├── sim/
         └── transport/
 
-[ ] Criar main.py com:
+[x] Criar main.py com:
     from fastapi import FastAPI
     from nicegui import ui
     app = FastAPI()

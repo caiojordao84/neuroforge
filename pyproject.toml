@@ -1,0 +1,41 @@
+[project]
+name = "dendriforge"
+version = "0.1.0"
+description = "Sovereign Industrial Simulation & ASL Transpilation Engine"
+readme = "docs/README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.29.0",
+    "nicegui>=1.4.0",
+    "lark>=1.1.9",
+    "pydantic>=2.7.0",
+    "pyserial>=3.5",
+    "pyspice>=1.5",
+    "python-dotenv>=1.0.1"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.3.0",
+    "pyright>=1.1.350"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B", "SIM"]
+ignore = []
+
+[tool.pyright]
+include = ["dendriforge"]
+exclude = ["**/node_modules", "**/__pycache__"]
+strict = ["dendriforge"]
