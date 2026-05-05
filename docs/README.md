@@ -36,7 +36,7 @@ As mesmas linguagens acima — o ASL é bidirecional. Um programa C pode ser tra
 
 ### Formato TOON
 
-**TOON** é o formato de definição de boards/PLCs usado pelo DendriForge. É um JSON estruturado que descreve os pinos, periféricos, capacidades e mapeamentos de hardware de cada placa. Os ficheiros `.toon` estão em `apps/shared/static/boards/` e são consumidos pelo transpiler, simulador e frontend.
+**TOON** é o formato de definição de boards/PLCs usado pelo DendriForge. É um JSON estruturado que descreve os pinos, periféricos, capacidades e mapeamentos de hardware de cada placa. Os ficheiros `.toon` estão em `dendriforge/core/boards/` e são consumidos pelo transpiler, simulador e frontend.
 
 ---
 
@@ -135,20 +135,25 @@ dendriforge/
 | Modelos de dados | **Pydantic v2** | Serialização JSON gratuita, validação automática, compatível com FastAPI |
 | Simulação circuitos | **PySpice + ngspice** | Motor externo para SPICE; simulação analógica/digital |
 | Comunicação série | **pyserial** | Protocolo serial-gpio documentado em `docs/serial-gpio-protocol.md` |
-| Boards | **TOON (.toon)** | Formato JSON próprio; >100 boards em `apps/shared/static/boards/` |
+| Boards | **TOON (.toon)** | Formato JSON próprio; >100 boards em `dendriforge/core/boards/` |
 | Configuração | **python-dotenv + Pydantic Settings** | Substitui `.env` do Node |
 | Testes | **pytest** | Standard Python |
 
 ---
 
-## Apps
+## Apps e Fronteiras de UI
+
+O projecto possui uma separação estrita de responsabilidades entre as suas interfaces:
+
+- **NiceGUI (`dendriforge/ui`)**: Utilizado estritamente como **Developer Tools e Debug Dashboard** local para quem desenvolve o *core* do sistema. Não é o produto virado para o utilizador final.
+- **SvelteKit (`apps/webapp`)**: É o **Produto Final Oficial (IDE Web)**, desenhado para utilizadores finais. Apenas comunica com o *core* consumindo os endpoints REST e WebSocket do FastAPI (`/api/v1/...`).
 
 O frontend é um monorepo separado dentro de `apps/` que consome a API Python:
 
 | App | Tecnologia | Estado |
 |-----|-----------|--------|
-| `apps/webapp` | SvelteKit + TypeScript | Frontend web principal |
-| `apps/shared` | TypeScript | Componentes, tipos e boards partilhados |
+| `apps/webapp` | SvelteKit + TypeScript | Frontend web principal (Interface de Utilizador Oficial) |
+| `apps/shared` | TypeScript | Componentes e tipos partilhados |
 | `apps/schemasmith` | SvelteKit | Editor de schemas de boards |
 | `apps/desktop` | A definir (pós v1.0) | Windows + Linux — implementado após Python core estável |
 | `apps/mobile` | A definir (pós v1.0) | Android + iOS — implementado após Python core estável |
@@ -157,7 +162,7 @@ O frontend é um monorepo separado dentro de `apps/` que consome a API Python:
 
 ## Estrutura de Boards
 
-As definições de hardware estão em `apps/shared/static/boards/`. O formato principal é `.toon` (>100 boards). Boards suportados incluem:
+As definições de hardware estão de forma definitiva alocadas em `dendriforge/core/boards/`. O formato principal é `.toon` (>100 boards). Boards suportados incluem:
 
 - **MCU**: Arduino Uno/Mega/Nano, ESP32 (múltiplas variantes), ESP8266, Raspberry Pi Pico (RP2040), STM32F4, ATtiny85, nRF52840, SAMD21
 - **PLC**: Siemens S7-1200/S7-300, Allen-Bradley MicroLogix, Omron CP1L, Schneider M221, Mitsubishi FX3U e muitos outros

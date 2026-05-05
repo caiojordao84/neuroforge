@@ -36,10 +36,16 @@ Este roadmap descreve as fases de migração do DendriForge de Rust para Python 
 
 ### Milestone 1.3 — Parsers
 - [ ] `base.py` — `NeuroParser` ABC
-- [ ] `c_parser.py` — C embarcado via Lark
+- [ ] `toon_parser.py` — Formato TOON (Necessário para a infraestrutura base)
+- [ ] Testes unitários para cada parser com exemplos reais
+
+**Core / Tier 1 (Essenciais para o MVP):**
 - [ ] `python_parser.py` — Python/MicroPython
-- [ ] `arduino_parser.py` — Arduino C++
 - [ ] `rust_parser.py` — Rust std
+- [ ] `arduino_parser.py` — Arduino C++
+
+**Community / Tier 2 (Pós-MVP):**
+- [ ] `c_parser.py` — C embarcado via Lark
 - [ ] `st_parser.py` — Structured Text (IEC 61131-3) via Lark
 - [ ] `lua_parser.py` — NodeMCU/Lua
 - [ ] `zig_parser.py` — Zig
@@ -48,26 +54,40 @@ Este roadmap descreve as fases de migração do DendriForge de Rust para Python 
 - [ ] `forth_parser.py` — Forth
 - [ ] `espruino_parser.py` — Espruino JS
 - [ ] `circuitpython_parser.py` — CircuitPython
-- [ ] `toon_parser.py` — Formato TOON
-- [ ] `ladder_parser.py` — Ladder Diagram PLC
-- [ ] Testes unitários para cada parser com exemplos reais
+
+**Industrial / Tier 3 (Pré Desktop & Mobile):**
+- [ ] `ladder_parser.py` — Ladder Diagram (LD)
+- [ ] `fbd_parser.py` — Function Block Diagram (FBD)
+- [ ] `sfc_parser.py` — Sequential Function Chart (SFC)
+- [ ] `il_parser.py` — Instruction List (IL)
+- [ ] `grafcet_parser.py` — GRAFCET
 
 ### Milestone 1.4 — Generators (linguagens de saída)
 - [ ] `base.py` — `AslGenerator` ABC com interface `generate(ast: AslProgram) -> str`
-- [ ] `st_generator.py` — Structured Text ← **prioritário** (mais testado no Rust)
-- [ ] `c_generator.py` — C embarcado
-- [ ] `arduino_generator.py` — Arduino C++
+- [ ] `toon_generator.py` — Formato TOON (porta directa de `toon_generator.rs`)
+
+**Core / Tier 1 (Essenciais para o MVP):**
 - [ ] `python_generator.py` — Python/MicroPython
-- [ ] `circuitpython_generator.py` — CircuitPython
 - [ ] `rust_generator.py` — Rust std
+- [ ] `arduino_generator.py` — Arduino C++
+
+**Community / Tier 2 (Pós-MVP):**
+- [ ] `c_generator.py` — C embarcado
+- [ ] `st_generator.py` — Structured Text
+- [ ] `circuitpython_generator.py` — CircuitPython
 - [ ] `lua_generator.py` — NodeMCU/Lua
 - [ ] `zig_generator.py` — Zig embarcado
 - [ ] `ada_generator.py` — Ada
 - [ ] `asm_generator.py` — AVR Assembly
 - [ ] `forth_generator.py` — Forth
 - [ ] `espruino_generator.py` — Espruino JS
-- [ ] `toon_generator.py` — Formato TOON (porta directa de `toon_generator.rs`)
-- [ ] `ladder_generator.py` — Ladder Diagram PLC (porta de `ladder_generator.rs`)
+
+**Industrial / Tier 3 (Pré Desktop & Mobile):**
+- [ ] `ladder_generator.py` — Ladder Diagram (LD)
+- [ ] `fbd_generator.py` — Function Block Diagram (FBD)
+- [ ] `sfc_generator.py` — Sequential Function Chart (SFC)
+- [ ] `il_generator.py` — Instruction List (IL)
+- [ ] `grafcet_generator.py` — GRAFCET
 
 ---
 
@@ -102,11 +122,12 @@ Este roadmap descreve as fases de migração do DendriForge de Rust para Python 
 - [ ] Carregar definição de board a partir de `.toon`
 - [ ] Implementar GPIO virtual com estado observável (para UI)
 
-### Milestone 3.2 — Simulation Engine
-- [ ] `dendriforge/core/sim/engine.py` — loop de simulação com tick configurável
-- [ ] Execução do código transpilado (Python) dentro do motor de simulação
-- [ ] Eventos: interrupts, timers, ADC reads, Serial in/out
-- [ ] Output em tempo real via WebSocket
+### Milestone 3.2 — Simulation Engine (Multi-Processo)
+- [ ] `dendriforge/core/sim/engine.py` — Motor principal a rodar num **Processo Isolado** (`multiprocessing` ou ZeroMQ).
+- [ ] O tick configurável (default 1ms) não bloqueará o Event Loop (GIL) do FastAPI/NiceGUI.
+- [ ] Execução do código transpilado (Python) num ambiente restrito dentro do worker.
+- [ ] Comunicação inter-processos rápida (IPC) para enviar estados dos GPIO para o WebSocket em tempo real.
+- [ ] Eventos: interrupts, timers, ADC reads, Serial in/out.
 
 ### Milestone 3.3 — PLC / TOON Runtime
 - [ ] `dendriforge/core/sim/plc.py` — runtime para PLCs usando boards TOON

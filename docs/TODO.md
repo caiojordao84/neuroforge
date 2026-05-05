@@ -20,7 +20,7 @@ Este documento é o guia operacional da migração. Cada item é accionável e s
 | App                | Conteúdo                                              | Decisão                                     |
 | ------------------ | ----------------------------------------------------- | ------------------------------------------- |
 | `apps/webapp`      | SvelteKit, rotas `/transpile`, `/plc`, `/schemasmith` | ✅ Manter — adaptar para consumir API Python |
-| `apps/shared`      | Componentes, tipos, `static/boards/` (>100 .toon)     | ✅ Manter intacto                            |
+| `apps/shared`      | Componentes, tipos                                    | ✅ Manter intacto                            |
 | `apps/schemasmith` | Editor de schemas                                     | ✅ Manter                                    |
 | `apps/desktop`     | Tauri scaffold                                        | ⏳ Adiar para pós v1.0                       |
 | `apps/mobile`      | App scaffold                                          | ⏳ Adiar para pós v1.0                       |
@@ -98,14 +98,17 @@ Este documento é o guia operacional da migração. Cada item é accionável e s
 
 ### 1.4 Parsers
 
-Ordem de prioridade (do mais testado ao menos):
-
 ```
 [ ] base.py              — NeuroParser ABC
-[ ] c_parser.py          — C embarcado via Lark
+[ ] toon_parser.py       — Formato TOON (Necessário para a infraestrutura base)
+
+**Core / Tier 1 (Essenciais para o MVP):**
 [ ] python_parser.py     — Python/MicroPython usando ast stdlib
-[ ] arduino_parser.py    — Arduino C++
 [ ] rust_parser.py       — Rust std via Lark
+[ ] arduino_parser.py    — Arduino C++
+
+**Community / Tier 2 (Pós-MVP):**
+[ ] c_parser.py          — C embarcado via Lark
 [ ] st_parser.py         — Structured Text (IEC 61131-3) via Lark
 [ ] lua_parser.py        — NodeMCU/Lua
 [ ] zig_parser.py        — Zig
@@ -113,30 +116,43 @@ Ordem de prioridade (do mais testado ao menos):
 [ ] asm_parser.py        — AVR Assembly
 [ ] forth_parser.py      — Forth
 [ ] espruino_parser.py   — Espruino JS
-[ ] circuitpython_parser.py
-[ ] toon_parser.py       — Formato TOON
-[ ] ladder_parser.py     — Ladder Diagram PLC
+[ ] circuitpython_parser.py — CircuitPython
+
+**Industrial / Tier 3 (Pré Desktop & Mobile):**
+[ ] ladder_parser.py     — Ladder Diagram (LD)
+[ ] fbd_parser.py        — Function Block Diagram (FBD)
+[ ] sfc_parser.py        — Sequential Function Chart (SFC)
+[ ] il_parser.py         — Instruction List (IL)
+[ ] grafcet_parser.py    — GRAFCET
 ```
 
 ### 1.5 Generators
 
-Ordem de prioridade:
-
 ```
-[ ] st_generator.py          — mais testado, referência: plugins/plc/
-[ ] c_generator.py           — referência: plugins/c/
-[ ] arduino_generator.py     — referência: plugins/arduino/
-[ ] python_generator.py      — referência: plugins/python/
-[ ] circuitpython_generator.py
 [ ] toon_generator.py        — CRÍTICO: referência: plugins/core/toon_generator.rs
-[ ] ladder_generator.py      — referência: plugins/ladder_generator.rs (17KB)
+
+**Core / Tier 1 (Essenciais para o MVP):**
+[ ] python_generator.py      — referência: plugins/python/
 [ ] rust_generator.py        — referência: plugins/rust_std/
+[ ] arduino_generator.py     — referência: plugins/arduino/
+
+**Community / Tier 2 (Pós-MVP):**
+[ ] c_generator.py           — referência: plugins/c/
+[ ] st_generator.py          — referência: plugins/plc/
+[ ] circuitpython_generator.py
 [ ] lua_generator.py         — referência: plugins/lua/
 [ ] zig_generator.py         — referência: plugins/zig/
 [ ] ada_generator.py         — referência: plugins/ada/
 [ ] asm_generator.py         — referência: plugins/asm/
 [ ] forth_generator.py       — referência: plugins/forth/
 [ ] espruino_generator.py    — referência: plugins/espruino/
+
+**Industrial / Tier 3 (Pré Desktop & Mobile):**
+[ ] ladder_generator.py      — referência: plugins/ladder_generator.rs (17KB)
+[ ] fbd_generator.py         — Function Block Diagram (FBD)
+[ ] sfc_generator.py         — Sequential Function Chart (SFC)
+[ ] il_generator.py          — Instruction List (IL)
+[ ] grafcet_generator.py     — GRAFCET
 ```
 
 ---
@@ -169,10 +185,11 @@ Ordem de prioridade:
     - PinState: { mode: INPUT|OUTPUT|PWM, value: float, pull: NONE|UP|DOWN }
     - Carregar board a partir de .toon (referência: docs/boards-documentation.md)
 
-[ ] dendriforge/core/sim/engine.py
-    - SimEngine com tick rate configurável (default: 1ms)
-    - Executar ASL transpilado (Python output) em ambiente isolado
-    - Emitir eventos GPIO via WebSocket
+[ ] dendriforge/core/sim/engine.py (Multi-Processo)
+    - SimEngine a correr num processo isolado para não bloquear o GIL
+    - Tick configurável (default: 1ms)
+    - Executar ASL transpilado num worker
+    - IPC para enviar eventos GPIO para o WebSocket
 
 [ ] dendriforge/core/sim/plc.py
     - PLCRuntime com scan cycle IEC 61131-3
