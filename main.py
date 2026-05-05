@@ -1,7 +1,8 @@
+import multiprocessing
+
 import uvicorn
 from fastapi import FastAPI
 from nicegui import ui
-import multiprocessing
 
 # Configuração da API FastAPI
 app = FastAPI(title="DendriForge API", version="0.1.0")
