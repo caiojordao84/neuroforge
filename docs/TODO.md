@@ -249,29 +249,73 @@ Este documento é o guia operacional da migração. Cada item é accionável e s
 
 ## Fase 6 — Desktop e Mobile (pós v1.0)
 
-```
-[ ] DESKTOP (Windows + Linux)
-    Avaliar opções:
-    - PyWebView: janela nativa que embebe o NiceGUI (solução mais simples)
-    - Tauri v2 com Python backend: melhor performance, mais complexo
-    - Electron: funciona mas pesado
-    Requisitos obrigatórios:
-    - Windows 10+ e Linux (Ubuntu 20.04+, Arch)
-    - Acesso directo a USB/Serial
-    - Auto-update
-    - Instalador (.msi / .deb / .AppImage)
+### Abordagem Técnica Escolhida
 
-[ ] MOBILE (Android + iOS)
-    Avaliar opções:
-    - BeeWare (Toga): Python nativo, suporte Android+iOS
-    - React Native + API Python remota: UI mais polida
-    - Kivy: madura mas UI datada
-    Requisitos obrigatórios:
-    - Android 10+ e iOS 15+
-    - Monitorização de boards via WiFi/BLE
-    - Transpilação via API remota
-    - SEM flash de firmware (limitação hardware mobile)
+**Plataforma única para Desktop e Mobile:** Kivy com Python + PyO3 (Rust) + PySpice/ngspice
+
+- Kivy permite full Canvas control com suporte nativo a multi-touch e drag-and-drop
+- PyO3 fornece bindings Rust para performance crítica (firmware emulation, Ladder logic)
+- PySpice + ngspice permite simulação de circuitos analógicos directamente na app
+- Buildozer compila o mesmo código para Android e iOS
+
+### Desktop (Windows + Linux)
+
 ```
+[ ] Implementar app Kivy com:
+    - MainWidget: gestão de ecrãs (boards, simulação, transpiler)
+    - Canvas com renderização de boards SVG/TOON
+    - Componentes Kivy personalizados para pinos, LEDs, sensores
+    - Drag-and-drop de componentes
+
+[ ] Integrar Python core:
+    - Importar dendriforge.core como módulo
+    - Comunicação directa (sem HTTP overhead)
+    - Async worker para simulação
+
+[ ] Camada PyO3 (opcional):
+    - Cargo new --lib dendriforge_native
+    - Maturin para build Python
+    - Funções críticas em Rust
+
+[ ] PySpice integration:
+    - subprocess ngspice para simulações
+    - Netlist gerado dinamicamente
+    - Visualização de tensão/corrente
+
+[ ] Empacotamento:
+    - PyInstaller para .exe (Windows)
+    - PyInstaller para binário (Linux)
+    - Auto-update via GitHub Releases
+```
+
+### Mobile (Android + iOS)
+
+```
+[ ] Mesma base Kivy do desktop:
+    - Adaptar layouts para ecrãs pequenos
+    - Touch gestures (pinch-zoom, pan, rotate)
+    - Keyboard virtual para código
+
+[ ] Buildozer:
+    - buildozer init
+    - Especificar requirements (kivy, pyspice, pyo3)
+    - buildozer android debug para testar
+    - buildozer ios (requere macOS)
+
+[ ] Funcionalidades mobile:
+    - Monitorização de boards via WiFi (WebSocket)
+    - BLE para boards compatíveis
+    - Transpilação via API (mesma do backend)
+    - SEM flash de firmware (limitação técnica)
+```
+
+### Fluxo de Desenvolvimento Recomendado
+
+1. **Semana 1-2:** "Hello World" Kivy — load SVG TOON, drag de componentes
+2. **Semana 3-4:** PySpice basic — battery + resistor + LED, visualize tensão
+3. **Semana 5-6:** Wiring system — wire snap a pins, netlist dinámica
+4. **Semana 7-8:** PyO3 (opcional) — Rust bindings para performance
+5. **Semana 9-10:** Mobile — Buildozer Android debug, UI touch
 
 ---
 

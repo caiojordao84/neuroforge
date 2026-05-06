@@ -16,19 +16,19 @@ O ASL não é uma linguagem que o utilizador escreve directamente. É o formato 
 
 ### Linguagens de entrada suportadas
 
-| Linguagem | Notas |
-|-----------|-------|
-| C | MCU embedded (Arduino, AVR, ESP32) |
-| Python / MicroPython / CircuitPython | MCU com runtime Python |
-| Rust (std) | MCU com Embassy / std |
-| Structured Text (ST) | IEC 61131-3, PLCs |
-| Arduino (C++) | Arduino IDE style |
-| Assembly | AVR ASM |
-| Lua | NodeMCU / ESP8266 |
-| Espruino (JS) | Espruino MCU |
-| Ada | Safety-critical |
-| Forth | Resource-constrained MCU |
-| Zig | Modern embedded |
+| Linguagem                            | Notas                              |
+| ------------------------------------ | ---------------------------------- |
+| C                                    | MCU embedded (Arduino, AVR, ESP32) |
+| Python / MicroPython / CircuitPython | MCU com runtime Python             |
+| Rust (std)                           | MCU com Embassy / std              |
+| Structured Text (ST)                 | IEC 61131-3, PLCs                  |
+| Arduino (C++)                        | Arduino IDE style                  |
+| Assembly                             | AVR ASM                            |
+| Lua                                  | NodeMCU / ESP8266                  |
+| Espruino (JS)                        | Espruino MCU                       |
+| Ada                                  | Safety-critical                    |
+| Forth                                | Resource-constrained MCU           |
+| Zig                                  | Modern embedded                    |
 
 ### Linguagens de saída suportadas
 
@@ -127,19 +127,19 @@ dendriforge/
 
 ## Stack Tecnológico
 
-| Componente | Tecnologia | Motivo |
-|-----------|------------|--------|
-| Motor Core | **Python 3.13+** | Performance nativa aprimorada, gestão avançada de AST e GIL release features |
-| Gestão de Ambiente | **uv** | Instalação de dependências ultrarrápida, substituição total de pip/poetry/virtualenv |
-| UI | **NiceGUI** | Python puro, WebSockets nativos, ideal para dashboards de simulação em tempo real |
-| API | **FastAPI + Uvicorn** | REST + WebSocket; corre no mesmo processo que o NiceGUI via `ui.run_with(app)` |
-| ASL Parser | **Lark (PEG/EBNF)** | Muito mais limpo que parsers manuais; gramáticas declarativas |
-| Modelos de dados | **Pydantic v2** | Serialização JSON gratuita, validação automática, compatível com FastAPI |
-| Simulação circuitos | **PySpice + ngspice** | Motor externo para SPICE; simulação analógica/digital |
-| Comunicação série | **pyserial** | Protocolo serial-gpio documentado em `docs/serial-gpio-protocol.md` |
-| Boards | **TOON (.toon)** | Formato JSON próprio; >100 boards em `dendriforge/core/boards/` |
-| Configuração | **python-dotenv + Pydantic Settings** | Substitui `.env` do Node |
-| Testes e Qualidade | **pytest + ruff + pyright** | Standard Python ultra-rápido (ruff) e segurança de tipos (pyright) |
+| Componente          | Tecnologia                            | Motivo                                                                               |
+| ------------------- | ------------------------------------- | ------------------------------------------------------------------------------------ |
+| Motor Core          | **Python 3.13+**                      | Performance nativa aprimorada, gestão avançada de AST e GIL release features         |
+| Gestão de Ambiente  | **uv**                                | Instalação de dependências ultrarrápida, substituição total de pip/poetry/virtualenv |
+| UI                  | **NiceGUI**                           | Python puro, WebSockets nativos, ideal para dashboards de simulação em tempo real    |
+| API                 | **FastAPI + Uvicorn**                 | REST + WebSocket; corre no mesmo processo que o NiceGUI via `ui.run_with(app)`       |
+| ASL Parser          | **Lark (PEG/EBNF)**                   | Muito mais limpo que parsers manuais; gramáticas declarativas                        |
+| Modelos de dados    | **Pydantic v2**                       | Serialização JSON gratuita, validação automática, compatível com FastAPI             |
+| Simulação circuitos | **PySpice + ngspice**                 | Motor externo para SPICE; simulação analógica/digital                                |
+| Comunicação série   | **pyserial**                          | Protocolo serial-gpio documentado em `docs/serial-gpio-protocol.md`                  |
+| Boards              | **TOON (.toon)**                      | Formato JSON próprio; >100 boards em `dendriforge/core/boards/`                      |
+| Configuração        | **python-dotenv + Pydantic Settings** | Substitui `.env` do Node                                                             |
+| Testes e Qualidade  | **pytest + ruff + pyright**           | Standard Python ultra-rápido (ruff) e segurança de tipos (pyright)                   |
 
 ---
 
@@ -152,13 +152,13 @@ O projecto possui uma separação estrita de responsabilidades entre as suas int
 
 O frontend é um monorepo separado dentro de `apps/` que consome a API Python:
 
-| App | Tecnologia | Estado |
-|-----|-----------|--------|
-| `apps/webapp` | SvelteKit + TypeScript | Frontend web principal (Interface de Utilizador Oficial) |
-| `apps/shared` | TypeScript | Componentes e tipos partilhados |
-| `apps/schemasmith` | SvelteKit | Editor de schemas de boards |
-| `apps/desktop` | A definir (pós v1.0) | Windows + Linux — implementado após Python core estável |
-| `apps/mobile` | A definir (pós v1.0) | Android + iOS — implementado após Python core estável |
+| App                | Tecnologia                                              | Estado                                                   |
+| ------------------ | ------------------------------------------------------- | -------------------------------------------------------- |
+| `apps/webapp`      | SvelteKit + TypeScript                                  | Frontend web principal (Interface de Utilizador Oficial) |
+| `apps/shared`      | TypeScript                                              | Componentes e tipos partilhados                          |
+| `apps/schemasmith` | SvelteKit                                               | Editor de schemas de boards                              |
+| `apps/desktop`     | Kivy + Python + PyO3 (Rust) + PySpice/ngspice          | Windows + Linux — implementado após Python core estável  |
+| `apps/mobile`      | Kivy + Buildozer (mesma base do desktop)               | Android + iOS — implementado após Python core estável    |
 
 ---
 

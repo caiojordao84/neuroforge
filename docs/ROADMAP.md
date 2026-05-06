@@ -180,19 +180,62 @@ Este roadmap descreve as fases de migração do DendriForge de Rust para Python 
 
 **Pré-requisito:** Python core 100% funcional e estável.
 
-**Objectivo:** Empacotar o DendriForge como aplicação nativa para Windows, Linux, Android e iOS.
+**Objectivo:** Empacotar o DendriForge como aplicação nativa para Windows, Linux, Android e iOS usando **Kivy** com backend Python + Rust (PyO3) e simulação analógica via PySpice/ngspice.
+
+### Tecnologia Escolhida
+
+- **Framework UI:** Kivy (full Canvas control, multi-touch/drag nativo)
+- **Backend:** Python + Rust via PyO3 (firmware emulation, Ladder logic)
+- **Simulação analógica:** PySpice + ngspice (circuitos analógicos)
+- **Packaging Mobile:** Buildozer (Android/iOS)
 
 ### Desktop (Windows + Linux)
-- [ ] Avaliar: PyWebView vs Tauri (com API Python como backend) vs Electron
-- [ ] Empacotamento com PyInstaller ou similar
+- [ ] Implementar UI Kivy com Canvas para visualização de boards
+- [ ] Integrar Python core via importação directa
+- [ ] Adicionar camada PyO3 para operações críticas (opcional)
+- [ ] Integrar PySpice para simulação de circuitos analógicos
+- [ ] Empacotamento com PyInstaller
 - [ ] Auto-update
 - [ ] Integração com USB/Serial nativa
 
 ### Mobile (Android + iOS)
-- [ ] Avaliar: Kivy vs BeeWare (Toga) vs React Native + API Python remota
-- [ ] UI adaptada para touch
+- [ ] Usar a mesma base Kivy do desktop
+- [ ] Compilar com Buildozer para Android (.apk) e iOS
+- [ ] UI adaptada para touch (gestos, pinch-zoom)
 - [ ] Monitorização de boards via WiFi/BLE
 - [ ] Sem suporte a flash de firmware (só monitorização e transpilação)
+
+### Fases de Implementação
+
+#### Fase 6.1 — "Hello World" do Hardware
+- [ ] Carregar SVG de boards a partir de ficheiros TOON
+- [ ] Renderização de componentes (MCU, pinos, periféricos) no Canvas Kivy
+- [ ] Funcionalidade de drag-and-drop de componentes
+- [ ] Pan/zoom do canvas
+
+#### Fase 6.2 — SPICE Integration
+- [ ] Integrar PySpice no backend Kivy
+- [ ] Criar componentes básicos: battery, resistor, LED
+- [ ] Simular circuito simples (bateria + resistor + LED)
+- [ ] Visualizar tensões/correntes em tempo real
+
+#### Fase 6.3 — Dynamic Wiring System
+- [ ] Implementar sistema de fios com snap aos pinos
+- [ ] Detecção de proximidade de pinos
+- [ ] Validação de conexões (evitar curto-circuitos)
+- [ ] Actualização dinâmica do netlist SPICE
+
+#### Fase 6.4 — Rust Optimization (PyO3)
+- [ ] Criar módulo Rust para emulação de firmware
+- [ ] bindings PyO3 para lógica de Ladder
+- [ ] Performance para simulações complexas
+- [ ] (Opcional mas recomendado para melhor performance)
+
+#### Fase 6.5 — Mobile Compilation
+- [ ] Configurar Buildozer para Android
+- [ ] Compilar APK e testar
+- [ ] Configurar Buildozer para iOS (requere macOS)
+- [ ] Testar UI touch em dispositivo real
 
 ---
 
