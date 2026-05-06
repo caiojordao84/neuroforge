@@ -135,3 +135,15 @@ notes/logseq
 
 # User-specific workspaces
 *.code-workspace
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.tox/
