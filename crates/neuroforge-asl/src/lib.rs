@@ -15,10 +15,14 @@ pub mod plugins;
 pub mod transforms;
 pub mod transpile;
 pub mod types;
-pub mod wasm;
+
 
 // New modular type system (Task 14)
 pub mod asl_types;
+
+// PyO3 Native Python Bindings
+pub mod python_bindings;
+
 
 // Re-export transpile functions for convenient access
 pub use crate::transpile::transpile;

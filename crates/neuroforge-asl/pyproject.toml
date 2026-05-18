@@ -1,0 +1,14 @@
+[build-system]
+requires = ["maturin>=1.4,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "neuroforge_core"
+version = "4.1.0"
+description = "Native Python extension for DendriForge ASL engine"
+requires-python = ">=3.13"
+dependencies = []
+
+[tool.maturin]
+manifest-path = "Cargo.toml"
+module-name = "neuroforge_core"

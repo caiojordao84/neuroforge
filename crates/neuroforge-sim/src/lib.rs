@@ -1,5 +1,5 @@
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
-use js_sys::WebAssembly;
 
 // A simple structure representing the shared buffer we create or hook into.
 // We'll expose memory from WASM to Javascript so Javascript can access the underlying SAB.
@@ -25,21 +25,22 @@ pub struct ToonNode {
 const SIM_BUFFER_SIZE: usize = 1024 * 1024; // 1MB
 static mut SIM_BUFFER: [u8; SIM_BUFFER_SIZE] = [0; SIM_BUFFER_SIZE];
 
-#[wasm_bindgen]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 pub struct SimEngine {
     tick_count: u64,
     active_nodes: usize,
 }
 
-#[wasm_bindgen]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 impl SimEngine {
-    #[wasm_bindgen(constructor)]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(constructor))]
     pub fn new() -> SimEngine {
         SimEngine {
             tick_count: 0,
             active_nodes: 0,
         }
     }
+
 
     /// Loads a TOON JSON payload to setup the simulation physics map.
     pub fn load_toon(&mut self, json_payload: &str) -> bool {
