@@ -13,7 +13,7 @@ Este documento é o guia operacional e tático de desenvolvimento, diretamente m
 - [x] **A.4 Barramento ZeroMQ (ZMQ):** Implementar comunicação interprocessos (Broker no FastAPI ↔ Workers Rust/Python).
 - [x] **A.5 Orquestração Assíncrona:** Configurar `asyncio` no Processo A (FastAPI) para gerir sessões e filas de mensagens.
 - [x] **A.6 Base de Dados Base:** Setup do PostgreSQL (Cloud) / SQLite (Desktop) usando SQLAlchemy/SQLModel.
-- [ ] **A.7 Sistema de Plugins:** Implementar interface `DendriPlugin` com declaração obrigatória de "Target Process".
+- [x] **A.7 Sistema de Plugins:** Implementar interface `DendriPlugin` com declaração obrigatória de "Target Process".
 
 ---
 
