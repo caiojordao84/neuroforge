@@ -1,372 +1,116 @@
-# DendriForge — Plano de Migração Rust → Python
+# DendriForge — Master TODO List
 
-Este documento é o guia operacional da migração. Cada item é accionável e segue a ordem do ROADMAP.
-
----
-
-## Estado Actual (branch `preRust`)
-
-### O que existe em Rust (a migrar)
-
-| Crate                          | Módulos principais                                                                                   | Estado               |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------- | -------------------- |
-| `crates/dendriforge-asl`       | parser/, generator/, executor/, asl_types/, plugins/ (14 linguagens), optimizer/, transforms/, flow/ | ✅ Funcional          |
-| `crates/dendriforge-sim`       | Motor de simulação de hardware                                                                       | ⚠️ Parcial            |
-| `crates/dendriforge-firmware`  | Firmware embarcado Embassy                                                                           | 🔄 Base               |
-| `crates/dendriforge-transport` | Serial + WebSocket transport                                                                         | ✅ Protocolo definido |
-
-### O que existe em TypeScript (manter/adaptar)
-
-| App                | Conteúdo                                              | Decisão                                     |
-| ------------------ | ----------------------------------------------------- | ------------------------------------------- |
-| `apps/webapp`      | SvelteKit, rotas `/transpile`, `/plc`, `/schemasmith` | ✅ Manter — adaptar para consumir API Python |
-| `apps/shared`      | Componentes, tipos                                    | ✅ Manter intacto                            |
-| `apps/schemasmith` | Editor de schemas                                     | ✅ Manter                                    |
-| `apps/desktop`     | Tauri scaffold                                        | ⏳ Adiar para pós v1.0                       |
-| `apps/mobile`      | App scaffold                                          | ⏳ Adiar para pós v1.0                       |
-
-### O que vai ser eliminado
-
-- `crates/dendriforge-asl/src/wasm/` — desnecessário sem WASM
-- `verify_wasm.mjs`, `test_wasm_frontend_integration.mjs` — obsoletos
-- `pnpm-workspace.yaml`, `tsconfig.json`, `package.json` raiz — obsoletos (o TS fica em `apps/`)
-- `Cargo.toml` / `Cargo.lock` raiz — obsoletos após migração
-- `test_ci.ps1` — substituir por `test_ci.py`
+Este documento é o guia operacional e tático de desenvolvimento, diretamente mapeado com as Fases do `implementation_plan_ensaio.md`.
 
 ---
 
-## Fase 1 — ASL Engine em Python
+## 🏗️ Fase A — Core e Fundações (Arquitetura Multi-Processo)
+> **Foco:** Criar a espinha dorsal imune a falhas, unindo Python e Rust sem gargalos no GIL.
 
-### 1.1 Setup do projecto Python
-
-```
-[x] Criar pyproject.toml na raiz com:
-    - nicegui
-    - fastapi
-    - uvicorn[standard]
-    - lark
-    - pydantic>=2
-    - pyserial
-    - pyspice
-    - python-dotenv
-    - pytest
-    - pytest-asyncio
-
-[x] Criar estrutura de pastas:
-    dendriforge/
-    ├── __init__.py
-    ├── ui/
-    │   ├── __init__.py
-    │   ├── pages/
-    │   └── components/
-    ├── api/
-    │   └── __init__.py
-    └── core/
-        ├── asl/
-        │   ├── parser/
-        │   └── generator/
-        ├── sim/
-        └── transport/
-
-[x] Criar main.py com:
-    from fastapi import FastAPI
-    from nicegui import ui
-    app = FastAPI()
-    ui.run_with(app, host="0.0.0.0", port=8080)
-```
-
-### 1.2 Tipos ASL (dendriforge/core/asl/types.py)
-
-```
-[ ] Portar AslProgram de asl_types/ (Rust) para Pydantic BaseModel
-[ ] Portar AslExpr, AslStatement, AslLiteral, AslType
-[ ] Portar AslFunction, AslVariable, AslBlock
-[ ] Validar: carregar ir_debug.json dos crates e fazer parse com os novos modelos
-[ ] Escrever test_asl_types.py
-```
-
-### 1.3 Executor (dendriforge/core/asl/executor.py)
-
-```
-[ ] Portar AslExecutor de executor/ (Rust)
-[ ] Implementar detect_language(source) → Language
-    (heurísticas: keywords ST, indentação Python, tipos C, etc.)
-[ ] Implementar transpile(source, from_lang, to_lang, board) → str
-[ ] Integrar optimizer e normalize
-[ ] Escrever test_asl_executor.py com casos do st_result.txt
-```
-
-### 1.4 Parsers
-
-```
-[ ] base.py              — NeuroParser ABC
-[ ] toon_parser.py       — Formato TOON (Necessário para a infraestrutura base)
-
-**Core / Tier 1 (Essenciais para o MVP):**
-[ ] python_parser.py     — Python/MicroPython usando ast stdlib
-[ ] rust_parser.py       — Rust std via Lark
-[ ] arduino_parser.py    — Arduino C++
-
-**Community / Tier 2 (Pós-MVP):**
-[ ] c_parser.py          — C embarcado via Lark
-[ ] st_parser.py         — Structured Text (IEC 61131-3) via Lark
-[ ] lua_parser.py        — NodeMCU/Lua
-[ ] zig_parser.py        — Zig
-[ ] ada_parser.py        — Ada
-[ ] asm_parser.py        — AVR Assembly
-[ ] forth_parser.py      — Forth
-[ ] espruino_parser.py   — Espruino JS
-[ ] circuitpython_parser.py — CircuitPython
-
-**Industrial / Tier 3 (Pré Desktop & Mobile):**
-[ ] ladder_parser.py     — Ladder Diagram (LD)
-[ ] fbd_parser.py        — Function Block Diagram (FBD)
-[ ] sfc_parser.py        — Sequential Function Chart (SFC)
-[ ] il_parser.py         — Instruction List (IL)
-[ ] grafcet_parser.py    — GRAFCET
-```
-
-### 1.5 Generators
-
-```
-[ ] toon_generator.py        — CRÍTICO: referência: plugins/core/toon_generator.rs
-
-**Core / Tier 1 (Essenciais para o MVP):**
-[ ] python_generator.py      — referência: plugins/python/
-[ ] rust_generator.py        — referência: plugins/rust_std/
-[ ] arduino_generator.py     — referência: plugins/arduino/
-
-**Community / Tier 2 (Pós-MVP):**
-[ ] c_generator.py           — referência: plugins/c/
-[ ] st_generator.py          — referência: plugins/plc/
-[ ] circuitpython_generator.py
-[ ] lua_generator.py         — referência: plugins/lua/
-[ ] zig_generator.py         — referência: plugins/zig/
-[ ] ada_generator.py         — referência: plugins/ada/
-[ ] asm_generator.py         — referência: plugins/asm/
-[ ] forth_generator.py       — referência: plugins/forth/
-[ ] espruino_generator.py    — referência: plugins/espruino/
-
-**Industrial / Tier 3 (Pré Desktop & Mobile):**
-[ ] ladder_generator.py      — referência: plugins/ladder_generator.rs (17KB)
-[ ] fbd_generator.py         — Function Block Diagram (FBD)
-[ ] sfc_generator.py         — Sequential Function Chart (SFC)
-[ ] il_generator.py          — Instruction List (IL)
-[ ] grafcet_generator.py     — GRAFCET
-```
+- [x] **A.1 Setup do Monorepo e Packaging:** Configurar pacotes segregados (Maturin para Rust, framework padrão para Python).
+- [x] **A.2 Exorcismo do WASM:** Remover dependências `js-sys`, `web-sys` e preparar compilação condicional nativa.
+- [x] **A.3 Integração PyO3:** Criar extensão nativa `neuroforge_core` com `py.allow_threads()` para libertação do GIL.
+- [x] **A.4 Barramento ZeroMQ (ZMQ):** Implementar comunicação interprocessos (Broker no FastAPI ↔ Workers Rust/Python).
+- [x] **A.5 Orquestração Assíncrona:** Configurar `asyncio` no Processo A (FastAPI) para gerir sessões e filas de mensagens.
+- [ ] **A.6 Base de Dados Base:** Setup do PostgreSQL (Cloud) / SQLite (Desktop) usando SQLAlchemy/SQLModel.
+- [ ] **A.7 Sistema de Plugins:** Implementar interface `DendriPlugin` com declaração obrigatória de "Target Process".
 
 ---
 
-## Fase 2 — API FastAPI
+## 🧠 Fase B — ASL e Transpilação
+> **Foco:** O "Esperanto" do código. A árvore de sintaxe abstrata (AST) que unifica Ladder, ST, C++ e Python.
 
-```
-[ ] dendriforge/api/transpiler.py
-    POST /transpile
-    Body: { source: str, from_lang: str, to_lang: str, board_id: str }
-    Response: { result: str, ir: AslProgram | None }
-
-[ ] dendriforge/api/boards.py
-    GET /boards          → lista de boards disponíveis (lê static/boards/*.toon)
-    GET /boards/{id}     → detalhes de board
-
-[ ] dendriforge/api/simulation.py
-    WS /sim/run          → WebSocket com eventos de simulação em tempo real
-
-[ ] Integrar os 3 routers no main.py via app.include_router()
-```
+- [ ] **B.1 Especificação ASL:** Redigir o `ASL_SPEC.md` definindo a estrutura formal do Intermediate Representation (IR).
+- [ ] **B.2 Refatorização de Parsers (Tier 1):** Validar ingestão nativa de C/C++ (Arduino), MicroPython e Rust via ASL.
+- [ ] **B.3 Parser Industrial (Tier 1):** Refinar parser de Structured Text (IEC 61131-3) e linguagens PLCopen XML.
+- [ ] **B.4 Otimizador ASL:** Implementar dead-code elimination e constant folding no Rust.
+- [ ] **B.5 Geradores de Código (Deploy):** Rust gerando saídas limpas de volta para C, Python, ST e LLVM IR.
+- [ ] **B.6 Golden Files Test Suite:** Garantir que 95% dos scripts fazem *round-trip* sem divergência semântica.
 
 ---
 
-## Fase 3 — Motor de Simulação
+## ⚡ Fase C — Simulação (Digital, Analógica e HIL)
+> **Foco:** O motor determinístico de alta performance a correr fora da main-thread.
 
-```
-[ ] dendriforge/core/sim/board.py
-    - Classe Board com pins: Dict[str, PinState]
-    - PinState: { mode: INPUT|OUTPUT|PWM, value: float, pull: NONE|UP|DOWN }
-    - Carregar board a partir de .toon (referência: docs/boards-documentation.md)
-
-[ ] dendriforge/core/sim/engine.py (Multi-Processo)
-    - SimEngine a correr num processo isolado para não bloquear o GIL
-    - Tick configurável (default: 1ms)
-    - Executar ASL transpilado num worker
-    - IPC para enviar eventos GPIO para o WebSocket
-
-[ ] dendriforge/core/sim/plc.py
-    - PLCRuntime com scan cycle IEC 61131-3
-    - Carregar programa ST → transpile → executar
-
-[ ] dendriforge/core/sim/spice.py
-    - SpiceBridge usando PySpice
-    - Gerar netlist a partir de .toon
-    - Chamar ngspice como subprocesso
-    - Mapear resultados de simulação analógica → GPIO virtual
-```
+- [x] **C.1 Motor Digital (Cérebro):** Classe stateful `AslExecutor` em memória Rust.
+- [ ] **C.2 Delta Generator:** O motor Rust calcula e emite exclusivamente subamostragens JSON das alterações (Deltas).
+- [ ] **C.3 Motor Analógico Isolado:** Setup do worker Ngspice em processo separado via ZMQ, com *Degraded Mode fallback*.
+- [ ] **C.4 Hardware in the Loop (HIL):** Workers `asyncio` para I/O (`pyserial`, `pymodbus`, `python-snap7`).
+- [ ] **C.5 API de Orquestração (WebSockets):** Rota pass-through no FastAPI para escutar ZMQ e fazer fan-out de Deltas para a UI.
 
 ---
 
-## Fase 4 — NiceGUI UI
+## 🛠️ Fase D — The Schemasmith (Ferramenta Interna)
+> **Foco:** A ferramenta de criação de componentes (`.toon` + `.svg`).
 
-```
-[ ] dendriforge/ui/pages/simulation.py
-    - Dashboard principal
-    - Selector de board (dropdown alimentado por GET /boards)
-    - Editor de código (ui.codemirror ou ui.textarea)
-    - Botões: Compile, Simulate, Flash
-    - Visualização de pinos em tempo real
-    - Console serial
-
-[ ] dendriforge/ui/pages/transpiler.py
-    - Editor duplo: código fonte / código transpilado
-    - Selector de linguagem origem + destino
-    - Visualização opcional da ASL IR (para debug)
-
-[ ] dendriforge/ui/components/board_view.py
-    - SVG ou canvas com representação do board
-    - Pinos com cores por estado (HIGH=verde, LOW=cinza, PWM=amarelo)
-
-[ ] dendriforge/ui/components/console.py
-    - Output série em tempo real
-    - Filtros por tipo de mensagem
-```
+- [ ] **D.1 JSON Schema Final:** Consolidar o schema dos ficheiros TOON.
+- [ ] **D.2 Validação Estática:** Implementar regras de colisão, consumos de corrente máxima e verificação de pinos virtuais.
+- [ ] **D.3 Schemasmith App:** Adaptar a UI do Schemasmith para exportar pares perfeitos TOON/SVG para a pasta `core`.
 
 ---
 
-## Fase 5 — Transport
+## 📦 Fase E — Bibliotecas de Base (The Payload)
+> **Foco:** Alimentar o simulador com hardware real.
 
-```
-[ ] dendriforge/core/transport/serial.py
-    - Protocolo: docs/serial-gpio-protocol.md
-    - Auto-scan de portas COM/tty
-    - Detecção de tipo de board
-    - Flash: avrdude (AVR), esptool (ESP32), picotool (RP2040)
-
-[ ] dendriforge/core/transport/ws.py
-    - WebSocket server para comunicação remota
-    - Mesmo protocolo que serial mas sobre rede
-```
+- [ ] **E.1 MCU Profiles:** Arduino Uno, ESP32, Raspberry Pi Pico.
+- [ ] **E.2 PLC Profiles:** Siemens S7-1200, Beckhoff CX, Allen-Bradley Micro820.
+- [ ] **E.3 Componentes Ativos/Passivos:** Sensores industriais (4-20mA), atuadores, botões industriais e eletrónica base.
+- [ ] **E.4 ASL Standard Library:** Timers (TON, TOF), PID, contadores e blocos de *motion control*.
 
 ---
 
-## Fase 6 — Desktop e Mobile (pós v1.0)
+## 🖥️ Fase F — Web Product (Cloud & Edição)
+> **Foco:** O portal unificado acessível via browser.
 
-### Abordagem Técnica Escolhida
-
-**Plataforma única para Desktop e Mobile:** Kivy com Python + PyO3 (Rust) + PySpice/ngspice
-
-- Kivy permite full Canvas control com suporte nativo a multi-touch e drag-and-drop
-- PyO3 fornece bindings Rust para performance crítica (firmware emulation, Ladder logic)
-- PySpice + ngspice permite simulação de circuitos analógicos directamente na app
-- Buildozer compila o mesmo código para Android e iOS
-
-### Desktop (Windows + Linux)
-
-```
-[ ] Implementar app Kivy com:
-    - MainWidget: gestão de ecrãs (boards, simulação, transpiler)
-    - Canvas com renderização de boards SVG/TOON
-    - Componentes Kivy personalizados para pinos, LEDs, sensores
-    - Drag-and-drop de componentes
-
-[ ] Integrar Python core:
-    - Importar dendriforge.core como módulo
-    - Comunicação directa (sem HTTP overhead)
-    - Async worker para simulação
-
-[ ] Camada PyO3 (opcional):
-    - Cargo new --lib dendriforge_native
-    - Maturin para build Python
-    - Funções críticas em Rust
-
-[ ] PySpice integration:
-    - subprocess ngspice para simulações
-    - Netlist gerado dinamicamente
-    - Visualização de tensão/corrente
-
-[ ] Empacotamento:
-    - PyInstaller para .exe (Windows)
-    - PyInstaller para binário (Linux)
-    - Auto-update via GitHub Releases
-```
-
-### Mobile (Android + iOS)
-
-```
-[ ] Mesma base Kivy do desktop:
-    - Adaptar layouts para ecrãs pequenos
-    - Touch gestures (pinch-zoom, pan, rotate)
-    - Keyboard virtual para código
-
-[ ] Buildozer:
-    - buildozer init
-    - Especificar requirements (kivy, pyspice, pyo3)
-    - buildozer android debug para testar
-    - buildozer ios (requere macOS)
-
-[ ] Funcionalidades mobile:
-    - Monitorização de boards via WiFi (WebSocket)
-    - BLE para boards compatíveis
-    - Transpilação via API (mesma do backend)
-    - SEM flash de firmware (limitação técnica)
-```
-
-### Fluxo de Desenvolvimento Recomendado
-
-1. **Semana 1-2:** "Hello World" Kivy — load SVG TOON, drag de componentes
-2. **Semana 3-4:** PySpice basic — battery + resistor + LED, visualize tensão
-3. **Semana 5-6:** Wiring system — wire snap a pins, netlist dinámica
-4. **Semana 7-8:** PyO3 (opcional) — Rust bindings para performance
-5. **Semana 9-10:** Mobile — Buildozer Android debug, UI touch
+- [ ] **F.1 Auth e Gestão:** Autenticação JWT, gestão de sessões multitenant.
+- [ ] **F.2 Editor UI:** Integrar Monaco Editor (C++/Python/Rust) e canvas visual para Ladder.
+- [ ] **F.3 O "Dumb Client" (Renderização):** Konva.js/Vanilla JS desenha o SVG e reage **apenas** aos Deltas JSON a 60fps. Zero física no browser.
+- [ ] **F.4 Validação Optimista UI:** "Snapping" elétrico instantâneo baseado no ficheiro TOON em cache no browser.
+- [ ] **F.5 Integração WebSerial/WebUSB:** Permitir flash de hardware direto do Chromium (ESP32/Arduino).
 
 ---
 
-## Fase 0.1 — Realocação de Recursos (CRÍTICO) ✅
+## 💻 Fase G — Desktop App (A Experiência Industrial)
+> **Foco:** O "Carro-Chefe" para chão de fábrica, com suporte offline total.
 
-[x] Mover `apps/shared/static/boards/` para `dendriforge/core/boards/`
-    - Actualizar imports e caminhos de leitura na API
-    - Garantir que o frontend consome via `GET /boards`
-
----
-
-## Fase 7 — AI Transpiler
-
-```
-[ ] dendriforge/core/asl/ai_transpiler.py
-    - Integrar `agent_skills/` como base de conhecimento para prompts
-    - Integrar `dendriforge/core/boards/` para contexto de hardware no LLM
-    - Implementar client para OpenAI, Anthropic e Ollama
-    - Fallback logic: se o parser falhar, enviar para LLM com prompt de sistema ASL
-    - Sistema de cache para evitar chamadas repetidas (API cost)
-
-[ ] Integração na UI
-    - Mostrar aviso "Transpilado via IA" quando o fallback é activado
-    - Botão para "Verificar/Corrigir" código gerado por IA
-    - Configuração de chaves API (BYOK)
-```
+- [ ] **G.1 Tauri Shell:** Empacotar a interface Web num contentor desktop leve.
+- [ ] **G.2 ZMQ Local Setup:** O Desktop corre os motores PyO3/Ngspice diretamente no SO do utilizador.
+- [ ] **G.3 Deploy Físico Nativo:** Integração via subprocessos com `avrdude`, `esptool` e `dfu-util`.
+- [ ] **G.4 Toolchain de Packaging:** Configuração de geradores de instaladores (NSIS para Windows, AppImage Linux) com *Notarization* da Apple (dylibs injetadas).
 
 ---
 
-## Limpar codebase após migração completa
+## 📱 Fase H — Mobile App (O Monitor de Bolso)
+> **Foco:** Interface HMI e telemetria.
 
-```
-[ ] Remover crates/ (após confirmar que Python replica toda a funcionalidade)
-[ ] Remover Cargo.toml / Cargo.lock da raiz
-[ ] Remover .cargo/
-[ ] Remover pnpm-workspace.yaml, tsconfig.json raiz
-[ ] Remover package.json raiz
-[ ] Remover verify_wasm.mjs, test_wasm_frontend_integration.mjs
-[ ] Remover apps/desktop scaffold vazio
-[ ] Remover apps/mobile scaffold vazio
-[ ] Atualizar .github/workflows para CI Python (pytest) em vez de Rust (cargo test)
-```
+- [ ] **H.1 PWA / Capacitor Setup:** Reutilizar a base da UI Web para compilação mobile.
+- [ ] **H.2 View-Only Mode:** Otimizar o *Delta-streaming* para redes 4G instáveis.
+- [ ] **H.3 Fallback UI:** Editor Blockly para ecrãs pequenos e direcionamento de lógicas avançadas para o Desktop.
 
 ---
 
-## Casos de Teste Prontos (dos crates Rust)
+## 💾 Fase I — Storage e Colaboração
+> **Foco:** A gestão de estado e ficheiros entre as plataformas.
 
-Os seguintes ficheiros nos crates são casos de teste reais para validar a implementação Python:
+- [ ] **I.1 Virtual File System (VFS):** API de persistência agnóstica (sqlite local vs cloud storage).
+- [ ] **I.2 Gestão de Conflitos:** Implementar lock de sessão ou merging semântico de diagramas baseados em texto.
+- [ ] **I.3 Packaging:** Geração e importação de ficheiros `.dfpack` (projetos) e `.dfsnap` (estados de simulação).
 
-- `crates/dendriforge-asl/` — `ir_debug.json` (ASL IR de exemplo)
-- `crates/dendriforge-asl/` — `st_result.txt` (output ST esperado)
-- `docs/serial-gpio-protocol.md` — protocolo de comunicação série
-- `docs/boards-documentation.md` — specs das boards
-- `core/boards/*.toon` — >100 boards reais para usar no simulador, agente IA e testar o loader
+---
+
+## 🤖 Fase J — AI Assistant (The Visual Tutor)
+> **Foco:** O copiloto inteligente contextualizado pela AST e Hardware.
+
+- [ ] **J.1 Integração de Providers:** Suporte BYOK (Bring Your Own Key) para OpenAI, Anthropic ou LLMs locais via Ollama.
+- [ ] **J.2 Prompt Hydration:** Injetar o ASL, mapa de pinos do TOON atual e erros de compilador automaticamente no contexto do LLM.
+- [ ] **J.3 Autocorreção ASL:** O motor tenta compilar o código sugerido pela IA *antes* de o apresentar ao utilizador.
+
+---
+
+## 🛡️ Fase K — Beta Testing e QA Final
+> **Foco:** Esmagar bugs antes de qualquer lançamento público.
+
+- [ ] **K.1 QA de Performance:** Validar métrica de "≤ 16ms por tick" e "≤ 500 componentes visíveis a 60fps" no "Dumb Client".
+- [ ] **K.2 Resilience Testing:** Matar o processo ZMQ do Ngspice intencionalmente e validar a ativação suave do *Degraded Mode* digital.
+- [ ] **K.3 Telemetry & Logs:** Monitorização silenciosa de falhas no motor de transpilação.
+- [ ] **K.4 Onboarding Tests:** Validar o wizard inicial e o tutorial do primeiro circuito LED Pisca.
