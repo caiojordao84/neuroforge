@@ -12,21 +12,18 @@ O produto final terá três superfícies principais:
 
 ---
 
-## 0.1 Estado atual e direção
+#### 0.1 Estado atual e direção
 
-O projeto realiza a transição da herança NeuroForge para uma stack baseada em Python e Rust. O core lógico (parsers, generators, optimizer) permanece em Rust para performance, enquanto a camada de aplicação e interface migra para Python. A infraestrutura de boards e componentes é centralizada em `dendriforge/core/boards`, utilizando o padrão TOON+SVG para definição de hardware.
+O projeto realiza a transição da herança NeuroForge para uma stack baseada numa **Arquitetura Multi-Processo (Python + Rust via PyO3 + ZeroMQ)**, abandonando abordagens baseadas em WASM no browser. O core lógico (parsers, generators, motor de passo ASL) é compilado em Rust como uma extensão nativa Python para garantir performance de tempo real. A camada de aplicação atua como um *broker* de mensagens, garantindo total isolamento entre a interface do utilizador, a comunicação de rede e a matemática pesada da simulação.
 
----
+#### 0.2 Princípios do produto
 
-## 0.2 Princípios do produto
-
-- **TOON + SVG-first** — O arquivo TOON governa a lógica e metadados; o SVG provê a geometria, hotspots de conexão e estados visuais animados.
-- **ASL-first** — A Abstract Simulation Layer (ASL) é a verdade única para tradução, simulação e validação.
-- **Offline-capable** — O ambiente desktop prioriza a execução local do core de simulação e transpilação.
-- **BYOK AI** — Flexibilidade para integração de modelos de IA de escolha do utilizador.
-- **Industrial UX** — Estética sóbria e funcional, focada em previsibilidade e eficiência técnica.
-- **A11Y by default** — Conformidade rigorosa com normas WCAG (AA/AAA) para garantir acessibilidade em ambientes críticos.
-- **Segurança por perfil** — Isolamento de recursos e níveis de auditoria segmentados entre perfis Maker, Classroom, Comercial e Industrial.
+* **TOON + SVG-first** — O arquivo TOON governa a lógica; o SVG provê a geometria. O frontend carrega o SVG apenas uma vez.
+* **Delta-Streaming UI** — A interface é um terminal passivo ultrarrápido. O backend nunca envia gráficos, apenas emite *deltas* (diferenças de estado) via WebSocket, deixando a GPU do cliente animar o circuito a 60fps.
+* **ASL-first** — A Abstract Simulation Layer (ASL) é a verdade única para tradução e simulação.
+* **Offline-capable** — O ambiente desktop corre os exatos mesmos processos ZMQ e workers PyO3 que a infraestrutura cloud, garantindo paridade 1:1 sem latência de rede.
+* **BYOK AI** — Flexibilidade para integração de modelos de IA de escolha do utilizador.
+* **A11Y & Industrial UX** — Conformidade rigorosa WCAG, focada em previsibilidade e eficiência técnica.
 
 ---
 
@@ -54,9 +51,11 @@ Para garantir imunidade a falhas e execução em tempo real realística (scan cy
 * Liberta o GIL do Python (`py.allow_threads()`) para correr em paralelo à velocidade do C.
 
 
-4. **Analog Layer (Processo C: Solver Analógico — Ngspice)**
-* Worker isolado que corre as equações diferenciais.
-* **Blindagem:** Se o solver não convergir e bloquear/crashar, o Processo B (Digital) deteta a falha via timeout do ZMQ e assume o "Degraded Mode", mantendo a automação do utilizador a funcionar.
+4. **Execution Layer (O Sistema Nervoso)**
+* **ZeroMQ (ZMQ):** Barramento interno de alta velocidade que liga todos os processos (API, Motor Digital, Solver Analógico, I/O Hardware).
+* **Python:** Orquestração de threads assíncronas (`asyncio`) para networking e hardware.
+* **Rust via PyO3:** Executável nativo injetado no Python para as partes críticas: parsing ASL, geração de netlists, *sim loop* determinístico. Como liberta o GIL, atinge performance C-like no backend.
+* **Ngspice:** Worker analógico acoplado via biblioteca partilhada (`libngspice`), estritamente confinado ao seu próprio processo ZMQ para evitar que problemas de convergência afetem o resto da app.
 
 
 5. **Transport Layer (I/O Desacoplado - Actor Model)**
@@ -1223,15 +1222,18 @@ O catálogo de PLCs separa:
 
 ## 6. UX de simulação e wiring
 
-### 6.1 Comportamento geral
+#### 6.1 Comportamento geral e Rendering
 
-A simulação terá três modos:
+A simulação no DendriForge opera sob o princípio de **"Dumb Client, Smart Backend"**. O browser ou app mobile nunca calcula física ou estados lógicos.
 
-- **Logical mode** — rápido, focado em estados digitais.
-- **Hybrid mode** — digital + analógico simplificado.
-- **Analog mode** — solver via Ngspice.
+* O backend avalia os nós a cada *tick* e transmite um payload JSON minúsculo (ex: `[{"id": "led1", "s": 1}, {"id": "wire3", "v": 5.0}]`).
+* O frontend (Konva.js / Vanilla JS) interceta o payload via WebSocket e injeta as alterações diretamente no DOM/Canvas (mudando o *fill*, *stroke* ou opacidade), garantindo os 60fps constantes independentemente da complexidade do circuito.
 
-O sistema inicia em **Logical mode** por defeito. Quando o utilizador adiciona componentes analógicos ao canvas, o sistema sugere upgrade de modo. A transição é sempre explícita — nunca silenciosa.
+A simulação terá três modos lógicos governados pelo backend:
+
+* **Logical mode** — rápido, focado em estados digitais.
+* **Hybrid mode** — digital + analógico simplificado.
+* **Analog mode** — solver completo acoplado ao worker Ngspice via ZMQ.
 
 ### 6.2 Como as ligações funcionam
 
@@ -1301,18 +1303,19 @@ A layer `faults` está sempre no topo e não pode ser bloqueada — visibilidade
 
 ### 6.6 Validação em tempo real
 
-**Build-time** (ao ligar um fio ou soltar um componente):
-- Verifica compatibilidade eléctrica entre pins.
-- Verifica direcção de pins (ex: output → output gera warning).
-- Detecta conflitos de net e power rails incompatíveis.
+**Build-time (ao ligar um fio ou soltar um componente):**
+- **Optimistic UI Validation:** Para evitar latência de rede, o frontend utiliza a metadata TOON que já está em cache para dar feedback instantâneo.
+- Verifica compatibilidade eléctrica básica entre pins (ex: detectar direcção output → output).
+- Snapping inteligente instantâneo sem aguardar roundtrip do servidor.
 
-**Run-time** (durante simulação activa):
+**Run-time (durante simulação activa no backend):**
+- A física real é delegada ao Processo B (ZMQ).
 - Verifica presença de alimentação antes de energizar outputs.
-- Detecta curtos por net validation.
-- Detecta overload e componentes fora de especificação.
+- Detecta curtos por net validation de malha fechada.
+- Detecta overload e componentes fora de especificação térmica/eléctrica.
 - Monitoriza estados de fault contínuos.
 
-Resultados surfaçados em: highlight vermelho no componente ou fio afectado, entrada automática no Event monitor, badge de status no painel de controlo.
+Resultados de Run-time surfaçados no frontend via Delta Payload: highlight vermelho no componente afectado, entrada no Event monitor e badge de status.
 
 ### 6.7 Regras gerais de simulação
 
@@ -1981,13 +1984,15 @@ disponíveis na app e no backend cloud.
 
 #### Maker / Development
 
+#### Maker / Development
+
 | Protocolo | Targets | Ferramenta interna | Notas |
 |---|---|---|---|
-| USB Serial + DTR reset | Arduino AVR, ESP32 | avrdude, esptool.py | Mais comum no perfil Maker |
+| USB Serial + DTR reset | Arduino AVR, ESP32 | avrdude, esptool.py | **Web App suporta via WebSerial API.** Desktop App usa bibliotecas nativas. |
 | UF2 drag-and-drop | RP2040, SAMD, nRF52 | filesystem mount | Sem software adicional |
-| DFU (USB) | STM32, RP2040, AVR32 | dfu-util | Modo bootloader nativo |
-| AVR ISP / USBasp | AVR bare-metal | avrdude | Sem bootloader |
-| UPDI | ATtiny, Mega 0-series, AVR modernos | avrdude, pymcuprog | Substituto do ISP nos AVR novos |
+| DFU (USB) | STM32, RP2040, AVR32 | dfu-util | **Web App suporta via WebUSB API.** |
+| AVR ISP / USBasp | AVR bare-metal | avrdude | Requer Desktop App |
+| UPDI | ATtiny, Mega 0-series | avrdude, pymcuprog | Requer Desktop App |
 
 #### Debug / Engineering
 
@@ -2151,12 +2156,10 @@ O comportamento do builder em relação ao bootloader do device é configurável
 - storage adapters;
 - **plugin system** — define o contrato de extensibilidade do DendriForge:
   - interface `DendriPlugin` com lifecycle hooks (register, activate, deactivate);
-  - tipos de plugin suportados: builder externo, provider de linguagem, componente TOON,
-    provider de IA, adapter de protocolo de deploy;
+  - **Process Targeting:** Dada a arquitetura ZMQ, os plugins devem declarar o seu "Target Process" (ex: `target: api_layer` para rotas REST, ou `target: sim_layer` para lógicas físicas), garantindo que código Python não-determinístico de terceiros nunca bloqueie o motor ASL em Rust;
+  - tipos de plugin suportados: builder externo, provider de linguagem, componente TOON, provider de IA, adapter de protocolo de deploy;
   - registry local (Fase A); registry cloud activado na Fase I;
-  - **limitação conhecida até Fase I**: plugins externos não são partilháveis publicamente
-    até o registry cloud estar disponível; builders de fabricantes terceiros ficam em
-    modo local-only até I.1;
+  - **limitação conhecida até Fase I**: plugins externos não são partilháveis publicamente até o registry cloud estar disponível; builders de fabricantes terceiros ficam em modo local-only até I.1;
   - isolamento de falha — um plugin que falha não derruba o core;
   - documentação de contrato em `ARCHITECTURE_DECISIONS.md` antes de implementar.
 
@@ -2422,10 +2425,12 @@ O comportamento do builder em relação ao bootloader do device é configurável
 
 #### C.6 Simulation session API
 
+#### C.6 Simulation session API
+
 > Movido de A.5 para aqui — depende do engine C.1/C.3.
-> Modelo de concorrência: múltiplas sessões por conta suportadas (uma por projecto aberto);
-> cada sessão é isolada; o Desktop App (G.3 multi-window) cria sessões independentes por
-> janela. Enquanto no WEBAPP e MOBILE APP as sessões ficam limitadas a 1 para não pesar o servidor nem o aparelho móvel do utilizador.
+> Modelo de concorrência: múltiplas sessões por conta suportadas.
+> O Desktop App (G.3 multi-window) cria sessões independentes no ZMQ local por cada janela.
+> No WEBAPP e MOBILE APP, as abas ativas ficam limitadas a 1 sessão em tempo real para evitar saturação do pool de WebSockets do servidor Cloud e poupar largura de banda (Delta-streaming) em redes móveis.
 
 - create / join / close session;
 - WebSocket para estado em tempo real;
@@ -2586,19 +2591,17 @@ O comportamento do builder em relação ao bootloader do device é configurável
 #### F.3 Performance
 
 > Targets de performance obrigatórios — sem métrica, F.3 nunca termina:
-> - canvas a 60fps em hardware médio com ≤ 50 componentes visíveis;
-> - tempo de load de projecto médio ≤ 2s (assets em cache local);
-> - latência de transpile para projectos típicos (≤ 500 linhas): ≤ 1s;
-> - latência de simulação digital step: ≤ 16ms (1 frame a 60fps).
+> * canvas a 60fps em hardware médio com ≤ 500 componentes visíveis (Aumentado de 50 para 500 graças à arquitetura de deltas);
+> * tempo de load de projecto médio ≤ 2s (assets em cache local);
+> * latência de transpile para projectos típicos (≤ 500 linhas): ≤ 1s;
+> * latência de simulação digital step: ≤ 16ms (1 frame a 60fps).
+> 
+> 
 
-- profiling de bottlenecks contra os targets acima;
-- render caching (canvas, SVG);
-- lazy loading de assets;
-- Rust offload para loops críticos;
-- background indexing (boards, libraries);
-- **verificação de APIs macOS para notarization** — confirmar que o app não usa APIs
-  privadas nem entitlements não justificados; deve ser feito aqui, não na véspera do
-  packaging em G.1.
+* **Estratégia de alcance:** Atingir 60fps constantes não depende de otimizar o Python, mas sim da eficiência do empacotamento JSON de *deltas* no ZMQ e da subamostragem (downsampling) de telemetria enviada pelo WebSocket.
+* lazy loading de assets pesados.
+* indexação em background de TOONs e libraries.
+* **verificação de APIs macOS para notarization** — confirmar que o app não usa APIs privadas nem entitlements não justificados.
 
 #### F.4 Reliability
 
@@ -2661,11 +2664,11 @@ O comportamento do builder em relação ao bootloader do device é configurável
 
 #### G.1 Packaging
 
-- **Windows** — installer NSIS ou MSI; auto-update via Squirrel ou equivalente;
-- **Linux** — AppImage, .deb, .rpm; auto-update via AppImageUpdate ou equivalente;
-- **macOS** — requer Apple Developer account, notarization e entitlements (hardened runtime);
-  notarization pode demorar dias e rejeita apps com APIs privadas — verificação feita em F.3;
-  prioridade dependente de recursos disponíveis; não bloqueia Windows e Linux.
+> *Atenção Arquitetural:* Devido à natureza Multi-Processo (ZMQ) e ao uso de binários nativos Rust (PyO3) e Ngspice, o packaging requer uma "toolchain" rigorosa para garantir que todos os workers "acordam" corretamente no sistema operativo do cliente.
+
+* **Windows** — Empacotamento nativo via PyInstaller ou Nuitka para compilar o core. Installer NSIS ou MSI; auto-update via Squirrel ou equivalente.
+* **Linux** — AppImage, .deb, .rpm; auto-update via AppImageUpdate ou equivalente. É imperativo compilar as bibliotecas partilhadas (`.so`) para compatibilidade com distribuições antigas (ex: via `manylinux`).
+* **macOS** — Requer Apple Developer account, notarization e entitlements (hardened runtime). Devido à necessidade de assinar bibliotecas dinâmicas injetadas (PyO3/Ngspice), a notarization deve ser testada logo na Fase F, pois rejeita *dylibs* mal configuradas.
 
 #### G.2 Native integrations
 
@@ -2721,10 +2724,8 @@ O comportamento do builder em relação ao bootloader do device é configurável
   - Android: USB Host API disponível mas suporte varia por device — não garantido;
   - OTA WiFi (ESP32, ESP8266) e HTTP OTA disponíveis em mobile como alternativa;
   - flash USB requer sempre o Desktop App;
-- simulação analógica não disponível (Ngspice não corre em mobile);
-- **Blockly em ecrãs pequenos (< 6")** — modo lista de blocos disponível como alternativa
-  ao canvas livre; o utilizador selecciona blocos de uma lista categorizada e o canvas
-  é gerado automaticamente;
+- **simulação unificada**: Graças ao "Delta-streaming", o mobile exibe simulações lógicas, híbridas e analógicas sem penalização de bateria, visto que todo o cálculo (Ngspice/ASL) ocorre no servidor Cloud ou na sessão remota do Desktop;
+- **Blockly em ecrãs pequenos (< 6")** — modo lista de blocos disponível como alternativa ao canvas livre; o utilizador selecciona blocos de uma lista categorizada e o canvas é gerado automaticamente;
 - UI simplificada por contexto — features avançadas redireccionam para Desktop.
 
 ---
@@ -2849,13 +2850,12 @@ A homepage deve responder imediatamente:
 - zero regressões nos parsers Tier 1 (Arduino C++, MicroPython, Rust, Python).
 
 **Simulação:**
-- canvas a 60fps com ≤ 50 componentes em hardware de referência (alinhado com F.3);
+- canvas a 60fps em hardware médio com ≤ 500 componentes visíveis (alinhado com F.3);
 - latência de simulação digital step ≤ 16ms (1 frame a 60fps — alinhado com F.3);
 - zero crashes não-recuperáveis em sessões de simulação de duração ≤ 30 min.
 
 **Onboarding:**
-- ≥ 80% dos utilizadores beta completam o tutorial de primeiro projecto sem suporte
-  directo (alinhado com F.1 onboarding wizard);
+- ≥ 80% dos utilizadores beta completam o tutorial de primeiro projecto sem suporte directo (alinhado com F.1 onboarding wizard);
 - tempo mediano de conclusão do tutorial ≤ 15 min.
 
 **Qualidade geral:**
@@ -2959,7 +2959,7 @@ São usados como exit criteria nas Fases B, F e K.
 - latência de transpile ≤ 1s para projectos típicos (≤ 500 linhas).
 
 **Simulação (derivados de F.3 e K.3):**
-- canvas a 60fps em hardware médio com ≤ 50 componentes visíveis;
+- canvas a 60fps em hardware médio com ≤ 500 componentes visíveis;
 - latência de simulação digital step ≤ 16ms (1 frame a 60fps);
 - zero crashes não-recuperáveis em sessões de simulação ≤ 30 min;
 - tempo de load de projecto médio ≤ 2s (assets em cache local).
