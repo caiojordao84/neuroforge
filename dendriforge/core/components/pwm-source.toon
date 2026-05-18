@@ -1,0 +1,137 @@
+# METADATA:
+project_name: pwm-source-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: pwm-source
+name: "PWM Signal Source"
+family: electricals
+subfamily: sources
+category: source
+standard: "IEC 61131-2"
+url: null
+image: pwm-source.svg
+symbol: pwm-source-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  voltage_high:
+    label: "High Level Voltage"
+    unit: V
+    default: 5
+    min: 1.8
+    max: 24
+    type: float
+    editable: true
+  voltage_low:
+    label: "Low Level Voltage"
+    unit: V
+    default: 0
+    min: 0
+    max: 5
+    type: float
+    editable: false
+  duty_cycle:
+    label: "Duty Cycle"
+    unit: "%"
+    default: 50
+    min: 0
+    max: 100
+    type: float
+    editable: true
+  frequency:
+    label: "PWM Frequency"
+    unit: V
+    default: 1000
+    min: 1
+    max: 1000000
+    type: float
+    editable: true
+  current_limit:
+    label: "Output Current Limit"
+    unit: A
+    default: 0.5
+    min: 0
+    max: 10
+    type: float
+    editable: true
+  polarity:
+    label: "Output Polarity"
+    default: "normal"
+    options: ["normal", "inverted"]
+    type: enum
+    editable: true
+  output_enabled:
+    label: "Output Enabled"
+    default: true
+    type: bool
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  OUT|output|pwm|"24V"|"10A"|"PWM signal output"
+  GND|output|ground|null|null|"signal ground reference"
+  SYNC|input|digital|"5V"|"10mA"|"external sync / trigger input"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  waveform: pwm
+  equation: "V_out = (t % (1/frequency)) < (duty_cycle/100 * 1/frequency) ? voltage_high : voltage_low"
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - off
+    - running
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "24V"
+  max_current: "10A"
+  max_power: null
+  max_temp: 85
+  min_temp: -40
+warnings[3]:
+  - "Do not exceed voltage_high above load maximum rated input voltage"
+  - "Ensure GND is shared with the driven load to avoid floating reference"
+  - "High-frequency PWM on inductive loads requires a flyback diode"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["motor-speed-control", "led-dimming", "dc-dc-converter", "servo-control"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 70
+  height: 60
+  ports_layout: custom
+  port_OUT: {x: 70, y: 15}
+  port_GND: {x: 70, y: 45}
+  port_SYNC: {x: 0, y: 30}
+  label_position: top
+  value_display: "{frequency}Hz / {duty_cycle}% / {voltage_high}V"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: pwm-source
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Sources"
+  tags[6]:
+    - pwm
+    - source
+    - signal
+    - digital
+    - pulse
+    - adjustable

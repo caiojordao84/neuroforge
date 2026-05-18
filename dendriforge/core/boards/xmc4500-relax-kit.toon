@@ -1,38 +1,101 @@
+# METADATA:
+project_name: xmc4500-relax-kit-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: xmc4500-relax-kit
-name: "XMC4500 Relax Kit"
-manufacturer: "Generic"
-mcu: "XMC4500"
-category: "industrial"
-image: "/boards/xmc4500-relax-kit.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 1048576
-sram: 163840
-clock_hz: 120000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "avr-family"
-  boardProfileId: "xmc4500-relax-kit"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+name: "Infineon XMC4500 Relax Kit"
+manufacturer: Infineon
+mcu: XMC4500-F100K1024
+category: maker
+image: xmc4500-relax-kit.svg
+url: "https://www.infineon.com/cms/en/product/evaluation-boards/kit_xmc4500_relax_v1/"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 2097152
+  flash_available: 2097152
+  sram: 163840
+  eeprom: 0
+  clock: 144000000
+  voltage: "3.3V"
+  cores: 1
+dims:
+  w: 100.0
+  h: 65.0
+  t: 15.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[5|]{name|direction|voltage|type}:
+  5V|input|"5V"|null
+  3V3|output|"3.3V"|null
+  VIN|input|"7V-12V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[20|]{pin|type|pwm|int|label|roles}:
+  0|digital|f|f|"D0 / P1.4"|uart-rx
+  1|digital|f|f|"D1 / P1.5"|uart-tx
+  2|digital|f|f|"D2 / P1.6"|null
+  3|digital|t|t|"D3 / P1.2"|pwm
+  4|digital|f|f|"D4 / P1.1"|null
+  5|digital|t|f|"D5 / P1.8"|pwm
+  6|digital|t|f|"D6 / P1.9"|pwm
+  7|digital|f|f|"D7 / P1.0"|null
+  8|digital|f|f|"D8 / P3.4"|null
+  9|digital|t|f|"D9 / P3.5"|pwm
+  10|digital|t|f|"D10 / P3.6"|"pwm;spi-ss"
+  11|digital|t|f|"D11 / P3.2"|"pwm;spi-mosi"
+  12|digital|f|f|"D12 / P3.1"|spi-miso
+  13|digital|f|f|"D13 / P3.0"|"spi-sck;status-led"
+  14|analog|f|f|"A0 / P14.0"|"adc:t"
+  15|analog|f|f|"A1 / P14.1"|"adc:t"
+  16|analog|f|f|"A2 / P14.2"|"adc:t"
+  17|analog|f|f|"A3 / P14.3"|"adc:t"
+  18|analog|f|f|"A4 / P14.4"|"adc:t"
+  19|analog|f|f|"A5 / P14.5"|"adc:t"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[6|]{peripheral|param|value}:
+  serial|"uarts:3"|"pins:0,1"
+  i2c|"channels:2"|"sda:7;scl:8"
+  spi|"channels:2"|"miso:12;mosi:11;sck:13;ss:10"
+  adc|"channels:12"|"pins:14,15,16,17,18,19"
+  pwm|"channels:16"|null
+  dac|"channels:2"|"pins:4;7"
+usb:
+  type: Micro-AB
+  chip: J-Link-OB
+  vid: "0x1366"
+  pid: "0x0101"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "8mA"
+  total_current_limit: "200mA"
+  warnings[4]:
+    - "Arduino Uno R3 header compatible — shield clearance may vary due to 3.3V logic"
+    - "On-board J-Link Lite debugger occupies USB connection during programming"
+    - "ADC reference voltage is 3.3V; maximum ADC input must not exceed VAREF"
+    - "D13 is connected to onboard LED — avoid high-current drive on this pin"
+compatibility:
+  arduinoCore: "2.1.0"
+  pio: infineonxmc
+  frameworks: "arduino;mbed"
+  languages: arduino-cpp
+  bootloader: jlink-ob
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: xmc-family
+  boardProfileId: xmc4500-relax-kit
+  defaultLanguageSkills[2]:
+    - arduino-cpp-xmc
+    - c-cpp-dave

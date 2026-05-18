@@ -1,0 +1,105 @@
+# METADATA:
+project_name: esp32-p4-function-ev-board-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: esp32-p4-function-ev-board
+name: "ESP32-P4-Function-EV-Board v1.5.2"
+manufacturer: Espressif
+mcu: "Espressif ESP32-P4 (RISC-V dual-core 400 MHz + LP core 40 MHz)"
+category: maker
+image: esp32-p4-function-ev-board.svg
+url: "https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32p4/esp32-p4-function-ev-board/user_guide.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 16777216
+  flash_available: 16252928
+  sram: 33554432
+  eeprom: 0
+  clock: 400000000
+  voltage: "3.3V"
+dims:
+  w: 74.0
+  h: 88.0
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[5|]{name|direction|voltage|type}:
+  5V|input|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RST|input|null|null
+  BOOT|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[23|]{pin|type|pwm|int|label|roles}:
+  2|analog|true|true|"GPIO2 / ADC1_CH1"|"adc:t"
+  3|analog|true|true|"GPIO3 / ADC1_CH2"|"adc:t"
+  4|analog|true|true|"GPIO4 / ADC1_CH3"|"adc:t"
+  5|analog|true|true|"GPIO5 / ADC1_CH4"|"adc:t"
+  6|digital|true|true|"GPIO6"|null
+  7|digital|true|true|"GPIO7 / SDA"|i2c-sda
+  8|digital|true|true|"GPIO8 / SCL"|i2c-scl
+  20|digital|true|true|"GPIO20 / SCK"|spi-sck
+  21|digital|true|true|"GPIO21 / MOSI"|spi-mosi
+  22|digital|true|true|"GPIO22 / MISO"|spi-miso
+  23|digital|true|true|"GPIO23 / SS"|spi-ss
+  26|digital|true|true|"GPIO26 / LCD PWM"|null
+  27|digital|true|true|"GPIO27 / LCD RST"|null
+  32|digital|true|true|"GPIO32"|null
+  33|digital|true|true|"GPIO33"|null
+  36|digital|true|true|"GPIO36"|null
+  37|digital|true|true|"GPIO37 / U0TXD"|uart-tx
+  38|digital|true|true|"GPIO38 / U0RXD"|uart-rx
+  46|digital|true|true|"GPIO46"|null
+  47|digital|true|true|"GPIO47"|null
+  48|digital|true|true|"GPIO48"|null
+  53|digital|true|true|"GPIO53"|null
+  54|digital|true|true|"GPIO54"|null
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uarts:5"|"pins:37,38"
+  i2c|"channels:2"|"sda:7;scl:8"
+  spi|"channels:3"|"miso:22;mosi:21;sck:20;ss:23"
+  adc|"resolution:12bit"|"pins:2;3;4;5"
+usb:
+  type: USB-C
+  chip: native
+  vid: "0x303A"
+  pid: "0x1001"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "25mA"
+  total_current_limit: "500mA"
+  warnings[7]:
+    - "All I/O pins operate at 3.3V; not 5V tolerant"
+    - "GPIO0/GPIO1 not broken out on J1 (marked NC); reserved for internal use"
+    - "GPIO26/GPIO27 used by LCD backlight PWM and reset by default"
+    - "PSRAM 32MB uses internal SPI bus; not accessible on J1 headers"
+    - "Wi-Fi and Bluetooth provided by co-module ESP32-C6-MINI-1; not on ESP32-P4 chip"
+    - "USB 2.0 Type-C and Type-A (OTG HS) cannot be used simultaneously"
+    - "MIPI-CSI/DSI pins not broken out on J1; dedicated FPC connectors only"
+compatibility:
+  arduinoCore: "3.0.0"
+  pio: espressif32
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: esp32p4-boot
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: esp32-family
+  boardProfileId: esp32-p4-function-ev-board
+  defaultLanguageSkills[3]:
+    - arduino-cpp-esp32
+    - micropython-esp32
+    - rust-embassy-esp32

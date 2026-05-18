@@ -1,0 +1,136 @@
+# METADATA:
+project_name: diode-schottky-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: diode-schottky
+name: "Schottky Diode"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60747-2"
+url: null
+image: diode-schottky.svg
+symbol: diode-schottky-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  vf:
+    label: "Forward Voltage (Vf)"
+    unit: V
+    default: 0.3
+    min: 0.1
+    max: 1
+    type: float
+    editable: false
+  if_rated:
+    label: "Rated Forward Current"
+    unit: A
+    default: 1
+    options: [0.1, 0.2, 0.5, 1, 3, 5, 10, 20]
+    type: enum
+    editable: true
+  vr_max:
+    label: "Max Reverse Voltage"
+    unit: V
+    default: 40
+    options: [20, 30, 40, 60, 80, 100, 150, 200]
+    type: enum
+    editable: true
+  leakage_current:
+    label: "Reverse Leakage Current"
+    unit: A
+    default: 0.0001
+    min: 0
+    max: 0.5
+    type: float
+    editable: false
+  junction_capacitance:
+    label: "Junction Capacitance"
+    unit: V
+    default: 20
+    min: 1
+    max: 500
+    type: float
+    editable: false
+  recovery_time:
+    label: "Reverse Recovery Time"
+    unit: V
+    default: 5
+    options: [1, 2, 5, 10, 20, 50]
+    type: enum
+    editable: true
+  package:
+    label: "Package"
+    default: "SOD-123"
+    options: ["SOD-123", "SOD-323", "SMA", "SMB", "SMC", "TO-220", "TO-247"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[2|]{id|direction|type|voltage_max|current_max|notes}:
+  A|input|power|"200V"|"20A"|"anode (positive terminal)"
+  K|output|ground|null|null|"cathode (negative terminal)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: basic-analog
+  equation: "I = I_s * (exp(V_d/(n*Vt)) - 1)"
+  bidirectional: false
+  dynamic: true
+  thermal_model: true
+  noise_model: false
+  states[3]:
+    - off
+    - forward
+    - breakdown
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "200V"
+  max_current: "20A"
+  max_power: null
+  max_temp: 175
+  min_temp: -55
+warnings[4]:
+  - "Schottky diodes have low forward drop but higher reverse leakage than PN diodes"
+  - "Reverse voltage must be derated — Schottky junctions are more susceptible to leakage and breakdown"
+  - "Thermal rise increases leakage current significantly at elevated temperature"
+  - "Use Schottky parts for fast switching and low losses, not for high reverse-voltage blocking"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["rectifier", "freewheel", "power-supply", "OR-ing", "clamp"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 50
+  height: 30
+  ports_layout: horizontal
+  port_A: {x: 0, y: 15}
+  port_K: {x: 50, y: 15}
+  label_position: top
+  value_display: "Schottky Vf={vf}V / Vr={vr_max}V"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: diode-schottky
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Passives"
+  tags[7]:
+    - diode
+    - schottky
+    - rectifier
+    - passive
+    - semiconductor
+    - fast-switching
+    - iec-60747-2

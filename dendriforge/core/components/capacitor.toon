@@ -1,0 +1,145 @@
+# METADATA:
+project_name: capacitor-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: capacitor
+name: "Capacitor"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60384-1"
+url: null
+image: capacitor.svg
+symbol: capacitor-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  capacitance:
+    label: "Capacitance"
+    unit: F
+    default: 0.0000001
+    min: 0.000000000001
+    max: 0.1
+    type: float
+    editable: true
+  voltage_rated:
+    label: "Rated Voltage (DC)"
+    unit: V
+    default: 50
+    options: [6.3, 10, 16, 25, 35, 50, 63, 100, 160, 200, 250, 400, 450, 630]
+    type: enum
+    editable: true
+  tolerance:
+    label: "Tolerance"
+    unit: "%"
+    default: 10
+    options: [1, 2, 5, 10, 20]
+    type: enum
+    editable: true
+  dielectric:
+    label: "Dielectric Type"
+    default: "ceramic-X7R"
+    options: ["ceramic-C0G", "ceramic-X5R", "ceramic-X7R", "electrolytic-Al", "electrolytic-Ta", "film-PET", "film-PP", "mica", "supercap"]
+    type: enum
+    editable: true
+  esr:
+    label: "ESR (Equivalent Series Resistance)"
+    unit: Ω
+    default: 0.1
+    min: 0.001
+    max: 10
+    type: float
+    editable: false
+  esl:
+    label: "ESL (Equivalent Series Inductance)"
+    unit: V
+    default: 0.000000001
+    min: 0.0000000001
+    max: 0.0000001
+    type: float
+    editable: false
+  temp_coefficient:
+    label: "Temperature Coefficient"
+    default: "X7R"
+    options: ["C0G/NP0", "X5R", "X7R", "Y5V", "Z5U"]
+    type: enum
+    editable: false
+  polarity:
+    label: "Polarity"
+    default: "non-polarized"
+    options: ["non-polarized", "polarized"]
+    type: enum
+    editable: true
+  package:
+    label: "Package"
+    default: "SMD-0805"
+    options: ["SMD-0201", "SMD-0402", "SMD-0603", "SMD-0805", "SMD-1206", "SMD-1210", "SMD-1812", "THT-radial", "THT-axial"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[2|]{id|direction|type|voltage_max|current_max|notes}:
+  POS|passive|analog|null|null|"positive terminal (anode for polarized types)"
+  NEG|passive|analog|null|null|"negative terminal (cathode for polarized types)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: basic-analog
+  equation: "I = capacitance * dV/dt; Z_c = 1 / (j * 2 * pi * f * capacitance)"
+  bidirectional: true
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - nominal
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "{voltage_rated}"
+  max_current: null
+  max_power: null
+  max_temp: 125
+  min_temp: -55
+warnings[4]:
+  - "Never reverse-bias polarized capacitors — rupture and fire hazard"
+  - "Derate voltage to 80% of rated value for long-term reliability"
+  - "Electrolytic capacitors have limited lifetime at high temperature — check ripple current rating"
+  - "C0G/NP0 is most stable vs temperature; Y5V/Z5U capacitance varies significantly with voltage and temperature"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["decoupling", "filtering", "timing", "energy-storage", "coupling"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 40
+  height: 30
+  ports_layout: horizontal
+  port_POS: {x: 0, y: 15}
+  port_NEG: {x: 40, y: 15}
+  label_position: top
+  value_display: "{capacitance}F / {voltage_rated}V ({dielectric})"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: capacitor
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Passives"
+  tags[6]:
+    - capacitor
+    - passive
+    - analog
+    - decoupling
+    - filtering
+    - iec-60384

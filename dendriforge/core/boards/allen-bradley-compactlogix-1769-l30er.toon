@@ -1,0 +1,100 @@
+# METADATA:
+project_name: allen-bradley-compactlogix-1769-l30er-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: allen-bradley-compactlogix-1769-l30er
+name: "Allen-Bradley CompactLogix 5370 L3 — 1769-L30ER; 1MB user memory; 2x EtherNet/IP DLR; 8 local 1769 I/O; 16 EtherNet/IP nodes; 256 connections; 32 tasks; USB; 1GB SD; no built-in I/O or PSU; Studio 5000"
+manufacturer: "Rockwell Automation / Allen-Bradley"
+mcu: "Rockwell Automation CompactLogix 5370 L3 CPU — 1MB user RAM; 32 tasks; 100 programs/task; IEC61131-3 LD-FBD-ST-SFC; CIP-based EtherNet/IP; 35-day RTC holdup via supercap; no integrated field I/O"
+category: plc
+image: allen-bradley-compactlogix-1769-l30er.svg
+url: "https://www.rockwellautomation.com/en-us/products/details.1769-l30er.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 1073741824
+  flash_available: 1048576
+  sram: 1048576
+  eeprom: 0
+  clock: 0
+  voltage: "24V"
+dims:
+  w: 89.0
+  h: 147.0
+  t: 87.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# 1769-L30ER has NO built-in power supply — a separate 1769-PA or 1769-PB power supply module is MANDATORY
+# 1769-PA2 / 1769-PA4: 120VAC or 240VAC input; 1769-PB2 / 1769-PB4: 24VDC input
+# The power supply provides: 5VDC backplane bus (for CPU + I/O modules) and field power 24VDC to I/O modules
+# CPU current draw from 5V backplane: 500mA; CPU current draw from 24V: 225mA
+# Field power (24VDC) current max: 2A total across all I/O modules (L30ER); protected by internal non-replaceable fuse
+# PE: Protective Earth — connect via DIN rail; rail must be earthed
+powerPins[5|]{name|direction|voltage|type}:
+  5V_BACKPLANE|input|"5V"|null
+  24V_FIELD_PWR|input|"24V"|null
+  M_COMMON|null|null|ground
+  PE_RAIL|null|null|ground
+  USB_VBUS|input|"5V"|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# 1769-L30ER has NO integrated field I/O (no DI, DO, AI, AO on CPU module)
+# All field I/O is via local 1769 Compact I/O modules (up to 8) or distributed EtherNet/IP I/O
+# GPIO map covers the physical communication ports on the CPU front face
+gpio[3|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|false|"ETH1 / EtherNet/IP Port 1 — RJ45; 10/100 Mbps auto-MDI-X; Part of 2-port embedded DLR switch; ONE shared IP address across both ETH ports; DLR capable for fault-tolerant ring without managed switch; up to 16 EtherNet/IP nodes; protocols: EtherNet/IP CIP, CIP Sync, CIP Motion (L30ERM only), PCCC-on-EIP, open socket TCP-UDP; isolation 30VDC cont 500VAC@60s"|"do;di"
+  1|digital|false|false|"ETH2 / EtherNet/IP Port 2 — RJ45; 10/100 Mbps; same embedded switch as ETH1; same single IP address; supports DLR ring topology when connected to another DLR-capable device; linear or star topology also supported; Cat 5e minimum cable"|"do;di"
+  2|digital|false|false|"USB / Mini-B — USB 2.0 Full Speed 12 Mbps; for temporary programming connection ONLY; NOT for permanent or industrial connection; use: program upload/download, firmware update, RSLinx Classic; isolation 30VDC cont 500VAC@60s; max cable length 3m; remove after programming"|"do;di"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[9|]{peripheral|param|value}:
+  ethernet_ip_dual|"speed:100Mbit"|"2x-RJ45-embedded-switch;DLR:Device-Level-Ring-fault-tolerant-no-managed-switch;one-IP-addr;nodes-max:16;connections-max:256;sockets-max:32;protocols:EtherNet-IP-CIP,CIP-Sync,open-socket-TCP-UDP,PCCC-on-EIP;cable:Cat5e-min;topology:linear-star-ring-DLR"
+  sd_card_nvm|"size:1GB"|"1784-SD1-1GB-SD-card-shipped-with-controller;1784-SD2-2GB-optional;stores:program-firmware-data-log-recipe;load-program-on-powerup;store-and-load-via-MSG-instruction;NOT-removable-during-run-without-data-loss"
+  rtc_supercap|"backup:35days"|"hardware-RTC;energy-storage:internal-supercapacitor;holdup:40-days@0C,35-days@25C,28-days@40C,16-days@60C;no-battery-required;L30ER-NSE-variant-has-NO-supercap-no-RTC-holdup"
+  io_local_expansion|"modules:8"|"max-8-Bulletin-1769-Compact-I-O-modules-right-of-CPU;max-3-banks-separated-by-1769-PA-or-PB-power-supply;power-supply-distance-rating:4-max-3-IO-modules-between-CPU-and-PSU;types:1769-IQ16-DI,1769-OQ16-DO,1769-IA16-AI,1769-OF4-AO,1769-HSC-counter,1769-SDN-DeviceNet,1769-ASCII,1769-SM2-motion;end-cap-1769-ECR-mandatory-on-last-module"
+  io_distributed_eip|"nodes:16"|"up-to-16-EtherNet-IP-I-O-adapter-nodes;types:1734-AENT-POINT-IO,1756-EN2T-ControlLogix-remote,1769-L2-remote-CompactLogix,PowerFlex-755-drives,Kinetix-5500-drives,1203-USM-DeviceNet-via-EIP;RPI-configurable-per-module"
+  programming_usb|"speed:12Mbit"|"USB-Mini-B-2.0-Full-Speed;for-temporary-use-only;RSLogix-5000-or-Studio-5000-programming;firmware-update;NOT-for-permanent-industrial-network;cable-max-3m;disconnect-after-use"
+  cip_motion_eip|"axes:0"|"L30ER-standard:NO-integrated-motion;L30ERM-variant:up-to-4-axes-via-CIP-Motion-EtherNet-IP;drives:Kinetix-5100-5300-5500-5700;SERCOS-derived-trajectory;motion-planner:Logix-controller;requires-L30ERM-cat-no"
+  devicenet_optional|"nodes:64"|"DeviceNet-access-via-1769-SDN-scanner-module-in-local-I-O-rack;scanner-counts-as-1-of-8-local-expansion-modules;max-64-DeviceNet-nodes-per-SDN;master-only;Explicit-and-I-O-messaging;power-supply-distance-rating:4-with-SDN"
+  tasks_programs|"tasks:32"|"32-tasks-max:1-continuous+31-periodic-event;100-programs-per-task;event-tasks:EVENT-MESSAGE-MOTION-AXIS-WATCH-CONSUMED-TAG;256-total-controller-connections;32-open-sockets;subroutine-nesting-max:JMP-JSR-unlimited-within-task"
+usb:
+  type: Mini-B
+  chip: native
+  vid: "0x1A86"
+  pid: "0x7523"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "2000mA"
+  total_current_limit: "500mA"
+  warnings[9]:
+    - "1769-L30ER has NO integrated field I/O and NO built-in power supply — a separate 1769-PA or 1769-PB power supply module MUST be installed immediately to the left of the controller on the DIN rail or panel; without the power supply the CPU will not power on; the power supply must be ordered separately (1769-PA2 for 120/240VAC or 1769-PB2 for 24VDC)"
+    - "Both EtherNet/IP ports on the 1769-L30ER share a SINGLE IP address via an embedded 2-port switch — do NOT configure the two ports with different IP addresses; for network isolation between segments use a separate managed switch or a second network adapter; the embedded DLR switch enables ring topology without a managed switch but does not provide VLAN separation"
+    - "The 1769-L30ER (non-M variant) does NOT support Integrated Motion on EtherNet/IP (CIP Motion) — motion control requires the 1769-L30ERM variant; the L30ER can still control simple drives via MSG instructions or third-party drives via EtherNet/IP but without the full CIP Motion trajectory planner; substituting L30ER for L30ERM in a motion application will cause axis configuration errors in Studio 5000"
+    - "The 1769-L30ER DOES include an internal energy-storage supercapacitor (RTC holdup ~35 days at 25°C) — the 1769-L30ER-NSE variant (No Stored Energy) deliberately OMITS this supercapacitor and provides NO RTC backup after power loss; select the correct variant for your application; confusing L30ER and L30ER-NSE in a time-critical system will cause clock loss on every power failure"
+    - "Maximum local expansion modules is 8 × 1769 Compact I/O modules, but the power supply distance rating is 4 — this means a maximum of 3 I/O modules may be placed between the controller and the power supply before another power supply must be installed; exceeding the power supply distance rating causes backplane communication errors and unpredictable I/O module faults"
+    - "The 1784-SD1 (1 GB) SD card shipped with the controller is REQUIRED for program storage on power cycle — if the SD card is removed or corrupted the controller will not reload the program on power-up; do NOT remove the SD card during RUN mode; use only Rockwell Automation 1784-SD1 or 1784-SD2 cards; third-party SD cards are NOT supported and will cause memory integrity faults"
+    - "The USB port on the 1769-L30ER is for TEMPORARY programming use only (not intended for permanent industrial connection) — do not use the USB port as a permanent network interface; isolation is 30VDC continuous Basic Insulation; the USB port is NOT isolated from the system in the same way Ethernet ports are; always use EtherNet/IP for permanent network topology"
+    - "EtherNet/IP node count limit is 16 for the 1769-L30ER (versus 32 for L33ER and up to 80 for L38ERM) — each distributed I/O adapter, drive, and EtherNet/IP device consumes one node count; if the application requires more than 16 nodes a larger controller (L33ER or above) or a secondary Logix controller on the network must be used; node count is per controller, not per port"
+    - "The 1769 Compact I/O system requires a 1769-ECR (right end cap) on the rightmost module in the system — failure to install the end cap leaves the backplane bus open and causes backplane communication faults across all I/O modules; the end cap is included with the controller but must be physically transferred to the last I/O module when expansion modules are added"
+compatibility:
+  sw: "Studio 5000 Logix Designer V21+ (primary); RSLogix 5000 V16-V20 (legacy); FactoryTalk View SE/ME for HMI; RSLinx Classic or FactoryTalk Linx for comms"
+  languages: "Relay Ladder (LD);Function Block Diagram (FBD);Structured Text (ST);Sequential Function Chart (SFC)"
+  frameworks: "IEC61131-3;EtherNet-IP-CIP;CIP-Sync;CIP-Safety-read;DLR;DeviceNet-via-1769-SDN;PCCC;Studio5000;FactoryTalk"
+  certifications: "cULus;CE;UKCA;RCM;IECEx;ATEX-Zone2;KC;CCC;EtherNet-IP-ODVA"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: allen-bradley-compactlogix-5370-l3-family
+  boardProfileId: allen-bradley-compactlogix-1769-l30er
+  defaultLanguageSkills[3]:
+    - ladder-studio5000-compactlogix
+    - fbd-studio5000-compactlogix
+    - st-studio5000-compactlogix

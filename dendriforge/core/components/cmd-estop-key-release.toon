@@ -1,0 +1,131 @@
+# METADATA:
+project_name: cmd-estop-key-release-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: cmd-estop-key-release
+name: "E-Stop Key Release"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60947-5-5"
+url: null
+image: cmd-estop-key-release.svg
+symbol: cmd-estop-key-release-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  contact_layout:
+    label: "Contact Layout"
+    default: "1NC+1NO"
+    options: ["1NC", "1NC+1NO", "2NC", "2NC+1NO"]
+    type: enum
+    editable: true
+  reset_type:
+    label: "Reset Type"
+    default: "key-release"
+    options: ["key-release", "twist-release", "pull-release"]
+    type: enum
+    editable: true
+  head_diameter:
+    label: "Head Diameter"
+    unit: mm
+    default: 40
+    options: [30, 40, 60]
+    type: enum
+    editable: true
+  ip_rating:
+    label: "Ingress Protection"
+    default: "IP65"
+    options: ["IP54", "IP65", "IP67"]
+    type: enum
+    editable: true
+  safety_rating:
+    label: "Safety Category"
+    default: "SIL3"
+    options: ["PL e", "SIL2", "SIL3"]
+    type: enum
+    editable: true
+  mechanical_life:
+    label: "Mechanical Life"
+    unit: cycles
+    default: 100000
+    min: 10000
+    max: 1000000
+    type: float
+    editable: false
+  package:
+    label: "Package"
+    default: "22mm panel"
+    options: ["22mm panel", "30mm panel", "40mm mushroom", "enclosed"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  COM|input|ground|null|null|"common terminal"
+  NC|output|digital|"250V"|"10A"|"normally-closed safety contact"
+  NO|output|digital|"250V"|"10A"|"normally-open auxiliary contact"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - armed
+    - tripped
+    - reset
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "250V"
+  max_current: "10A"
+  max_power: null
+  max_temp: 70
+  min_temp: -25
+warnings[4]:
+  - "This is a safety device and must be used in a safety-rated circuit"
+  - "NC safety contact should open on actuation to remove hazard energy"
+  - "Do not bypass or defeat the emergency stop chain"
+  - "Use monitored dual-channel safety inputs where required by the application"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["safety-relay", "plc-safety-input", "dc-source"]
+  forbidden_with: ["ac-source"]
+  requires: ["safety-relay"]
+  typical_context: ["emergency-stop", "machine-safety", "safety-chain"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 70
+  height: 40
+  ports_layout: custom
+  port_COM: {x: 0, y: 20}
+  port_NC: {x: 70, y: 15}
+  port_NO: {x: 70, y: 25}
+  label_position: top
+  value_display: "E-Stop key / {reset_type} / {contact_layout}"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: cmd-estop-key-release
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Switches"
+  tags[7]:
+    - e-stop
+    - key-release
+    - safety
+    - switch
+    - operator
+    - control
+    - iec-60947-5-5

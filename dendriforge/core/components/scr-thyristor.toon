@@ -1,0 +1,106 @@
+# METADATA:
+project_name: scr-thyristor-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: scr-thyristor
+name: "SCR Thyristor"
+family: electricals
+subfamily: semiconductors
+category: semiconductor
+standard: "IEC 60617"
+url: null
+image: scr-thyristor.svg
+symbol: scr-thyristor-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  v_drm:
+    label: "Peak Repetitive Off-State Voltage"
+    unit: V
+    default: 400
+    type: float
+    editable: true
+  i_gt:
+    label: "Gate Trigger Current"
+    unit: mA
+    default: 15
+    type: float
+    editable: true
+  v_gt:
+    label: "Gate Trigger Voltage"
+    unit: V
+    default: 1.5
+    type: float
+    editable: false
+  i_t_avg:
+    label: "Average On-State Current"
+    unit: A
+    default: 8
+    type: float
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  A|input|analog|"400V"|"8A"|"Anode"
+  K|output|analog|"400V"|"8A"|"Cathode"
+  G|input|analog|"1.5V"|"50mA"|"Gate"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - off
+    - triggering
+    - latching
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "400V"
+  max_current: "8A"
+  max_power:
+    value: 12.0
+    unit: W
+  max_temp: 125
+  min_temp: -40
+warnings[2]:
+  - "Gate current must be limited to prevent semiconductor damage"
+  - "The device remains conducting until the current falls below the holding current"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["power-switching", "phase-control", "rectification"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 40
+  height: 60
+  ports_layout: custom
+  port_A: {x: 20, y: 0}
+  port_K: {x: 20, y: 60}
+  port_G: {x: 0, y: 40}
+  label_position: top
+  value_display: "{name}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: scr-thyristor
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Semiconductors"
+  tags[3]:
+    - thyristor
+    - semiconductor
+    - power-electronics

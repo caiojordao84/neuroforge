@@ -1,0 +1,129 @@
+# METADATA:
+project_name: pneu-valve-2-2-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: pneu-valve-2-2
+name: "2/2 Directional Control Valve (Válvula 2/2 Vias)"
+family: pneumatics
+subfamily: directional-valves
+category: valve
+standard: "ISO 1219-1"
+url: null
+image: pneu-valve-2-2.svg
+symbol: pneu-valve-2-2-symbol.svg
+symbol_standard: ISO
+
+## 2. PARAMETERS:
+params:
+  normal_state:
+    label: "Normal State (Estado de Repouso)"
+    default: "normally-closed"
+    options: ["normally-closed", "normally-open"]
+    type: enum
+    editable: true
+  actuation_type:
+    label: "Actuation Type (Acionamento)"
+    default: "solenoid"
+    options: ["solenoid", "manual-pushbutton", "manual-lever", "pneumatic-pilot"]
+    type: enum
+    editable: true
+  return_type:
+    label: "Return Mechanism (Retorno)"
+    default: "spring"
+    options: ["spring", "solenoid", "pneumatic-pilot"]
+    type: enum
+    editable: true
+  supply_pressure:
+    label: "Max Supply Pressure"
+    unit: bar
+    default: 10
+    min: 2
+    max: 16
+    type: float
+    editable: false
+  flow_rate:
+    label: "Nominal Flow Rate"
+    unit: "l/min"
+    default: 500
+    min: 100
+    max: 5000
+    type: float
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  SOL_A_VCC|input|power|"24V"|"500mA"|"solenoid A power (extend/actuate)"
+  SOL_A_GND|input|ground|null|null|"solenoid A ground"
+  SOL_B_VCC|input|power|"24V"|"500mA"|"solenoid B power (return) - leave unconnected if return_type is spring"
+  SOL_B_GND|input|ground|null|null|"solenoid B ground"
+
+## 4b. FLUID PORTS (PNEUMATIC):
+pneumatic_ports[2|]{id|direction|type|pressure_max|flow_nominal|notes}:
+  P|input|pneumatic|"10bar"|"{flow_rate}"|"supply pressure port (1)"
+  A|output|pneumatic|"10bar"|"{flow_rate}"|"work port (2)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: pneumatic-valve
+  motion: none
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - state-0  # Default rest state
+    - state-1  # Actuated state
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_pressure: 10
+  min_pressure: 2
+  max_voltage: "24V"
+  max_current: "500mA"
+  max_power: null
+  max_temp: 60
+  min_temp: -10
+warnings[3]:
+  - "If return_type is 'spring', SOL_B electrical ports are non-functional and should be ignored."
+  - "Simulation model will dynamically map internal port connections based on 'normal_state' parameter."
+  - "A 2/2 valve cannot exhaust trapped downstream air. Use a 3/2 valve if exhaust is required."
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["pneu-cylinder-*", "pneu-frl-unit", "pneu-flow-control-*", "relay-*", "plc-*", "mcu-*", "ind-do-bank", "dc-source", "ac-source"]
+  forbidden_with: ["hyd-*"]
+  requires: ["pneu-frl-unit"]
+  typical_context: ["air-supply-isolation", "blow-off-nozzles", "vacuum-control"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 80
+  height: 60
+  ports_layout: custom
+  port_P: {x: 40, y: 0}
+  port_A: {x: 40, y: 60}
+  port_SOL_A_VCC: {x: 0, y: 20}
+  port_SOL_A_GND: {x: 0, y: 40}
+  port_SOL_B_VCC: {x: 80, y: 20}
+  port_SOL_B_GND: {x: 80, y: 40}
+  label_position: bottom
+  value_display: "2/2 {actuation_type} / {return_type}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: pneumatics-family
+  componentProfileId: pneu-valve-2-2
+  simulationEngine: pneumatic-motion
+  paletteGroup: "Pneumatics > Directional Valves"
+  tags[6]:
+    - valve
+    - 2/2
+    - directional
+    - pneumatic
+    - solenoid
+    - isolation

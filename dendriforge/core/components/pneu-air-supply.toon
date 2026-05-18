@@ -1,0 +1,94 @@
+# METADATA:
+project_name: pneu-air-supply-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: pneu-air-supply
+name: "Compressed Air Supply (Saída de ar comprimido)"
+family: pneumatics
+subfamily: air-preparation
+category: source
+standard: "ISO 1219-1"
+url: null
+image: pneu-air-supply.svg
+symbol: pneu-air-supply-symbol.svg
+symbol_standard: ISO
+
+## 2. PARAMETERS:
+params:
+  supply_pressure:
+    label: "Supply Pressure"
+    unit: bar
+    default: 6
+    min: 0
+    max: 16
+    type: float
+    editable: true
+  flow_rate:
+    label: "Nominal Flow Rate"
+    unit: "l/min"
+    default: 1000
+    type: float
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[0|]{}:
+
+## 4b. FLUID PORTS (PNEUMATIC):
+pneumatic_ports[1|]{id|direction|type|pressure_max|flow_nominal|notes}:
+  OUT|output|pneumatic|"16bar"|"{flow_rate}"|"compressed air output"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: fluid-pressure-source
+  motion: none
+  bidirectional: false
+  dynamic: false
+  thermal_model: false
+  noise_model: false
+  states[1]:
+    - active
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_pressure: 16
+  min_pressure: 0
+  max_voltage: null
+  max_current: null
+  max_power: null
+  max_temp: 60
+  min_temp: -10
+warnings[1]:
+  - "Primary pneumatic energy source; ideally route through an FRL unit before actuators."
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["pneu-*"]
+  forbidden_with: ["hyd-*"]
+  requires: []
+  typical_context: ["air-supply", "compressor-outlet", "pressure-line"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 40
+  height: 40
+  ports_layout: custom
+  port_OUT: {x: 20, y: 0}
+  label_position: bottom
+  value_display: "{supply_pressure} bar"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: pneumatics-family
+  componentProfileId: pneu-air-supply
+  simulationEngine: pneumatic-motion
+  paletteGroup: "Pneumatics > Air Preparation"
+  tags[4]:
+    - source
+    - supply
+    - air
+    - pneumatic

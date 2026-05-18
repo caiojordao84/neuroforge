@@ -1,0 +1,131 @@
+# METADATA:
+project_name: sensor-flame-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: sensor-flame
+name: "Flame Detector Sensor"
+family: sensors
+subfamily: environment
+category: sensor
+standard: "IEC 60079-29-1"
+url: null
+image: sensor-flame.svg
+symbol: sensor-flame-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  output_type:
+    label: "Output Type"
+    default: "DO+AO"
+    options: ["DO", "AO", "DO+AO"]
+    type: enum
+    editable: true
+  detection_angle:
+    label: "Detection Angle"
+    unit: "%"
+    default: 60
+    min: 30
+    max: 120
+    type: float
+    editable: false
+  spectral_range:
+    label: "Spectral Range"
+    default: "760-1100nm"
+    options: ["760-1100nm", "185-260nm", "4.3um-CO2"]
+    type: enum
+    editable: false
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 5
+    options: [3, 5]
+    type: enum
+    editable: true
+  sensitivity:
+    label: "Sensitivity"
+    default: "medium"
+    options: ["low", "medium", "high"]
+    type: enum
+    editable: true
+  response_time:
+    label: "Response Time"
+    unit: V
+    default: 15
+    min: 5
+    max: 50
+    type: float
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"5V"|"100mA"|"DC supply positive"
+  GND|input|ground|null|null|"DC supply negative"
+  DO|output|digital|"5V"|"20mA"|"Digital output — LOW when flame detected"
+  AO|output|analog|"5V"|"20mA"|"Analog output — voltage decreases with flame intensity"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: threshold
+  trigger: proximity
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - idle
+    - detected
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "5V"
+  max_current: "100mA"
+  max_power: null
+  max_temp: 85
+  min_temp: -40
+  ip_rating: null
+  safety_category: null
+warnings[4]:
+  - "DO output is active LOW — logic LOW indicates flame presence"
+  - "Sensor detects IR from sunlight and incandescent lamps — filter ambient light"
+  - "Not a certified safety device — do not use as sole fire detection in safety systems"
+  - "Detection angle is approximately 60 degrees from sensor axis"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["ind-di-bank", "plc-*", "mcu-*", "ind-contact-no"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["fire-detection", "burner-control", "flame-monitoring"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 50
+  height: 60
+  ports_layout: custom
+  port_VCC: {x: 25, y: 0}
+  port_GND: {x: 25, y: 60}
+  port_DO: {x: 50, y: 20}
+  port_AO: {x: 50, y: 40}
+  label_position: right
+  value_display: "{output_type} / {spectral_range} / {sensitivity}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: sensors-family
+  componentProfileId: sensor-flame
+  simulationEngine: digital-io
+  paletteGroup: "Sensors > Environment"
+  tags[6]:
+    - flame-sensor
+    - sensor
+    - environment
+    - fire-detection
+    - infrared
+    - analog

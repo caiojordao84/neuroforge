@@ -1,0 +1,134 @@
+# METADATA:
+project_name: cmd-cam-switch-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: cmd-cam-switch
+name: "Cam Switch (Comutador Cam)"
+family: command-elements
+subfamily: selectors
+category: command
+standard: "IEC 60947-5-1"
+url: null
+image: cmd-cam-switch.svg
+symbol: cmd-cam-switch-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  contact_config:
+    label: "Contact Configuration"
+    default: "2NO+2NC"
+    options: ["1NO", "1NC", "1NO+1NC", "2NO", "2NC", "2NO+2NC"]
+    type: enum
+    editable: true
+  positions:
+    label: "Number of Positions"
+    default: 3
+    options: [2, 3, 4, 6, 8, 12]
+    type: enum
+    editable: true
+  voltage_rating:
+    label: "Voltage Rating"
+    unit: V
+    default: 400
+    options: [24, 110, 240, 400, 690]
+    type: enum
+    editable: false
+  current_rating:
+    label: "Current Rating"
+    unit: A
+    default: 20
+    type: float
+    editable: false
+  color:
+    label: "Handle Color"
+    default: "black"
+    options: ["black", "grey", "red", "yellow", "blue"]
+    type: enum
+    editable: true
+  illuminated:
+    label: "Illuminated"
+    default: false
+    type: bool
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+ports[8|]{id|direction|type|voltage_max|current_max|notes}:
+  NO1_in|input|digital|"400V"|"20A"|"NO contact 1 in"
+  NO1_out|output|digital|"400V"|"20A"|"NO contact 1 out"
+  NC1_in|input|digital|"400V"|"20A"|"NC contact 1 in"
+  NC1_out|output|digital|"400V"|"20A"|"NC contact 1 out"
+  NO2_in|input|digital|"400V"|"20A"|"NO contact 2 in"
+  NO2_out|output|digital|"400V"|"20A"|"NO contact 2 out"
+  NC2_in|input|digital|"400V"|"20A"|"NC contact 2 in"
+  NC2_out|output|digital|"400V"|"20A"|"NC contact 2 out"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: contact-block
+  trigger: user-interaction
+  bidirectional: false
+  dynamic: true
+  latching: true
+  release_condition: null
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - normal
+    - actuated
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "400V"
+  max_current: "20A"
+  max_power: null
+  max_temp: 60
+  min_temp: -25
+  ip_rating: "IP65"
+  safety_category: null
+warnings[2]:
+  - "Do not exceed rated voltage or current on any contact terminal"
+  - "Ensure switching positions match the configured physical stops"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["ind-contact-no", "ind-contact-nc", "ind-coil", "ind-di-bank", "plc-*", "act-motor-*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["motor-control", "phase-selection", "manual-override", "mode-selector"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 80
+  ports_layout: custom
+  port_NO1_in: {x: 0, y: 10}
+  port_NO1_out: {x: 60, y: 10}
+  port_NC1_in: {x: 0, y: 30}
+  port_NC1_out: {x: 60, y: 30}
+  port_NO2_in: {x: 0, y: 50}
+  port_NO2_out: {x: 60, y: 50}
+  port_NC2_in: {x: 0, y: 70}
+  port_NC2_out: {x: 60, y: 70}
+  label_position: bottom
+  value_display: "{contact_config} / {positions}pos"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: command-elements-family
+  componentProfileId: cmd-cam-switch
+  simulationEngine: digital-io
+  paletteGroup: "Command Elements > Selectors"
+  tags[6]:
+    - cam-switch
+    - selector
+    - command
+    - rotary
+    - multi-position
+    - comutador

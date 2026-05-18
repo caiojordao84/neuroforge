@@ -1,0 +1,179 @@
+# METADATA:
+project_name: solar-panel-source-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: solar-panel-source
+name: "Photovoltaic Solar Panel"
+family: electricals
+subfamily: sources
+category: source
+standard: "IEC 61215-1 / IEC 61730"
+url: null
+image: solar-panel-source.svg
+symbol: solar-panel-source-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  pmax_stc:
+    label: "Max Power at STC (Wp)"
+    unit: V
+    default: 400
+    min: 1
+    max: 800
+    type: float
+    editable: true
+  voc:
+    label: "Open-Circuit Voltage (Voc)"
+    unit: V
+    default: 49.8
+    min: 5
+    max: 600
+    type: float
+    editable: true
+  isc:
+    label: "Short-Circuit Current (Isc)"
+    unit: A
+    default: 10.5
+    min: 0.1
+    max: 30
+    type: float
+    editable: true
+  vmpp:
+    label: "Voltage at MPP (Vmpp)"
+    unit: V
+    default: 41
+    min: 5
+    max: 550
+    type: float
+    editable: true
+  impp:
+    label: "Current at MPP (Impp)"
+    unit: A
+    default: 9.75
+    min: 0.1
+    max: 25
+    type: float
+    editable: true
+  fill_factor:
+    label: "Fill Factor"
+    unit: "%"
+    default: 80
+    min: 60
+    max: 90
+    type: float
+    editable: false
+  temp_coeff_pmax:
+    label: "Temp. Coefficient Pmax (%/°C)"
+    unit: "%"
+    default: -0.35
+    min: -0.6
+    max: -0.2
+    type: float
+    editable: false
+  temp_coeff_voc:
+    label: "Temp. Coefficient Voc (%/°C)"
+    unit: "%"
+    default: -0.27
+    min: -0.4
+    max: -0.2
+    type: float
+    editable: false
+  irradiance:
+    label: "Irradiance (STC = 1000 W/m2)"
+    unit: V
+    default: 1000
+    min: 0
+    max: 1500
+    type: float
+    editable: true
+  cell_temp:
+    label: "Cell Temperature"
+    unit: V
+    default: 25
+    min: -40
+    max: 85
+    type: float
+    editable: true
+  cell_type:
+    label: "Cell Technology"
+    default: "Mono-PERC"
+    options: ["Mono-PERC", "Mono-TOPCon", "Poly", "HJT", "Thin-Film"]
+    type: enum
+    editable: true
+  num_cells:
+    label: "Number of Cells"
+    default: 144
+    options: [60, 72, 96, 108, 120, 132, 144, 156, 166]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[2|]{id|direction|type|voltage_max|current_max|notes}:
+  POS|output|power|"600V"|"30A"|"positive DC output / string +"
+  NEG|output|ground|null|null|"negative DC output / string -"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: basic-analog
+  waveform: DC
+  equation: "P_out = pmax_stc * (irradiance/1000) * (1 + temp_coeff_pmax/100 * (cell_temp - 25))"
+  bidirectional: false
+  dynamic: true
+  thermal_model: true
+  noise_model: false
+  states[4]:
+    - off
+    - generating
+    - partial-shading
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "600V"
+  max_current: "30A"
+  max_power: null
+  max_temp: 85
+  min_temp: -40
+warnings[4]:
+  - "Never connect panel output in reverse polarity to inverter or charge controller"
+  - "String Voc must not exceed inverter maximum DC input voltage at lowest expected temperature"
+  - "Bypass diodes must be used to mitigate partial-shading hot-spot effect"
+  - "Disconnect panel before connecting or disconnecting to avoid DC arc faults"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["mppt-controller", "grid-tie-inverter", "battery-charging", "off-grid-system"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 80
+  height: 60
+  ports_layout: custom
+  port_POS: {x: 80, y: 20}
+  port_NEG: {x: 80, y: 45}
+  label_position: top
+  value_display: "{pmax_stc}Wp / {voc}Voc / {isc}Aisc ({cell_type})"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: solar-panel-source
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Sources"
+  tags[7]:
+    - solar-panel
+    - photovoltaic
+    - source
+    - dc
+    - renewable
+    - mppt
+    - pv

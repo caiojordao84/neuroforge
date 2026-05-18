@@ -1,0 +1,119 @@
+# METADATA:
+project_name: stm32f103c8t6-bluepill-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: stm32f103c8t6-bluepill
+name: "STM32F103C8T6 Blue Pill"
+manufacturer: STMicroelectronics
+mcu: STM32F103C8T6
+category: embedded
+image: stm32f103c8t6-bluepill.svg
+url: "https://stm32-base.org/boards/STM32F103C8T6-Blue-Pill.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 65536
+  flash_available: 57344
+  sram: 20480
+  eeprom: 0
+  clock: 72000000
+  voltage: "3.3V"
+dims:
+  w: 53.0
+  h: 22.5
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  VIN|input|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  VBAT|input|"3.3V"|null
+  NRST|input|null|null
+  VUSB|input|"5V"|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[33|]{pin|type|pwm|int|label|roles}:
+  0|analog|t|t|PA0|"adc:t;uart2-tx;tim2-ch1"
+  1|analog|t|t|PA1|"adc:t;uart2-rx;tim2-ch2"
+  2|analog|t|t|PA2|"adc:t;uart2-tx;tim2-ch3"
+  3|analog|t|t|PA3|"adc:t;uart2-rx;tim2-ch4"
+  4|analog|f|t|PA4|"adc:t;spi1-ss"
+  5|analog|f|t|PA5|"adc:t;spi1-sck"
+  6|analog|t|t|PA6|"adc:t;spi1-miso;tim3-ch1"
+  7|analog|t|t|PA7|"adc:t;spi1-mosi;tim3-ch2"
+  8|digital|t|t|PA8|"tim1-ch1;uart1-ck"
+  9|digital|t|t|PA9|"uart1-tx;tim1-ch2"
+  10|digital|t|t|PA10|"uart1-rx;tim1-ch3"
+  11|digital|f|t|"PA11 / D-"|usb-dm
+  12|digital|f|t|"PA12 / D+"|usb-dp
+  13|digital|f|t|PA15|"spi1-ss-remap;jtdi"
+  14|analog|t|t|PB0|"adc:t;tim3-ch3"
+  15|analog|t|t|PB1|"adc:t;tim3-ch4"
+  16|digital|f|f|"PB2 / BOOT1"|boot1
+  17|digital|f|t|PB3|"spi1-sck-remap;jtdo"
+  18|digital|f|t|PB4|"spi1-miso-remap;njtrst"
+  19|digital|f|t|PB5|spi1-mosi-remap
+  20|digital|t|t|PB6|"i2c1-scl;tim4-ch1"
+  21|digital|t|t|PB7|"i2c1-sda;tim4-ch2"
+  22|digital|t|t|PB8|"can-rx;tim4-ch3"
+  23|digital|t|t|PB9|"can-tx;tim4-ch4"
+  24|digital|f|t|PB10|"i2c2-scl;uart3-tx"
+  25|digital|f|t|PB11|"i2c2-sda;uart3-rx"
+  26|digital|f|t|PB12|spi2-ss
+  27|digital|f|t|PB13|spi2-sck
+  28|digital|f|t|PB14|spi2-miso
+  29|digital|f|t|PB15|spi2-mosi
+  30|digital|f|t|"PC13 / LED"|status-led
+  31|digital|f|t|PC14|osc32-in
+  32|digital|f|t|PC15|osc32-out
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[8|]{peripheral|param|value}:
+  serial|"uart1:1"|"pins:9,10"
+  serial|"uart2:1"|"pins:2,3"
+  serial|"uart3:1"|"pins:24,25"
+  i2c|"i2c1:1"|"sda:21;scl:20"
+  i2c|"i2c2:1"|"sda:25;scl:24"
+  spi|"spi1:1"|"miso:6;mosi:7;sck:5;ss:4"
+  spi|"spi2:1"|"miso:28;mosi:29;sck:27;ss:26"
+  adc|"channels:10"|"pins:0,1,2,3,4,5,6,7,14,15"
+usb:
+  type: Micro-USB
+  chip: native
+  vid: "0x1EAF"
+  pid: "0x0003"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "25mA"
+  total_current_limit: "150mA"
+  warnings[6]:
+    - "GPIO operates at 3.3V logic — not 5V tolerant on most pins"
+    - "PA11/PA12 reserved for USB D-/D+ — avoid for GPIO when USB active"
+    - "PA13/PA14 are SWDIO/SWCLK — avoid for GPIO to preserve debug access"
+    - "PB2 (BOOT1) behavior affects boot mode — use with caution"
+    - "PC13/PC14/PC15 have limited sink/source current (max 3mA) and slow slew rate"
+    - "ADC inputs must not exceed 3.6V; ensure signal conditioning on analog pins"
+compatibility:
+  arduinoCore: "1.0.0"
+  pio: ststm32
+  frameworks: "arduino;stm32cube"
+  languages: arduino-cpp
+  bootloader: stm32duino
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: stm32f1-family
+  boardProfileId: stm32f103c8t6-bluepill
+  defaultLanguageSkills[3]:
+    - arduino-cpp-stm32
+    - rust-embassy-stm32
+    - stm32cube-c

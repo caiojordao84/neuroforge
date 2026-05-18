@@ -1,0 +1,102 @@
+# METADATA:
+project_name: ge-rx3i-ic695cpu320-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: ge-rx3i-ic695cpu320
+name: "GE PACSystems RX3i IC695CPU320 — 1GHz Celeron-M, 64MB RAM+Flash, Dual-Bus Backplane, RS-232/485, Series 90-30 migration"
+manufacturer: "GE Intelligent Platforms (now Emerson Automation Solutions)"
+mcu: "Intel Celeron-M 1GHz (32-bit x86) — boolean exec 0.047ms/1K; hardware FPU; ECC DRAM"
+category: plc
+image: ge-rx3i-ic695cpu320.svg
+url: "https://www.emerson.com/en-us/catalog/emerson-pac-systems-rx3i-cpus"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 67108864
+  flash_available: 67108864
+  sram: 67108864
+  eeprom: 0
+  clock: 1000000000
+  voltage: "24V"
+dims:
+  w: 203.0
+  h: 127.0
+  t: 88.9
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# Powered from IC695PS025 or IC695PS040 power supply module in backplane
+# CPU draws from backplane +3.3V and +5V rails (NOT user 24V direct)
+powerPins[5|]{name|direction|voltage|type}:
+  BP_3V3|input|"3.3V"|null
+  BP_5V|input|"5V"|null
+  BP_GND|null|null|ground
+  BAT_PLUS|input|"3.3V"|null
+  BAT_GND|null|null|ground
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# No field-level GPIO; all I/O via IC695/IC694 modules in backplane slots
+# COM1 DB-9 = RS-232 front panel; COM2 = RS-485 terminal block front panel
+# Ethernet NOT embedded — requires IC695ETM001 in backplane (pin 31)
+gpio[11|]{pin|type|pwm|int|label|roles}:
+  12|digital|false|false|"COM1 RS-232 DB-9 pin2 / RXD — SNP Slave; Modbus RTU Slave (default station=1); Serial I/O; ASCII; default 19200 baud; max safe 57600"|uart-rx
+  13|digital|false|false|"COM1 RS-232 DB-9 pin3 / TXD — WinLoader firmware upgrade uses COM1; initial baud 19200; download at 115200"|uart-tx
+  15|digital|false|false|"COM1 RS-232 DB-9 pin5 / GND signal reference"|null
+  17|digital|false|false|"COM1 RS-232 DB-9 pin7 / RTS — flow control; use 1761-NET-AIC for off-enclosure isolation"|null
+  18|digital|false|false|"COM1 RS-232 DB-9 pin8 / CTS — flow control"|null
+  21|digital|false|false|"COM2 RS-485 terminal A(-) — Modbus RTU Slave; SNP; ASCII; 2-wire multi-drop; max 32 nodes; 57600 baud max under load"|uart-rx
+  22|digital|false|false|"COM2 RS-485 terminal B(+) — differential pair with A(-); NOTE: transmitter enabled at power-up until CPU OK LED — may disrupt multi-drop comms!"|uart-tx
+  23|digital|false|false|"COM2 RS-485 terminal GND / shield reference"|null
+  31|digital|false|false|"Backplane SLOT 1..10 / IC695ETM001 (Ethernet) — NOT embedded in CPU320; add IC695ETM001 for Ethernet; 10/100Mbps; SRTP;EGD;Modbus-TCP;OPC-DA;SNTP"|"eth;if-slot"
+  40|digital|false|false|"Backplane IC695CHS012 — 12 slots; dual-bus PCI+serial; supports IC695 (PCI) and IC694/90-30 (serial) modules mixed; RIUP supported for I/O modules"|null
+  60|digital|false|false|"Expansion rack connector — Series 90-30 expansion racks supported; max 7 expansion racks; IC695CHS016 or Series 90-30 rack via IC694CHS392"|null
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[5|]{peripheral|param|value}:
+  rs232_com1|"baud:57600"|"proto:Modbus-RTU-Slave;SNP-Slave;Serial-IO;ASCII;isolation:no;connector:DB9-front-panel;winloader:yes"
+  rs485_com2|"baud:57600"|"proto:Modbus-RTU-Slave;SNP;Serial-IO;ASCII;multi-drop:32-nodes;isolation:no;terminal-block;NOTE:TX-on-at-powerup"
+  ethernet_etm001|"speed:100Mbit"|"module:IC695ETM001;proto:SRTP-client-server;EGD;Modbus-TCP;OPC-DA;SNTP;ports:2xRJ45;web-server;email;NOT-in-CPU320"
+  backplane_pci|"standard:PCI-2.2"|"slots:IC695CHS012-12slot;dual-bus:PCI-plus-serial;ic695:PCI-modules;ic694-9030:serial-modules;RIUP:IO-only"
+  redundancy_opt|"module:IC695RMX128"|"proto:CRU320-hot-standby;links:2-max;transfer:2MB-max;switchover:3.133ms-min;1-scan-max"
+usb:
+  type: none
+  chip: none
+  vid: "0x0000"
+  pid: "0x0000"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "1200mA"
+  total_current_limit: "1200mA"
+  warnings[9]:
+    - "CPU320 has NO embedded Ethernet — add IC695ETM001 (or IC695ETM001-GH+) in any available backplane slot for Ethernet; configure with Proficy Machine Edition via serial COM1 first"
+    - "CPU320 has NO USB port — use COM1 (RS-232 DB-9) or Ethernet (via ETM001) for programming; firmware upgrade via WinLoader over COM1 at 19200 baud initial rate"
+    - "RS-485 COM2 transmitter is ACTIVE (enabled) at power-up until OK LED illuminates — this disrupts active multi-drop communications from other nodes sharing the same cable; power nodes sequentially if possible"
+    - "Battery must be installed WITH POWER ON if no battery was previously present — installing a new battery while powered OFF and with no prior battery will prevent CPU from powering up; remove battery, power cycle, then install"
+    - "Flash write endurance = 100,000 cycles minimum; avoid frequent SVC_REQ 57 (Logic Driven Write to Flash) calls — limit to 1 call per sweep max; multiple calls per sweep may trigger CPU watchdog timeout and STOP-HALT"
+    - "IC698ACC701 Lithium Battery Pack is NOT compatible with CPU320 — use ONLY IC693ACC302, IC695ACC302, or IC690RBT001; use of wrong battery presents fire/explosion risk"
+    - "Series 90-30 Main Racks (IC693CHS391/393) CANNOT be used as main RX3i rack; Series 90-30 CPUs do NOT operate in RX3i racks; Series 90-30 EXPANSION racks are supported via the serial backplane bus"
+    - "Hot swap of CPU modules or power supplies is NOT supported — only I/O modules and some option modules support RIUP; always de-energize before swapping the CPU320"
+    - "Serial I/O at 115200 baud can cause rare data corruption under heavy interrupt load — restrict to 57600 baud or lower on heavily loaded systems; Modbus RTU ignores invalid function codes from firmware v6.70+ (no error response sent)"
+compatibility:
+  sw: "Proficy Machine Edition (PME) 8.50 SIM 2+ for full HART pass-through support"
+  languages: "LD;FBD;ST;C (IEC 61131-3 + GE C Toolkit v5.00 Build 16C1+)"
+  fieldbuses: "Modbus-RTU-Slave;SNP;Serial-IO;ASCII;Ethernet-via-ETM001:SRTP-EGD-Modbus-TCP-OPC-DA;PROFINET-via-IC695PNC001;Genius-via-IC695GBC-etc"
+  io_modules: "IC695ALG626;IC695ALG628;IC695ALG728;IC694MDL758;IC695CNM001;IC695PMM335;IC694PSM001;IC695PSD140;IC694-series-90-30-IO"
+  certifications: "UL-Industrial;cUL;CE-RoHS;ATEX-Zone2-GroupIIC-IP54;UL-HazLoc-CL1-DIV2-GPABCD;ABS;BV;DNV-GL"
+  redundancy: "IC695CRU320 (Hot Standby pair) + IC695RMX128 (memory xchange module)"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: ge-pacsystems-rx3i-family
+  boardProfileId: ge-rx3i-ic695cpu320
+  defaultLanguageSkills[3]:
+    - ld-ge-pacsystems-proficy-me
+    - st-ge-pacsystems-proficy-me
+    - fbd-ge-pacsystems-proficy-me

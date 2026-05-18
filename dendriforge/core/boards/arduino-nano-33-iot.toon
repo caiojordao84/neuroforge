@@ -1,0 +1,105 @@
+# METADATA:
+project_name: arduino-nano-33-iot-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: arduino-nano-33-iot
+name: "Arduino Nano 33 IoT"
+manufacturer: Arduino
+mcu: SAMD21G18A
+category: maker
+image: arduino-nano-33-iot.svg
+url: https://store.arduino.cc/products/arduino-nano-33-iot
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 262144
+  flash_available: 245760
+  sram: 32768
+  eeprom: 0
+  clock: 48000000
+  voltage: "3.3V"
+  wifi: "2.4GHz 802.11b/g/n"
+  bluetooth: "BLE 4.2"
+dims:
+  w: 45.0
+  h: 18.0
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+  AREF|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[22|]{pin|type|pwm|int|label|roles}:
+  0|digital|f|f|"D0 / TX"|uart-tx
+  1|digital|f|f|"D1 / RX"|uart-rx
+  2|digital|t|t|D2|null
+  3|digital|t|t|"D3 / PWM"|null
+  4|digital|f|t|D4|null
+  5|digital|t|t|"D5 / PWM"|null
+  6|digital|t|t|"D6 / PWM"|null
+  7|digital|f|t|D7|null
+  8|digital|f|t|D8|null
+  9|digital|t|t|"D9 / PWM"|null
+  10|digital|t|t|"D10 / PWM / SS"|spi-ss
+  11|digital|t|t|"D11 / PWM / MOSI"|spi-mosi
+  12|digital|t|t|"D12 / PWM / MISO"|spi-miso
+  13|digital|f|f|"D13 / LED / SCK"|"spi-sck;status-led"
+  14|analog|f|f|"A0 / DAC0"|"adc:t;dac:t"
+  15|analog|f|f|A1|"adc:t"
+  16|analog|t|f|A2|"adc:t"
+  17|analog|t|f|A3|"adc:t"
+  18|analog|f|f|"A4 / SDA"|"adc:t;i2c-sda"
+  19|analog|t|f|"A5 / SCL"|"adc:t;i2c-scl"
+  20|analog|f|f|A6|"adc:t"
+  21|analog|f|f|A7|"adc:t"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[5|]{peripheral|param|value}:
+  serial|"uarts:1"|"pins:0,1"
+  i2c|"channels:1"|"sda:18;scl:19"
+  spi|"channels:1"|"miso:12;mosi:11;sck:13;ss:10"
+  adc|"channels:8"|"pins:14,15,16,17,18,19,20,21"
+  dac|"channels:1"|"dac1:14"
+usb:
+  type: Micro-USB
+  chip: SAMD21-native
+  vid: "0x2341"
+  pid: "0x8057"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "7mA"
+  total_current_limit: "200mA"
+  warnings[5]:
+    - "All I/O pins operate at 3.3V only — NOT 5V tolerant"
+    - "A4/A5 have internal pull-ups; usage as pure analog inputs not recommended"
+    - "Pin D13 shares SCK with SPI and has onboard LED"
+    - "5V pin is NC by default; enable via VUSB jumper only"
+    - "Wi-Fi (NINA-W102) uses SPI + UART internally; may interfere with SPI bus"
+compatibility:
+  arduinoCore: "1.8.14"
+  pio: atmelsam
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: arduino-zero
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: samd21-family
+  boardProfileId: arduino-nano-33-iot
+  defaultLanguageSkills[2]:
+    - arduino-cpp-samd
+    - rust-embassy-samd21

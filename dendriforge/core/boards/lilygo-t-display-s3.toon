@@ -1,0 +1,113 @@
+# METADATA:
+project_name: lilygo-t-display-s3-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: lilygo-t-display-s3
+name: "LILYGO T-Display-S3"
+manufacturer: LILYGO
+mcu: "ESP32-S3"
+category: maker
+image: lilygo-t-display-s3.svg
+url: "https://www.lilygo.cc/products/t-display-s3"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 16777216
+  flash_available: 16777216
+  sram: 327680
+  psram: 8388608
+  eeprom: 0
+  clock: 240000000
+  voltage: "3.3V"
+  cores: 2
+  wifi: "802.11b/g/n"
+  bluetooth: "BLE 5.0"
+  display: "1.9 inch ST7789V 170x320 IPS TFT"
+dims:
+  w: 55.0
+  h: 33.0
+  t: 10.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[4|]{name|direction|voltage|type}:
+  VIN|input|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  BAT|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[28|]{pin|type|pwm|int|label|roles}:
+  0|digital|t|t|"G0 / BTN"|null
+  1|digital|t|t|"G1 / TX"|uart-tx
+  2|digital|t|t|"G2 / RX"|uart-rx
+  3|digital|t|t|G3|null
+  4|digital|t|t|G4|null
+  5|digital|t|t|G5|null
+  6|digital|t|t|"G6 / LCD SCK"|"spi-sck;lcd-spi"
+  7|digital|t|t|"G7 / LCD MOSI"|"spi-mosi;lcd-spi"
+  8|digital|t|t|"G8 / LCD CS"|"spi-ss;lcd-spi"
+  10|digital|t|t|G10|null
+  11|digital|t|t|G11|null
+  12|digital|t|t|G12|null
+  13|digital|t|t|G13|null
+  17|digital|t|t|G17|null
+  18|digital|t|t|G18|null
+  21|digital|t|t|"G21 / SDA"|i2c-sda
+  38|digital|t|t|G38|null
+  39|digital|t|t|G39|null
+  40|digital|t|t|G40|null
+  43|digital|t|t|G43|null
+  44|digital|t|t|G44|null
+  45|digital|t|t|G45|null
+  46|digital|t|t|G46|null
+  47|digital|t|t|G47|null
+  34|analog|f|f|G34|"adc:t;input-only"
+  35|analog|f|f|G35|"adc:t;input-only"
+  36|analog|f|f|G36|"adc:t;input-only"
+  37|analog|f|f|G37|"adc:t;input-only"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[5|]{peripheral|param|value}:
+  serial|"uart0:1"|"pins:1,2"
+  i2c|"channels:1"|"sda:21;scl:17"
+  spi|"lcd:1"|"miso:null;mosi:7;sck:6;ss:8"
+  spi|"user:1"|"miso:39;mosi:40;sck:43;ss:44"
+  adc|"channels:4"|"pins:34,35,36,37"
+usb:
+  type: USB-C
+  chip: "ESP32-S3 native"
+  vid: "0x303A"
+  pid: "0x0002"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "40mA"
+  total_current_limit: "1000mA"
+  warnings[6]:
+    - "G6, G7 used internally by LCD SPI clock and data — avoid conflicts"
+    - "G8 used internally by LCD chip select — do NOT use for other SPI slaves"
+    - "G15 used internally by LCD data/command — do NOT use"
+    - "G16 used internally by LCD reset — do NOT use"
+    - "G48 used internally by LCD backlight — do NOT use"
+    - "G14 is the boot button; G0 is the user button — do not configure as outputs"
+compatibility:
+  arduinoCore: "2.0.17"
+  pio: espressif32
+  frameworks: "arduino;espidf"
+  languages: arduino-cpp
+  bootloader: uf2
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: esp32-xtensa-family
+  boardProfileId: lilygo-t-display-s3
+  defaultLanguageSkills[2]:
+    - arduino-cpp-esp32
+    - rust-embassy-esp32

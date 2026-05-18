@@ -1,0 +1,144 @@
+# METADATA:
+project_name: openplc-arduino-mega-2560-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: openplc-arduino-mega-2560
+name: "OpenPLC Slave — Arduino Mega 2560 (ATmega2560, 16MHz, USB Modbus RTU)"
+manufacturer: Arduino
+mcu: "ATmega2560 (AVR 8-bit, 16MHz, OpenPLC firmware)"
+category: maker
+image: openplc-arduino-mega-2560.svg
+url: "https://openplcproject.com/runtime/arduino/"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 262144
+  flash_available: 255488
+  sram: 8192
+  eeprom: 4096
+  clock: 16000000
+  voltage: "5V"
+dims:
+  w: 53.0
+  h: 101.52
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[5|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# OpenPLC v3 Mega mapping (slave offset=100):
+# DI:  D22=%IX100.0 .. D45=%IX100.23  (24 DI, digital pins 22-45)
+# DO:  D2=%QX100.0  .. D17=%QX100.15 (16 DO, digital pins 2-17)
+# AI:  A0=%IW100    .. A15=%IW115     (16 AI, pins A0-A15)
+# AO:  D2=%QW100    .. D13=%QW111    (12 AO/PWM, pins 2-13)
+# Note: DO and AO share pins 2-13; AO = PWM mode, DO = digital mode
+gpio[52|]{pin|type|pwm|int|label|roles}:
+  2|digital|true|false|"D2 / %QX100.0 (DO) / %QW100 (AO/PWM)"|"do;dac"
+  3|digital|true|true|"D3 / %QX100.1 (DO) / %QW101 (AO/PWM)"|"do;dac"
+  4|digital|true|false|"D4 / %QX100.2 (DO) / %QW102 (AO/PWM)"|"do;dac"
+  5|digital|true|false|"D5 / %QX100.3 (DO) / %QW103 (AO/PWM)"|"do;dac"
+  6|digital|true|false|"D6 / %QX100.4 (DO) / %QW104 (AO/PWM)"|"do;dac"
+  7|digital|true|false|"D7 / %QX100.5 (DO) / %QW105 (AO/PWM)"|"do;dac"
+  8|digital|true|false|"D8 / %QX100.6 (DO) / %QW106 (AO/PWM)"|"do;dac"
+  9|digital|true|false|"D9 / %QX100.7 (DO) / %QW107 (AO/PWM)"|"do;dac"
+  10|digital|true|false|"D10 / %QX100.8 (DO) / %QW108 (AO/PWM)"|"do;dac"
+  11|digital|true|false|"D11 / %QX100.9 (DO) / %QW109 (AO/PWM)"|"do;dac"
+  12|digital|true|false|"D12 / %QX100.10 (DO) / %QW110 (AO/PWM)"|"do;dac"
+  13|digital|true|false|"D13 / %QX100.11 (DO) / %QW111 (AO/PWM) / LED"|"do;dac;status-led"
+  14|digital|false|false|"D14 / %QX100.12 (DO) / TX3"|uart-tx
+  15|digital|false|false|"D15 / %QX100.13 (DO) / RX3"|uart-rx
+  16|digital|false|false|"D16 / %QX100.14 (DO) / TX2"|uart-tx
+  17|digital|false|false|"D17 / %QX100.15 (DO) / RX2"|uart-rx
+  22|digital|false|false|"D22 / %IX100.0 (DI)"|di
+  23|digital|false|false|"D23 / %IX100.1 (DI)"|di
+  24|digital|false|false|"D24 / %IX100.2 (DI)"|di
+  25|digital|false|false|"D25 / %IX100.3 (DI)"|di
+  26|digital|false|false|"D26 / %IX100.4 (DI)"|di
+  27|digital|false|false|"D27 / %IX100.5 (DI)"|di
+  28|digital|false|false|"D28 / %IX100.6 (DI)"|di
+  29|digital|false|false|"D29 / %IX100.7 (DI)"|di
+  30|digital|false|false|"D30 / %IX100.8 (DI)"|di
+  31|digital|false|false|"D31 / %IX100.9 (DI)"|di
+  32|digital|false|false|"D32 / %IX100.10 (DI)"|di
+  33|digital|false|false|"D33 / %IX100.11 (DI)"|di
+  34|digital|false|false|"D34 / %IX100.12 (DI)"|di
+  35|digital|false|false|"D35 / %IX100.13 (DI)"|di
+  36|digital|false|false|"D36 / %IX100.14 (DI)"|di
+  37|digital|false|false|"D37 / %IX100.15 (DI)"|di
+  38|digital|false|false|"D38 / %IX100.16 (DI)"|di
+  39|digital|false|false|"D39 / %IX100.17 (DI)"|di
+  40|digital|false|false|"D40 / %IX100.18 (DI)"|di
+  41|digital|false|false|"D41 / %IX100.19 (DI)"|di
+  42|digital|false|false|"D42 / %IX100.20 (DI)"|di
+  43|digital|false|false|"D43 / %IX100.21 (DI)"|di
+  44|digital|false|false|"D44 / %IX100.22 (DI)"|di
+  45|digital|false|false|"D45 / %IX100.23 (DI)"|di
+  54|analog|false|false|"A0 / %IW100 (AI, 10-bit)"|"adc:t"
+  55|analog|false|false|"A1 / %IW101 (AI, 10-bit)"|"adc:t"
+  56|analog|false|false|"A2 / %IW102 (AI, 10-bit)"|"adc:t"
+  57|analog|false|false|"A3 / %IW103 (AI, 10-bit)"|"adc:t"
+  58|analog|false|false|"A4 / %IW104 (AI, 10-bit) / SDA"|"adc:t;i2c-sda"
+  59|analog|false|false|"A5 / %IW105 (AI, 10-bit) / SCL"|"adc:t;i2c-scl"
+  60|analog|false|false|"A6 / %IW106 (AI, 10-bit)"|"adc:t"
+  61|analog|false|false|"A7 / %IW107 (AI, 10-bit)"|"adc:t"
+  62|analog|false|false|"A8 / %IW108 (AI, 10-bit)"|"adc:t"
+  63|analog|false|false|"A9 / %IW109 (AI, 10-bit)"|"adc:t"
+  64|analog|false|false|"A10 / %IW110 (AI, 10-bit)"|"adc:t"
+  65|analog|false|false|"A11 / %IW111 (AI, 10-bit)"|"adc:t"
+  66|analog|false|false|"A12 / %IW112 (AI, 10-bit)"|"adc:t"
+  67|analog|false|false|"A13 / %IW113 (AI, 10-bit)"|"adc:t"
+  68|analog|false|false|"A14 / %IW114 (AI, 10-bit)"|"adc:t"
+  69|analog|false|false|"A15 / %IW115 (AI, 10-bit)"|"adc:t"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[3|]{peripheral|param|value}:
+  serial|"baud:115200"|"proto:Modbus-RTU;role:slave;addr:1;pins:0,1"
+  adc|"resolution:10bit"|"pins:54;55;56;57;58;59;60;61;62;63;64;65;66;67;68;69"
+  pwm|"resolution:8bit"|"openplc-scale:0-65535;pins:2;3;4;5;6;7;8;9;10;11;12;13"
+usb:
+  type: Micro-USB
+  chip: ATmega16U2
+  vid: "0x2341"
+  pid: "0x0042"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "40mA"
+  total_current_limit: "200mA"
+  warnings[8]:
+    - "Arduino Mega in OpenPLC v3 works ONLY as a SLAVE device (Modbus RTU); main PLC runtime must run on a separate host"
+    - "DO pins D2-D13 overlap with AO (PWM) pins — OpenPLC uses them as either digital or analog outputs, not simultaneously"
+    - "All 16 AI channels (A0-A15) are 10-bit (0-1023 raw) but OpenPLC scales them to 0-32767 (IEC %IW UINT16)"
+    - "24 DI (D22-D45) and 16 DO (D2-D17) and 12 AO (D2-D13) give 52 usable I/O points in OpenPLC addressing"
+    - "D0/D1 (Serial0) reserved for OpenPLC Modbus RTU bridge; D18/D19 (Serial1 TX/RX) are free for user serial"
+    - "Slave offset on v3 starts at 100: DI=%IX100.x, DO=%QX100.x, AI=%IW100+, AO=%QW100+ for first slave in list"
+    - "Multiple Mega slaves are supported; second slave starts at next available block (e.g., %IX101.0 if first uses 100.0-100.23)"
+    - "OpenPLC firmware source for Mega is at github.com/openplcproject/OpenPLC_Runtime — hardware/arduino/mega/hardware_layer.cpp"
+compatibility:
+  arduinoCore: "1.8.14"
+  pio: atmelavr
+  frameworks: "openplc-v3"
+  languages: "LD;ST;FBD;SFC;IL"
+  bootloader: "optiboot-atmega2560"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: avr-family
+  boardProfileId: openplc-arduino-mega-2560
+  defaultLanguageSkills[3]:
+    - ld-openplc-editor
+    - st-iec61131-openplc
+    - fbd-openplc-editor

@@ -1,0 +1,130 @@
+# METADATA:
+project_name: cmd-safety-gate-switch-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: cmd-safety-gate-switch
+name: "Safety Gate Switch"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60947-5-3"
+url: null
+image: cmd-safety-gate-switch.svg
+symbol: cmd-safety-gate-switch-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  contact_layout:
+    label: "Contact Layout"
+    default: "2NC+1NO"
+    options: ["1NC", "2NC", "2NC+1NO"]
+    type: enum
+    editable: true
+  actuator_type:
+    label: "Actuator Type"
+    default: "tongue"
+    options: ["tongue", "hinge", "guard-lock"]
+    type: enum
+    editable: true
+  ip_rating:
+    label: "Ingress Protection"
+    default: "IP67"
+    options: ["IP65", "IP67"]
+    type: enum
+    editable: true
+  safety_rating:
+    label: "Safety Category"
+    default: "SIL3"
+    options: ["PL d", "PL e", "SIL2", "SIL3"]
+    type: enum
+    editable: true
+  locking_type:
+    label: "Locking Type"
+    default: "guard-lock"
+    options: ["none", "solenoid-lock", "guard-lock"]
+    type: enum
+    editable: true
+  mechanical_life:
+    label: "Mechanical Life"
+    unit: cycles
+    default: 1000000
+    min: 100000
+    max: 10000000
+    type: float
+    editable: false
+  package:
+    label: "Package"
+    default: "safety gate"
+    options: ["safety gate", "hinged gate", "guard-lock module"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  COM|input|ground|null|null|"common terminal"
+  NC|output|digital|"250V"|"10A"|"normally-closed safety contact"
+  NO|output|digital|"250V"|"10A"|"auxiliary contact"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - gate-open
+    - gate-closed
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "250V"
+  max_current: "10A"
+  max_power: null
+  max_temp: 70
+  min_temp: -25
+warnings[4]:
+  - "This switch is part of a safety function and must be integrated with a safety relay or safety PLC"
+  - "NC safety contact should open when the guard is opened or a fault occurs"
+  - "Do not bypass guard interlocks or defeat locking mechanisms"
+  - "Verify alignment, actuator wear and safety timing during maintenance"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["safety-relay", "plc-safety-input", "dc-source"]
+  forbidden_with: ["ac-source"]
+  requires: ["safety-relay"]
+  typical_context: ["guard-interlock", "machine-safety", "safety-chain"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 70
+  height: 40
+  ports_layout: custom
+  port_COM: {x: 0, y: 20}
+  port_NC: {x: 70, y: 15}
+  port_NO: {x: 70, y: 25}
+  label_position: top
+  value_display: "Safety gate / {actuator_type} / {locking_type}"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: cmd-safety-gate-switch
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Switches"
+  tags[7]:
+    - safety-gate
+    - interlock
+    - safety
+    - switch
+    - operator
+    - control
+    - iec-60947-5-3

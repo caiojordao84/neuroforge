@@ -1,0 +1,101 @@
+# METADATA:
+project_name: m5stack-atoms3-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: m5stack-atoms3
+name: "M5Stack AtomS3"
+manufacturer: M5Stack
+mcu: "ESP32-S3FN8"
+category: maker
+image: m5stack-atoms3.svg
+url: "https://docs.m5stack.com/en/core/AtomS3"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 8388608
+  flash_available: 8388608
+  sram: 327680
+  psram: 8388608
+  eeprom: 0
+  clock: 240000000
+  voltage: "3.3V"
+  cores: 2
+  wifi: "802.11b/g/n"
+  bluetooth: "BLE 5.0"
+  led_matrix: "5x5 RGB"
+  ir: true
+dims:
+  w: 24.0
+  h: 24.0
+  t: 10.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[3|]{name|direction|voltage|type}:
+  5V|input|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[20|]{pin|type|pwm|int|label|roles}:
+  1|digital|t|t|G1|null
+  2|digital|t|t|G2|null
+  3|digital|t|t|G3|null
+  4|digital|t|t|G4|null
+  5|digital|t|t|G5|null
+  6|digital|t|t|G6|null
+  7|digital|t|t|G7|null
+  8|digital|t|t|G8|null
+  9|digital|t|t|G9|null
+  10|digital|t|t|G10|null
+  11|digital|t|t|G11|null
+  12|digital|t|t|G12|"ir-tx"
+  13|digital|t|t|G13|null
+  14|digital|t|t|G14|null
+  17|digital|t|t|G17|null
+  18|digital|t|t|G18|null
+  19|digital|t|t|G19|null
+  20|digital|t|t|G20|null
+  21|digital|t|t|"G21 / SDA"|i2c-sda
+  22|digital|t|t|"G22 / SCL"|i2c-scl
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[3|]{peripheral|param|value}:
+  serial|"uart0:1"|"pins:1,2"
+  i2c|"grove:1"|"sda:21;scl:22"
+  spi|"channels:1"|"miso:7;mosi:6;sck:5;ss:8"
+usb:
+  type: USB-C
+  chip: "ESP32-S3 native"
+  vid: "0x303A"
+  pid: "0x0002"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "40mA"
+  total_current_limit: "500mA"
+  warnings[4]:
+    - "G35 used internally by WS2812 RGB LED matrix — do NOT use"
+    - "G41 used internally by user button — do NOT use"
+    - "G12 drives onboard IR LED at 38 kHz — consider interference with I2C bus"
+    - "Strapping pins G44, G46, G45 must not be pulled LOW at boot"
+compatibility:
+  arduinoCore: "2.0.17"
+  pio: espressif32
+  frameworks: "arduino;espidf"
+  languages: arduino-cpp
+  bootloader: uf2
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: esp32-xtensa-family
+  boardProfileId: m5stack-atoms3
+  defaultLanguageSkills[2]:
+    - arduino-cpp-esp32
+    - rust-embassy-esp32

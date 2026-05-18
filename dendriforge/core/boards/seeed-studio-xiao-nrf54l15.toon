@@ -1,0 +1,98 @@
+# METADATA:
+project_name: seeed-studio-xiao-nrf54l15-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: seeed-studio-xiao-nrf54l15
+name: "Seeed Studio XIAO nRF54L15"
+manufacturer: "Seeed Studio"
+mcu: "Nordic nRF54L15 (ARM Cortex-M33 + RISC-V FLPR coprocessor)"
+category: maker
+image: seeed-studio-xiao-nrf54l15.svg
+url: "https://www.seeedstudio.com/Seeed-Studio-XIAO-nRF54L15-p-6374.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 1572864
+  flash_available: 1474560
+  sram: 262144
+  eeprom: 0
+  clock: 128000000
+  voltage: "3.3V"
+dims:
+  w: 17.8
+  h: 21.0
+  t: 3.5
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+  VBAT|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[16|]{pin|type|pwm|int|label|roles}:
+  0|analog|true|true|"D0 / A0 / P1.04"|"adc:t"
+  1|analog|true|true|"D1 / A1 / P1.05"|"adc:t"
+  2|analog|true|true|"D2 / A2 / P1.06"|"adc:t"
+  3|analog|true|true|"D3 / A3 / P1.07"|"adc:t"
+  4|digital|true|true|"D4 / SDA / P1.10"|i2c-sda
+  5|digital|true|true|"D5 / SCL / P1.11"|i2c-scl
+  6|digital|true|true|"D6 / TX / P2.08"|uart-tx
+  7|digital|true|true|"D7 / RX / P2.07"|uart-rx
+  8|digital|true|true|"D8 / SCK / P2.01"|spi-sck
+  9|digital|true|true|"D9 / MISO / P2.04"|spi-miso
+  10|digital|true|true|"D10 / MOSI / P2.02"|"spi-mosi;status-led"
+  11|digital|true|true|"D11 / SCL-1 / P0.03"|i2c-scl
+  12|digital|true|true|"D12 / SDA-1 / P0.04"|i2c-sda
+  13|digital|true|true|"D13 / P2.10"|null
+  14|digital|true|true|"D14 / P2.09"|null
+  15|digital|true|true|"D15 / P2.06"|null
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uarts:1"|"pins:6,7"
+  i2c|"channels:2"|"sda:4;scl:5"
+  spi|"channels:1"|"miso:9;mosi:10;sck:8;ss:null"
+  adc|"resolution:14bit"|"pins:0;1;2;3"
+usb:
+  type: USB-C
+  chip: native
+  vid: "0x2886"
+  pid: "0x0060"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "10mA"
+  total_current_limit: "200mA"
+  warnings[6]:
+    - "All I/O pins operate at 3.3V; not 5V tolerant"
+    - "D11/D12 are secondary I2C; cannot use simultaneously with SPI on same bus"
+    - "NFC pads (P1.02/P1.03) not broken out on standard headers"
+    - "RISC-V FLPR coprocessor shares RAM; reserve at least 64KB for coprocessor"
+    - "LiPo charging built-in via VBAT pad; charge current configurable"
+    - "Boot requires UART disabled in prj.conf when running on battery only"
+compatibility:
+  arduinoCore: "1.0.0"
+  pio: nordicnrf54
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: nrf54l15-boot
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: nrf54-family
+  boardProfileId: seeed-studio-xiao-nrf54l15
+  defaultLanguageSkills[3]:
+    - arduino-cpp-nrf54
+    - zephyr-nrf54
+    - rust-embassy-nrf54

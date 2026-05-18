@@ -1,0 +1,164 @@
+# METADATA:
+project_name: thermistor-ptc-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: thermistor-ptc
+name: "PTC Thermistor"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60738-1"
+url: null
+image: thermistor-ptc.svg
+symbol: thermistor-ptc-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  resistance_25:
+    label: "Resistance at 25°C (R25)"
+    unit: Ω
+    default: 100
+    options: [10, 22, 47, 100, 220, 470, 1000, 2200, 5000]
+    type: enum
+    editable: true
+  switch_temp:
+    label: "Switching Temperature (Tc)"
+    unit: V
+    default: 120
+    options: [60, 80, 100, 110, 120, 130, 150, 170, 200, 240, 270]
+    type: enum
+    editable: true
+  resistance_min:
+    label: "Minimum Resistance (Rmin)"
+    unit: Ω
+    default: 50
+    min: 1
+    max: 10000
+    type: float
+    editable: false
+  resistance_max:
+    label: "Max Resistance at Tc+30°C"
+    unit: Ω
+    default: 100000
+    min: 1000
+    max: 100000000
+    type: float
+    editable: false
+  ptc_type:
+    label: "PTC Type"
+    default: "ceramic-BaTiO3"
+    options: ["ceramic-BaTiO3", "polymer-PPTC", "silistor-Si"]
+    type: enum
+    editable: true
+  voltage_rated:
+    label: "Rated Voltage"
+    unit: V
+    default: 265
+    options: [6, 12, 24, 30, 60, 120, 265]
+    type: enum
+    editable: true
+  current_rated:
+    label: "Rated Hold Current (Ih)"
+    unit: A
+    default: 0.5
+    min: 0.01
+    max: 100
+    type: float
+    editable: true
+  current_trip:
+    label: "Trip Current (It)"
+    unit: A
+    default: 1
+    min: 0.02
+    max: 200
+    type: float
+    editable: false
+  time_to_trip:
+    label: "Time to Trip at 2×Ih"
+    unit: V
+    default: 8
+    min: 0.1
+    max: 120
+    type: float
+    editable: false
+  reset_type:
+    label: "Reset Type"
+    default: "self-resetting"
+    options: ["self-resetting", "manual-reset"]
+    type: enum
+    editable: true
+  package:
+    label: "Package"
+    default: "SMD-1812"
+    options: ["SMD-0402", "SMD-0603", "SMD-0805", "SMD-1206", "SMD-1210", "SMD-1812", "SMD-2920", "THT-disc", "THT-radial", "axial-leaded"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[2|]{id|direction|type|voltage_max|current_max|notes}:
+  A|passive|analog|"265V"|"200A"|"PTC thermistor terminal A"
+  B|passive|analog|"265V"|"200A"|"PTC thermistor terminal B"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: lookup-table
+  equation: "R(T) = resistance_25 * exp(alpha * (T - 25)) for T < switch_temp; R(T) = resistance_min * exp(beta * (T - switch_temp)) for T >= switch_temp; alpha < 0, beta >> 0"
+  bidirectional: true
+  dynamic: true
+  thermal_model: true
+  noise_model: false
+  states[3]:
+    - nominal
+    - tripped
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "265V"
+  max_current: "200A"
+  max_power: null
+  max_temp: 125
+  min_temp: -40
+warnings[4]:
+  - "Polymer PPTC requires cooling below hold current to reset — allow sufficient recovery time after trip"
+  - "Do not use ceramic PTC (BaTiO3) for precision temperature measurement — use NTC instead"
+  - "Inrush current at cold start may be 10–100× rated current — verify downstream circuit tolerance"
+  - "Repeated tripping degrades PPTC hold/trip current ratings over time — check datasheet trip endurance"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["overcurrent-protection", "inrush-limiting", "motor-protection", "battery-protection", "self-resetting-fuse"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 50
+  height: 30
+  ports_layout: horizontal
+  port_A: {x: 0, y: 15}
+  port_B: {x: 50, y: 15}
+  label_position: top
+  value_display: "PTC {resistance_25}Ω / Tc={switch_temp}°C / Ih={current_rated}A ({ptc_type})"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: thermistor-ptc
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Passives"
+  tags[7]:
+    - thermistor
+    - ptc
+    - overcurrent-protection
+    - passive
+    - analog
+    - thermal
+    - iec-60738

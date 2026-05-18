@@ -1,0 +1,128 @@
+# METADATA:
+project_name: cmd-safety-reset-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: cmd-safety-reset
+name: "Safety Reset"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60947-5-1"
+url: null
+image: cmd-safety-reset.svg
+symbol: cmd-safety-reset-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  contact_type:
+    label: "Contact Type"
+    default: "normally-open"
+    options: ["normally-open", "momentary"]
+    type: enum
+    editable: true
+  actuation_force:
+    label: "Actuation Force"
+    unit: N
+    default: 2.5
+    options: [1.5, 2.5, 3.5, 5.0]
+    type: enum
+    editable: true
+  reset_latch:
+    label: "Reset Latching"
+    default: true
+    type: bool
+    editable: true
+  ip_rating:
+    label: "Ingress Protection"
+    default: "IP65"
+    options: ["IP54", "IP65", "IP67"]
+    type: enum
+    editable: true
+  safety_rating:
+    label: "Safety Category"
+    default: "SIL2"
+    options: ["PL d", "PL e", "SIL2", "SIL3"]
+    type: enum
+    editable: true
+  mechanical_life:
+    label: "Mechanical Life"
+    unit: cycles
+    default: 1000000
+    min: 100000
+    max: 10000000
+    type: float
+    editable: false
+  package:
+    label: "Package"
+    default: "22mm panel"
+    options: ["22mm panel", "30mm panel", "enclosed"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[2|]{id|direction|type|voltage_max|current_max|notes}:
+  COM|input|ground|null|null|"common terminal"
+  NO|output|digital|"250V"|"5A"|"reset contact"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - ready
+    - pulsed
+    - latched
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "250V"
+  max_current: "5A"
+  max_power: null
+  max_temp: 70
+  min_temp: -25
+warnings[4]:
+  - "Reset should only be accepted after the safety condition is cleared"
+  - "Use this device as part of a safety-rated reset chain"
+  - "Do not use reset to re-arm a fault without verification"
+  - "Manual reset must be deliberate and clearly distinguishable from start"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["safety-relay", "plc-safety-input", "dc-source"]
+  forbidden_with: ["ac-source"]
+  requires: ["safety-relay"]
+  typical_context: ["safety-reset", "machine-safety", "restart-permission"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 50
+  height: 30
+  ports_layout: horizontal
+  port_COM: {x: 0, y: 15}
+  port_NO: {x: 50, y: 15}
+  label_position: top
+  value_display: "Safety reset / {contact_type}"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: cmd-safety-reset
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Switches"
+  tags[7]:
+    - safety-reset
+    - switch
+    - operator
+    - control
+    - momentary
+    - safety
+    - iec-60947-5-1

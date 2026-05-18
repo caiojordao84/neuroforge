@@ -1,0 +1,106 @@
+# METADATA:
+project_name: ind-rfid-tag-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: ind-rfid-tag
+name: "Industrial RFID Tag (Tag RFID Industrial)"
+family: communication
+subfamily: wireless
+category: node
+standard: "ISO/IEC 15693"
+url: null
+image: ind-rfid-tag.svg
+symbol: ind-rfid-tag-symbol.svg
+symbol_standard: custom
+
+## 2. PARAMETERS:
+params:
+  frequency_band:
+    label: "Frequency Band"
+    default: "HF-13.56MHz"
+    options: ["LF-125kHz", "HF-13.56MHz", "UHF-860MHz"]
+    type: enum
+    editable: true
+  uid:
+    label: "Tag UID (Hex)"
+    default: "E0:04:01:00:00:00:00:00"
+    type: string
+    editable: true
+  user_memory:
+    label: "User Memory"
+    unit: "bytes"
+    default: 896
+    type: float
+    editable: false
+  mounting_type:
+    label: "Mounting Type"
+    default: "on-metal"
+    options: ["on-metal", "flush", "non-metal"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[0|]{}:
+
+## 4c. PROTOCOL PORTS:
+protocol_ports[1|]{id|direction|protocol|notes}:
+  RF|bidirectional|"ISO-15693"|"wireless RF interface"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: digital-io
+  protocol_emulation: true
+  bidirectional: true
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - idle
+    - transmitting
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: null
+  max_current: null
+  max_power: null
+  max_temp: 85
+  min_temp: -25
+  ip_rating: "IP68"
+  safety_category: null
+warnings[2]:
+  - "Passive rugged tag — powered entirely by the reader's RF field"
+  - "Select correct mounting type (e.g. 'on-metal') to prevent detuning of the antenna"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["comm-rfid-industrial*", "comm-*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["traceability", "asset-tracking", "harsh-environments", "logistics"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 50
+  height: 20
+  ports_layout: custom
+  port_RF: {x: 25, y: 10}
+  label_position: top
+  value_display: "{uid}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: communication-family
+  componentProfileId: ind-rfid-tag
+  simulationEngine: protocol-stub-engine
+  paletteGroup: "Communication > Wireless"
+  tags[5]:
+    - rfid
+    - tag
+    - industrial
+    - wireless
+    - tracking

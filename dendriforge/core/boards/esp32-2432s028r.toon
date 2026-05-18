@@ -1,0 +1,84 @@
+# METADATA:
+project_name: esp32-2432s028r-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: esp32-2432s028r
+name: "ESP32-2432S028R (CYD - Cheap Yellow Display)"
+manufacturer: Sunton
+mcu: "ESP32-WROOM-32 dual-core LX6 up to 240 MHz; 4MB Flash; 520KB SRAM; Wi-Fi 802.11 b/g/n; BLE 4.2; 2.8in 320x240 ILI9341 TFT; XPT2046 resistive touch; microSD; RGB LED; LDR; speaker; CH340C USB-serial"
+category: maker
+image: esp32-2432s028r.svg
+url: "https://github.com/witnessmenow/ESP32-Cheap-Yellow-Display"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs: flashtotal 4194304 | flashavailable 4194304 | sram 540672 | eeprom 0 | clock 240000000 | voltage "3.3V" | cores 2 | wifi "802.11 b/g/n" | bluetooth "BLE 4.2"
+dims: w 85.0 | h 50.0 | t 14.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+powerPins[4|]{name|direction|voltage|type}:
+  USB5V|input|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  P1-VIN|input|"5V"|null
+
+## 4. GPIO MAP:
+gpio[23|]{pin|type|pwm|int|label|roles}:
+  1|digital|f|f|"GPIO1 — UART0 TX; P1 connector TX; shared with CH340C USB-serial; do not use while USB CDC active"|"uart-tx"
+  2|digital|f|f|"GPIO2 — TFT DC (ILI9341 data/command select; HSPI bus); strapping pin — must be LOW at boot for download mode, HIGH for normal boot"|"spi"
+  3|digital|f|f|"GPIO3 — UART0 RX; P1 connector RX; shared with CH340C; do not use while USB CDC active"|"uart-rx"
+  4|digital|t|f|"GPIO4 — RGB LED Red (active-LOW; inverted logic; PWM capable)"|"status-led"
+  5|digital|f|f|"GPIO5 — microSD CS (VSPI bus; CS for SD card)"|"spi"
+  13|digital|t|f|"GPIO13 — TFT MOSI (ILI9341 HSPI MOSI; shared SPI bus for display only)"|"spi"
+  14|digital|t|f|"GPIO14 — TFT SCK (ILI9341 HSPI clock)"|"spi"
+  15|digital|f|f|"GPIO15 — TFT CS (ILI9341 chip-select; HSPI)"|"spi"
+  16|digital|t|f|"GPIO16 — RGB LED Green (active-LOW; inverted logic; shared with TFT MISO on some board revisions — verify before use)"|"status-led"
+  17|digital|t|f|"GPIO17 — RGB LED Blue (active-LOW; inverted logic; PWM capable)"|"status-led"
+  18|digital|f|f|"GPIO18 — microSD SCK (VSPI; shared with touchscreen XPT2046)"|"spi"
+  19|digital|f|f|"GPIO19 — microSD MISO (VSPI; shared with touchscreen MISO)"|"spi"
+  21|digital|t|f|"GPIO21 — TFT Backlight control (HIGH=on; LOW=off); also exposed on P3 connector; avoid using as free GPIO while backlight is needed"|"do"
+  22|digital|f|f|"GPIO22 — Free GPIO; exposed on P3 and CN1 connectors; recommended for I2C SCL (external sensors)"|"di;do"
+  23|digital|f|f|"GPIO23 — microSD MOSI (VSPI; shared with touchscreen MOSI)"|"spi"
+  25|digital|t|f|"GPIO25 — Touch XPT2046 SCK (VSPI); also DAC1 output; PWM capable"|"spi"
+  26|digital|t|f|"GPIO26 — Speaker output (1.25mm JST connector; DAC or PWM audio); DAC2 output; do not drive speaker directly without amplifier stage"|"do"
+  27|digital|f|f|"GPIO27 — Free GPIO; exposed on CN1 connector; R18 10k pull-up to 3.3V fitted on PCB; analogRead returns 4095 if unconnected; suitable for I2C SDA external sensors"|"di;do"
+  33|digital|f|f|"GPIO33 — Touch XPT2046 CS (VSPI)"|"spi"
+  34|analog|f|f|"GPIO34 — LDR light sensor (input only; 1M pull-up R15 + 1M R19 parallel to GND; low sensitivity as shipped; consider replacing R15 with 10k for better range); INPUT ONLY — no output capability"|"di"
+  35|analog|f|f|"GPIO35 — Free GPIO on P3 connector; INPUT ONLY — no output; 12-bit ADC channel; do not attempt to drive as output"|"di"
+  36|analog|f|f|"GPIO36 — Touch XPT2046 IRQ (input only; interrupt from touch controller)"|"di"
+  39|analog|f|f|"GPIO39 — Touch XPT2046 MISO (VSPI; input only — INPUT ONLY pin)"|"di"
+
+## 5. PERIPHERALS & USB:
+peripherals[4|]{peripheral|param|value}:
+  serial|uart0|"tx1|rx3"
+  spi|channels2|"hspi:mosi13|sck14|cs15|dc2-tft;vspi:mosi23|miso19|sck18|cs5-sd|cs33-touch"
+  i2c|channels1|"sda27|scl22"
+  adc|channels1|"gpio34-ldr|gpio35|gpio36-touch-irq|gpio39"
+usb: type Micro-USB | chip "CH340C" | vid "0x1A86" | pid "0x7523"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "40mA"
+  total_current_limit: "1200mA"
+  warnings[9]:
+    - "GPIO21 controls the TFT backlight (HIGH=on); it is ALSO exposed on the P3 connector; as long as the display backlight is on, GPIO21 is driven HIGH by the display driver; if GPIO21 is used as a free GPIO output, it will conflict with the backlight state; to use GPIO21 freely, either control backlight manually and accept it tied to GPIO21 state, or physically cut the PCB trace from GPIO21 to the backlight FET and wire backlight to 3.3V permanently"
+    - "GPIO35 and GPIO39 are INPUT ONLY pins on ESP32 — they have NO internal pull-up/pull-down, NO output driver, and CANNOT be configured as outputs; attempting digitalWrite() on GPIO35 or GPIO39 will silently fail; GPIO34 and GPIO36 are also input-only; never connect these pins to circuits expecting bidirectional data"
+    - "The TFT (HSPI) and the touchscreen plus microSD (VSPI) use TWO separate SPI buses; TFT uses HSPI (GPIO13/14/15/2); touchscreen XPT2046 and microSD share VSPI (GPIO23/19/18 MOSI/MISO/SCK with separate CS GPIO5 and GPIO33); mixing TFT and touch/SD SPI calls on the wrong bus will cause display corruption or touch failure; always verify SPIClass(HSPI) vs SPIClass(VSPI) in firmware"
+    - "GPIO1 (TX) and GPIO3 (RX) are connected to BOTH the ESP32 UART0 AND the CH340C USB-serial chip; when the USB cable is connected and serial monitor is active, the CH340C drives these lines; connecting external serial devices to GPIO1/GPIO3 via the P1 connector while USB is active will cause bus contention; P1 serial use requires disconnecting USB or using a different UART (UART1 or UART2 on GPIO22/GPIO27)"
+    - "RGB LED uses active-LOW logic: write LOW to illuminate, HIGH to turn off; GPIO4=Red, GPIO16=Green, GPIO17=Blue; GPIO16 may share the TFT MISO line on some board revisions — if TFT MISO is needed (for display readback), avoid using GPIO16 as RGB LED simultaneously; most ILI9341 applications do not require MISO so this is rarely an issue in practice"
+    - "The onboard LDR (GPIO34) has 1M ohm pull-up (R15) and 1M ohm parallel resistor (R19) to GND as shipped; this results in very low ADC swing between light and dark conditions (approximately 0.016V to 0.617V); for useful light sensing, remove R19 and replace R15 with 10k ohm; GPIO34 has a pull-up to 3.3V in the stock circuit so analogRead without modification will always read near-maximum in normal room lighting"
+    - "GPIO27 has a 10k ohm pull-up resistor R18 to 3.3V soldered on the PCB; analogRead(27) on an unconnected GPIO27 returns 4095 (3.3V); this pull-up assists I2C use (SDA with no external pull-up needed) but means GPIO27 is not a clean floating input; sensors that require a floating or pull-DOWN input will not work correctly without removing R18; GPIO27 is recommended for I2C SDA with GPIO22 as SCL for external sensors via CN1"
+    - "Speaker output on GPIO26 uses the ESP32 DAC2 (8-bit resolution) or LEDC PWM; there is no onboard amplifier — the 1.25mm JST connector connects directly to a small passive speaker; output voltage swing is 0-3.3V at GPIO26 current limits (40mA max); do not connect a low-impedance speaker (less than 8 ohm) directly; use a PAM8403 or similar amplifier module for adequate volume; GPIO26 is shared with DAC2 and cannot be used for other digital output while DAC audio is active"
+    - "The board has NO dedicated 5V or GND screw/pin header for external power; the only power input is USB Micro-B (5V); power can be injected via P1 connector VIN pin (5V) or by soldering to USB 5V pads; there is NO 3.3V output header exposed for external use except on CN1; free GPIO count is critically low: only GPIO22, GPIO27, and GPIO35 (input-only) are fully accessible without hardware modification; projects requiring more GPIO must use I2C expanders (PCF8574) or remove the RGB LED (frees GPIO4, GPIO16, GPIO17)"
+compatibility: pio esp32dev | frameworks "arduino;espidf" | languages "arduino-cpp;micropython" | bootloader "esp-idf-bootloader"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: esp32-xtensa-family
+  boardProfileId: esp32-2432s028r
+  defaultLanguageSkills[2]:
+    - arduino-cpp-esp32
+    - espidf-c-esp32

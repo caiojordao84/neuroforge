@@ -1,34 +1,103 @@
+# METADATA:
+project_name: arduino-mkr-wifi-1010-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: arduino-mkr-wifi-1010
 name: "Arduino MKR WiFi 1010"
-manufacturer: "Generic"
-mcu: "SAMD21"
-category: "maker"
-image: "/boards/arduino-mkr-wifi-1010.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 262144
-sram: 32768
-clock_hz: 48000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "samd-family"
-  boardProfileId: "arduino-mkr-wifi-1010"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [4]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  14,A0,analog,false,true,false
+manufacturer: Arduino
+mcu: ATSAMD21G18A
+category: maker
+image: arduino-mkr-wifi-1010.svg
+url: "https://docs.arduino.cc/hardware/mkr-wifi-1010"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 262144
+  flash_available: 262144
+  sram: 32768
+  eeprom: 0
+  clock: 48000000
+  voltage: "3.3V"
+  wifi: "802.11b/g/n"
+  bluetooth: "v4.2 BLE"
+dims:
+  w: 25.0
+  h: 61.5
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  VIN|input|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+  VBATT|input|null|null
+  5V|output|"5V"|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[21|]{pin|type|pwm|int|label|roles}:
+  0|digital|t|t|"D0 / TX"|uart-tx
+  1|digital|t|t|"D1 / RX"|uart-rx
+  2|digital|t|f|D2|null
+  3|digital|t|f|D3|null
+  4|digital|t|t|D4|null
+  5|digital|t|t|D5|null
+  6|digital|t|t|"D6 / LED"|status-led
+  7|digital|t|t|D7|null
+  8|digital|t|f|"D8 / MOSI"|spi-mosi
+  9|digital|f|t|"D9 / SCL"|i2c-scl
+  10|digital|t|f|"D10 / MISO"|spi-miso
+  11|digital|f|f|"D11 / SCK"|spi-sck
+  12|digital|t|f|D12|null
+  13|digital|f|f|"D13 / SDA"|i2c-sda
+  14|analog|f|f|"A0 / DAC0"|"adc:t;dac"
+  15|analog|f|t|A1|"adc:t"
+  16|analog|f|t|A2|"adc:t"
+  17|analog|t|f|A3|"adc:t;pwm"
+  18|analog|t|f|A4|"adc:t;pwm"
+  19|analog|f|f|A5|"adc:t"
+  20|analog|f|f|A6|"adc:t"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[5|]{peripheral|param|value}:
+  serial|"uarts:1"|"pins:0,1"
+  i2c|"channels:1"|"sda:13;scl:9"
+  spi|"channels:1"|"miso:10;mosi:8;sck:11;ss:7"
+  adc|"channels:7"|"pins:14,15,16,17,18,19,20"
+  dac|"channels:1"|"dac0:14"
+usb:
+  type: USB-Micro-B
+  chip: SAMD21-native
+  vid: "0x2341"
+  pid: "0x8054"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "7mA"
+  total_current_limit: "200mA"
+  warnings[5]:
+    - "All I/O pins operate at 3.3V — NOT 5V tolerant"
+    - "Pins D0/D1 shared with UART Serial1 (TX/RX)"
+    - "Pin D6 is LED_BUILTIN — onboard LED interference"
+    - "WiFi/BLE module NINA-W102 uses internal SPI — do NOT conflict"
+    - "Li-Po single-cell battery connector supported; built-in charger"
+compatibility:
+  arduinoCore: "1.8.14"
+  pio: atmelsam
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: sam-ba
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: samd21-family
+  boardProfileId: arduino-mkr-wifi-1010
+  defaultLanguageSkills[1]:
+    - arduino-cpp-samd

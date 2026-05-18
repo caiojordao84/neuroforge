@@ -1,0 +1,108 @@
+# METADATA:
+project_name: ge-versamax-ic200cpue05-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: ge-versamax-ic200cpue05
+name: "GE VersaMax IC200CPUE05 — 64KB, 0.8ms/K Boolean, RS-232/RS-485+Ethernet 10Mbps, EGD/SRTP, NTP, DIN-rail modular PLC"
+manufacturer: "GE Intelligent Platforms (now Emerson Automation Solutions)"
+mcu: "Proprietary embedded processor — 0.8ms/K boolean; hardware FPU; battery-backed RAM + system flash NV"
+category: plc
+image: ge-versamax-ic200cpue05.svg
+url: "https://www.emerson.com/en-us/catalog/emerson-versamax-plc"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 65536
+  flash_available: 65536
+  sram: 65536
+  eeprom: 0
+  clock: 0
+  voltage: "5V"
+dims:
+  w: 126.0
+  h: 128.0
+  t: 69.1
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# Powered by separate IC200PWR002 power supply module on DIN rail
+# CPU draws 5V from carrier/backplane (220mA without options, 320mA with serial converter)
+# 3.3V rail used internally only (570mA with serial converter or EZ Program Store)
+powerPins[4|]{name|direction|voltage|type}:
+  BP_5V|input|"5V"|null
+  BP_3V3|input|"3.3V"|null
+  BP_GND|null|null|ground
+  BAT_BR2032|input|"3V"|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# No field-level GPIO; all I/O via expansion I/O modules on DIN carrier
+# Port 1 RS-232 DB-9: pins 11-19 (DB9 pin1..9) — UNUSUAL: pin2=TXD out, pin3=RXD in
+# Port 2 RS-485 DB-15: pins 21-35 (DB15 pin1..15)
+# Ethernet RJ-45: pin 40
+gpio[15|]{pin|type|pwm|int|label|roles}:
+  12|digital|false|false|"Port1 DB-9 pin2 / TXD output — ATTENTION: UNUSUAL pinout; pin2=TXD(out) pin3=RXD(in); use straight-through cable to PC; SNP Slave; Modbus RTU Slave+Master(FW2.31+); Serial I/O; firmware upgrade port; max 57.6kbps"|uart-tx
+  13|digital|false|false|"Port1 DB-9 pin3 / RXD input — see pin2 note; also Station Manager local via Ethernet Restart button toggle (press 5sec); max cable 15m"|uart-rx
+  15|digital|false|false|"Port1 DB-9 pin5 / GND signal reference"|null
+  17|digital|false|false|"Port1 DB-9 pin7 / CTS input — flow control"|null
+  18|digital|false|false|"Port1 DB-9 pin8 / RTS output — flow control"|null
+  21|digital|false|false|"Port2 DB-15 pin1 / SHLD — cable shield drain wire"|null
+  25|digital|false|false|"Port2 DB-15 pin5 / P5V output — +5.1VDC 100mA max for external RS-232 level converter (IC690ACC901)"|null
+  27|digital|false|false|"Port2 DB-15 pin7 / GND — signal reference + EZ Program Store power return"|null
+  29|digital|false|false|"Port2 DB-15 pin9 / RT — connect to GND to activate 120-ohm termination for RDA; terminate only at END nodes of RS-485 chain"|null
+  30|digital|false|false|"Port2 DB-15 pin10 / RDA' — RS-485 Receive Data A(-) input; Modbus RTU Slave+Master; SNP; Serial I/O; EZ Program Store; max 57.6kbps; max cable 1200m; max 32 nodes"|uart-rx
+  31|digital|false|false|"Port2 DB-15 pin11 / RDB' — RS-485 Receive Data B(-) input; differential pair with RDA'"|uart-rx
+  32|digital|false|false|"Port2 DB-15 pin12 / SDA — RS-485 Transmit Data A(+) output"|uart-tx
+  33|digital|false|false|"Port2 DB-15 pin13 / SDB — RS-485 Transmit Data B(+) output; differential pair with SDA"|uart-tx
+  34|digital|false|false|"Port2 DB-15 pin14 / RTSA — Request to Send A output (flow control for RS-485)"|null
+  40|digital|false|false|"Ethernet RJ-45 / 10BaseT — 10Mbps ONLY (NOT 100Mbps); half/full-duplex auto; SRTP server 8 conn; EGD 32 exchanges; NTP; Station Manager UDP; no Modbus TCP; restart button required on overload"|"eth"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[5|]{peripheral|param|value}:
+  rs232_port1|"baud:57600"|"proto:SNP-Slave;Modbus-RTU-Slave;Modbus-RTU-Master-FW231plus;Serial-IO;Station-Manager-local;firmware-upgrade;isolation:no;connector:DB9-DCE-unusual-pinout;cable-max:15m"
+  rs485_port2|"baud:57600"|"proto:Modbus-RTU-Slave;Modbus-RTU-Master-FW231plus;SNP;Serial-IO;EZ-Program-Store;isolation:no;connector:DB15-female;P5V-100mA-on-pin5;termination-RT-pin9;cable-max:1200m;nodes:32"
+  ethernet|"speed:10Mbit"|"proto:SRTP-server-8conn;EGD-32-exchanges;NTP;Station-Manager-UDP;NO-Modbus-TCP;duplex:auto-half-full;restart-button:yes;connector:RJ45-10BaseT-CAT5"
+  ez_program_store|"connector:Port2-DB15"|"module:IC200ACC003;transfer:program+config+IO-table;via-Port2-RS485"
+  expansion|"max-modules:64"|"carrier:IC200CHS002-005-022;io:2048-discrete;io-modules:DI-DO-AI-AO-relay;comm-modules:IC200PBI001-ETM001;riup:yes"
+usb:
+  type: none
+  chip: none
+  vid: "0x0000"
+  pid: "0x0000"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "220mA"
+  total_current_limit: "320mA"
+  warnings[9]:
+    - "IC200CPUE05 has NO USB port — firmware upgrade is done ONLY via Port 1 (RS-232, 9-pin) using GE Winloader tool at initial 19200 baud; Port 2 CANNOT be used for firmware upgrade"
+    - "Port 1 RS-232 pinout is UNUSUAL (DCE-style): pin2=TXD(out), pin3=RXD(in) — use a straight-through cable to a PC; do NOT use a null-modem cable; wrong cable will cause no-communication failure silently"
+    - "Ethernet is 10BaseT (10Mbps) ONLY — it does NOT auto-negotiate to 100Mbps; connect only to a hub or switch port configured at 10Mbps; a 100Mbps-only port will fail to link; use CAT5 cable max 100m"
+    - "Use ONLY Panasonic BR2032 (or IC200ACC001) as backup battery — use of any other battery model or chemistry presents a risk of fire or explosion; do NOT recharge, disassemble, or heat above 100°C"
+    - "If Ethernet is overloaded (32 EGD exchanges at <150ms intervals), SRTP connections will timeout and the Ethernet interface may self-restart; press Ethernet Restart button to recover; reduce EGD exchange frequency to resolve"
+    - "EGD traffic takes priority over SRTP, which takes priority over Station Manager — on heavily loaded systems, Station Manager commands may be completely locked out; monitor with 'Stat g' command"
+    - "Port 1 can be toggled to local Station Manager mode by pressing the Ethernet Restart button for 5+ seconds — it will remain in Station Manager mode until power cycle; this disables normal PLC serial communication on Port 1"
+    - "Analog modules ALG320/321/322 Rev A and ALG430/431 Rev A/B and ALG432 Rev A in expansion racks cause System Configuration Mismatch fault — upgrade to minimum required revision before adding to expansion"
+    - "The IC200CPUE05 does NOT support supernetting or multicast/broadcast IP addresses as its own address — avoid x.y.z.255, x.y.z.0, x.y.z.1, or addresses >223.x.y.z; these cause erratic Ethernet behavior with no error reported"
+compatibility:
+  sw: "VersaPro v2.0+; Cimplicity Machine Edition Logic Developer v2.11+"
+  languages: "LD;IL (IEC 61131-3 subset — Ladder Diagram and Instruction List only)"
+  protocols: "SNP-Slave;Modbus-RTU-Slave;Modbus-RTU-Master-FW231plus;Serial-IO;SRTP-server;EGD;NTP;Station-Manager-UDP"
+  io_modules: "IC200MDL640-643-730-740;IC200ALG230-240-260-320-321-322-430-431-432;IC200MDL930-940;IC200HSC001"
+  comm_modules: "IC200PBI001(Profibus-DP);IC200ETM001(Ethernet-adapter);IC200GBI001(Genius)"
+  certifications: "UL-Industrial;cUL;CE-RoHS;Class-I-Div2-GPABCD;IEC-61131-2"
+  ez_program_store: "IC200ACC003 — connects to Port 2 DB-15; stores program+config+IO table; offline transfer"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: ge-versamax-plc-family
+  boardProfileId: ge-versamax-ic200cpue05
+  defaultLanguageSkills[3]:
+    - ld-ge-versamax-versapro
+    - il-ge-versamax-versapro
+    - ld-ge-versamax-cimplicity-me

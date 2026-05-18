@@ -1,0 +1,105 @@
+# METADATA:
+project_name: arduino-nano-33-ble-sense-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: arduino-nano-33-ble-sense
+name: "Arduino Nano 33 BLE Sense"
+manufacturer: Arduino
+mcu: nRF52840
+category: maker
+image: arduino-nano-33-ble-sense.svg
+url: "https://store.arduino.cc/products/arduino-nano-33-ble-sense"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 1048576
+  flash_available: 983040
+  sram: 262144
+  eeprom: 0
+  clock: 64000000
+  voltage: "3.3V"
+  cores: 1
+  bluetooth: "v5.0 BLE"
+dims:
+  w: 45.0
+  h: 18.0
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  3V3|output|"3.3V"|null
+  VUSB|input|"5V"|null
+  GND|null|null|ground
+  RST|input|null|null
+  AREF|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[22|]{pin|type|pwm|int|label|roles}:
+  0|digital|f|f|"D0 / RX"|uart-rx
+  1|digital|f|f|"D1 / TX"|uart-tx
+  2|digital|t|t|D2|null
+  3|digital|t|t|"D3 / PWM"|null
+  4|digital|t|t|D4|null
+  5|digital|t|t|"D5 / PWM"|null
+  6|digital|t|t|"D6 / PWM"|null
+  7|digital|t|t|D7|null
+  8|digital|t|t|D8|null
+  9|digital|t|t|"D9 / PWM"|null
+  10|digital|t|t|"D10 / PWM / SS"|spi-ss
+  11|digital|t|t|"D11 / MOSI"|spi-mosi
+  12|digital|t|t|"D12 / MISO"|spi-miso
+  13|digital|t|t|"D13 / SCK / LED"|"spi-sck;status-led"
+  14|analog|f|f|A0|"adc:t"
+  15|analog|f|f|A1|"adc:t"
+  16|analog|f|f|A2|"adc:t"
+  17|analog|f|f|A3|"adc:t"
+  18|analog|f|f|"A4 / SDA"|"adc:t;i2c-sda"
+  19|analog|f|f|"A5 / SCL"|"adc:t;i2c-scl"
+  20|analog|f|f|A6|"adc:t"
+  21|analog|f|f|A7|"adc:t"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uarts:1"|"pins:0,1"
+  i2c|"channels:1"|"sda:18;scl:19"
+  spi|"channels:1"|"miso:12;mosi:11;sck:13;ss:10"
+  adc|"channels:8"|"pins:14,15,16,17,18,19,20,21"
+usb:
+  type: Micro-USB
+  chip: nRF52840-native
+  vid: "0x2341"
+  pid: "0x805A"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "15mA"
+  total_current_limit: "200mA"
+  warnings[6]:
+    - "All GPIO operate at 3.3V — NOT 5V tolerant"
+    - "Pins D0/D1 shared with UART0 / USB Serial"
+    - "Pin D13 has onboard RGB LED interference (red channel)"
+    - "Internal I2C bus used by onboard sensors (LSM9DS1, HTS221, LPS22HB, APDS-9960, MP34DT05)"
+    - "Onboard sensors share internal I2C — avoid address conflicts"
+    - "BLE and USB cannot be used simultaneously at full throughput"
+compatibility:
+  arduinoCore: "1.3.2"
+  pio: nordicnrf52
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: arduino-mbed
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: nrf52-family
+  boardProfileId: arduino-nano-33-ble-sense
+  defaultLanguageSkills[2]:
+    - arduino-cpp-nrf52
+    - rust-embassy-nrf52

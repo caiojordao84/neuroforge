@@ -1,38 +1,101 @@
+# METADATA:
+project_name: compactlogix-5380-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+# 1. DEVICE IDENTIFICATION:
 id: compactlogix-5380
-name: "CompactLogix 5380"
-manufacturer: "Generic"
-mcu: "Allen-Bradley"
-category: "industrial"
-image: "/boards/compactlogix-5380.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 0
-sram: 0
-clock_hz: 0
-voltage_mv: 3300
+name: CompactLogix 5380
+manufacturer: Rockwell Automation / Allen-Bradley
+mcu: Atom E3825 (dual-core x86)
+category: plc
+image: compactlogix-5380.svg
+url: https://www.rockwellautomation.com/en-gb/products/hardware/i-o/5069-compact-5000-i-o.html
+
+# 2. CONTROLLER VARIANTS:
+# Format: catalog | memory_kb | local_io_max | enip_nodes | motion_axes | motion_support
+variants[7]:
+  - 5069-L306ER|640|16|16|0|f
+  - 5069-L310ER|1024|16|24|0|f
+  - 5069-L310ERM|1024|16|24|10|t
+  - 5069-L320ER|2048|31|40|0|f
+  - 5069-L320ERM|2048|31|40|20|t
+  - 5069-L330ER|4096|31|50|0|f
+  - 5069-L330ERM|4096|31|50|20|t
+  - 5069-L340ERM|4096|31|90|20|t
+
+# 3. TECH SPECS:
+specs:
+  user_memory_max: 4194304 | nonvolatile: SD-card | clock: dual-core | voltage: 24VDC | arch: x86 (Atom E3825)
+supply:
+  voltage: 24VDC | voltage_range: 18-32VDC | current_max: 1.2A | power_max_w: 29
+dims:
+  w: 45.0 | h: 144.0 | t: 115.0
+
+# 4. ELECTRICAL PROFILE:
+# Format: name | direction | voltage | type
+powerPins[4]:
+  - DC+|input|24|main-power
+  - DC-|input|null|ground
+  - SHIELD|null|null|chassis-ground
+  - SA_PWR|output|24|system-power-bus
+
+# 5. LOCAL I/O — 5069 COMPACT I/O MODULES:
+# No fixed GPIO — I/O defined by installed 5069 modules
+# Format: module | type | channels | resolution | signal_range | notes
+io_module_types[10]:
+  - 5069-IB16|digital-input|16|1bit|24VDC|sink
+  - 5069-IB16F|digital-input-fast|16|1bit|24VDC|fast-response,timestamped
+  - 5069-OB16|digital-output|16|1bit|24VDC|source
+  - 5069-OB8|digital-output|8|1bit|24VDC|source,high-current
+  - 5069-IA16|digital-input-ac|16|1bit|120VAC|null
+  - 5069-OA8|digital-output-ac|8|1bit|120-240VAC|null
+  - 5069-IF8|analog-input|8|16bit|±10V,0-10V,0-20mA,4-20mA|differential
+  - 5069-OF8|analog-output|8|16bit|±10V,0-10V,0-20mA,4-20mA|null
+  - 5069-HSC8|high-speed-counter|8|32bit|24VDC|encoder,frequency,period
+  - 5069-IB6XOB6F|digital-mixed|6+6|1bit|24VDC|fast-output,timestamped
+
+# 6. PERIPHERALS & CONNECTIVITY:
+# Format: peripheral | param | value
+peripherals[6]:
+  - ethernet|ports:2|speed:1Gbps|protocol:EtherNet/IP,Modbus-TCP|topology:star,linear,DLR
+  - usb|type:USB-A|mode:programming-only|notes:temporary-connection-only
+  - sd-card|catalog:1784-SD1,1784-SD2|purpose:nonvolatile-storage,firmware-update
+  - motion|variants:ERM-only|network:EtherNet/IP|axis_max:20|types:servo,virtual,consumed
+  - field-bus|adapter:5069-AEN2TR,5069-AENTR|protocol:EtherNet/IP|use:distributed-remote-io
+  - modbus-rtu|adapter:5069-SERIAL|protocol:Modbus-RTU|note:via-serial-module
+sa_power:
+  type: 24VDC | distributor: 5069-FPD | note: use FPD to mix AC+DC SA power on same backplane
+
+# 7. I/O ARCHITECTURE:
+io_architecture:
+  local_io_family: 5069 Compact I/O | local_io_max: 31 | modules_per_bank: 31
+  remote_io_families: 5069,1756,1769,1746 | remote_io_via: EtherNet/IP
+  io_tree_max_nodes_by_variant: see-variants-section
+  end_cap_required: t | end_cap_catalog: 5069-ECR
+
+# 8. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  operating_temp_min: 0C | operating_temp_max: 55C | protection: IP20 | din_rail: t
+  warnings[6]:
+    - Studio 5000 v29 limits local I/O to 16 modules — upgrade to v30+ for 31 modules
+    - Motion (ERM) only available on catalog numbers with M suffix
+    - USB port is for temporary programming only — not for runtime comms
+    - Mixed AC+DC SA power requires 5069-FPD field potential distributor
+    - 1746 SLC and 1769 Compact I/O only supported as remote I/O via EtherNet/IP
+    - Safety I/O requires Compact GuardLogix 5380 variant — not standard CompactLogix
+compatibility:
+  ide: Studio 5000 Logix Designer v30+ | firmware: v30+
+  plc_languages: ladder,fbd,st,sfc,il | iec_standard: IEC-61131-3
+  legacy_io_remote: 1756-ControlLogix,1769-Compact,1746-SLC
+
+# 9. AGENT SKILLS:
 neuroforge:
-  boardFamilySkillId: "plc-family"
-  boardProfileId: "compactlogix-5380"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+  boardFamilySkillId: compactlogix-5380-family
+  boardProfileId: compactlogix-5380
+  defaultLanguageSkills[2]: structured-text-iec61131, ladder-logic-iec61131
+  plcIdeSupport: t
+  ioModuleFamily: 5069-compact-io
+  variantIds[7]: 5069-L306ER, 5069-L310ER, 5069-L310ERM, 5069-L320ER, 5069-L320ERM, 5069-L330ER, 5069-L330ERM, 5069-L340ERM

@@ -1,0 +1,108 @@
+# METADATA:
+project_name: beckhoff-cx5130-0125-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: beckhoff-cx5130-0125
+name: "Beckhoff CX5130-0125 — Embedded PC; Intel Atom E3827 dual-core 1.75GHz; 4GB DDR3 non-expandable; WES7P 32-bit + TwinCAT 3 XAR; 2× GbE Intel i210 RJ45; 4× USB 2.0; DVI-I; 1-sec UPS; CFast+microSD; E-/K-bus auto-detect; fTPM 2.0; 14W; 24VDC; 142×100×92mm DIN rail fanless"
+manufacturer: "Beckhoff Automation"
+mcu: "Intel Atom E3827 dual-core 1.75GHz; 4GB DDR3 soldered (not expandable); Intel HD Graphics 542MHz base/792MHz burst; DirectX11; TwinCAT 3 XAR performance class 40; 4 user tasks; EtherCAT master via LAN ports with RT driver; K-bus or E-bus terminal expansion"
+category: plc
+image: beckhoff-cx5130-0125.svg
+url: "https://www.beckhoff.com/en-en/products/ipc/embedded-pcs/cx5100-intel-atom-r/cx5130.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 42949672960
+  flash_available: 1048576
+  sram: 4294967296
+  eeprom: 0
+  clock: 1750
+  voltage: "24V"
+dims:
+  w: 142.0
+  h: 100.0
+  t: 92.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# CX5130-0125: 24VDC (-15%/+20%) = 20.4-28.8VDC; spring-loaded terminals on power supply terminal
+# Max power consumption: 14W (CPU + all system interfaces); 20W peak (including 1-sec UPS capacitor charging)
+# E-bus / K-bus terminal power: max 10W (5V / max 2A) via power supply terminal to terminal chain
+# Power contacts on terminal bus: max 10A (for supplying field power to connected Bus/EtherCAT Terminals)
+# Isolation: 500V between 24VDC supply and internal electronics (galvanic isolation tested)
+# No isolated field supply built-in — additional CX2100-0900 power supply module needed for separate field supply
+# Internal 1-second UPS: supercapacitor-based; stores up to 1MB persistent variables on CFast/microSD
+# Battery: CR2032 in replaceable compartment under front flap; backs up RTC only (not RAM/flash)
+powerPins[5|]{name|direction|voltage|type}:
+  PWR_24V|input|"24V"|null
+  PWR_0V|null|null|ground
+  PE_GND|null|null|ground
+  EBUS_5V|output|"5V"|null
+  POWER_CONTACT_24V|output|"24V"|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# CX5130-0125 has NO integrated field I/O — all I/O via E-bus or K-bus terminals on right side
+# GPIO map covers the physical hardware interfaces on the CX5130 front/top panel
+# EtherCAT master function: achieved by loading Beckhoff RT EtherCAT driver on X000 or X001 GbE port
+# Second EtherCAT master port: via optional interface M112 in optional slot (ordered ex factory only)
+gpio[8|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|false|"ETH X000 — RJ45; Intel i210; 10/100/1000 Mbit/s; independent Gigabit Ethernet; auto-MDI/MDIX; jumbo frames supported (up to 9014 bytes); NIC teaming supported; EtherCAT master operation via Beckhoff RT driver (load RT driver in TwinCAT to use as EtherCAT master); protocols: EtherCAT master, EtherNet/IP adapter, Modbus TCP, ADS/AMS over TCP, OPC UA, PROFINET via TwinCAT; LED LINK/ACT green + SPEED green/red; factory default: EtherCAT mode"|"do;di"
+  1|digital|false|false|"ETH X001 — RJ45; Intel i210; 10/100/1000 Mbit/s; second independent Gigabit Ethernet; same specs as X000; independent MAC address; use for SCADA/HMI or EtherCAT cable redundancy (ring topology with X000); NO internal switch between X000 and X001 — cannot pass traffic between them without OS routing; cable max 100m Cat5e+"|"do;di"
+  2|digital|false|false|"USB X100 — USB 2.0 Type-A; 480 Mbps; 500mA VBUS; for keyboard/mouse/storage/touchscreen; NOT for continuous high-current devices; cable max 3m without hub"|"do;di"
+  3|digital|false|false|"USB X101 — USB 2.0 Type-A; 480 Mbps; 500mA; same as X100"|"do;di"
+  4|digital|false|false|"USB X102 — USB 2.0 Type-A; 480 Mbps; 500mA; same as X100"|"do;di"
+  5|digital|false|false|"USB X103 — USB 2.0 Type-A; 480 Mbps; 500mA; same as X100; total 4× USB 2.0; in hazardous area use CX2900-0107 retainer bracket and cable tie all USB plugs"|"do;di"
+  6|digital|false|false|"DVI-I X200 — DVI-I female 29-pin; resolution 640×480 to 1920×1200; max cable 5m direct DVI (50m with Beckhoff DVI extension panel); digital and analog (VGA via adapter); Intel HD Graphics 256MB shared 542MHz base/792MHz burst; DirectX 11; OpenGL 4.0; Shader 5.0; no independent GPU memory — uses system RAM; clone/extended display with optional N010 DVI-D or N011 DisplayPort second interface"|"do"
+  7|digital|false|false|"OPTIONAL INTERFACE X300 — 1 slot; must be ordered ex factory — NOT retrofittable; available options: N010 DVI-D (clone/extended display), N011 DisplayPort (2560×1600), N020 audio 3.5mm jacks (not available on WEC7), N030 RS232 D-sub9 isolated 500V, N031 RS422/RS485 D-sub9 isolated 500V, B110 EtherCAT slave (2×RJ45 EtherCAT IN/OUT), M310 PROFIBUS master D-sub9 9.6k-12Mbd, B310 PROFIBUS slave, M510 CANopen master D-sub9 10k-1Mbd, B510 CANopen slave, M930 PROFINET RT controller 2×RJ45, B930 PROFINET RT device 2×RJ45 switch; specify at order time — field upgrade not possible"|"do;di"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[9|]{peripheral|param|value}:
+  ethercat_master|"ports:2"|"EtherCAT-master-via-standard-GbE-ports-X000-X001-with-Beckhoff-RT-EtherCAT-driver;no-dedicated-EtherCAT-port-on-base-unit;TC3-performance-class-40;EtherCAT-cable-redundancy-via-both-ports-ring-topology;optional-M112-EtherCAT-slave-interface-for-EtherCAT-slave-mode;drives-BK-EK-EL-EP-EP-series-terminals-and-servo-drives;DC-sync;TwinCAT-System-Manager-auto-scan"
+  terminal_bus|"terminals:65534"|"right-side-power-supply-terminal-auto-detects-E-bus-EtherCAT-Terminals-or-K-bus-Bus-Terminals;E-bus:up-to-65534-EL-EP-series-EtherCAT-Terminals;K-bus:up-to-64-BK-KL-series-Bus-Terminals-or-255-with-K-bus-extension;5V-2A-power-to-terminal-chain;power-contacts-10A-max;K-bus-process-data:max-2048B-in-2048B-out;NX-END02-equivalent:EtherCAT-Terminal-bus-end-cover"
+  cfast_slot|"size:40GB"|"CFast-card-slot-under-front-flap;cards-not-included;min-40GB-for-WES7P-or-Win10-IoT;min-20GB-for-WEC7-or-TC-BSD;industrial-grade-CFast-recommended:Beckhoff-CX1900-0102-series;stores:OS-TC3-program-persistent-1MB-UPS-data;SATA-interface;LED-flash-access-on-front-panel;power-off-before-inserting-or-removing"
+  microsd_slot|"size:32GB"|"microSD-card-slot-under-front-flap;cards-not-included;additional-storage;can-store-persistent-UPS-data-if-no-CFast;IDE-interface;Beckhoff-recommends-industrial-microSD;max-32GB-tested;hot-swap-NOT-supported-power-off-before-change"
+  ups_1sec|"capacity:1MB"|"integrated-1-second-UPS;supercapacitor-based;triggers-on-power-failure;stores-up-to-1MB-persistent-variables-on-CFast-or-microSD;FB_S_UPS_CX51x0-function-block-in-TwinCAT;BIOS-UPS-enable-required;Windows-Write-Filter-must-be-configured;peak-power-consumption-20W-during-capacitor-charging"
+  twincat3_xar|"class:40"|"TwinCAT-3-XAR-runtime-pre-installed;performance-class-40;4-user-tasks-max;tasks:cyclic-periodic-event-free-running;min-task-cycle-time-depends-on-CPU-load-typical-250µs-1ms;EtherCAT-master-integrated;NC-PTP-NC-I-motion-control-included;CNC-optional;PLC-runtime-IEC-61131-3-full;ADS-AMS-communication;OPC-UA-server;Modbus-TCP-slave-client;EtherNet-IP-adapter-optional;TC-BSD-option-order-0185"
+  graphics_ipc|"resolution:1920x1200"|"Intel-HD-Graphics-integrated;256MB-shared-from-system-RAM;base-clock-542MHz;burst-792MHz;DirectX-11;OpenGL-4.0;Shader-5.0;DVI-I-native;DVI-D-optional-N010;DisplayPort-optional-N011;max-2560x1600-on-DP;clone-or-extended-dual-display;Beckhoff-DVI-extension-panels-up-to-50m;VGA-via-DVI-I-adapter"
+  battery_rtc|"type:CR2032"|"battery-CR2032-under-front-flap-replaceable;backs-up-RTC-date-and-time-ONLY;does-NOT-back-up-RAM-or-program;program-retained-on-CFast-flash;always-replace-battery-with-power-ON-to-avoid-RTC-reset;battery-location:front-flap-bottom-compartment;replace-when-date-time-lost-on-power-cycle"
+  fieldbus_options|"slots:1"|"1x-optional-interface-slot-X300;must-order-ex-factory-not-retrofittable;options:N030-RS232-500V-isolated,N031-RS422-RS485-500V-isolated,B110-EtherCAT-slave-2xRJ45,M310-PROFIBUS-master,B310-PROFIBUS-slave,M510-CANopen-master,B510-CANopen-slave,M930-PROFINET-RT-controller,B930-PROFINET-RT-device,N010-DVI-D,N011-DisplayPort,N020-audio;RS232-RS485-configurable-in-TwinCAT-or-Windows;fieldbus-options-require-corresponding-TC3-fieldbus-license"
+usb:
+  type: Type-A
+  chip: xHCI
+  vid: "0x15EC"
+  pid: "0x0000"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "2000mA"
+  total_current_limit: "2000mA"
+  warnings[9]:
+    - "The CX5130-0125 has NO integrated field I/O on the CPU module — all discrete I/O (digital inputs, digital outputs, analog inputs, analog outputs, encoder inputs, safety I/O) is provided exclusively by Beckhoff EtherCAT Terminals (EL/EP series, E-bus) or Bus Terminals (KL series, K-bus) connected via the terminal bus on the right side of the power supply terminal; the CX5130 module alone cannot control any field devices; the power supply terminal (CX2100-xxxx) must be ordered as a separate item and attached before any terminals can be connected"
+    - "The CX5130-0125 is pre-installed with Windows Embedded Standard 7 P 32-BIT — this is a 32-bit operating system with the practical RAM limit of approximately 3.5 GB visible to Windows even though 4 GB is physically installed; TwinCAT 3 can use the full 4 GB via memory-mapped access for its real-time kernel; for applications requiring full 64-bit OS with access to the complete 4 GB RAM in both Windows and TwinCAT, order the CX5130-0135 (WES7P 64-bit) or CX5130-0155/0175 (Windows 10 IoT 64-bit) variants; the 32-bit OS also limits single-process address space to 2 GB"
+    - "The OPTIONAL INTERFACE SLOT (X300) must be ordered EX FACTORY and CANNOT BE RETROFITTED in the field — once the CX5130-0125 is delivered without an optional interface, it is impossible to add RS232, RS485, PROFIBUS, CANopen, EtherCAT slave, or PROFINET connectivity later; always specify the required fieldbus interface at the time of ordering; the only post-delivery communication expansion options are via EtherCAT expansion terminals (EL6xxx series) on the terminal bus"
+    - "The EtherCAT master function on the CX5130-0125 is provided by loading the Beckhoff RT EtherCAT driver on one of the standard Gigabit Ethernet ports (X000 or X001) — there is NO dedicated hardware EtherCAT port on the base unit; this means the EtherCAT master port shares the same Intel i210 NIC hardware with standard Ethernet; if BOTH ports are used (one for EtherCAT, one for SCADA/Modbus TCP), they use independent NICs and there is no performance interference; for EtherCAT cable redundancy, both X000 and X001 must be dedicated to EtherCAT in a ring topology, leaving no Ethernet port for SCADA — in that case use an additional network interface via EL6601/EL6614 EtherCAT terminal"
+    - "The 1-second UPS stores a MAXIMUM of 1 MB of persistent variables on power failure — applications requiring more than 1 MB of persistent data storage must implement their own data-saving mechanisms (writing to CFast or MicroSD via file access in the TwinCAT PLC program before the UPS timeout); the 1-second window is the worst case; actual storage time may be slightly longer; the BIOS UPS enable setting and Windows Write Filter configuration are both MANDATORY prerequisites for UPS function — if not configured, the UPS will not store any data; use FB_S_UPS_CX51x0 function block in TwinCAT to control the UPS"
+    - "The CFast card and MicroSD card are NOT included with the CX5130-0125 — the unit cannot boot without a CFast card (Windows Embedded Standard 7 P requires a minimum 40 GB CFast card); Beckhoff strongly recommends industrial-grade CFast cards (CX1900-0102 series) rated for the full operating temperature range of -25°C to +60°C; consumer-grade CFast or SDHC cards may fail at high temperatures or under continuous write cycles in data-logging applications; the OS and TwinCAT 3 runtime are NOT pre-loaded on a card — they must be ordered on a separate Beckhoff image card or re-imaged by the user"
+    - "The two Gigabit Ethernet ports X000 and X001 are INDEPENDENT — there is NO internal Ethernet switch between them; packets cannot pass between X000 and X001 without Windows routing or a bridging configuration; this means the two ports cannot be used as a 2-port managed switch for connecting a downstream device without additional Windows ICS (Internet Connection Sharing) or NIC Teaming configuration; for industrial network bridging between EtherCAT and SCADA segments, use Windows routing or an external managed switch; NIC Teaming (LACP/failover) between X000 and X001 is supported in Windows networking configuration"
+    - "The CX5130-0125 requires TwinCAT 3 XAR performance class 40 licensing — this performance class supports a maximum of 4 user tasks; applications requiring more than 4 concurrent real-time tasks (e.g. complex multi-technology architectures with PLC + NC + CNC + safety all as separate tasks) may need to restructure task allocation or upgrade to a higher-performance CX5140 (quad-core, higher TC3 performance class); the 32-bit WES7P OS also limits the maximum TwinCAT 3 build to the last TC3 build supporting WES7P; for the latest TwinCAT 3 builds with all features, use 64-bit Windows 10 IoT variants"
+    - "For operation in HAZARDOUS AREAS (ATEX Zone 2/22) the device modification CX2900-0107 is MANDATORY — without it the USB connectors may vibrate loose and cause a deflagration; the CX2900-0107 adds a retainer bracket for mechanically securing all USB, RJ45, and DVI connectors with cable ties; the optional N020 audio interface CANNOT be used in hazardous areas; the embedded PC MUST be installed inside an IP54-rated enclosure for Zone 2 gas (EN 60079-15) or IP54 for non-conductive dust / IP6X for conductive dust (EN 60079-31); take measures to prevent supply voltage exceeding 119V due to short-term interference"
+compatibility:
+  sw: "TwinCAT 3 XAR (pre-installed, class 40); TwinCAT 2 PLC/NC PTP/NC I (optional license); TwinCAT/BSD (order -0185 variant instead); Windows Embedded Standard 7 P 32-bit (pre-installed -0125); Windows 10 IoT Enterprise LTSB/LTSC (order -0150/-0155/-0160/-0175/-0190/-0195 variants); Beckhoff Device Manager; Beckhoff TF licenses (TF6xxx fieldbus, TF5xxx NC, TF4xxx HMI)"
+  languages: "Instruction List (IL);Structured Text (ST);Ladder Diagram (LD);Function Block Diagram (FBD);Sequential Function Chart (SFC);Continuous Function Chart (CFC)"
+  frameworks: "IEC61131-3;EtherCAT-master;TwinSAFE-over-EtherCAT-FSoE;EtherNet-IP-via-TC3-TF6280;Modbus-TCP;ADS-AMS;OPC-UA-TF6100;PROFIBUS-via-N030-option;CANopen-via-M510-option;PROFINET-via-M930-option;PLCopen-Motion-Control;CNC-optional"
+  certifications: "CE;UL;DNV-GL;ATEX-Zone2-22-with-CX2900-0107;IECEx-with-CX2900-0107;cFMus-with-CX2900-0107;fTPM-2.0;EN-61000-6-2;EN-61000-6-4"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: beckhoff-cx5100-family
+  boardProfileId: beckhoff-cx5130-0125
+  defaultLanguageSkills[3]:
+    - st-twincat3-cx5130
+    - ladder-twincat3-cx5130
+    - fbd-twincat3-cx5130

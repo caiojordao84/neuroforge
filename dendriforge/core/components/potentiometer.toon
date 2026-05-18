@@ -1,0 +1,134 @@
+# METADATA:
+project_name: potentiometer-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: potentiometer
+name: "Potentiometer"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60393-1"
+url: null
+image: potentiometer.svg
+symbol: potentiometer-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  resistance:
+    label: "Total Resistance"
+    unit: Ω
+    default: 10000
+    min: 10
+    max: 10000000
+    type: float
+    editable: true
+  wiper_position:
+    label: "Wiper Position"
+    unit: "%"
+    default: 50
+    min: 0
+    max: 100
+    type: float
+    editable: true
+  taper:
+    label: "Taper (Law)"
+    default: "linear"
+    options: ["linear", "logarithmic", "anti-logarithmic"]
+    type: enum
+    editable: true
+  power_rating:
+    label: "Power Rating"
+    unit: W
+    default: 0.25
+    options: [0.1, 0.25, 0.5, 1, 2, 3, 5]
+    type: enum
+    editable: true
+  tolerance:
+    label: "Resistance Tolerance"
+    unit: "%"
+    default: 20
+    options: [5, 10, 20]
+    type: enum
+    editable: true
+  resolution:
+    label: "Resolution"
+    default: "continuous"
+    options: ["continuous", "16-steps", "32-steps", "64-steps", "256-steps"]
+    type: enum
+    editable: true
+  package:
+    label: "Package"
+    default: "THT-rotary"
+    options: ["THT-rotary", "THT-trimmer", "SMD-trimmer", "slide", "digital-SPI", "digital-I2C"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  A|passive|analog|null|null|"resistive track terminal A (full resistance end)"
+  B|passive|analog|null|null|"resistive track terminal B (zero resistance end)"
+  W|output|analog|null|null|"wiper / sliding contact output"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ohms-law
+  equation: "R_AW = resistance * f(wiper_position, taper); R_WB = resistance - R_AW"
+  bidirectional: true
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - nominal
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: null
+  max_current: null
+  max_power:
+    value: "{power_rating}"
+    unit: W
+  max_temp: 125
+  min_temp: -55
+warnings[3]:
+  - "Do not exceed rated power dissipation across the full resistive track"
+  - "Wiper current must not exceed the contact current rating (typically 1% of power rating)"
+  - "Logarithmic taper is designed for audio applications — do not use for linear control"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["voltage-divider", "volume-control", "bias-adjustment", "sensor-calibration"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 50
+  ports_layout: custom
+  port_A: {x: 0, y: 10}
+  port_B: {x: 0, y: 40}
+  port_W: {x: 60, y: 25}
+  label_position: top
+  value_display: "{resistance}Ω / {wiper_position}% ({taper})"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: potentiometer
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Passives"
+  tags[6]:
+    - potentiometer
+    - passive
+    - analog
+    - variable-resistor
+    - wiper
+    - voltage-divider

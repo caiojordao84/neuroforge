@@ -1,0 +1,131 @@
+# METADATA:
+project_name: act-stepper-motor-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: act-stepper-motor
+name: "Stepper Motor"
+family: actuators
+subfamily: industrial-electrical
+category: actuator
+standard: "IEC 60034-1"
+url: null
+image: act-stepper-motor.svg
+symbol: act-stepper-motor-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  steps_per_rev:
+    label: "Steps per Revolution"
+    default: 200
+    options: [48, 100, 200, 400]
+    type: enum
+    editable: true
+  voltage:
+    label: "Rated Voltage"
+    unit: V
+    default: 12
+    options: [5, 12, 24, 48]
+    type: enum
+    editable: true
+  current_per_phase:
+    label: "Current per Phase"
+    unit: A
+    default: 1
+    min: 0.1
+    max: 10
+    type: float
+    editable: false
+  winding_type:
+    label: "Winding Type"
+    default: "bipolar"
+    options: ["bipolar", "unipolar"]
+    type: enum
+    editable: true
+  holding_torque:
+    label: "Holding Torque"
+    unit: V
+    default: 0.4
+    min: 0.01
+    max: 50
+    type: float
+    editable: false
+  frame_size:
+    label: "NEMA Frame Size"
+    default: "NEMA17"
+    options: ["NEMA8", "NEMA11", "NEMA14", "NEMA17", "NEMA23", "NEMA34"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  A_POS|input|power|"48V"|"10A"|"Phase A positive coil terminal"
+  A_NEG|input|power|"48V"|"10A"|"Phase A negative coil terminal"
+  B_POS|input|power|"48V"|"10A"|"Phase B positive coil terminal"
+  B_NEG|input|power|"48V"|"10A"|"Phase B negative coil terminal"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: basic-analog
+  motion: rotary
+  bidirectional: true
+  dynamic: true
+  thermal_model: true
+  noise_model: false
+  states[4]:
+    - idle
+    - stepping
+    - holding
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "48V"
+  max_current: "10A"
+  max_power: null
+  max_temp: 85
+  min_temp: -20
+  ip_rating: null
+  safety_category: null
+warnings[3]:
+  - "Do not disconnect stepper windings while driver is energised — may damage driver"
+  - "Provide flyback diode protection in driver if not built-in"
+  - "Current must be limited by driver — never apply rated voltage without current limiting"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["ind-stepper-driver", "mcu-*", "plc-*"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["cnc-axis", "3d-printer", "precision-positioning"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 70
+  height: 60
+  ports_layout: custom
+  port_A_POS: {x: 0, y: 10}
+  port_A_NEG: {x: 0, y: 25}
+  port_B_POS: {x: 0, y: 40}
+  port_B_NEG: {x: 0, y: 55}
+  label_position: right
+  value_display: "{frame_size} / {steps_per_rev}spr / {winding_type}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: actuators-family
+  componentProfileId: act-stepper-motor
+  simulationEngine: digital-io
+  paletteGroup: "Actuators > Industrial Electrical"
+  tags[6]:
+    - stepper-motor
+    - actuator
+    - industrial-electrical
+    - stepping
+    - bipolar
+    - cnc

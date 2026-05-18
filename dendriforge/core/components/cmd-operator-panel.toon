@@ -1,0 +1,121 @@
+# METADATA:
+project_name: cmd-operator-panel-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: cmd-operator-panel
+name: "Operator Panel Simple"
+family: industrial
+subfamily: hmi-signaling
+category: instrument
+standard: "IEC 61131-3"
+url: null
+image: cmd-operator-panel.svg
+symbol: cmd-operator-panel-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  display_type:
+    label: "Display Type"
+    default: "7-segment"
+    options: ["none", "7-segment", "LCD", "LED-matrix"]
+    type: enum
+    editable: true
+  pushbutton_count:
+    label: "Number of Pushbuttons"
+    default: 4
+    min: 0
+    max: 16
+    type: int
+    editable: true
+  led_count:
+    label: "Number of Status LEDs"
+    default: 4
+    min: 0
+    max: 16
+    type: int
+    editable: true
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 24
+    options: [5, 12, 24]
+    type: enum
+    editable: true
+  interface:
+    label: "Control Interface"
+    default: "discrete-io"
+    options: ["discrete-io", "I2C", "SPI", "Modbus-RTU"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"24V"|"500mA"|"DC supply positive"
+  GND|input|ground|null|null|"DC supply negative"
+  DI_BUS|input|digital|"24V"|"200mA"|"Digital inputs from buttons/selectors"
+  DO_BUS|output|digital|"24V"|"200mA"|"Digital outputs to LEDs/display"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: function-block-engine
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - idle
+    - active
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "24V"
+  max_current: "500mA"
+  max_power: null
+  max_temp: 55
+  min_temp: -10
+  ip_rating: "IP54"
+  safety_category: null
+warnings[3]:
+  - "Total current draw increases with LED count and display type"
+  - "Discrete IO interface requires individual wiring per button and LED"
+  - "Verify IP rating matches installation environment requirements"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["plc-*", "ind-di-bank", "ind-do-bank", "mcu-*"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["machine-panel", "local-control", "status-indication"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 80
+  height: 60
+  ports_layout: custom
+  port_VCC: {x: 0, y: 10}
+  port_GND: {x: 0, y: 25}
+  port_DI_BUS: {x: 0, y: 40}
+  port_DO_BUS: {x: 80, y: 40}
+  label_position: top
+  value_display: "{display_type} / {pushbutton_count}btn / {led_count}LED"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: industrial-family
+  componentProfileId: cmd-operator-panel
+  simulationEngine: function-block-engine
+  paletteGroup: "Industrial > HMI & Signaling"
+  tags[6]:
+    - operator-panel
+    - hmi-signaling
+    - industrial
+    - pushbutton
+    - display
+    - local-control

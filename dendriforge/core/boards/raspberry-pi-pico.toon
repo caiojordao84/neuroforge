@@ -1,38 +1,114 @@
+# METADATA:
+project_name: raspberry-pi-pico-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: raspberry-pi-pico
 name: "Raspberry Pi Pico"
-manufacturer: "Generic"
-mcu: "RP2040"
-category: "industrial"
-image: "/boards/raspberry-pi-pico.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 2097152
-sram: 270336
-clock_hz: 133000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "rp2040-family"
-  boardProfileId: "raspberry-pi-pico"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+manufacturer: Raspberry Pi
+mcu: RP2040
+category: maker
+image: raspberry-pi-pico.svg
+url: "https://www.raspberrypi.com/products/raspberry-pi-pico/"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 2097152
+  flash_available: 2097152
+  sram: 270336
+  eeprom: 0
+  clock: 133000000
+  voltage: "3.3V"
+  cores: 2
+dims:
+  w: 21.0
+  h: 51.0
+  t: 1.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  VBUS|input|"5V"|null
+  VSYS|input|"5V"|null
+  3V3|output|"3.3V"|null
+  3V3EN|input|null|null
+  ADC_VREF|input|null|null
+  GND|null|null|ground
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[30|]{pin|type|pwm|int|label|roles}:
+  0|digital|t|t|GP0|"uart0-tx;i2c0-sda;spi0-rx"
+  1|digital|t|t|GP1|"uart0-rx;i2c0-scl;spi0-csn"
+  2|digital|t|t|GP2|"uart0-cts;i2c1-sda;spi0-sck"
+  3|digital|t|t|GP3|"uart0-rts;i2c1-scl;spi0-tx"
+  4|digital|t|t|GP4|"uart1-tx;i2c0-sda;spi0-rx"
+  5|digital|t|t|GP5|"uart1-rx;i2c0-scl;spi0-csn"
+  6|digital|t|t|GP6|"uart1-cts;i2c1-sda;spi0-sck"
+  7|digital|t|t|GP7|"uart1-rts;i2c1-scl;spi0-tx"
+  8|digital|t|t|GP8|"uart1-tx;i2c0-sda;spi1-rx"
+  9|digital|t|t|GP9|"uart1-rx;i2c0-scl;spi1-csn"
+  10|digital|t|t|GP10|"uart1-cts;i2c1-sda;spi1-sck"
+  11|digital|t|t|GP11|"uart1-rts;i2c1-scl;spi1-tx"
+  12|digital|t|t|GP12|"uart0-tx;i2c0-sda;spi1-rx"
+  13|digital|t|t|GP13|"uart0-rx;i2c0-scl;spi1-csn"
+  14|digital|t|t|GP14|"uart0-cts;i2c1-sda;spi1-sck"
+  15|digital|t|t|GP15|"uart0-rts;i2c1-scl;spi1-tx"
+  16|digital|t|t|GP16|"uart0-tx;i2c0-sda;spi0-rx"
+  17|digital|t|t|GP17|"uart0-rx;i2c0-scl;spi0-csn"
+  18|digital|t|t|GP18|"uart0-cts;i2c1-sda;spi0-sck"
+  19|digital|t|t|GP19|"uart0-rts;i2c1-scl;spi0-tx"
+  20|digital|t|t|GP20|"uart1-tx;i2c0-sda;spi0-rx"
+  21|digital|t|t|GP21|"uart1-rx;i2c0-scl;spi0-csn"
+  22|digital|t|t|GP22|"uart1-cts;i2c1-sda;spi0-sck"
+  25|digital|t|t|"GP25 / LED"|status-led
+  26|analog|t|t|"GP26 / A0"|"adc:t;uart1-rx;i2c1-sda;spi1-sck"
+  27|analog|t|t|"GP27 / A1"|"adc:t;uart1-tx;i2c1-scl;spi1-tx"
+  28|analog|t|t|"GP28 / A2"|"adc:t;uart0-tx;i2c0-sda;spi1-rx"
+  29|analog|f|f|"GP29 / A3"|"adc:t;vsys-monitor"
+  23|digital|f|f|GP23|"b-power-save"
+  24|digital|f|f|GP24|"vbus-detect"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[6|]{peripheral|param|value}:
+  serial|"uarts:2"|"pins:0,1"
+  serial|"uarts:2"|"pins:8,9"
+  i2c|"channels:2"|"sda:0;scl:1"
+  spi|"channels:2"|"miso:0;mosi:3;sck:2;ss:1"
+  adc|"channels:3"|"pins:26,27,28"
+  pwm|"channels:16"|"pins:0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15"
+usb:
+  type: USB-Micro-B
+  chip: RP2040
+  vid: "0x2E8A"
+  pid: "0x0005"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "12mA"
+  total_current_limit: "300mA"
+  warnings[5]:
+    - "GP23, GP24, GP25, GP29 are internal — avoid using as general GPIO"
+    - "GP25 is connected to the onboard LED"
+    - "GP26-GP28 share ADC function; GP29 used for VSYS voltage monitoring"
+    - "ADC reference voltage is 3.3V; max ADC input must not exceed 3.3V"
+    - "Flash memory uses QSPI interface internally; do not conflict with GP0-GP5 in boot mode"
+compatibility:
+  arduinoCore: "4.0.1"
+  pio: raspberrypi
+  frameworks: "arduino;micropython"
+  languages: arduino-cpp
+  bootloader: uf2-rp2040
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: rp2040-family
+  boardProfileId: raspberry-pi-pico
+  defaultLanguageSkills[3]:
+    - arduino-cpp-rp2040
+    - micropython-rp2040
+    - rust-embassy-rp2040

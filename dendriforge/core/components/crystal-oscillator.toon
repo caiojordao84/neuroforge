@@ -1,0 +1,161 @@
+# METADATA:
+project_name: crystal-oscillator-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: crystal-oscillator
+name: "Crystal Oscillator (XTAL)"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60444-1"
+url: null
+image: crystal-oscillator.svg
+symbol: crystal-oscillator-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  frequency:
+    label: "Nominal Frequency"
+    unit: V
+    default: 16000000
+    min: 32768
+    max: 200000000
+    type: float
+    editable: true
+  frequency_tolerance:
+    label: "Frequency Tolerance"
+    unit: V
+    default: 30
+    options: [10, 20, 30, 50, 100]
+    type: enum
+    editable: true
+  frequency_stability:
+    label: "Temperature Stability (ppm)"
+    unit: V
+    default: 50
+    options: [10, 20, 30, 50, 100]
+    type: enum
+    editable: true
+  load_capacitance:
+    label: "Load Capacitance (CL)"
+    unit: V
+    default: 18
+    options: [6, 8, 10, 12, 18, 20, 32]
+    type: enum
+    editable: true
+  esr:
+    label: "Equivalent Series Resistance (ESR)"
+    unit: Ω
+    default: 50
+    min: 5
+    max: 300
+    type: float
+    editable: false
+  drive_level:
+    label: "Max Drive Level"
+    unit: V
+    default: 0.0001
+    min: 0.000001
+    max: 0.001
+    type: float
+    editable: false
+  aging:
+    label: "Aging (ppm/year)"
+    unit: V
+    default: 3
+    min: 0.5
+    max: 10
+    type: float
+    editable: false
+  cut:
+    label: "Crystal Cut"
+    default: "AT"
+    options: ["AT", "BT", "SC", "TF", "32kHz-tuning-fork"]
+    type: enum
+    editable: true
+  package:
+    label: "Package"
+    default: "HC-49S"
+    options: ["HC-49S", "HC-49U", "HC-49SMD", "SMD-3225", "SMD-2520", "SMD-2016", "SMD-1612", "TCXO-module", "OCXO-module"]
+    type: enum
+    editable: true
+  oscillator_type:
+    label: "Oscillator Type"
+    default: "crystal-passive"
+    options: ["crystal-passive", "TCXO", "VCXO", "OCXO", "MEMS"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  PIN1|passive|analog|"5V"|"10mA"|"crystal terminal 1 (connect to MCU OSC_IN / inverter input)"
+  PIN2|passive|analog|"5V"|"10mA"|"crystal terminal 2 (connect to MCU OSC_OUT / inverter output)"
+  VCC|input|power|"5V"|"50mA"|"supply (active oscillator modules only — N/C for passive crystal)"
+  GND|input|ground|null|null|"ground (active oscillator modules only — N/C for passive crystal)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  waveform: sine
+  equation: "f_out = frequency * (1 + delta_ppm / 1e6); delta_ppm in range ±frequency_tolerance"
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - off
+    - starting
+    - locked
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "5V"
+  max_current: "50mA"
+  max_power: null
+  max_temp: 85
+  min_temp: -40
+warnings[4]:
+  - "Load capacitors (CL) on PIN1 and PIN2 must match the crystal spec — incorrect CL shifts frequency"
+  - "Never exceed the rated drive level — crystal overdrive causes frequency shift and permanent damage"
+  - "Keep crystal traces short and away from switching signals to avoid parasitic oscillation"
+  - "TCXO/OCXO modules require VCC and GND — passive crystals do not use VCC/GND ports"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["mcu-clock", "rtc-32khz", "usb-clock", "ethernet-clock", "rf-reference"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 50
+  ports_layout: custom
+  port_PIN1: {x: 0, y: 20}
+  port_PIN2: {x: 60, y: 20}
+  port_VCC: {x: 30, y: 0}
+  port_GND: {x: 30, y: 50}
+  label_position: top
+  value_display: "{frequency}Hz ({cut} / {package})"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: crystal-oscillator
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Passives"
+  tags[7]:
+    - crystal
+    - oscillator
+    - xtal
+    - clock
+    - passive
+    - frequency-reference
+    - iec-60444

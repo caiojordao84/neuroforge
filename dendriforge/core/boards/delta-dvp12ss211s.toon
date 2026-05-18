@@ -1,0 +1,111 @@
+# METADATA:
+project_name: delta-dvp12ss211s-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: delta-dvp12ss211s
+name: "Delta Electronics DVP12SS211S — DVP-SS2 Slim PLC; 32-bit CPU; 0.35µs basic inst; 8k steps program; 5k words data; 8DI+4DO PNP transistor; 4×10kHz PTO (Y0-Y3); 8×HSC (4×20kHz+4×10kHz); PWM DA output; RS-232+RS-485 Modbus; 480 I/O max; 24VDC; 25.2mm ultra-slim DIN rail"
+manufacturer: "Delta Electronics"
+mcu: "Delta DVP-SS2 32-bit CPU — 0.35µs LD; 8k steps; 5k words D reg; 8 HSC (4×20kHz+4×10kHz); 4×PTO 10kHz; PID auto-tune; RS-232+RS-485 Modbus ASCII/RTU; WPLSoft/ISPSoft; IEC-61131 IL+SFC; battery-free program retention"
+category: plc
+image: delta-dvp12ss211s.svg
+url: "https://www.deltaww.com/en-US/products/PLC-Programmable-Logic-Controllers/253"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 16384
+  flash_available: 16384
+  sram: 10240
+  eeprom: 0
+  clock: 0
+  voltage: "24V"
+dims:
+  w: 25.2
+  h: 96.0
+  t: 60.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# DVP12SS211S: 24VDC (-15%/+20%) = 20.4-28.8VDC; max 7W consumption
+# Inrush: 7.5A max @ 24VDC cold start; isolation 1500VAC primary-secondary and primary-PE; 500VAC secondary-PE
+# DO power (S/D): Y0-Y3 use separate DO power supply pin; PNP sourcing from S terminal
+# COM1 RS-232: powered from CPU (5V level shift internal); not separately powered
+# COM2 RS-485: powered from CPU; pin 5 optional signal ground; isolated internally per model
+# Left-side module power: provided from CPU 24VDC via module interface (max 1 module)
+# Grounding: Class D (<100Ω); use dedicated earth — do not share with high-current circuits
+powerPins[5|]{name|direction|voltage|type}:
+  PWR_24V|input|"24V"|null
+  PWR_GND|null|null|ground
+  FG|null|null|ground
+  DO_S|input|"24V"|null
+  DO_COM|null|null|ground
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# DI X0-X7: 24VDC sink or source; 4.7kΩ impedance; ON ≥15VDC; OFF ≤5VDC
+#   Response: OFF→ON 3.5µs; ON→OFF 20µs; max input frequency: 10kHz (X0-X3) / 1kHz (X4-X7) standard
+#   X0,X1: HSC up to 20kHz (C235,C236); X2,X3: HSC 20kHz (C237,C238); X4,X5: 10kHz (C239,C240); X6,X7: 10kHz (C241,C242)
+# DO Y0-Y3: PNP transistor sourcing; 0.3A/pt; 24VDC; response: ON 0.1ms; OFF 0.5ms; leakage <0.1mA; short-circuit protection
+#   Y0-Y3: 4 PTO channels (10kHz max); Y0 and Y1: PWM DA output (only DVP-12SS211S)
+#   PLSY/PLSR: pulse output; DDRVA/DDRVI: positioning; PWM: pulse-width modulation for DA output
+gpio[12|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|true|"X0 — Digital Input 0; 24VDC sink or source; ON ≥15VDC; OFF ≤5VDC; 4.7kΩ; OFF→ON 3.5µs; ON→OFF 20µs; max 10kHz; HSC C235 channel (20kHz A-phase or single); interrupt input I001/I101; PLC registers address X0 (octal); for high-speed use DO NOT set digital filter"|"di"
+  1|digital|false|true|"X1 — Digital Input 1; 24VDC sink/source; 20kHz max; HSC C235 B-phase or C236 A-phase; interrupt I101; 4.7kΩ; 3.5µs/20µs"|"di"
+  2|digital|false|true|"X2 — Digital Input 2; 24VDC; 20kHz max; HSC C237 A-phase; interrupt I201"|"di"
+  3|digital|false|true|"X3 — Digital Input 3; 24VDC; 20kHz max; HSC C237 B-phase or C238; interrupt I301"|"di"
+  4|digital|false|true|"X4 — Digital Input 4; 24VDC; 10kHz max; HSC C239 A-phase; interrupt I401; 1kHz in standard input mode"|"di"
+  5|digital|false|true|"X5 — Digital Input 5; 24VDC; 10kHz max; HSC C239 B-phase or C240; interrupt I501; 1kHz standard"|"di"
+  6|digital|false|true|"X6 — Digital Input 6; 24VDC; 10kHz max; HSC C241 A-phase; interrupt I601; 1kHz standard"|"di"
+  7|digital|false|true|"X7 — Digital Input 7; 24VDC; 10kHz max; HSC C241 B-phase or C242; interrupt I701; 1kHz standard; last built-in DI; total 8 HSC channels: 4×C235-C238@20kHz + 4×C239-C242@10kHz = 8 sets 32-bit HSC counters"|"di"
+  8|digital|true|false|"Y0 — Transistor Output 0 PNP (sourcing); 0.3A/24VDC; ON response 0.1ms; OFF response 0.5ms; leakage <0.1mA; residual voltage <1.5VDC; short-circuit protection; PTO channel 0: 10kHz max 32-bit pulse PLSY/PLSR/DDRVA/DDRVI; PWM DA output channel 0 (only DVP-12SS211S); use API57 PWM for analog output via RC filter circuit 100Ω+100µF = 0-10VDC equivalent"|"do"
+  9|digital|true|false|"Y1 — Transistor Output 1 PNP; 0.3A; PTO channel 1: 10kHz 32-bit pulse; PWM DA output channel 1 (only DVP-12SS211S); same specs as Y0; direction output for Y0 PTO in DDRVA/DDRVI dual-axis mode"|"do"
+  10|digital|true|false|"Y2 — Transistor Output 2 PNP; 0.3A; PTO channel 2: 10kHz 32-bit pulse; no PWM DA (Y2/Y3 do not support DA); use PLSY/PLSR for pulse-only output; same electrical specs as Y0"|"do"
+  11|digital|true|false|"Y3 — Transistor Output 3 PNP; 0.3A; PTO channel 3: 10kHz 32-bit pulse; last built-in DO; 4 PTO channels total (Y0-Y3); max pulse output frequency 10kHz per channel; 32-bit total count; short-circuit protection; isolation: transistor output to internal logic 500VAC"|"do"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[7|]{peripheral|param|value}:
+  serial_com1|"speed:115200bps"|"RS-232-RJ25-6P4C-front-panel;9600-115200bps;7-or-8-data-bits;even-odd-no-parity;1-or-2-stop-bits;Modbus-ASCII-RTU-master-slave;Delta-Host-Link;PLC-Link-master;no-protocol-free-format;max-15m-cable;not-isolated;default-9600-7E1;programming-via-COM1-or-USB"
+  serial_com2|"speed:115200bps"|"RS-485-spring-clamp-terminal-SG-plus-minus;9600-115200bps;Modbus-ASCII-RTU-master-slave;PLC-Link-master-slave;no-protocol;half-duplex-2-wire;max-50m-cable;biased-by-CPU-120Ω-terminator-optional;not-isolated;node-address-1-254-configurable-D1121"
+  hsc_counters|"count:8"|"8-hardware-HSC-sets;C235-C236-X0-X1:20kHz-32bit-up-down-A-B-quadrature-or-single;C237-C238-X2-X3:20kHz;C239-C240-X4-X5:10kHz;C241-C242-X6-X7:10kHz;32-bit-signed-counter;reset-via-external-or-RST-instruction;interrupt-on-target-count-via-HSCS-instruction;mask-via-M1040-M1041"
+  pto_pwm|"channels:4"|"PTO:4-channels-Y0-Y3-10kHz-max-32bit-count;instructions:PLSY-PLSR-DDRVA-DDRVI-ZRNI-SPD;dual-axis-positioning-Y0+Y1-or-Y2+Y3;ramp-up-down-acceleration;PWM:Y0-Y1-only-10kHz-max;API57-PWM-instruction;DA-output-via-RC-filter-100ohm-100uF-gives-0-10VDC;M1071-M1072-enable-PWM-mode"
+  expansion_right|"modules:8"|"right-side-clip-on-DVP-slim-extension-modules;max-8-modules;types:DVPDT04-SL-DVPDT08-SL-digital-IO,DVPDO08H-SL-high-current-DO,DVPAE04-SL-4AI-12bit,DVPAE02-SL-2AI,DVPAPU01-SL-2AI-2AO,DVPPT01-SL-positioning,DVPLC01-SL-load-cell,DVPTC01-SL-temperature,DVPCOPM-SL-CANopen;max-480-IO-total-with-all-modules"
+  left_side_module|"slots:1"|"1x-left-side-special-module-slot;types:DVPEN01-SL-Ethernet-Modbus-TCP,DVPDNET-SL-DeviceNet-slave,DVPPFB-SL-PROFIBUS-DP-slave,DVPCOPM-SL-CANopen-master,DVPSCM-SL-RS232-RS485-2nd-serial;NOT-hot-swappable;power-off-before-installation;left-module-connected-via-proprietary-serial-expansion-bus"
+  pid_control|"loops:8"|"8-PID-loops;auto-tune-function-M1128;saves-parameters-after-auto-tune;API88-PID-instruction;D register-based-PV-SP-MV;used-for-temperature-pressure-flow-control;supports-AT-auto-tuning-integral-derivative-proportional;heating-cooling-dual-output"
+usb:
+  type: Mini-B
+  chip: WPL
+  vid: "0x2345"
+  pid: "0x0001"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "300mA"
+  total_current_limit: "300mA"
+  warnings[9]:
+    - "DVP12SS211S has only 4 transistor outputs (Y0-Y3) at 0.3A each with PNP sourcing — the output current of 0.3A per point is significantly lower than the 0.5A typical of larger PLCs; for loads exceeding 0.3A (solenoid valves above 7W at 24VDC, contactors, high-current LEDs) install an external relay or solid-state relay on each output; the total DO current should not exceed 0.8A on the common DO_S terminal; built-in short-circuit protection will limit current but repeated short-circuits damage the transistor junction over time"
+    - "The 4 PTO channels (Y0-Y3) are limited to 10kHz maximum — this means a maximum stepping rate of 10,000 pulses/second per axis; for a typical stepper motor with 200 steps/rev at 10kHz, the maximum speed is 3,000 RPM (50 RPS × 60); for high-speed CNC applications requiring >10kHz pulse rates use the DVPPT01-SL positioning module which supports up to 200kHz; the PTO and HSC share the same high-speed input/output resources — running PTO and HSC on the same pin simultaneously is not possible"
+    - "PWM DA output (PWM-to-analog conversion) is available ONLY on Y0 and Y1 on the DVP12SS211S — Y2 and Y3 do NOT support PWM DA output; the PWM output must be filtered with an external RC circuit (minimum 100Ω + 100µF electrolytic) to convert the PWM signal to a DC voltage (0-10VDC); the ripple voltage at 10kHz with a 100Ω+100µF filter is approximately 50mV; for applications requiring clean analog output without ripple install a DVPAE04-SL analog output module instead of using the PWM DA method"
+    - "The RS-232 COM1 port (RJ25 6P4C front connector) is NOT ISOLATED from the internal CPU logic — connecting the RS-232 port to a PC or HMI with a different earth potential will cause a ground loop that may corrupt communications or damage the CPU UART; always use a USB-to-RS232 isolator or optically isolated RS-232 cable when connecting to a laptop or PC that does not share the same panel earth; the RS-485 COM2 port is also not isolated and the same precaution applies for remote panels with separate earthing"
+    - "The RS-485 COM2 port supports a maximum cable length of 50m at 115200 bps — at lower baud rates (9600 bps) the cable can be extended to approximately 1,000m; when using 50m+ cables at high baud rates, install a 120Ω termination resistor between the + and - terminals at the far end of the RS-485 bus; the DVP12SS211S provides internal RS-485 bus biasing but the termination resistor is NOT built-in; without termination at high baud rates, signal reflections will cause Modbus CRC errors and communication timeouts"
+    - "The maximum expansion I/O capacity of 480 points requires multiple right-side slim extension modules — the DVP12SS211S CPU provides internal 5V bus power to expansion modules from its internal regulated supply, but this supply is limited; always calculate the total current consumption of all connected expansion modules from Appendix D of the official Delta DVP operation manual before finalizing module selection; exceeding the CPU's expansion bus current capacity causes random I/O module faults, module initialization failures, and CPU reset"
+    - "The program capacity is 8k steps ONLY — this is the smallest program memory in the DVP slim series; for applications requiring more than 8k steps (approximately 500-800 ladder rungs with basic logic), upgrade to DVP28SS211S (8k steps, same but 14DI+14DO) or DVP12SA211S (4k steps but with built-in analog) or DVP20SX211T (16k steps with analog and 200kHz HSC); 8k steps is sufficient for typical single-machine sequential control but will be insufficient for complex state-machine or motion applications"
+    - "The left-side special module slot (DVPEN01-SL for Ethernet, DVPDNET-SL for DeviceNet, etc.) supports ONLY ONE module — if both Ethernet and PROFIBUS connectivity are required simultaneously, this is NOT possible with a single DVP12SS211S; plan the communications architecture before selecting the DVP-S model; the DVPEN01-SL Ethernet module adds Modbus TCP client/server capability but does NOT add EtherNet/IP support (only Delta proprietary Modbus TCP over Ethernet); for EtherNet/IP use the DVP-SE series PLC which has built-in EtherNet/IP"
+    - "DVP12SS211S has NO built-in RTC (Real-Time Clock) by default — clock functions (time-of-day scheduling, timestamped data logging) are not available without an external RTC module; the internal M1511-M1517 RTC registers may be present in firmware but are battery-backed only if a backup battery accessory is installed; without a battery, the clock resets to 00:00:00 on every power cycle; always verify the availability of the RTC function for the specific firmware version using WPLSoft's PLC information dialog before relying on clock-based logic in the application"
+compatibility:
+  sw: "WPLSoft V2.30+ (primary; Windows 7/8/10/11); ISPSoft V3.00+ (advanced IEC editor); COMMGR V1.10+ (communication manager); DCISoft (device monitoring); Delta DIAScreen for HMI configuration"
+  languages: "Instruction List (IL);Ladder Diagram (LD);Sequential Function Chart (SFC) via STL"
+  frameworks: "Modbus-ASCII;Modbus-RTU;Delta-Host-Link;PLC-Link;DeviceNet-slave-via-DVPDNET-SL;PROFIBUS-DP-slave-via-DVPPFB-SL;CANopen-master-via-DVPCOPM-SL;Ethernet-Modbus-TCP-via-DVPEN01-SL"
+  certifications: "CE;cULus-UL508;cCSAus;RCM;EAC-GOST;TUV;SEMI-F47;RoHS"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: delta-dvp-ss2-family
+  boardProfileId: delta-dvp12ss211s
+  defaultLanguageSkills[3]:
+    - ladder-wplsoft-dvp-ss2
+    - il-wplsoft-dvp-ss2
+    - sfc-wplsoft-dvp-ss2

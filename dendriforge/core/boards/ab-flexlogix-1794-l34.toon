@@ -1,0 +1,106 @@
+# METADATA:
+project_name: ab-flexlogix-1794-l34-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: ab-flexlogix-1794-l34
+name: "Allen-Bradley FlexLogix 1794-L34 — Logix5000 Controller, 512KB, 24VDC, 2x 1788-card slots, FLEX I/O backplane"
+manufacturer: "Rockwell Automation (Allen-Bradley)"
+mcu: "Rockwell 5434 (proprietary Logix5000 processor, 32-bit, hardware FPU)"
+category: plc
+image: ab-flexlogix-1794-l34.svg
+url: "https://www.rockwellautomation.com/en-us/products/hardware/allen-bradley/programmable-controllers/small-controllers/flexlogix-controllers.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 524288
+  flash_available: 524288
+  sram: 0
+  eeprom: 0
+  clock: 0
+  voltage: "24V"
+dims:
+  w: 199.5
+  h: 101.5
+  t: 88.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# Spring-clip + screw-terminal connector plug (2 options shipped)
+# Terminal A=+24V, B=0V, C/D=pass-through to next module (web:942)
+powerPins[5|]{name|direction|voltage|type}:
+  A_24V_IN|input|"24V"|null
+  B_COM_GND|null|null|ground
+  C_24V_PASS|output|"24V"|null
+  D_COM_PASS|null|null|ground
+  GND_STUD|null|null|ground
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# No direct I/O on controller — all field I/O via FLEX I/O modules on FLEXBUS
+# Pins = connectors and interface points
+# RS232 DB-9: pin offset 10 (11=DB9-pin1 .. 19=DB9-pin9)
+# mini-DIN 8: pin offset 20 (21=mDIN-1 .. 28=mDIN-8)
+# 1788 card slots, FLEXBUS out, extended-local adapter
+gpio[11|]{pin|type|pwm|int|label|roles}:
+  12|digital|false|false|"RS232 DB-9 pin2 / RXD — DF1 Full/Half-Duplex; DH-485; ASCII; Modbus RTU via ladder; non-isolated; 1756-CP3 or 1747-CP3 cable"|uart-rx
+  13|digital|false|false|"RS232 DB-9 pin3 / TXD — non-isolated serial out; use 1761-NET-AIC isolator for off-enclosure connections"|uart-tx
+  14|digital|false|false|"RS232 DB-9 pin4 / DTR"|null
+  15|digital|false|false|"RS232 DB-9 pin5 / GND signal"|null
+  17|digital|false|false|"RS232 DB-9 pin7 / RTS"|null
+  18|digital|false|false|"RS232 DB-9 pin8 / CTS"|null
+  21|digital|false|false|"mini-DIN-8 pin1 / DCD (alt serial port 2 via 1761-NET-AIC isolator)"|null
+  22|digital|false|false|"mini-DIN-8 pin2 / RXD (alt serial port 2)"|uart-rx
+  23|digital|false|false|"mini-DIN-8 pin3 / TXD (alt serial port 2)"|uart-tx
+  31|digital|false|false|"1788 daughtercard SLOT 1 — install 1788-ENBT (EtherNet/IP) or 1788-CNC/CNF (ControlNet) or 1788-DNBO (DeviceNet); NOT interchangeable while powered"|"eth;can;if-slot"
+  32|digital|false|false|"1788 daughtercard SLOT 2 — independent slot; same card options as slot 1; max 1 EtherNet/IP card total; max 1 ControlNet card total"|"eth;can;if-slot"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[6|]{peripheral|param|value}:
+  rs232_serial|"baud:19200"|"proto:DF1-full-half-duplex;DH-485;ASCII;Modbus-RTU-ladder;isolation:no;connector:DB9-DTE-plus-miniDIN8"
+  ethernetip_opt|"speed:100Mbit"|"card:1788-ENBT;proto:EtherNet-IP-CIP;connections:32;slot:1-or-2;fit:RJ45"
+  controlnet_opt|"speed:5Mbps"|"card:1788-CNC-or-CNCR-or-CNF-or-CNFR;connections:32;slot:1-or-2;media:coax-or-fiber;sched:deterministic"
+  devicenet_opt|"speed:500kbps"|"card:1788-DNBO;slot:1-or-2;max-nodes:63;proto:DeviceNet-CIP"
+  flexbus|"current:653mA"|"voltage:5.1V;role:FLEX-IO-backplane-master;riup:IO-modules-only;max-modules:8-per-rail;extended-local:1794-FLA"
+  extended_local|"cable:1794-CE1-CE3"|"adapter:1794-FLA;rails:LOCAL+LOCAL2;each-rail-split-once;max-modules:8-per-rail"
+usb:
+  type: none
+  chip: none
+  vid: "0x0000"
+  pid: "0x0000"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "653mA"
+  total_current_limit: "1330mA"
+  warnings[9]:
+    - "FlexLogix 1794-L34 has NO built-in USB, Ethernet, or ControlNet — all fieldbus communication requires 1788-series daughtercards installed in the 2 available slots; plan fieldbus topology before ordering"
+    - "Controller ships with firmware v1.x — you MUST perform a ControlFLASH firmware upgrade to match your RSLogix 5000 version BEFORE programming; the OK LED will flash red until this is done"
+    - "Non-Volatile Memory (NVM/Flash restore) is ONLY available on Series B hardware (1794-L34/B); Series A hardware requires battery for memory backup; use 1756-BA1 battery ONLY"
+    - "The controller, extended-local adapter (1794-FLA), and 1788 communication cards CANNOT be removed or inserted under power — only FLEX I/O modules support RIUP (Remove/Insert Under Power)"
+    - "RS-232 port is NON-ISOLATED — if connecting to devices outside the control enclosure, use the 1761-NET-AIC isolator with 1761-CBL-AP00 (right-angle) or 1761-CBL-PM02 (straight) cable to mini-DIN port; the mini-DIN connector is not commercially available"
+    - "Maximum 32 EtherNet/IP connections AND 32 ControlNet connections — plan your I/O device count and HMI connections within these limits; DeviceNet node count is limited to 63"
+    - "FLEXBUS backplane current = 653 mA @ 5.1V; calculate total current consumption of all FLEX I/O modules on each rail; use 1794-PS13 or 1794-PS3 power supply to provide both 24V input and 5V backplane"
+    - "Use ONLY zinc-plated yellow-chromate steel DIN rail (A-B 199-DR1, EN 50022 35×7.55mm) for proper EMI grounding; aluminum or plastic DIN rail will cause improper grounding and EMI failures"
+    - "8 tasks max (1 continuous + 7 periodic/event); task cycle time planning is critical — all tasks share the 512KB user memory; program/data memory split is configured in RSLogix 5000"
+compatibility:
+  sw: "RSLogix 5000 (v10+) / Studio 5000 Logix Designer"
+  firmware: "ControlFLASH (must match RSLogix version)"
+  languages: "LD;FBD;ST;SFC (IEC 61131-3 per Logix5000)"
+  fieldbuses: "EtherNet-IP;ControlNet;DeviceNet;DH-485;DF1;Modbus-RTU-via-ladder"
+  flex_io_adapters: "1794-AENT;1794-AENTR;1794-ACN15;1794-ACNR15;1794-ADN;1794-ASB;1794-APB;1794-APBDPV1"
+  flex_io_modules: "1794-IB8-16-32;1794-OB8-16-32;1794-IA8-16;1794-OA8-16;1794-IE8-4I;1794-OE4;1794-IT8;1794-IR8;1794-HSC"
+  certifications: "UL-Industrial-Control;UL-CL1-DIV2-GPABCD;cULus;CSA;CE-EMC;C-Tick;ATEX-EEx-Zone2;ESD-IEC61000-4-2;IEC60068-2-6"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: rockwell-logix5000-plc-family
+  boardProfileId: ab-flexlogix-1794-l34
+  defaultLanguageSkills[3]:
+    - ld-logix5000-rslogix5000
+    - st-logix5000-studio5000
+    - fbd-logix5000-studio5000

@@ -1,0 +1,109 @@
+# METADATA:
+project_name: igbt-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: igbt
+name: "IGBT (Insulated Gate Bipolar Transistor)"
+family: electricals
+subfamily: semiconductors
+category: semiconductor
+standard: "IEC 60747-9"
+url: null
+image: igbt.svg
+symbol: igbt-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  vce_sat:
+    label: "Collector-Emitter Saturation Voltage"
+    unit: V
+    default: 1.7
+    type: float
+    editable: true
+  vge_threshold:
+    label: "Gate Threshold Voltage"
+    unit: V
+    default: 5.8
+    min: 3.0
+    max: 9.0
+    type: float
+    editable: true
+  ic_max:
+    label: "Max Collector Current"
+    unit: A
+    default: 40.0
+    type: float
+    editable: true
+  package:
+    label: "Package"
+    default: "TO-247"
+    options: ["TO-220", "TO-247", "TO-264", "SOT-227"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  G|input|analog|"20V"|null|"Gate terminal (insulated)"
+  C|input|power|null|"{ic_max}"|"Collector terminal"
+  E|output|ground|null|"{ic_max}"|"Emitter terminal"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  bidirectional: false
+  dynamic: true
+  thermal_model: true
+  noise_model: false
+  states[3]:
+    - off
+    - saturation
+    - active
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "600V"
+  max_current: "{ic_max}"
+  max_power:
+    value: 150
+    unit: W
+  max_temp: 175
+  min_temp: -55
+warnings[2]:
+  - "Gate-Emitter voltage must never exceed +/- 20V"
+  - "Always use a proper heatsink; thermal runaway can occur at high current"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: ["gate-driver"]
+  typical_context: ["motor-inverter", "pfc-circuit", "induction-heating"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 40
+  height: 60
+  ports_layout: custom
+  port_G: {x: 0, y: 30}
+  port_C: {x: 40, y: 10}
+  port_E: {x: 40, y: 50}
+  label_position: top
+  value_display: "{name}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: igbt
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Semiconductors"
+  tags[4]:
+    - igbt
+    - semiconductor
+    - power-transistor
+    - switching

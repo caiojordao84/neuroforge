@@ -1,0 +1,121 @@
+# METADATA:
+project_name: ac-source-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: ac-source
+name: "Single-Phase AC Power Source"
+family: electricals
+subfamily: sources
+category: source
+standard: "IEC 61010-1 / IEC 60038"
+url: null
+image: ac-source.svg
+symbol: ac-source-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  voltage:
+    label: "Output Voltage (RMS)"
+    unit: V
+    default: 230
+    min: 0
+    max: 300
+    type: float
+    editable: true
+  frequency:
+    label: "Frequency"
+    unit: Hz
+    default: 50
+    options: [50, 60]
+    type: enum
+    editable: true
+  current_limit:
+    label: "Current Limit"
+    unit: A
+    default: 10
+    min: 0
+    max: 100
+    type: float
+    editable: true
+  phase_angle:
+    label: "Phase Angle Offset"
+    unit: V
+    default: 0
+    min: 0
+    max: 360
+    type: float
+    editable: true
+  output_enabled:
+    label: "Output Enabled"
+    default: true
+    type: bool
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  L|output|power|"300V"|"100A"|"line / hot terminal"
+  N|output|ground|null|null|"neutral terminal"
+  PE|output|ground|null|null|"protective earth"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  waveform: sine
+  equation: "V_out = voltage * sqrt(2) * sin(2*pi*frequency*t + phase_angle)"
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - off
+    - on
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "300V"
+  max_current: "100A"
+  max_power: null
+  max_temp: 40
+  min_temp: -10
+warnings[3]:
+  - "Never short-circuit L and N terminals"
+  - "Always connect PE before energising the circuit"
+  - "Verify load current rating before enabling output"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["lab-bench", "appliance-testing", "load-test", "power-quality-analysis"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 70
+  height: 60
+  ports_layout: custom
+  port_L: {x: 70, y: 10}
+  port_N: {x: 70, y: 35}
+  port_PE: {x: 70, y: 55}
+  label_position: left
+  value_display: "{voltage}V / {frequency}Hz"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: ac-source
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Sources"
+  tags[5]:
+    - ac-source
+    - single-phase
+    - laboratory
+    - source
+    - adjustable

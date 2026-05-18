@@ -1,38 +1,104 @@
+# METADATA:
+project_name: nucleo-l476rg-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: nucleo-l476rg
-name: "Nucleo-L476RG"
-manufacturer: "Generic"
-mcu: "STM32L476RG"
-category: "maker"
-image: "/boards/nucleo-l476rg.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 1048576
-sram: 131072
-clock_hz: 80000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "avr-family"
-  boardProfileId: "nucleo-l476rg"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+name: "ST Nucleo-L476RG"
+manufacturer: "STMicroelectronics"
+mcu: STM32L476RGT6
+category: embedded
+image: nucleo-l476rg.svg
+url: "https://www.st.com/en/microcontrollers-microprocessors/stm32l476rg.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 1048576
+  flash_available: 1048576
+  sram: 131072
+  eeprom: 0
+  clock: 80000000
+  voltage: "3.3V"
+dims:
+  w: 84.0
+  h: 56.0
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  IOREF|output|"3.3V"|null
+  NRST|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[22|]{pin|type|pwm|int|label|roles}:
+  0|digital|t|t|"D0 / RX"|uart-rx
+  1|digital|t|t|"D1 / TX"|uart-tx
+  2|digital|f|t|D2|null
+  3|digital|f|t|D3|null
+  4|digital|f|t|D4|null
+  5|digital|t|t|D5|null
+  6|digital|t|t|D6|null
+  7|digital|t|t|D7|null
+  8|digital|f|t|D8|spi-ss
+  9|digital|t|t|D9|null
+  10|digital|t|t|"D10 / SS"|spi-ss
+  11|digital|t|t|"D11 / MOSI"|spi-mosi
+  12|digital|t|t|"D12 / MISO"|spi-miso
+  13|digital|t|t|"D13 / SCK / LED"|"spi-sck;status-led"
+  14|digital|t|t|"D14 / SDA"|i2c-sda
+  15|digital|t|t|"D15 / SCL"|i2c-scl
+  16|analog|t|t|A0|"adc:t"
+  17|analog|t|t|A1|"adc:t"
+  18|analog|f|t|"A2"|dac
+  19|analog|t|t|A3|"adc:t"
+  20|analog|f|t|A4|"adc:t"
+  21|analog|f|t|A5|"adc:t"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[5|]{peripheral|param|value}:
+  serial|"uarts:6"|"pins:0,1"
+  i2c|"channels:3"|"sda:14;scl:15"
+  spi|"channels:3"|"miso:12;mosi:11;sck:13;ss:10"
+  adc|"channels:3;bits:12"|"pins:16;17;19;20;21"
+  dac|"channels:2;bits:12"|"pins:18;13"
+usb:
+  type: "Micro-AB"
+  chip: "ST-LINK/V2-1"
+  vid: "0x0483"
+  pid: "0x374B"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "20mA"
+  total_current_limit: "160mA"
+  warnings[6]:
+    - "DAC1_CH2 is on PA5 (D13) — conflicts with SPI1_SCK and user LED LD2"
+    - "A2 (PA4) is shared between ADC and DAC1_CH1 — mutually exclusive functions"
+    - "D0/D1 (PA2/PA3) shared with ST-LINK Virtual COM — reconfigure JP6 to free"
+    - "Total MCU supply current must not exceed 160mA across all I/O pins"
+    - "Most I/O pins are 5V tolerant for input but always output 3.3V logic"
+    - "Dual-bank flash supports read-while-write for live firmware updates"
+compatibility:
+  arduinoCore: "STM32duino"
+  pio: ststm32
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: "none"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: stm32l4-family
+  boardProfileId: nucleo-l476rg
+  defaultLanguageSkills[2]:
+    - arduino-cpp-stm32l4
+    - c-stm32-hal

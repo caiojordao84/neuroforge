@@ -1,0 +1,120 @@
+# METADATA:
+project_name: hyd-motor-vane-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: hyd-motor-vane
+name: "Hydraulic Vane Motor (Motor hid. de palhetas)"
+family: hydraulics
+subfamily: hydraulic-actuators
+category: actuator
+standard: "ISO 1219-1"
+url: null
+image: hyd-motor-vane.svg
+symbol: hyd-motor-vane-symbol.svg
+symbol_standard: ISO
+
+## 2. PARAMETERS:
+params:
+  displacement:
+    label: "Displacement"
+    unit: "cm³/rev"
+    default: 32
+    options: [16, 25, 32, 40, 50, 63, 80, 100]
+    type: enum
+    editable: true
+  operating_pressure:
+    label: "Operating Pressure"
+    unit: bar
+    default: 150
+    min: 10
+    max: 250
+    type: float
+    editable: true
+  flow_rate:
+    label: "Nominal Flow Rate"
+    unit: "l/min"
+    default: 48
+    type: float
+    editable: false
+  speed_rated:
+    label: "Rated Speed"
+    unit: RPM
+    default: 1500
+    min: 100
+    max: 3000
+    type: float
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[0|]{}:
+
+## 4b. FLUID PORTS (HYDRAULIC):
+hydraulic_ports[3|]{id|direction|type|pressure_max|flow_max|notes}:
+  A|bidirectional|hydraulic|"{operating_pressure}bar"|"{flow_rate}"|"port A — rotate CW"
+  B|bidirectional|hydraulic|"{operating_pressure}bar"|"{flow_rate}"|"port B — rotate CCW"
+  L|exhaust|hydraulic|"5bar"|"5"|"case drain (leakage return to tank)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: hydraulic-rotary-actuator
+  motion: rotary
+  bidirectional: true
+  dynamic: true
+  thermal_model: true
+  leakage_model: true
+  noise_model: false
+  states[4]:
+    - stopped
+    - rotating-cw
+    - rotating-ccw
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_pressure: 250
+  min_pressure: 10
+  max_voltage: null
+  max_current: null
+  max_power: null
+  max_temp: 90
+  min_temp: -20
+warnings[3]:
+  - "Case drain port (L) must be connected directly to the tank with minimal backpressure"
+  - "Internal leakage increases with wear and fluid temperature"
+  - "Operating torque is a function of differential pressure and displacement"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["hyd-valve-4-2-*", "hyd-valve-4-3-*", "hyd-flow-control-*"]
+  forbidden_with: ["pneu-*", "act-motor-*"]
+  requires: ["hyd-power-unit"]
+  typical_context: ["winch-drive", "conveyor-drive", "heavy-duty-rotation"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 60
+  ports_layout: custom
+  port_A: {x: 10, y: 0}
+  port_B: {x: 50, y: 0}
+  port_L: {x: 30, y: 60}
+  label_position: bottom
+  value_display: "{displacement}cc / {speed_rated}RPM"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: hydraulics-family
+  componentProfileId: hyd-motor-vane
+  simulationEngine: hydraulic-motion
+  paletteGroup: "Hydraulics > Hydraulic Actuators"
+  tags[5]:
+    - motor
+    - hydraulic
+    - rotary
+    - vane
+    - actuator

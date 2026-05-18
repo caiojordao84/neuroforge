@@ -1,0 +1,117 @@
+# METADATA:
+project_name: resistor-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: resistor
+name: "Resistor"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60062"
+url: null
+image: resistor.svg
+symbol: resistor-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  resistance:
+    label: "Resistance"
+    unit: Ω
+    default: 1000
+    min: 0.001
+    max: 10000000
+    type: float
+    editable: true
+  tolerance:
+    label: "Tolerance"
+    unit: "%"
+    default: 5
+    options: [0.1, 0.5, 1, 2, 5, 10, 20]
+    type: enum
+    editable: true
+  power_rating:
+    label: "Power Rating"
+    unit: W
+    default: 0.25
+    options: [0.063, 0.125, 0.25, 0.5, 1, 2, 5, 10, 25, 50]
+    type: enum
+    editable: true
+  temp_coefficient:
+    label: "Temp. Coefficient"
+    unit: "%"
+    default: 100
+    min: 10
+    max: 500
+    type: float
+    editable: false
+  package:
+    label: "Package"
+    default: "THT"
+    options: ["THT", "SMD-0402", "SMD-0603", "SMD-0805", "SMD-1206", "SMD-2512"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[2|]{id|direction|type|voltage_max|current_max|notes}:
+  A|passive|analog|null|null|"terminal A"
+  B|passive|analog|null|null|"terminal B"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ohms-law
+  equation: "V = I * resistance"
+  bidirectional: true
+  dynamic: false
+  thermal_model: false
+  noise_model: false
+  states[1]:
+    - nominal
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: null
+  max_current: null
+  max_power:
+    value: "{power_rating}"
+    unit: W
+  max_temp: 155
+  min_temp: -55
+warnings[2]:
+  - "Do not exceed rated power dissipation"
+  - "Derate 50% above 70°C ambient temperature"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["current-limiting", "voltage-divider", "pull-up", "pull-down"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 20
+  ports_layout: horizontal
+  port_A: {x: 0, y: 10}
+  port_B: {x: 60, y: 10}
+  label_position: top
+  value_display: "{resistance}Ω / {power_rating}W"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: resistor
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Passives"
+  tags[5]:
+    - resistor
+    - passive
+    - analog
+    - ohms-law
+    - passive-component

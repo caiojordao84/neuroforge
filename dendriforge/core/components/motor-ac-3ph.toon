@@ -1,0 +1,189 @@
+# METADATA:
+project_name: motor-ac-3ph-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: motor-ac-3ph
+name: "Three-Phase AC Induction Motor"
+family: actuators
+subfamily: industrial-electrical
+category: actuator
+standard: "IEC 60034-1 / IEC 60034-30-1"
+url: null
+image: motor-ac-3ph.svg
+symbol: motor-ac-3ph-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  power_rated:
+    label: "Rated Power"
+    unit: W
+    default: 3000
+    min: 120
+    max: 1000000
+    type: float
+    editable: true
+  voltage_rated:
+    label: "Rated Voltage (L-L)"
+    unit: V
+    default: 400
+    options: [230, 400, 415, 690, 1000, 3300, 6000, 11000]
+    type: enum
+    editable: true
+  frequency:
+    label: "Supply Frequency"
+    unit: V
+    default: 50
+    options: [50, 60]
+    type: enum
+    editable: true
+  poles:
+    label: "Number of Poles"
+    default: 4
+    options: [2, 4, 6, 8]
+    type: enum
+    editable: true
+  speed_rated:
+    label: "Rated Speed"
+    unit: V
+    default: 1440
+    min: 600
+    max: 3600
+    type: float
+    editable: false
+  current_rated:
+    label: "Rated Current"
+    unit: A
+    default: 6.8
+    min: 0.1
+    max: 2000
+    type: float
+    editable: false
+  power_factor:
+    label: "Power Factor (cos φ)"
+    unit: "%"
+    default: 0.83
+    min: 0.6
+    max: 0.95
+    type: float
+    editable: false
+  efficiency_class:
+    label: "Efficiency Class"
+    default: "IE3"
+    options: ["IE1", "IE2", "IE3", "IE4", "IE5"]
+    type: enum
+    editable: true
+  efficiency:
+    label: "Rated Efficiency"
+    unit: "%"
+    default: 89.1
+    min: 70
+    max: 98
+    type: float
+    editable: false
+  duty_cycle:
+    label: "Duty Cycle"
+    default: "S1"
+    options: ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9"]
+    type: enum
+    editable: true
+  insulation_class:
+    label: "Insulation Class"
+    default: "F"
+    options: ["B", "F", "H"]
+    type: enum
+    editable: true
+  protection_class:
+    label: "Protection Class (IP)"
+    default: "IP55"
+    options: ["IP23", "IP44", "IP54", "IP55", "IP65", "IP66", "IP67"]
+    type: enum
+    editable: true
+  wiring:
+    label: "Winding Connection"
+    default: "delta"
+    options: ["star", "delta", "star-delta"]
+    type: enum
+    editable: true
+  mounting:
+    label: "Mounting Form"
+    default: "B3"
+    options: ["B3", "B5", "B14", "B34", "B35", "V1"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  U1|input|power|"11000V"|"2000A"|"phase U / L1 supply terminal"
+  V1|input|power|"11000V"|"2000A"|"phase V / L2 supply terminal"
+  W1|input|power|"11000V"|"2000A"|"phase W / L3 supply terminal"
+  PE|input|ground|null|null|"protective earth / frame ground"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: basic-analog
+  motion: rotary
+  equation: "T = (power_rated * efficiency/100) / (2 * pi * speed_rated / 60); I = power_rated / (sqrt(3) * voltage_rated * power_factor * efficiency/100)"
+  bidirectional: false
+  dynamic: true
+  thermal_model: true
+  noise_model: false
+  states[4]:
+    - off
+    - starting
+    - running
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "11000V"
+  max_current: "2000A"
+  max_power: null
+  max_temp: 40
+  min_temp: -20
+  ip_rating: "IP55"
+warnings[4]:
+  - "Always verify phase sequence before starting — incorrect sequence causes reverse rotation"
+  - "Provide overcurrent and thermal overload protection sized to rated current"
+  - "Star-delta starters must not switch under full load — use adequate timing relay"
+  - "Do not exceed insulation class temperature limit including ambient and self-heating"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["ac-source-3phase", "contactor-*", "act-vfd", "act-starter-dol", "act-starter-sd"]
+  forbidden_with: ["dc-source", "ac-source", "battery"]
+  requires: ["ac-source-3phase"]
+  typical_context: ["pump-drive", "fan-drive", "compressor", "conveyor", "industrial-machine"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 80
+  height: 70
+  ports_layout: custom
+  port_U1: {x: 0, y: 15}
+  port_V1: {x: 0, y: 35}
+  port_W1: {x: 0, y: 55}
+  port_PE: {x: 40, y: 70}
+  label_position: right
+  value_display: "{power_rated}W / {voltage_rated}V / {speed_rated}rpm ({efficiency_class})"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: actuators-family
+  componentProfileId: motor-ac-3ph
+  simulationEngine: digital-io
+  paletteGroup: "Actuators > Industrial Electrical"
+  tags[8]:
+    - motor
+    - ac
+    - three-phase
+    - induction
+    - actuator
+    - industrial
+    - squirrel-cage
+    - iec-60034

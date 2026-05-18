@@ -1,0 +1,130 @@
+# METADATA:
+project_name: abb-ac500-eco-pm564-tp-eth-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: abb-ac500-eco-pm564-tp-eth
+name: "ABB AC500-eCo Modular PLC CPU (PM564-TP-ETH / 1SAP120900R0071)"
+manufacturer: ABB
+cpu: "AC500-eCo PM564 32-bit RISC, 0.08µs/instruction"
+category: plc
+form_factor: modular
+standard: "IEC 61131-3"
+image: abb-ac500-eco-pm564-tp-eth.svg
+url: "https://new.abb.com/products/1SAP120900R0071/pm564-tp-eth"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  memory_work: 142KB
+  memory_load: 128KB
+  memory_retain: 1KB
+  supply_voltage: 24V
+  power_consumption: 5W
+  di_integrated: 6
+  do_integrated: 6
+  ai_integrated: 2
+dims:
+  w: 82.0
+  h: 135.0
+  t: 74.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerSupply[4|]{name|direction|voltage|type}:
+  L+|input|24V|supply
+  M|input|null|ground
+  PE|input|null|protective-earth
+  SENSOR_SUPPLY|output|24V|sensor-power
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[4|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|6|"%IX0.0"|"%IX0.5"|null
+  1|0|DO|6|"%QX0.0"|"%QX0.5"|null
+  2|0|AI|2|"%IW0"|"%IW1"|null
+  3|0|AO|1|"%QW0"|"%QW0"|null
+
+## 5. DIGITAL CHANNEL DESCRIPTORS:
+# Format: addr | direction | label | roles
+digitalChannels[12|]{addr|direction|label|roles}:
+  "%IX0.0"|input|"DI I1 (24V PNP, 1kHz)"|"di;hsc"
+  "%IX0.1"|input|"DI I2 (24V PNP, 1kHz)"|"di;hsc"
+  "%IX0.2"|input|"DI I3 (24V PNP)"|di
+  "%IX0.3"|input|"DI I4 (24V PNP)"|di
+  "%IX0.4"|input|"DI I5 (24V PNP / AI-configurable)"|"di;ai"
+  "%IX0.5"|input|"DI I6 (24V PNP / AI-configurable)"|"di;ai"
+  "%QX0.0"|output|"DO Q1 (PNP transistor 0.5A, 24V)"|do
+  "%QX0.1"|output|"DO Q2 (PNP transistor 0.5A, 24V)"|do
+  "%QX0.2"|output|"DO Q3 (PNP transistor 0.5A, 24V)"|do
+  "%QX0.3"|output|"DO Q4 (PNP transistor 0.5A, 24V)"|do
+  "%QX0.4"|output|"DO Q5 (PNP transistor 0.5A, 24V)"|do
+  "%QX0.5"|output|"DO Q6 (PNP transistor 0.5A, 24V)"|do
+
+## 6. ANALOG CHANNEL DESCRIPTORS:
+# Format: addr | direction | resolution | range | label
+analogChannels[3|]{addr|direction|resolution|range|label}:
+  "%IW0"|input|12|"0-10V/0-20mA/4-20mA"|"AI 1 (configurable; shared with DI I5)"
+  "%IW1"|input|12|"0-10V/0-20mA/4-20mA"|"AI 2 (configurable; shared with DI I6)"
+  "%QW0"|output|10|"0-10V/0-20mA/4-20mA"|"AO 1 (configurable)"
+
+## 7. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[5|]{peripheral|param|value}:
+  ethernet|"port:502"|"protocol:Modbus-TCP;role:client-server;speed:100Mbps"
+  ethernetip|"port:44818"|"protocol:EtherNet/IP;role:adapter;speed:100Mbps"
+  serial|"baud:115200"|"proto:Modbus-RTU;bus:RS485;role:client-server"
+  opc-ua|"port:4840"|"security:tls1.2;note:V3-only"
+  mqtt|"port:8883"|"tls:true;note:V3-only"
+usb:
+  type: "USB-A"
+  function: "programming"
+  vid: "0x10C4"
+  pid: "0x84BC"
+
+## 8. RACKS & EXPANSION:
+# Format: rack | slots | backplane_current | voltage
+racks[1|]{rack|slots|backplane_current|voltage}:
+  0|7|1200mA|5V
+expansion:
+  max_signal_modules: 7
+  max_communication_modules: 2
+  max_signal_boards: 3
+
+## 9. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  supply_voltage: 24V
+  supply_current_max: 200mA
+  io_output_current_max: 500mA
+  sensor_supply_current: 400mA
+  operating_temp: "0-55°C"
+  storage_temp: "-40-70°C"
+  protection_class: IP20
+  warnings[8]:
+    - "AI channels I5/I6 are dual-function DI/AI; configure mode in Automation Builder hardware config"
+    - "DO outputs are PNP transistor (sourcing 24V); NOT relay — cannot switch AC loads directly"
+    - "RS485 (COM1) Modbus address range 1-247; baud rate 2400-115200 bps; no RS232 on CPU"
+    - "Max 7 local S500/S500-eCo expansion I/O modules; separate process power supply required for modules"
+    - "Two option board slots accept OB500/501/503/504/505 for extra DI/DO/AI/KNX/RS232"
+    - "TK503 USB cable uses Silicon Labs CP210x (VID 0x10C4/PID 0x84BC); driver must be pre-installed"
+    - "OPC-UA and MQTT are only available on AC500-eCo V3 CPU firmware; V2 supports Modbus/EIP only"
+    - "Terminal base TB521-ETH required to mount PM564-TP-ETH; CPU and terminal base ordered separately"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "ABB Automation Builder v2.7"
+  runtime: "AC500-eCo FW V3.x"
+  firmware: "3.x"
+  languages: "LD;FBD;ST;SFC;IL"
+  order_ref: "1SAP120900R0071"
+
+## 10. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: abb-ac500-eco-pm564-tp-eth
+  defaultLanguageSkills[3]:
+    - st-iec61131
+    - ld-automation-builder-ac500
+    - fbd-automation-builder-ac500

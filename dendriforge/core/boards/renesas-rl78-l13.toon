@@ -1,0 +1,107 @@
+# METADATA:
+project_name: renesas-rl78-l13-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: renesas-rl78-l13
+name: "Renesas RL78/L13 (R5F10WMGAFB) Target Board (QB-R5F10WMG-TB)"
+manufacturer: Renesas
+mcu: "Renesas R5F10WMGAFB (RL78/L13, 16-bit RL78 core, 24MHz)"
+category: embedded
+image: renesas-rl78-l13-qb-r5f10wmg-tb.svg
+url: "https://www.renesas.com/en/design-resources/boards-kits/qb-r5f10wmg-tb"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 131072
+  flash_available: 122880
+  sram: 8192
+  eeprom: 4096
+  clock: 24000000
+  voltage: "3.3V"
+dims:
+  w: 55.0
+  h: 85.0
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[5|]{name|direction|voltage|type}:
+  VCC|input|null|null
+  EVDD|input|null|null
+  VSS|null|null|ground
+  RESET|input|null|null
+  REGC|output|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# Encoding: port*10 + bit (P0.0=0, P1.3=13, P2.0=20, etc.)
+gpio[22|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|true|"P00 / SCL1 (IICA1)"|i2c-scl
+  1|digital|false|true|"P01 / SDA1 (IICA1)"|i2c-sda
+  10|digital|false|true|"P10 / SI00 (CSI00)"|spi-miso
+  11|digital|false|true|"P11 / SO00 (CSI00)"|spi-mosi
+  12|digital|false|true|"P12 / SCK00 (CSI00)"|spi-sck
+  13|digital|false|true|"P13 / TXD0 (UART0) / AIN8"|uart-tx
+  14|digital|false|true|"P14 / RXD0 (UART0) / AIN9"|uart-rx
+  15|digital|false|true|"P15 / TO01 (Timer)"|null
+  16|digital|false|true|"P16 / RXD1 / SDA0 (IICA0)"|"uart-rx;i2c-sda"
+  17|digital|false|true|"P17 / TXD1 / SCL0 (IICA0)"|"uart-tx;i2c-scl"
+  20|analog|false|true|"P20 / AIN0 / SO10 (CSI10)"|"adc:t;spi-mosi"
+  21|analog|false|true|"P21 / AIN1 / SI10 (CSI10)"|"adc:t;spi-miso"
+  22|analog|false|true|"P22 / AIN2 / SCK10 (CSI10)"|"adc:t;spi-sck"
+  23|analog|false|true|"P23 / AIN3"|"adc:t"
+  24|analog|false|true|"P24 / AIN4"|"adc:t"
+  25|analog|false|true|"P25 / AIN5"|"adc:t"
+  26|analog|false|true|"P26 / AIN6"|"adc:t"
+  27|analog|false|true|"P27 / AIN7"|"adc:t"
+  30|digital|false|true|"P30 / INTP0"|null
+  31|digital|false|true|"P31 / INTP1"|null
+  40|digital|true|false|"P40 / TO00 (TAU PWM)"|null
+  50|digital|false|true|"P50 / INTP5"|null
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uarts:3"|"pins:13,14"
+  i2c|"channels:3"|"sda:1;scl:0"
+  spi|"channels:2"|"miso:10;mosi:11;sck:12;ss:null"
+  adc|"resolution:10bit"|"pins:20;21;22;23;24;25;26;27"
+usb:
+  type: null
+  chip: null
+  vid: null
+  pid: null
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "10mA"
+  total_current_limit: "100mA"
+  warnings[9]:
+    - "NO onboard USB; programming and debugging require an external E1/E2/E2 Lite emulator via 14-pin connector"
+    - "Board operates at 2.7-5.5V with 20MHz crystal; 3.3V and 5V both supported"
+    - "RL78/L13 is a 16-bit MCU with RL78 core — NOT ARM; Arduino framework is NOT supported"
+    - "LCD controller drives COM/SEG pins on P3x-P7x; these are NOT general-purpose GPIO"
+    - "P16/P17 are multiplexed between UART1 (RXD1/TXD1) and IIC0 (SDA0/SCL0); use one at a time"
+    - "P20-P27 are multiplexed between ADC (AIN0-AIN7) and CSI10 (SPI); use one at a time"
+    - "All 80 MCU pins are exposed on peripheral board connectors (2x22 headers)"
+    - "20MHz resonator is main clock; 32.768kHz crystal for RTC also mounted"
+    - "TOOL0 pin is shared between programming/debug and normal GPIO — used by E1/E2 during debug"
+compatibility:
+  arduinoCore: null
+  pio: null
+  frameworks: renesas-fsp
+  languages: c-rl78
+  bootloader: null
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: renesas-rl78-family
+  boardProfileId: renesas-rl78-l13
+  defaultLanguageSkills[3]:
+    - c-rl78-e2studio
+    - cubesuite-plus-rl78
+    - cs-plus-rl78

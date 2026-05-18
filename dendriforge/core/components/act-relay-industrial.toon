@@ -1,0 +1,164 @@
+# METADATA:
+project_name: act-relay-industrial-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: act-relay-industrial
+name: "Industrial Relay (DPDT)"
+family: actuators
+subfamily: industrial-electrical
+category: switching
+standard: "IEC 61810-1"
+url: null
+image: act-relay-industrial.svg
+symbol: act-relay-industrial-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  coil_voltage:
+    label: "Coil Nominal Voltage"
+    unit: V
+    default: 24
+    options: [5, 6, 9, 12, 24, 48, 110, 230]
+    type: enum
+    editable: true
+  coil_current:
+    label: "Coil Current"
+    unit: mA
+    default: 120
+    options: [50, 80, 100, 120, 200, 400]
+    type: enum
+    editable: false
+  contact_voltage_max:
+    label: "Max Contact Voltage"
+    unit: V
+    default: 250
+    options: [30, 125, 250, 400]
+    type: enum
+    editable: true
+  contact_current_max:
+    label: "Max Contact Current"
+    unit: A
+    default: 10
+    options: [3, 5, 8, 10, 16, 25]
+    type: enum
+    editable: true
+  contact_config:
+    label: "Contact Configuration"
+    default: "DPDT"
+    options: ["SPST-NO", "SPST-NC", "SPDT", "DPDT"]
+    type: enum
+    editable: true
+  pickup_voltage:
+    label: "Pick-up Voltage"
+    unit: V
+    default: 19.2
+    type: float
+    editable: false
+  dropout_voltage:
+    label: "Drop-out Voltage"
+    unit: V
+    default: 2.4
+    type: float
+    editable: false
+  operate_time:
+    label: "Operate Time"
+    unit: ms
+    default: 20
+    type: int
+    editable: false
+  release_time:
+    label: "Release Time"
+    unit: ms
+    default: 20
+    type: int
+    editable: false
+  flyback:
+    label: "Flyback Diode Included"
+    default: false
+    type: bool
+    editable: true
+  mounting:
+    label: "Mounting"
+    default: "DIN-rail"
+    options: ["DIN-rail", "panel", "PCB", "socket"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[7|]{id|direction|type|voltage_max|current_max|notes}:
+  A1|input|power|"230V"|"400mA"|"coil positive supply"
+  A2|input|ground|null|null|"coil negative / common ground"
+  COM1|passive|power|"400V"|"25A"|"contact 1 common"
+  NO1|passive|power|"400V"|"25A"|"contact 1 normally open"
+  NC1|passive|power|"400V"|"25A"|"contact 1 normally closed"
+  NO2|passive|power|"400V"|"25A"|"contact 2 normally open"
+  NC2|passive|power|"400V"|"25A"|"contact 2 normally closed"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: relay-coil
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - de-energised
+    - energised
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "400V"
+  max_current: "25A"
+  max_power:
+    value: 2.4
+    unit: W
+  max_temp: 85
+  min_temp: -40
+warnings[4]:
+  - "Always install flyback protection on the coil supply when driven by MCU or PLC outputs"
+  - "Do not exceed rated contact current — use contactor for loads above 16A"
+  - "Contact bounce may occur at switching; use debounce logic for digital inputs"
+  - "Coil pickup and dropout voltages define safe operating voltage window"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["relay-driver", "relay-driver-opto", "ind-do-bank", "mcu-gpio", "dc-source", "ac-source", "pneu-valve-*", "hyd-valve-*", "act-motor-*"]
+  forbidden_with: []
+  requires: ["dc-source"]
+  typical_context: ["industrial-io", "panel-control", "motor-switching", "lamp-control", "safety-circuit"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 70
+  height: 60
+  ports_layout: custom
+  port_A1: {x: 35, y: 0}
+  port_A2: {x: 35, y: 60}
+  port_COM1: {x: 0, y: 20}
+  port_NO1: {x: 70, y: 10}
+  port_NC1: {x: 70, y: 30}
+  port_NO2: {x: 70, y: 45}
+  port_NC2: {x: 70, y: 55}
+  label_position: top
+  value_display: "Industrial Relay / {coil_voltage}V / {contact_current_max}A / {contact_config}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: actuators-family
+  componentProfileId: act-relay-industrial
+  simulationEngine: digital-io
+  paletteGroup: "Actuators > Industrial Electrical"
+  tags[6]:
+    - relay
+    - industrial
+    - dpdt
+    - switching
+    - coil
+    - actuator

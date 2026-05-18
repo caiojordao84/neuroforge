@@ -1,0 +1,101 @@
+# METADATA:
+project_name: maker-ir-remote-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: maker-ir-remote
+name: "IR Remote Control (Controlo IR)"
+family: communication
+subfamily: wireless
+category: node
+standard: "custom"
+url: null
+image: maker-ir-remote.svg
+symbol: maker-ir-remote-symbol.svg
+symbol_standard: custom
+
+## 2. PARAMETERS:
+params:
+  protocol:
+    label: "Protocol"
+    default: "NEC"
+    options: ["NEC", "RC5", "RC6", "Sony"]
+    type: enum
+    editable: true
+  carrier_frequency:
+    label: "Carrier Frequency"
+    unit: kHz
+    default: 38
+    options: [36, 38, 40, 56]
+    type: enum
+    editable: true
+  buttons:
+    label: "Number of Buttons"
+    default: 21
+    options: [17, 21, 24, 44]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[0|]{}:
+
+## 4c. PROTOCOL PORTS:
+protocol_ports[1|]{id|direction|protocol|notes}:
+  IR_TX|output|"{protocol}"|"IR wireless transmission"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: digital-io
+  protocol_emulation: true
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - idle
+    - transmitting
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: null
+  max_current: null
+  max_power: null
+  max_temp: 50
+  min_temp: -10
+  ip_rating: null
+  safety_category: null
+warnings[2]:
+  - "Wireless component — does not require physical electrical connections"
+  - "Requires line of sight to the IR receiver for reliable communication"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["sensor-ir-receiver"]
+  forbidden_with: ["*"]
+  requires: []
+  typical_context: ["remote-control", "wireless-input", "hmi"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 40
+  height: 100
+  ports_layout: custom
+  port_IR_TX: {x: 20, y: 0}
+  label_position: right
+  value_display: "{protocol} / {buttons} keys"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: communication-family
+  componentProfileId: maker-ir-remote
+  simulationEngine: protocol-stub-engine
+  paletteGroup: "Communication > Wireless"
+  tags[4]:
+    - remote
+    - infrared
+    - wireless
+    - transmitter

@@ -1,0 +1,322 @@
+# METADATA:
+# Purpose: Canonical schema and authoring guide for dendriForge board profiles (.toon).
+#          All board profile files must conform to this schema.
+#          Sections 1, 2, 5, 6, 9 and 10 are REQUIRED. All others are OPTIONAL.
+project_name: board-schema
+version: 2
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+# ============================================================
+# SECTION 1 — DEVICE IDENTIFICATION (REQUIRED)
+# ============================================================
+# Purpose: Catalog metadata and primary board identification.
+# All fields are required unless marked optional.
+
+id: <string-kebab-case>               # Unique board identifier, e.g. arduino-uno, esp32-devkitc-v4
+name: <string>                        # Human-readable display name, e.g. Arduino Uno R3
+manufacturer: <string>                # Board maker, e.g. Arduino / Espressif / Rockwell Automation
+mcu: <string>                         # Primary MCU model string, e.g. ATmega328P, ESP32-C6, STM32H747XI
+category: <enum>                      # maker | iot | industrial | micro-plc | plc | educational | prototyping | custom
+image: <string>                       # Image filename (.svg preferred), e.g. arduino-uno-r3.svg
+url: <string-url | null>              # Official product page or datasheet URL — plain URL, no Markdown links
+sku: <string | null>                  # Optional — official SKU/part number, e.g. ABX00092, AFX00001
+
+# ============================================================
+# SECTION 2 — TECH SPECS & DIMENSIONS (REQUIRED)
+# ============================================================
+# Purpose: Core hardware specifications as inline key:value dictionaries separated by |.
+# specs block is REQUIRED. All other blocks in this section are OPTIONAL.
+
+# Required fields in specs:
+#   flash_total     <int>         Total flash in bytes (including bootloader)
+#   flash_available <int>         User-accessible flash in bytes (total minus bootloader)
+#   sram            <int>         Total SRAM in bytes
+#   eeprom          <int>         EEPROM in bytes — use 0 if none
+#   clock           <int>         Default/primary clock speed in Hz
+#   voltage         <float|int>   Primary I/O logic voltage (V)
+#
+# Optional fields in specs (add inline after required fields):
+#   flash_type      <string>      e.g. NOR-QSPI, parallel
+#   flash_chip      <string>      e.g. AT25SF128A
+#   flash_qspi      <int>         External QSPI flash in bytes (if separate from internal)
+#   sram_rtc        <int>         RTC-domain SRAM in bytes
+#   sram_bank0/1    <int>         Named SRAM banks in bytes (e.g. SAM3X)
+#   rom             <int>         Internal ROM in bytes (e.g. ESP32 bootrom)
+#   psram           <int>         External PSRAM in bytes (e.g. ESP32-S3)
+#   eeprom_emulated <t/f>         True if EEPROM is emulated via flash
+#   clock_max       <int>         Maximum achievable clock in Hz (if different from default)
+#   clock_default   <int>         Default boot clock in Hz (if different from max)
+#   clock_<id>      <int>         Named core clocks, e.g. clock_m7, clock_m4, clock_hp_max, clock_lp_max
+#   clock_f401      <int>         Variant-specific clock, e.g. for multi-variant families
+#   cores           <int>         Number of CPU cores
+#   arch            <string>      CPU architecture string, e.g. ARM Cortex-M0+, Xtensa LX6, RISC-V
+#   fpu             <t/f>         Has hardware floating-point unit
+#   dsp             <t/f>         Has DSP instructions
+#   adc_resolution  <string>      ADC bit depth, e.g. 10bit, 12bit, 14bit
+#   pwm_resolution  <string>      PWM bit depth, e.g. 8bit, 12bit
+#   dac_resolution  <string>      DAC bit depth, e.g. 10bit, 12bit
+
+specs:
+  flash_total: <int> | flash_available: <int> | sram: <int> | eeprom: <int> | clock: <int> | voltage: <float|int>
+
+# supply block — OPTIONAL. Use for boards powered from industrial voltage ranges.
+supply:
+  voltage_min: <float|int> | voltage_max: <float|int> | voltage_unit: <string> | power_min_w: <float> | power_max_w: <float>
+
+# dims block — OPTIONAL. Physical PCB dimensions in mm.
+dims:
+  w: <float> | h: <float> | t: <float>
+
+# wireless block — OPTIONAL. For WiFi / BLE / mesh-capable boards.
+# wifi standard values: 802.11b/g/n | 802.11ax
+# bluetooth values: BLE | BR/EDR+BLE
+wireless:
+  wifi: <string> | wifi_freq: <string> | wifi_max: <string>
+  bluetooth: <string> | bt_version: <string> | bt_features: <string-csv>
+  ieee802154: <t/f> | zigbee: <string> | thread: <string> | matter: <t/f>
+
+# security block — OPTIONAL. Hardware security features of the MCU or module.
+security:
+  trustzone: <t/f> | secure_boot: <t/f> | otp: <int-bits> | sha256_hw: <t/f>
+  trng_hw: <t/f> | fault_detection: <t/f>
+  crypto_chip: <string>              # External secure element, e.g. ATECC608A, ATECC508A
+  features: <string-csv>             # e.g. key-storage,hw-crypto,ecdh,ecdsa
+
+# coprocessor block — OPTIONAL. Secondary MCU (comms, safety, ML).
+coprocessor:
+  mcu: <string> | flash: <int> | rom: <int> | sram: <int> | clock_max: <int> | voltage: <float>
+  wifi: <string> | bt: <string> | role: <string>    # role: e.g. wifi-coprocessor, dedicated-to-comms-only
+
+# battery block — OPTIONAL. For boards with onboard battery management.
+battery:
+  type: <string> | cells: <int> | voltage: <string> | capacity_min: <int-mAh> | charger: <onboard|external>
+
+# power block — OPTIONAL. Fine-grained power consumption data.
+power:
+  input_min: <float> | input_max: <float> | io_source_current: <int-mA> | io_sink_current: <int-mA>
+  deep_sleep: <string> | light_sleep: <string> | dormant_current: <string>
+
+# ============================================================
+# SECTION 3 — VARIANTS (OPTIONAL)
+# ============================================================
+# Purpose: SKU-level variant table for board families with multiple hardware configs.
+# The column format is flexible — document it in a comment directly above the array.
+# Boolean values use t/f. Null values use null.
+# Format example: variant_id | sku | flash | sram | clock_max | feature_flag
+variants[<int>]:
+  - <string-variant-id>|<string-sku>|<any>|<any>|<t/f>
+
+# ============================================================
+# SECTION 4 — ARCHITECTURE MODES (OPTIONAL)
+# ============================================================
+# Purpose: For MCUs that support multiple ISA modes selectable at boot (e.g. RP2350 Arm/RISC-V).
+# Modes are mutually exclusive unless stated otherwise in notes.
+# Format: mode | isa | fpu | dsp | notes
+arch_modes[<int>]:
+  - <string-mode>|<string-isa>|<t/f>|<t/f>|<string-notes>
+
+# ============================================================
+# SECTION 5 — ELECTRICAL PROFILE: POWER PINS (REQUIRED)
+# ============================================================
+# Purpose: All dedicated power, ground, reset and reference pins (not GPIO-capable).
+# Format: name | direction | voltage | type
+#
+# direction enum:   input | output | null
+# voltage:          numeric (V), range string (e.g. 1.8-5.5), or null
+# type enum:        null | ground | protective-earth | reset | boot-mode | usb-power | main-power
+#                   adc-ref | rtc-backup | enable | internal | unregulated | regulated | nina-module-power
+
+powerPins[<int>]:
+  - <string-name>|<enum: input|output|null>|<float|string|null>|<string-type>
+
+# ============================================================
+# SECTION 6 — I/O & GPIO MAP (REQUIRED)
+# ============================================================
+# Purpose: Complete pin map. Array name and format vary by board domain.
+#
+# Allowed array names:
+#   gpio[N]                 Maker / IoT / SBC boards
+#   inputs[N]               PLC / industrial input channels
+#   outputs[N]              PLC / industrial output channels
+#   embedded_inputs[N]      PLC with embedded I/O module
+#   embedded_outputs[N]     PLC with embedded I/O module
+#   relay_outputs[N]        Dedicated relay output channels
+#   high_speed_counters[N]  High-speed counter / encoder inputs
+#
+# FORMAT FOR maker / iot boards:
+#   pin | type | pwm | int | label | roles
+#   - pin:   integer (logical Arduino/firmware pin number)
+#   - type:  digital | analog | input-only | power | ground | special
+#   - pwm:   t/f — supports PWM output
+#   - int:   t/f — supports hardware external interrupt
+#   - label: silk-screen label, e.g. D3 PWM, A0, GP26 / A0
+#   - roles: comma-separated functional roles, use null if none
+#            Protocol roles: uart0-tx, uart0-rx, i2c0-sda, i2c0-scl,
+#                            spi0-mosi, spi0-miso, spi0-sck, spi0-ss,
+#                            spi-mosi, spi-miso, spi-sck, spi-ss
+#            Special roles:  status-led, rgb-red, rgb-green, rgb-blue,
+#                            int0, int1, int2 ... intN,
+#                            adc:N (ADC channel), dac:N (DAC channel),
+#                            touch:N, strapping, boot-mode, boot-btn,
+#                            swdio, swdclk, usb-dm, usb-dp,
+#                            can0-tx, can0-rx, hall-sensor, lp-gpio
+#
+# FORMAT FOR plc / industrial boards:
+#   pin | type | direction | range | label | roles
+#   - type:      digital | analog | relay-no | relay-nc | analog-digital | counter
+#   - direction: input | output
+#   - range:     voltage/current string, e.g. 0-24VDC, 0-10V, 250VAC/24VDC
+#   - roles:     adc:t, digital:t, max:10A, peak:15A, encoder, pulse
+
+gpio[<int>]:
+  - <pin>|<type>|<pwm: t/f>|<int: t/f>|<string-label>|<string-roles>
+
+# ============================================================
+# SECTION 7 — PERIPHERALS & CONNECTIVITY (REQUIRED)
+# ============================================================
+# Purpose: Communication interfaces, onboard hardware and connectivity.
+# Format: peripheral-name | param:value | param:value | ...
+#
+# Common peripheral names (maker / IoT):
+#   uart0..N, i2c0..N, spi0..N, spi-vspi, spi-hspi,
+#   ledc-pwm, pio, can, twai, i2s, rmt, dac, touch,
+#   usb-hid, hall-sensor, ulp, sercom
+#
+# Common peripheral names (PLC / industrial):
+#   ethernet, rs485, motion-cip, sd-card, dlr, rtc, pio
+#
+# peripherals count [N] should match actual number of lines in the array.
+# If a peripheral is present on select variants only, document with: note:variant-id-only
+
+peripherals[<int>]:
+  - <string-name>|<string-param>:<value>|<string-param>:<value>
+
+# usb block — OPTIONAL. USB connectivity details.
+# type enum: USB-A | USB-B | Micro-USB-B | USB-C | Mini-USB | none
+# mode examples: device | host | device+host | device+OTG | programming+data | USB-Serial+JTAG
+# Optional fields: version, mode, baud_max, otg, native, speed, standard
+usb:
+  type: <string> | chip: <string> | vid: <hex-0xXXXX> | pid: <hex-0xXXXX>
+
+# For boards with dual USB ports (e.g. ESP32-C6, Arduino Due), use named blocks:
+# usb_native: ...
+# usb_uart: ...
+# usb_programming: ... / usb_native: ...
+
+# ethernet block — OPTIONAL. For networked boards and PLCs.
+ethernet:
+  connector: <string> | speed: <string> | protocol: <string-csv>
+
+# internal block — OPTIONAL. Onboard peripherals not exposed on headers.
+# Common fields: adc_temp_sensor, adc_resolution, adc_sample_rate, rtc, rtc_clock,
+#                dma_channels, timer_alarms, bootsel_button, onboard_led, swd_pins,
+#                sleep_current, dormant_current, lp_core, lp_clock, op_amp
+internal:
+  <key>: <value> | <key>: <value>
+
+# ============================================================
+# SECTION 8 — SPECIALIZED DOMAIN SECTIONS (OPTIONAL)
+# ============================================================
+# Use only when relevant to the board domain. Each block must have a comment.
+
+# adc block — Explicit ADC spec (industrial / high-res boards)
+adc:
+  resolution: <string> | resolution_configurable: <t/f> | channels: <int> | sample_rate: <string>
+  lsb_value: <string> | input_impedance: <int-Ohm> | accuracy: <string> | repeatability: <string>
+  cycle_time: <string> | voltage_range: <string>
+
+# dac block — Explicit DAC spec
+dac:
+  channels: <int> | resolution: <string> | pins: <string-csv> | voltage_range: <string>
+  sample_rate: <string>
+
+# digital_input block — PLC digital input timing spec
+digital_input:
+  freq_max: <string> | threshold_low: <string> | threshold_high: <string> | filter: <string>
+
+# debug block — Debug interface specification
+debug:
+  jtag: <t/f> | swd: <t/f> | trace: <t/f> | programmer: <string-csv>
+
+# sensors block — Onboard sensors (IMU, microphone, barometer, etc.)
+sensors:
+  imu: <string> | imu_dof: <int> | imu_features: <string-csv> | imu_bus: <string>
+  microphone: <string> | mic_type: <string> | mic_snr: <string>
+  temp_sensor: <t/f> | baro: <string>
+
+# onboard block — Onboard user interface elements
+onboard:
+  user_led: <string> | rgb_led: <t/f> | rgb_led_controller: <string>
+  bootsel_button: <t/f> | boot_button: <t/f> | reset_button: <t/f>
+  led_matrix: <t/f> | display: <string>
+
+# leds block — Named status LEDs
+# Format: label | color | function
+leds[<int>]:
+  - <string-label>|<string-color>|<string-function>
+
+# timers block — Timer/counter hardware (relevant for STM32, AVR advanced)
+# Format: timer | type | channels | freq_max | features
+timers[<int>]:
+  - <string-timer>|<string-type>|<int-channels>|<string-freq>|<string-features-csv>
+
+# pico_delta block — Pico family delta table (RP2040 vs RP2350)
+# Format: feature | previous_value | new_value
+pico_delta[<int>]:
+  - <string-feature>|<string-old>|<string-new>
+
+# ============================================================
+# SECTION 9 — RESTRICTIONS & COMPATIBILITY (REQUIRED)
+# ============================================================
+# Purpose: Electrical limits, simulator safety alerts and software compatibility.
+
+# restrictions block — REQUIRED.
+# Required fields: at least one of max_io_current or input_voltage_max
+# Optional fields: total_current_limit, operating_voltage, max_io_voltage, max_3v3_current,
+#                  operating_temp_min, operating_temp_max, protection (IP rating),
+#                  din_rail, panel_mount, humidity, shield_warning
+restrictions:
+  max_io_current: <string-mA> | total_current_limit: <string-mA> | operating_voltage: <string>
+  warnings[<int>]:
+    - <string-warning>                 # Plain English. Start with affected pin/block if specific.
+
+# compatibility block — REQUIRED.
+# Required: at least one SDK/core reference (arduinoCore, sdk, or pio)
+# Optional: frameworks, languages, bootloader, plc_languages, iec_standard,
+#           security, shield_warning, debug, programmer, adc_resolution, pwm_resolution
+compatibility:
+  <key>: <value> | <key>: <value>
+
+# ============================================================
+# SECTION 10 — AGENT SKILLS (REQUIRED)
+# ============================================================
+# Purpose: Internal configuration consumed by dendriForge simulator and AI engine.
+# IMPORTANT: The root key is always `dendriForge:` (not neuroforge).
+
+dendriForge:
+  boardFamilySkillId: <string>              # REQUIRED — maps to agent_skills/boards directory
+                                             # Known values: avr-family, rp2040-family, rp2350-family,
+                                             #   stm32f1-family, stm32f4-family, stm32h7-family,
+                                             #   sam3x-family, samd21-family, renesas-ra-family,
+                                             #   esp32-family, esp32s3-family, compactlogix-family
+  boardProfileId: <string>                  # REQUIRED — Rust BoardProfile identifier (kebab-case)
+                                             # Must match the board's id field in Section 1
+  defaultLanguageSkills[<int>]: <string-csv> # REQUIRED — ordered list of preferred language skill IDs
+                                             # e.g. arduino-cpp-avr, micropython-rp2040, rust-embassy-stm32
+  plcIdeSupport: <t/f>                      # Optional — PLC IDE integration (Arduino PLC IDE, Studio 5000)
+  debugInterface: <string>                  # Optional — e.g. SWD, JTAG, SWD+JTAG, none
+  simulationOnly: <t/f>                     # Optional — true for virtual / emulation-only board profiles
+  variantIds[<int>]: <string-csv>           # Optional — list of variant profile IDs (from Section 3)
+  hasCoprocessor: <t/f>                     # Optional — has secondary MCU (see Section 2 coprocessor block)
+  coprocessorId: <string>                   # Optional — secondary MCU's boardProfileId
+  onboardSensors[<int>]: <string-csv>       # Optional — sensor skill IDs (from Section 8 sensors block)
+  secureElementId: <string>                 # Optional — external crypto chip skill ID
+  usbHidSupport: <t/f>                      # Optional — supports USB HID (keyboard, mouse, gamepad)
+  wirelessFeatures[<int>]: <string-csv>     # Optional — wireless protocol skill IDs
+                                             # e.g. wifi6, ble5, zigbee3, thread1.3, matter
+  formFactor: <string>                      # Optional — physical form factor label
+                                             # e.g. nano, mkr, mega, uno, din-rail, devkit, custom
+  hidSupport: <t/f>                         # Optional — alias for usbHidSupport (prefer usbHidSupport)
+  wirelessCapable: <t/f>                    # Optional — simple flag when wirelessFeatures not needed

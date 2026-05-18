@@ -1,0 +1,158 @@
+# METADATA:
+project_name: thermistor-ntc-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: thermistor-ntc
+name: "NTC Thermistor"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60539-1"
+url: null
+image: thermistor-ntc.svg
+symbol: thermistor-ntc-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  resistance_25:
+    label: "Resistance at 25°C (R25)"
+    unit: Ω
+    default: 10000
+    options: [100, 470, 1000, 2200, 4700, 10000, 22000, 47000, 100000]
+    type: enum
+    editable: true
+  b_constant:
+    label: "B Constant (B25/85)"
+    unit: V
+    default: 3950
+    options: [3380, 3435, 3470, 3950, 4050, 4150, 4250, 4400]
+    type: enum
+    editable: true
+  tolerance:
+    label: "Resistance Tolerance at 25°C"
+    unit: "%"
+    default: 1
+    options: [0.5, 1, 2, 5, 10]
+    type: enum
+    editable: true
+  b_tolerance:
+    label: "B Constant Tolerance"
+    unit: "%"
+    default: 1
+    options: [0.5, 1, 2, 3]
+    type: enum
+    editable: true
+  temp_min:
+    label: "Min Operating Temperature"
+    unit: V
+    default: -40
+    min: -55
+    max: 0
+    type: float
+    editable: true
+  temp_max:
+    label: "Max Operating Temperature"
+    unit: V
+    default: 125
+    min: 85
+    max: 200
+    type: float
+    editable: true
+  dissipation_constant:
+    label: "Dissipation Constant (δ)"
+    unit: V
+    default: 0.001
+    min: 0.0001
+    max: 0.1
+    type: float
+    editable: false
+  thermal_time_constant:
+    label: "Thermal Time Constant (τ)"
+    unit: V
+    default: 10
+    min: 0.5
+    max: 120
+    type: float
+    editable: false
+  max_power:
+    label: "Max Power Dissipation"
+    unit: W
+    default: 0.1
+    min: 0.01
+    max: 5
+    type: float
+    editable: false
+  package:
+    label: "Package"
+    default: "SMD-0402"
+    options: ["SMD-0201", "SMD-0402", "SMD-0603", "SMD-0805", "SMD-1206", "THT-disc", "THT-bead", "THT-rod", "probe-epoxy", "probe-glass"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[2|]{id|direction|type|voltage_max|current_max|notes}:
+  A|passive|analog|"50V"|"500mA"|"thermistor terminal A"
+  B|passive|analog|"50V"|"500mA"|"thermistor terminal B"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: lookup-table
+  equation: "R(T) = resistance_25 * exp(b_constant * (1/(T+273.15) - 1/298.15)); T in Celsius"
+  bidirectional: true
+  dynamic: true
+  thermal_model: true
+  noise_model: false
+  states[2]:
+    - nominal
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "50V"
+  max_current: "500mA"
+  max_power: "{max_power}W"
+  max_temp: 125
+  min_temp: -40
+warnings[4]:
+  - "Self-heating error: keep measurement current low (< 0.1mA for 10kΩ NTC) to avoid dissipation-induced offset"
+  - "B constant varies slightly with temperature — use Steinhart-Hart equation for precision applications"
+  - "Tolerance stack: resistance tolerance and B tolerance both contribute to temperature error"
+  - "Response time depends on thermal mass and medium — τ in still air is much longer than in liquid"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["temperature-sensing", "inrush-limiting", "battery-management", "thermal-protection", "voltage-divider"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 50
+  height: 30
+  ports_layout: horizontal
+  port_A: {x: 0, y: 15}
+  port_B: {x: 50, y: 15}
+  label_position: top
+  value_display: "NTC {resistance_25}Ω / B={b_constant}K"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: thermistor-ntc
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Passives"
+  tags[7]:
+    - thermistor
+    - ntc
+    - temperature-sensor
+    - passive
+    - analog
+    - thermal
+    - iec-60539

@@ -1,0 +1,122 @@
+# METADATA:
+project_name: arduino-opta-wifi-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: arduino-opta-wifi
+name: "Arduino Opta WiFi"
+manufacturer: Arduino
+cpu: "STM32H747XI Dual Cortex-M7/M4"
+category: plc
+form_factor: compact
+standard: "IEC 61131-3"
+image: arduino-opta-wifi.svg
+url: "https://store.arduino.cc/products/opta-wifi"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  memory_work: 1024KB
+  memory_load: 16384KB
+  memory_retain: 2048KB
+  supply_voltage: 24V
+  power_consumption: 3W
+dims:
+  w: 69.0
+  h: 90.0
+  t: 80.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerPins[4|]{name|direction|voltage|type}:
+  VIN+|input|24V|null
+  VIN-|null|null|ground
+  PE|null|null|ground
+  3V3|output|"3.3V"|null
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[2|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|8|"%IX0.0"|"%IX0.7"|null
+  1|0|DO|4|"%QX0.0"|"%QX0.3"|null
+
+## 5. DIGITAL CHANNEL DESCRIPTORS:
+# Format: addr | direction | label | roles
+digitalChannels[12|]{addr|direction|label|roles}:
+  "%IX0.0"|input|"I1"|di
+  "%IX0.1"|input|"I2"|di
+  "%IX0.2"|input|"I3"|di
+  "%IX0.3"|input|"I4"|di
+  "%IX0.4"|input|"I5"|di
+  "%IX0.5"|input|"I6"|di
+  "%IX0.6"|input|"I7"|di
+  "%IX0.7"|input|"I8"|di
+  "%QX0.0"|output|"O1"|do
+  "%QX0.1"|output|"O2"|do
+  "%QX0.2"|output|"O3"|do
+  "%QX0.3"|output|"O4"|do
+
+## 6. ANALOG CHANNEL DESCRIPTORS:
+# Format: addr | direction | resolution | range | label
+analogChannels[8|]{addr|direction|resolution|range|label}:
+  "%IW0"|input|12|"0-10V"|"AI1"
+  "%IW2"|input|12|"0-10V"|"AI2"
+  "%IW4"|input|12|"0-10V"|"AI3"
+  "%IW6"|input|12|"0-10V"|"AI4"
+  "%IW8"|input|12|"0-10V"|"AI5"
+  "%IW10"|input|12|"0-10V"|"AI6"
+  "%IW12"|input|12|"0-10V"|"AI7"
+  "%IW14"|input|12|"0-10V"|"AI8"
+
+## 7. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[5|]{peripheral|param|value}:
+  ethernet|"port:502"|"proto:Modbus-TCP;speed:10-100Mbps"
+  modbus-tcp|"port:502"|"role:server"
+  modbus-rtu|"baud:115200"|"proto:RS485;half-duplex:true"
+  opc-ua|"port:4840"|null
+  serial|"baud:115200"|"proto:RS485"
+usb:
+  type: "USB-C"
+  vid: "0x2341"
+  pid: "0x0069"
+
+## 8. RACKS & EXPANSION:
+# Format: rack | slots | backplane_current | voltage
+racks[1|]{rack|slots|backplane_current|voltage}:
+  0|1|500mA|24V
+expansion:
+  wifi: "802.11b/g/n 2.4GHz"
+  ble: "Bluetooth 4.2 BLE"
+  secure_element: ATECC608B
+  rtc: "~10days retention"
+
+## 9. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "500mA"
+  total_current_limit: "3000mA"
+  warnings[5]:
+    - "Inputs are configurable digital or analog 0-10V; not simultaneously"
+    - "Relay outputs rated 250V AC 10A max; max switching voltage 400V AC"
+    - "Supply voltage must be 12-24V DC; do not exceed 24V"
+    - "USB-C port powers CPU only; does not power PLC outputs or peripherals"
+    - "WiFi and BLE available only on AFX00002 variant (Opta WiFi)"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "Arduino IDE 2.x;Arduino PLC IDE"
+  runtime: "STM32H747XI FW"
+  languages: "LD;FBD;ST;SFC;IL"
+  order_ref: AFX00002
+
+## 10. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: arduino-opta-wifi
+  defaultLanguageSkills[4]:
+    - st-iec61131
+    - ld-arduino-plc
+    - fbd-arduino-plc
+    - arduino-cpp-stm32

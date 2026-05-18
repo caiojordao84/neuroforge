@@ -1,0 +1,82 @@
+# METADATA:
+project_name: compactlogix-5069-l310er-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: compactlogix-5069-l310er
+name: "Allen-Bradley CompactLogix 5380"
+manufacturer: "Rockwell Automation"
+cpu: "5069-L310ER"
+category: plc
+form_factor: compact
+standard: "IEC 61131-3"
+image: compactlogix-5069-l310er.svg
+url: "https://rockwellautomation.com/products/compactlogix-5380.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  supply_voltage: 24V
+  memory_work: 2048KB
+  memory_load: 2048KB
+  power_consumption: 5W
+  di_integrated: 16
+  do_integrated: 16
+  ai_integrated: 4
+  ao_integrated: 2
+dims:
+  w: 120.0
+  h: 90.0
+  t: 87.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerPins[3|]{name|direction|voltage|type}:
+  L+|input|24V|null
+  M|null|null|ground
+  PE|null|null|ground
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[4|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|16|"%IX0.0"|"%IX1.7"|null
+  1|0|DO|16|"%QX0.0"|"%QX1.7"|null
+  2|0|AI|4|"%IW0"|"%IW3"|null
+  3|0|AO|2|"%QW0"|"%QW1"|null
+
+## 5. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[3|]{peripheral|param|value}:
+  ethernetip|"port:44818"|"mode:dual-switch;speed:100Mbps"
+  modbus-tcp|"port:502"|"role:server;max_connections:128"
+  opc-ua|"port:4840"|"security:basic256sha256;max_sessions:25"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "2000mA"
+  total_current_limit: "3000mA"
+  operating_temp: "0-55C"
+  protection_class: IP20
+  warnings[4]:
+    - "Integrated DO are solid-state (0.5A per point, sourcing) — not relay outputs"
+    - "Maximum 8 expansion 5069 I/O modules supported beyond integrated I/O"
+    - "SD card recommended for non-volatile program retention across power cycles"
+    - "Studio 5000 v32 or later required for 5380 series programming"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "Studio 5000 v32+"
+  runtime: "Firmware 32.011+"
+  languages: "LD;FBD;ST;SFC"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: compactlogix-5069-l310er
+  defaultLanguageSkills[4]:
+    - ld-iec61131
+    - fbd-iec61131
+    - st-iec61131
+    - sfc-iec61131

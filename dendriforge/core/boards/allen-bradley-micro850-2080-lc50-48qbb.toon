@@ -1,0 +1,141 @@
+# METADATA:
+project_name: allen-bradley-micro850-2080-lc50-48qbb-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: allen-bradley-micro850-2080-lc50-48qbb
+name: "Allen-Bradley Micro850 48-Point (2080-LC50-48QBB)"
+manufacturer: "Allen-Bradley / Rockwell Automation"
+cpu: "Micro850 24V DC sourcing 28DI/20DO"
+category: plc
+form_factor: compact
+standard: "IEC 61131-3"
+image: allen-bradley-micro850-2080-lc50-48qbb.svg
+url: "https://www.rockwellautomation.com/en-us/products/hardware/allen-bradley/programmable-controllers/micro-programmable-controllers/micro850.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  memory_work: 10KB
+  memory_load: 20KB
+  supply_voltage: 24V
+  power_consumption: 33W
+  di_integrated: 28
+  do_integrated: 20
+  ai_integrated: 0
+dims:
+  w: 238.0
+  h: 90.0
+  t: 80.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerSupply[4|]{name|direction|voltage|type}:
+  L+|input|24V|supply
+  M|input|null|ground
+  PE|input|null|protective-earth
+  SENSOR_SUPPLY|output|24V|sensor-power
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[2|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|28|"%IX0.0"|"%IX3.3"|null
+  1|0|DO|20|"%QX0.0"|"%QX2.3"|null
+
+## 5. DIGITAL CHANNEL DESCRIPTORS:
+# Format: addr | direction | label | roles
+digitalChannels[48|]{addr|direction|label|roles}:
+  "%IX0.0"|input|"DI 0.0 (HS)"|"di;hsc"
+  "%IX0.1"|input|"DI 0.1 (HS)"|"di;hsc"
+  "%IX0.2"|input|"DI 0.2 (HS)"|"di;hsc"
+  "%IX0.3"|input|"DI 0.3 (HS)"|"di;hsc"
+  "%IX0.4"|input|"DI 0.4 (HS)"|"di;hsc"
+  "%IX0.5"|input|"DI 0.5 (HS)"|"di;hsc"
+  "%IX0.6"|input|"DI 0.6 (HS)"|"di;hsc"
+  "%IX0.7"|input|"DI 0.7 (HS)"|"di;hsc"
+  "%IX1.0"|input|"DI 1.0 (HS)"|"di;hsc"
+  "%IX1.1"|input|"DI 1.1 (HS)"|"di;hsc"
+  "%IX1.2"|input|"DI 1.2 (HS)"|"di;hsc"
+  "%IX1.3"|input|"DI 1.3 (HS)"|"di;hsc"
+  "%IX1.4"|input|"DI 1.4 (ST)"|di
+  "%IX1.5"|input|"DI 1.5 (ST)"|di
+  "%IX1.6"|input|"DI 1.6 (ST)"|di
+  "%IX1.7"|input|"DI 1.7 (ST)"|di
+  "%IX2.0"|input|"DI 2.0 (ST)"|di
+  "%IX2.1"|input|"DI 2.1 (ST)"|di
+  "%IX2.2"|input|"DI 2.2 (ST)"|di
+  "%IX2.3"|input|"DI 2.3 (ST)"|di
+  "%IX2.4"|input|"DI 2.4 (ST)"|di
+  "%IX2.5"|input|"DI 2.5 (ST)"|di
+  "%IX2.6"|input|"DI 2.6 (ST)"|di
+  "%IX2.7"|input|"DI 2.7 (ST)"|di
+  "%IX3.0"|input|"DI 3.0 (ST)"|di
+  "%IX3.1"|input|"DI 3.1 (ST)"|di
+  "%IX3.2"|input|"DI 3.2 (ST)"|di
+  "%IX3.3"|input|"DI 3.3 (ST)"|di
+  "%QX0.0"|output|"DO 0.0 (HS)"|"do;fast-counter"
+  "%QX0.1"|output|"DO 0.1 (HS)"|"do;fast-counter"
+  "%QX0.2"|output|"DO 0.2 (HS)"|"do;fast-counter"
+  "%QX0.3"|output|"DO 0.3 (HS)"|"do;fast-counter"
+  "%QX0.4"|output|"DO 0.4 (ST)"|do
+  "%QX0.5"|output|"DO 0.5 (ST)"|do
+  "%QX0.6"|output|"DO 0.6 (ST)"|do
+  "%QX0.7"|output|"DO 0.7 (ST)"|do
+  "%QX1.0"|output|"DO 1.0 (ST)"|do
+  "%QX1.1"|output|"DO 1.1 (ST)"|do
+  "%QX1.2"|output|"DO 1.2 (ST)"|do
+  "%QX1.3"|output|"DO 1.3 (ST)"|do
+  "%QX1.4"|output|"DO 1.4 (ST)"|do
+  "%QX1.5"|output|"DO 1.5 (ST)"|do
+  "%QX1.6"|output|"DO 1.6 (ST)"|do
+  "%QX1.7"|output|"DO 1.7 (ST)"|do
+  "%QX2.0"|output|"DO 2.0 (ST)"|do
+  "%QX2.1"|output|"DO 2.1 (ST)"|do
+  "%QX2.2"|output|"DO 2.2 (ST)"|do
+  "%QX2.3"|output|"DO 2.3 (ST)"|do
+
+## 6. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  ethernetip|"port:44818"|"protocol:EtherNet/IP;speed:10-100Mbps"
+  modbus-tcp|"port:502"|"role:server"
+  serial|"baud:19200"|"proto:RS232;port:1"
+  serial|"baud:19200"|"proto:RS485;port:2"
+usb:
+  type: "USB-B"
+  function: "programming"
+
+## 7. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  supply_voltage: 24V
+  supply_current_max: 1400mA
+  io_output_current_max: 1000mA
+  sensor_supply_current: 400mA
+  operating_temp: "0-65°C"
+  storage_temp: "-40-85°C"
+  protection_class: IP20
+  warnings[6]:
+    - "Supply voltage must be 24V DC (20.4-26.4V); AC input version is 2080-LC50-48AWB"
+    - "12 HS inputs (IX0.0-IX1.3) share channels with 6 HSC counters at up to 100kHz"
+    - "4 HS outputs (QX0.0-QX0.3) share channels with 3 PTO/PWM channels"
+    - "Analog I/O requires plug-in modules (2080-IF2, 2080-OF2, 2080-IF4); none onboard"
+    - "Maximum 4 local expansion I/O modules; maximum total 132 I/O points"
+    - "RS232 and RS485 are non-isolated; cannot be used simultaneously"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "Connected Components Workbench (CCW) v21+"
+  runtime: "Micro850 FW11"
+  languages: "LD;FBD;ST;SFC;IL"
+  order_ref: "2080-LC50-48QBB"
+
+## 8. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: allen-bradley-micro850-2080-lc50-48qbb
+  defaultLanguageSkills[3]:
+    - ld-ccw-micro800
+    - fbd-ccw-micro800
+    - st-iec61131

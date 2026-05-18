@@ -1,0 +1,75 @@
+# METADATA:
+project_name: panasonic-fp-x-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: panasonic-fp-x
+name: "Panasonic FP-X"
+manufacturer: "Panasonic Electric Works"
+cpu: "AFPX-C30T"
+category: plc
+form_factor: compact
+standard: "IEC 61131-3"
+image: panasonic-fp-x.svg
+url: "https://industry.panasonic.com/global/en/products/fasys/plc/plc/fp-x"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  memory_work: 64KB
+  memory_load: 1024KB
+  memory_retain: 16KB
+  supply_voltage: 24V
+  power_consumption: 30W
+dims:
+  w: 90.0
+  h: 90.0
+  t: 88.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerPins[3|]{name|direction|voltage|type}:
+  V+|input|"24V"|null
+  V-|input|null|ground
+  SHIELD|input|null|ground
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[2|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|16|"%IX0.0"|"%IX1.7"|null
+  1|0|DO|14|"%QX0.0"|"%QX1.5"|null
+
+## 5. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[3|]{peripheral|param|value}:
+  serial|"baud:115200;proto:RS232"|"port:tool-port"
+  modbus-rtu|"baud:9600;proto:RS485"|"role:master-slave"
+  ethernet|"port:80"|"via:AFPX-ETH-cassette"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "2000mA"
+  total_current_limit: "3000mA"
+  warnings[5]:
+    - "FP-X series is discontinued — recommended replacement is FP-XH series"
+    - "Built-in EEPROM retention — no backup battery needed; EEPROM write limit 100000 cycles"
+    - "Ethernet not built-in — requires optional AFPX-ETH communication cassette"
+    - "FPWIN GR (ladder only) and FPWIN Pro (IEC 61131-3) programs are not cross-compatible"
+    - "Maximum 3 cassette slots on left side of CPU — plan analog and comm allocation carefully"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "Control FPWIN Pro 7"
+  runtime: "FP-X Firmware"
+  languages: "LD;ST;IL;FBD;SFC"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: panasonic-fp-x
+  defaultLanguageSkills[3]:
+    - ld-iec61131
+    - st-iec61131
+    - fbd-iec61131

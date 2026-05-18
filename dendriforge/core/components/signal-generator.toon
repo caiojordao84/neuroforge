@@ -1,0 +1,147 @@
+# METADATA:
+project_name: signal-generator-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: signal-generator
+name: "Signal Generator"
+family: electricals
+subfamily: sources
+category: source
+standard: "IEC 61010-1"
+url: null
+image: signal-generator.svg
+symbol: signal-generator-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  waveform_type:
+    label: "Waveform Type"
+    default: "sine"
+    options: ["sine", "square", "triangle", "noise", "pwm", "DC"]
+    type: enum
+    editable: true
+  frequency:
+    label: "Frequency"
+    unit: V
+    default: 1000
+    min: 0.001
+    max: 1000000
+    type: float
+    editable: true
+  amplitude:
+    label: "Amplitude (peak)"
+    unit: V
+    default: 1
+    min: 0
+    max: 20
+    type: float
+    editable: true
+  offset:
+    label: "DC Offset"
+    unit: V
+    default: 0
+    min: -20
+    max: 20
+    type: float
+    editable: true
+  duty_cycle:
+    label: "Duty Cycle (square/pwm only)"
+    unit: "%"
+    default: 50
+    min: 0
+    max: 100
+    type: float
+    editable: true
+  phase:
+    label: "Phase Offset"
+    unit: "%"
+    default: 0
+    min: 0
+    max: 360
+    type: float
+    editable: true
+  output_impedance:
+    label: "Output Impedance"
+    unit: Ω
+    default: 50
+    options: [50, 600]
+    type: enum
+    editable: true
+  output_enabled:
+    label: "Output Enabled"
+    default: true
+    type: bool
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  OUT|output|analog|"20V"|"200mA"|"main signal output"
+  OUT_INV|output|analog|"20V"|"200mA"|"inverted signal output"
+  GND|output|ground|null|null|"signal ground / chassis"
+  TRIG_IN|input|digital|"5V"|"10mA"|"external trigger / sync input"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  waveform: sine
+  equation: "V_out = amplitude * waveform(waveform_type, frequency, t, phase) + offset"
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: true
+  states[3]:
+    - off
+    - running
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "20V"
+  max_current: "200mA"
+  max_power: null
+  max_temp: 50
+  min_temp: -10
+warnings[3]:
+  - "Do not connect output directly to low-impedance loads without proper matching"
+  - "DC offset combined with amplitude must not exceed max_voltage rating"
+  - "External trigger voltage must not exceed 5V TTL levels"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["circuit-testing", "frequency-response", "filter-characterisation", "oscilloscope-input"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 80
+  height: 70
+  ports_layout: custom
+  port_OUT: {x: 80, y: 15}
+  port_OUT_INV: {x: 80, y: 35}
+  port_GND: {x: 80, y: 55}
+  port_TRIG_IN: {x: 0, y: 30}
+  label_position: top
+  value_display: "{waveform_type} / {frequency}Hz / {amplitude}Vp"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: signal-generator
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Sources"
+  tags[7]:
+    - signal-generator
+    - source
+    - waveform
+    - sine
+    - square
+    - laboratory
+    - bench-instrument

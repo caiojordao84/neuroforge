@@ -1,0 +1,114 @@
+# METADATA:
+project_name: openplc-raspberry-pi4b-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: openplc-raspberry-pi4b
+name: "OpenPLC Native Runtime — Raspberry Pi 4 Model B (BCM2711, 1.5GHz, 40-pin GPIO)"
+manufacturer: "Raspberry Pi Foundation"
+mcu: "BCM2711 (Cortex-A72 quad-core, 1.5GHz, 64-bit)"
+category: maker
+image: openplc-raspberry-pi4b.svg
+url: "https://openplcproject.com/runtime/raspberry-pi/"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 0
+  flash_available: 0
+  sram: 4294967296
+  eeprom: 0
+  clock: 1500000000
+  voltage: "3.3V"
+dims:
+  w: 85.0
+  h: 56.0
+  t: 17.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  5V_1|output|"5V"|null
+  5V_2|output|"5V"|null
+  3V3_1|output|"3.3V"|null
+  3V3_2|output|"3.3V"|null
+  GND|null|null|ground
+  ID_EEPROM|inout|"3.3V"|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# WiringPi → BCM mapping used by raspberrypi.cpp hardware layer
+# %IX0.0/%IX0.1 (BCM2/3) have FIXED hardware pull-UPs — read TRUE when unconnected!
+# All GPIO at 3.3V logic; max 16mA per pin (50mA burst), 1A total GPIO bank
+gpio[26|]{pin|type|pwm|int|label|roles}:
+  2|digital|false|false|"BCM2 / WP8 / Phys3 / %IX0.0 (DI) / I2C SDA — PULL-UP always HIGH"|"di;i2c-sda"
+  3|digital|false|false|"BCM3 / WP9 / Phys5 / %IX0.1 (DI) / I2C SCL — PULL-UP always HIGH"|"di;i2c-scl"
+  4|digital|false|false|"BCM4 / WP7 / Phys7 / %IX0.2 (DI)"|di
+  17|digital|false|false|"BCM17 / WP0 / Phys11 / %IX0.3 (DI)"|di
+  27|digital|false|false|"BCM27 / WP2 / Phys13 / %IX0.4 (DI)"|di
+  22|digital|false|false|"BCM22 / WP3 / Phys15 / %IX0.5 (DI)"|di
+  10|digital|false|false|"BCM10 / WP12 / Phys19 / %IX0.6 (DI) / SPI MOSI"|"di;spi-mosi"
+  9|digital|false|false|"BCM9 / WP13 / Phys21 / %IX0.7 (DI) / SPI MISO"|"di;spi-miso"
+  11|digital|false|false|"BCM11 / WP14 / Phys23 / %IX1.0 (DI) / SPI SCLK"|"di;spi-sck"
+  5|digital|false|true|"BCM5 / WP21 / Phys29 / %IX1.1 (DI)"|di
+  6|digital|false|false|"BCM6 / WP22 / Phys31 / %IX1.2 (DI)"|di
+  13|digital|true|false|"BCM13 / WP23 / Phys33 / %IX1.3 (DI) / PWM1"|di
+  19|digital|false|false|"BCM19 / WP24 / Phys35 / %IX1.4 (DI) / SPI MISO1"|di
+  26|digital|false|false|"BCM26 / WP25 / Phys37 / %IX1.5 (DI)"|di
+  14|digital|false|false|"BCM14 / WP15 / Phys8 / %QX0.0 (DO) / UART TX"|"do;uart-tx"
+  15|digital|false|false|"BCM15 / WP16 / Phys10 / %QX0.1 (DO) / UART RX"|"do;uart-rx"
+  23|digital|false|false|"BCM23 / WP4 / Phys16 / %QX0.2 (DO)"|do
+  24|digital|false|false|"BCM24 / WP5 / Phys18 / %QX0.3 (DO)"|do
+  25|digital|false|false|"BCM25 / WP6 / Phys22 / %QX0.4 (DO)"|do
+  8|digital|false|false|"BCM8 / WP10 / Phys24 / %QX0.5 (DO) / SPI CE0"|"do;spi-ss"
+  7|digital|false|false|"BCM7 / WP11 / Phys26 / %QX0.6 (DO) / SPI CE1"|"do;spi-ss"
+  12|digital|true|false|"BCM12 / WP26 / Phys32 / %QX0.7 (DO) / PWM0"|do
+  16|digital|false|false|"BCM16 / WP27 / Phys36 / %QX1.0 (DO)"|do
+  20|digital|false|false|"BCM20 / WP28 / Phys38 / %QX1.1 (DO) / SPI MOSI1"|do
+  21|digital|false|false|"BCM21 / WP29 / Phys40 / %QX1.2 (DO) / SPI SCLK1"|do
+  18|digital|true|false|"BCM18 / WP1 / Phys12 / %QW0 (AO/PWM hardware)"|"adc:f;dac"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  ethernet|"port:8080"|"proto:OpenPLC-WebServer;role:runtime-master;upload:SFTP-SSH"
+  serial|"baud:115200"|"proto:Modbus-TCP;uart:BCM14,15;role:master"
+  i2c|"channels:1"|"sda:BCM2;scl:BCM3;speed:400kHz"
+  spi|"channels:2"|"mosi:BCM10;miso:BCM9;sck:BCM11;ce0:BCM8;ce1:BCM7"
+usb:
+  type: USB-C
+  chip: native
+  vid: "0x2E8A"
+  pid: "0x0004"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "16mA"
+  total_current_limit: "1000mA"
+  warnings[9]:
+    - "Raspberry Pi runs OpenPLC Runtime as a native Linux process — it is NOT a Modbus slave; IEC addresses start at %IX0.0 (no offset)"
+    - "%IX0.0 (BCM2) and %IX0.1 (BCM3) have FIXED hardware pull-UPs (1.8kΩ to 3.3V) — they read as TRUE when unconnected; invert logic in ladder for these inputs"
+    - "WiringPi library is REQUIRED; it was deprecated for RPi 4+ but an unofficial patched version (wiringpi 2.70+) must be installed manually for RPi 4/5"
+    - "OpenPLC deploys programs via the built-in web interface on port 8080 — no USB cable required; upload .st files through the browser"
+    - "All GPIO operate at 3.3V logic — NOT 5V tolerant; connecting 5V signals directly to GPIO will permanently damage BCM2711"
+    - "There are 0 hardware analog inputs on the Raspberry Pi GPIO; for AI you must add an external ADC (e.g. MCP3208 via SPI) and use a custom hardware layer"
+    - "There is only 1 hardware PWM analog output: %QW0 on BCM18 (Physical pin 12); BCM13 (Physical 33) can be used as PWM2 only with custom layer"
+    - "OpenPLC service starts automatically on boot (systemd); control with: sudo systemctl start/stop/status openplc"
+    - "The same GPIO mapping applies across RPi 1/2/3/4/5 — all share the 40-pin HAT header layout introduced on Model B+"
+compatibility:
+  os: "Raspberry Pi OS (32/64-bit, Bullseye/Bookworm)"
+  wiringpi: "2.70 (patched for RPi 4/5)"
+  frameworks: "openplc-v3"
+  languages: "LD;ST;FBD;SFC;IL"
+  webui_port: "8080"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: linux-plc-family
+  boardProfileId: openplc-raspberry-pi4b
+  defaultLanguageSkills[3]:
+    - ld-openplc-editor
+    - st-iec61131-openplc
+    - fbd-openplc-editor

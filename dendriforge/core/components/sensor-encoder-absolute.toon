@@ -1,0 +1,117 @@
+# METADATA:
+project_name: sensor-encoder-absolute-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: sensor-encoder-absolute
+name: "Absolute Encoder (Encoder Absoluto)"
+family: sensors
+subfamily: motion-position
+category: sensor
+standard: "IEC 60947-5-2"
+url: null
+image: sensor-encoder-absolute.svg
+symbol: sensor-encoder-absolute-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  resolution_bits:
+    label: "Resolution (Bits)"
+    default: 12
+    options: [8, 10, 12, 14, 16, 24]
+    type: enum
+    editable: true
+  output_protocol:
+    label: "Output Protocol"
+    default: "SSI"
+    options: ["SSI", "Parallel-Gray", "BISS-C"]
+    type: enum
+    editable: true
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 24
+    options: [5, 12, 24]
+    type: enum
+    editable: true
+  max_rpm:
+    label: "Maximum RPM"
+    unit: "RPM"
+    default: 6000
+    min: 1000
+    max: 12000
+    type: float
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+ports[6|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"{supply_voltage}"|"100mA"|"encoder supply voltage"
+  GND|input|ground|null|null|"encoder ground"
+  CLK_P|input|digital|"5V"|"20mA"|"SSI/BISS clock + (RS422 differential)"
+  CLK_N|input|digital|"5V"|"20mA"|"SSI/BISS clock - (RS422 differential)"
+  DATA_P|output|digital|"5V"|"20mA"|"SSI/BISS data + (RS422 differential)"
+  DATA_N|output|digital|"5V"|"20mA"|"SSI/BISS data - (RS422 differential)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: digital-io
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - idle
+    - measuring
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "{supply_voltage}"
+  max_current: "100mA"
+  max_power: null
+  max_temp: 85
+  min_temp: -20
+  ip_rating: "IP67"
+  safety_category: null
+warnings[3]:
+  - "Clock and Data lines operate on 5V RS422 differential standards, not 24V supply logic"
+  - "Ensure proper shielding and twisted pair wiring to prevent data corruption"
+  - "Exceeding the maximum mechanical RPM will result in permanent bearing damage"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["plc-*", "mcu-*", "act-motor-*", "comm-rs485-stub"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["servo-feedback", "cnc-positioning", "robotics-joint-angle"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 60
+  ports_layout: custom
+  port_VCC: {x: 15, y: 0}
+  port_GND: {x: 45, y: 0}
+  port_CLK_P: {x: 0, y: 20}
+  port_CLK_N: {x: 0, y: 40}
+  port_DATA_P: {x: 60, y: 20}
+  port_DATA_N: {x: 60, y: 40}
+  label_position: bottom
+  value_display: "{resolution_bits}-bit {output_protocol}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: sensors-family
+  componentProfileId: sensor-encoder-absolute
+  simulationEngine: digital-io
+  paletteGroup: "Sensors > Motion & Position"
+  tags[5]:
+    - encoder
+    - absolute
+    - ssi
+    - position
+    - rs422

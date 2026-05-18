@@ -1,0 +1,139 @@
+# METADATA:
+project_name: cmd-joystick-2axis-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: cmd-joystick-2axis
+name: "2-Axis Analog Joystick Module (KY-023)"
+family: command-elements
+subfamily: special-interfaces
+category: command
+standard: null
+url: null
+image: cmd-joystick-2axis.svg
+symbol: cmd-joystick-2axis-symbol.svg
+symbol_standard: custom
+
+## 2. PARAMETERS:
+params:
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 5
+    options: [3.3, 5]
+    type: enum
+    editable: true
+  axis_x_rest:
+    label: "X-Axis Rest Value (ADC counts)"
+    unit: null
+    default: 512
+    min: 0
+    max: 1023
+    type: int
+    editable: false
+  axis_y_rest:
+    label: "Y-Axis Rest Value (ADC counts)"
+    unit: null
+    default: 512
+    min: 0
+    max: 1023
+    type: int
+    editable: false
+  potentiometer_resistance:
+    label: "Potentiometer Resistance"
+    unit: Ω
+    default: 10000
+    min: 10000
+    max: 10000
+    type: float
+    editable: false
+  self_centering:
+    label: "Self-Centering Spring"
+    default: true
+    type: bool
+    editable: false
+  sw_logic:
+    label: "Button Active Logic"
+    default: "active-low"
+    options: ["active-low"]
+    type: enum
+    editable: false
+  sw_pullup_required:
+    label: "SW Pull-up Required"
+    default: true
+    type: bool
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+ports[5|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"5V"|"10mA"|"supply voltage — 3.3V or 5V; analog output range tracks VCC"
+  GND|input|ground|null|null|"ground reference"
+  VRX|output|analog|"5V"|"1mA"|"X-axis analog output — 0V to VCC; centre ~VCC/2; 10kΩ pot wiper"
+  VRY|output|analog|"5V"|"1mA"|"Y-axis analog output — 0V to VCC; centre ~VCC/2; 10kΩ pot wiper"
+  SW|output|digital|"5V"|"1mA"|"push-button switch — normally open to GND when pressed; requires external or MCU pull-up to VCC"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: analog-transfer
+  equation: "VRX = supply_voltage * (x_position + 0.5); VRY = supply_voltage * (y_position + 0.5); SW = 0 if pressed else 1 (with pull-up)"
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: true
+  states[3]:
+    - idle
+    - actuated
+    - pressed
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "5V"
+  max_current: "10mA"
+  max_power: null
+  max_temp: 70
+  min_temp: -20
+warnings[5]:
+  - "VRX and VRY output range is 0V to VCC — when powering at 5V, do NOT feed outputs directly into a 3.3V-only ADC; use a voltage divider or power the module at 3.3V instead"
+  - "SW pin is normally-open to GND when the stick is pressed — always enable the MCU internal pull-up (INPUT_PULLUP) or add an external 10kΩ resistor between SW and VCC; without pull-up the pin floats and produces random readings"
+  - "At rest the joystick returns approximately VCC/2 on both axes — the exact centre value may vary ±50 ADC counts due to mechanical tolerances; always implement a dead-zone in firmware (typically ±50 counts around 512)"
+  - "The two 10kΩ potentiometers draw approximately 0.5mA each at 5V — total quiescent current from VCC is approximately 1mA plus any MCU ADC input leakage; source from a stable regulated supply for best ADC accuracy"
+  - "Do not connect VRX or VRY to a digital GPIO — these are analog voltage outputs; use only ADC-capable pins on the microcontroller"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["robot-control", "pan-tilt-camera", "game-controller", "menu-navigation", "motor-speed-direction"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 70
+  ports_layout: custom
+  port_VCC: {x: 0, y: 10}
+  port_GND: {x: 0, y: 25}
+  port_VRX: {x: 60, y: 15}
+  port_VRY: {x: 60, y: 35}
+  port_SW: {x: 60, y: 55}
+  label_position: top
+  value_display: "{supply_voltage}V / X:{axis_x_rest} Y:{axis_y_rest}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: command-elements-family
+  componentProfileId: cmd-joystick-2axis
+  simulationEngine: digital-io
+  paletteGroup: "Command Elements > Special Interfaces"
+  tags[7]:
+    - joystick
+    - analog
+    - two-axis
+    - potentiometer
+    - command
+    - ky-023
+    - self-centering

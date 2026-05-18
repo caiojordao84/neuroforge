@@ -1,0 +1,77 @@
+# METADATA:
+project_name: idec-fc6a-plus-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: idec-fc6a-plus
+name: "IDEC MicroSmart FC6A Plus"
+manufacturer: IDEC
+cpu: "FC6A-D32K1CEE"
+category: plc
+form_factor: compact
+standard: "IEC 61131-3"
+image: idec-fc6a-plus.svg
+url: "https://www.idec.com/usa/en/products/plc/fc6a_plus"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  memory_work: 1040KB
+  memory_load: 800KB
+  memory_retain: 32KB
+  supply_voltage: 24V
+  power_consumption: 3W
+dims:
+  w: 90.0
+  h: 70.0
+  t: 130.9
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerPins[3|]{name|direction|voltage|type}:
+  V+|input|"24V"|null
+  V-|input|null|ground
+  SHIELD|input|null|ground
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[3|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|16|"%IX0.0"|"%IX1.7"|null
+  1|0|DO|16|"%QX0.0"|"%QX1.7"|null
+  2|0|AI|1|"%IW0"|"%IW0"|null
+
+## 5. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  ethernetip|"port:44818"|"role:scanner-adapter"
+  modbus-tcp|"port:502"|"role:client-server"
+  modbus-rtu|"baud:9600;proto:RS485"|"role:client-server"
+  opc-ua|"port:4840"|null
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "2000mA"
+  total_current_limit: "3000mA"
+  warnings[5]:
+    - "IP20 only — suitable for control cabinet installation; no dust or water protection"
+    - "32 I/O Plus CPU is transistor output only — no relay version exists"
+    - "IDEC Script is proprietary and not fully IEC 61131-3 ST compliant"
+    - "No IL or SFC support — limited to LD;FBD and Script only"
+    - "Inrush current 35A — ensure power supply can handle the inrush surge"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "WindLDR"
+  runtime: "FC6A Plus Firmware"
+  languages: "LD;FBD;ST"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: idec-fc6a-plus
+  defaultLanguageSkills[3]:
+    - ld-iec61131
+    - fbd-iec61131
+    - st-iec61131

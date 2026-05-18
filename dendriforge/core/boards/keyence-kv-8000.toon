@@ -1,0 +1,76 @@
+# METADATA:
+project_name: keyence-kv-8000-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: keyence-kv-8000
+name: "Keyence KV-8000"
+manufacturer: Keyence
+cpu: "KV-8000"
+category: plc
+form_factor: modular
+standard: "IEC 61131-3"
+image: keyence-kv-8000.svg
+url: "https://www.keyence.com/products/plc/kv-8000"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  memory_work: 4096KB
+  memory_load: 4096KB
+  memory_retain: 256KB
+  supply_voltage: 24V
+  power_consumption: 10W
+dims:
+  w: 63.0
+  h: 90.0
+  t: 75.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerPins[3|]{name|direction|voltage|type}:
+  V+|input|"24V"|null
+  V-|input|null|ground
+  SHIELD|input|null|ground
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[4|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|16|"%IX0.0"|"%IX1.7"|null
+  1|0|DO|16|"%QX0.0"|"%QX1.7"|null
+  2|0|AI|4|"%IW0"|"%IW3"|null
+  3|0|AO|4|"%QW0"|"%QW3"|null
+
+## 5. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[3|]{peripheral|param|value}:
+  ethernetip|"port:44818"|"role:scanner-adapter"
+  modbus-tcp|"port:502"|"role:server"
+  opc-ua|"port:4840"|"variant:KV-8000A"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "2000mA"
+  total_current_limit: "3200mA"
+  warnings[5]:
+    - "CPU module has no built-in I/O — all I/O provided by separate expansion modules"
+    - "Lithium battery KV-B1 must be replaced within 10 minutes to avoid data loss"
+    - "Flash ROM write limit 10000 cycles — plan firmware update strategy"
+    - "OPC UA built-in only on KV-8000A variant; standard KV-8000 requires add-on"
+    - "Maximum 16 expansion units per base; 48 units with KV-EB1S/KV-EB1R extension"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "KV STUDIO"
+  runtime: "KV-8000 Firmware"
+  languages: "LD;ST"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: keyence-kv-8000
+  defaultLanguageSkills[2]:
+    - ld-iec61131
+    - st-iec61131

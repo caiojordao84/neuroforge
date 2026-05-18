@@ -1,0 +1,129 @@
+# METADATA:
+project_name: maker-keypad-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: maker-keypad
+name: "Matrix Keypad 4x4"
+family: command-elements
+subfamily: special-interfaces
+category: command
+standard: "IEC 60947-5-1"
+url: null
+image: maker-keypad.svg
+symbol: maker-keypad-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  matrix:
+    label: "Key Matrix"
+    default: "4x4"
+    options: ["1x4", "3x4", "4x4"]
+    type: enum
+    editable: true
+  key_type:
+    label: "Key Type"
+    default: "tactile"
+    options: ["tactile", "membrane", "rubber-dome"]
+    type: enum
+    editable: true
+  supply_voltage:
+    label: "Logic Voltage"
+    unit: V
+    default: 5
+    options: [3, 5]
+    type: enum
+    editable: true
+  pull_resistor:
+    label: "Pull Resistor"
+    default: "pull-up"
+    options: ["pull-up", "pull-down", "external"]
+    type: enum
+    editable: true
+  key_count:
+    label: "Total Keys"
+    default: 16
+    min: 4
+    max: 16
+    type: int
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+ports[8|]{id|direction|type|voltage_max|current_max|notes}:
+  R1|output|digital|"5V"|"5mA"|"Row 1 scan line"
+  R2|output|digital|"5V"|"5mA"|"Row 2 scan line"
+  R3|output|digital|"5V"|"5mA"|"Row 3 scan line"
+  R4|output|digital|"5V"|"5mA"|"Row 4 scan line"
+  C1|input|digital|"5V"|"5mA"|"Column 1 read line"
+  C2|input|digital|"5V"|"5mA"|"Column 2 read line"
+  C3|input|digital|"5V"|"5mA"|"Column 3 read line"
+  C4|input|digital|"5V"|"5mA"|"Column 4 read line"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: contact-block
+  trigger: user-interaction
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - idle
+    - key-pressed
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "5V"
+  max_current: "5mA"
+  max_power: null
+  max_temp: 70
+  min_temp: -20
+  ip_rating: null
+  safety_category: null
+warnings[3]:
+  - "Requires matrix scanning firmware — do not wire columns directly to power"
+  - "Enable internal pull-up resistors on column pins in MCU firmware"
+  - "Simultaneous key presses may cause ghosting — use diodes for full N-key rollover"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["mcu-*"]
+  forbidden_with: ["ac-source", "plc-*"]
+  requires: ["dc-source"]
+  typical_context: ["password-entry", "menu-navigation", "numeric-input"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 80
+  ports_layout: custom
+  port_R1: {x: 0, y: 10}
+  port_R2: {x: 0, y: 25}
+  port_R3: {x: 0, y: 40}
+  port_R4: {x: 0, y: 55}
+  port_C1: {x: 60, y: 10}
+  port_C2: {x: 60, y: 25}
+  port_C3: {x: 60, y: 40}
+  port_C4: {x: 60, y: 55}
+  label_position: top
+  value_display: "{matrix} / {key_count}keys / {key_type}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: command-elements-family
+  componentProfileId: maker-keypad
+  simulationEngine: digital-io
+  paletteGroup: "Command Elements > Special Interfaces"
+  tags[6]:
+    - keypad
+    - command
+    - special-interfaces
+    - matrix
+    - matrix-4x4
+    - maker

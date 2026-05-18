@@ -1,0 +1,108 @@
+# METADATA:
+project_name: triac-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: triac
+name: "Triac (Triode for Alternating Current)"
+family: electricals
+subfamily: semiconductors
+category: semiconductor
+standard: "IEC 60747-6"
+url: null
+image: triac.svg
+symbol: triac-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  v_drm:
+    label: "Repetitive Peak Off-State Voltage"
+    unit: V
+    default: 600.0
+    type: float
+    editable: true
+  i_t_rms:
+    label: "RMS On-State Current"
+    unit: A
+    default: 12.0
+    type: float
+    editable: true
+  i_gt:
+    label: "Gate Trigger Current"
+    unit: mA
+    default: 50.0
+    type: float
+    editable: true
+  v_gt:
+    label: "Gate Trigger Voltage"
+    unit: V
+    default: 1.5
+    type: float
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+# Formato: id | direction | type | voltage_max | current_max | notes
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  MT1|passive|analog|null|"{i_t_rms}"|"Main Terminal 1 (Reference)"
+  MT2|passive|analog|"{v_drm}"|"{i_t_rms}"|"Main Terminal 2"
+  G|input|analog|"10V"|"{i_gt}"|"Gate Terminal"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  bidirectional: true
+  dynamic: true
+  thermal_model: true
+  noise_model: false
+  states[3]:
+    - off
+    - quadrant-i-iii
+    - quadrant-ii-iv
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "{v_drm}"
+  max_current: "{i_t_rms}"
+  max_power:
+    value: 50
+    unit: W
+  max_temp: 125
+  min_temp: -40
+warnings[2]:
+  - "High dv/dt can cause false triggering; snubber circuit recommended"
+  - "Heatsink required for currents above 1A RMS"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: ["resistor"]
+  typical_context: ["ac-dimmer", "motor-speed-control", "static-switching"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 40
+  height: 60
+  ports_layout: custom
+  port_MT1: {x: 20, y: 60}
+  port_MT2: {x: 20, y: 0}
+  port_G: {x: 0, y: 45}
+  label_position: top
+  value_display: "{name} {v_drm}V"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: triac
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Semiconductors"
+  tags[4]:
+    - triac
+    - semiconductor
+    - thyristor
+    - ac-control

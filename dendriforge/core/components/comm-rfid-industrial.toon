@@ -1,0 +1,116 @@
+# METADATA:
+project_name: comm-rfid-industrial-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: comm-rfid-industrial
+name: "Industrial RFID Reader (Leitor RFID Industrial)"
+family: communication
+subfamily: wireless
+category: node
+standard: "ISO 15693"
+url: null
+image: comm-rfid-industrial.svg
+symbol: comm-rfid-industrial-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  frequency_band:
+    label: "Frequency Band"
+    default: "HF (13.56 MHz)"
+    options: ["LF (125 kHz)", "HF (13.56 MHz)", "UHF (860-960 MHz)"]
+    type: enum
+    editable: true
+  protocol:
+    label: "Interface Protocol"
+    default: "IO-Link"
+    options: ["IO-Link", "Modbus-RTU", "PROFINET"]
+    type: enum
+    editable: true
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 24
+    options: [12, 24]
+    type: enum
+    editable: true
+  reading_range:
+    label: "Reading Range"
+    unit: mm
+    default: 50
+    min: 10
+    max: 500
+    type: float
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[2|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"{supply_voltage}"|"500mA"|"supply +"
+  GND|input|ground|null|null|"supply -"
+
+## 4c. PROTOCOL PORTS:
+protocol_ports[1|]{id|direction|protocol|notes}:
+  NET|bidirectional|"{protocol}"|"industrial network interface"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: script
+  protocol_emulation: true
+  bidirectional: true
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[4]:
+    - idle
+    - scanning
+    - processing
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "{supply_voltage}"
+  max_current: "500mA"
+  max_power: null
+  max_temp: 70
+  min_temp: -25
+  ip_rating: "IP67"
+  safety_category: null
+warnings[2]:
+  - "Metallic environments can significantly reduce the effective reading range"
+  - "Ensure protocol baud rates and addresses match the master controller"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["comm-*", "plc-*", "mcu-*"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["traceability", "access-control", "material-handling", "logistics"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 60
+  ports_layout: custom
+  port_VCC: {x: 15, y: 0}
+  port_GND: {x: 45, y: 0}
+  port_NET: {x: 30, y: 60}
+  label_position: top
+  value_display: "RFID / {protocol}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: communication-family
+  componentProfileId: comm-rfid-industrial
+  simulationEngine: protocol-stub-engine
+  paletteGroup: "Communication > Wireless"
+  tags[5]:
+    - rfid
+    - reader
+    - communication
+    - wireless
+    - tracking

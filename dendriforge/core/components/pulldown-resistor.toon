@@ -1,0 +1,112 @@
+# METADATA:
+project_name: pulldown-resistor-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: pulldown-resistor
+name: "Pull-Down Resistor"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60062"
+url: null
+image: pulldown-resistor.svg
+symbol: pulldown-resistor-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  resistance:
+    label: "Resistance"
+    unit: Ω
+    default: 10000
+    options: [1000, 2200, 4700, 10000, 47000, 100000]
+    type: enum
+    editable: true
+  power_rating:
+    label: "Power Rating"
+    unit: W
+    default: 0.125
+    options: [0.063, 0.125, 0.25, 0.5]
+    type: enum
+    editable: true
+  tolerance:
+    label: "Tolerance"
+    unit: "%"
+    default: 1
+    options: [0.1, 0.5, 1, 5]
+    type: enum
+    editable: true
+  package:
+    label: "Package"
+    default: "SMD-0402"
+    options: ["SMD-0402", "SMD-0603", "SMD-0805", "SMD-1206", "THT"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  SIG|bidirectional|digital|"5V"|"200mA"|"signal line pulled low"
+  GND|input|ground|null|null|"ground rail connection (low side)"
+  VCC|input|power|"5V"|"200mA"|"supply reference (unused for pure pull-down)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ohms-law
+  equation: "V_SIG = I_source * resistance; I_static = V_SIG / resistance"
+  bidirectional: true
+  dynamic: false
+  thermal_model: false
+  noise_model: false
+  states[1]:
+    - nominal
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "5V"
+  max_current: "200mA"
+  max_power:
+    value: "{power_rating}"
+    unit: W
+  max_temp: 125
+  min_temp: -55
+warnings[3]:
+  - "Low resistance values increase static current draw — use 10k or higher for low-power designs"
+  - "Ensure pull-down is connected directly to GND with no series impedance"
+  - "Do not use pull-down alone on inputs that may float at high voltage — add ESD protection"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["gpio-input", "enable-pin", "button-debounce", "adc-input", "mosfet-gate"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 50
+  height: 60
+  ports_layout: custom
+  port_VCC: {x: 25, y: 0}
+  port_SIG: {x: 50, y: 30}
+  port_GND: {x: 25, y: 60}
+  label_position: right
+  value_display: "{resistance}Ω to GND"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: pulldown-resistor
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Passives"
+  tags[6]:
+    - pull-down
+    - resistor
+    - passive
+    - digital
+    - logic
+    - gpio

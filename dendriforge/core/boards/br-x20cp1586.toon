@@ -1,0 +1,101 @@
+# METADATA:
+project_name: br-x20cp1586-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: br-x20cp1586
+name: "B&R X20CP1586 — X20 PLC CPU, Intel Atom E680T 1.6GHz, 512MB DDR2, POWERLINK V1/V2, 1x IF slot"
+manufacturer: "B&R Industrial Automation"
+mcu: "Intel Atom E680T (x86, 1.6GHz, 512KB L2, FPU) + integrated I/O processor"
+category: plc
+image: br-x20cp1586.svg
+url: "https://www.br-automation.com/en/products/plc-systems/x20-system/x20-plc/x20cp1586/"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 0
+  flash_available: 0
+  sram: 536870912
+  eeprom: 0
+  clock: 1600000000
+  voltage: "24V"
+dims:
+  w: 150.0
+  h: 99.0
+  t: 85.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# Based on X20TB12 terminal block pinout (datasheet section 9)
+powerPins[8|]{name|direction|voltage|type}:
+  TB1_GND_IO|null|null|ground
+  TB2_24V_IO|input|"24V"|null
+  TB3_24V_IO|input|"24V"|null
+  TB4_GND_IO|null|null|ground
+  TB5_24V_CP|input|"24V"|null
+  TB6_24V_CP|input|"24V"|null
+  TB10_GND_RS232|null|null|ground
+  VCC_INT|output|"3.3V"|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# PLC CPU module — no traditional GPIO; pins = interface connectors + RS232 terminal
+# TB = X20TB12 terminal block; IF = interface
+# Pin numbering: TB pins 10-12, IF pins 101-106
+gpio[9|]{pin|type|pwm|int|label|roles}:
+  10|digital|false|false|"TB10 / RS232 GND (IF1) — via X20TB12 terminal block"|null
+  11|digital|false|false|"TB11 / RS232 RX (IF1) — non-isolated; max 115.2kbps; max 900m"|uart-rx
+  12|digital|false|false|"TB12 / RS232 TX (IF1) — non-isolated; programming + comms"|uart-tx
+  102|digital|false|false|"IF2 / Ethernet GbE — RJ45 shielded; 10/100/1000BASE-T; autoneg; max 100m; INA2000 via hex switches"|"eth-gbe"
+  103|digital|false|false|"IF3 / POWERLINK V1-V2 — RJ45 shielded; 100BASE-TX; MN default (node 0/V1, 240/V2) or CN 1-239; PRC supported"|"plk-mn;plk-cn"
+  104|digital|false|false|"IF4 / USB 2.0 Type-A — non-isolated; 0.5A max; peripheral only; NOT for online comms"|"usb-host"
+  105|digital|false|false|"IF5 / USB 2.0 Type-A — non-isolated; 0.5A max; peripheral only; NOT for online comms"|"usb-host"
+  106|digital|false|false|"IF6 / X2X Link master — isolated from ETH/PLK/PLC; backplane for X20 I/O expansion"|"x2x-master"
+  107|digital|false|false|"IF7 / Modular interface slot — 1x X20 interface module (e.g. PROFIBUS, CANopen, DeviceNet, PROFINET)"|"if-slot"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[5|]{peripheral|param|value}:
+  ethernet_if2|"speed:1000Mbit"|"proto:INA2000;ip-range-reserved:192.168.100.x;auto-MDI-MDIX:yes;duplex:half-full"
+  powerlink_if3|"speed:100Mbit"|"proto:POWERLINK-V1-V2;mode:MN-CN;PRC:yes;duplex:half-POWERLINK;full-Ethernet;node-MN:240;node-CN:1-239"
+  x2x_link_if6|"role:master"|"iso:yes;expansion:X20-IO-modules;power-output:7W"
+  rs232_if1|"baud:115200"|"isolation:no;max-dist:900m;conn:X20TB12-pins-10-12"
+  usb_if4_if5|"standard:USB2.0"|"type:host-only;iso:no;max-current:0.5A;restriction:no-online-comms"
+usb:
+  type: USB-A
+  chip: native
+  vid: "0x1E29"
+  pid: "0x0200"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "500mA"
+  total_current_limit: "10000mA"
+  warnings[9]:
+    - "CompactFlash application memory is NOT included — must be ordered separately (e.g. 5CFCRD.0512-06 to 5CFCRD.032G-06); CPU will not run without it"
+    - "Ethernet IF2 and POWERLINK IF3 are separate physical interfaces — do NOT use IF2 with IP address in range 192.168.100.x (reserved for POWERLINK)"
+    - "USB interfaces IF4/IF5 CANNOT be used as online programming interfaces — use Ethernet IF2 (Automation Studio) or RS232 IF1 for online connection"
+    - "Only connect USB devices that are galvanically isolated from GND to IF4/IF5 — non-isolated USB devices may cause ground loops"
+    - "X2X Link IF6 powers the I/O expansion: 7W nominal (derated to 5W above 55°C); calculate X2X power budget before adding I/O modules"
+    - "CPU/X2X Link 24V supply (TB5/TB6) and I/O 24V supply (TB2/TB3) are galvanically isolated from each other — must be connected separately; I/O supply requires max 10A slow-blow fuse"
+    - "Battery (Renata CR2477N, 3V/950mAh) is included in delivery but must be replaced every 4 years; LED DC red = battery empty; buffers: RTC, user RAM, remanent variables"
+    - "Operating mode switch positions: RUN (normal), BOOT (firmware install via AS — erases user flash on download start), DIAG (diagnostic, no RAM/Flash init); no other positions permitted"
+    - "X20CP1586 has only 1 modular interface slot (vs X20CP3586 which has 3 slots); select the correct model if more than 1 additional fieldbus interface is needed"
+compatibility:
+  ide: "B&R Automation Studio 4.x / 6.x"
+  runtime: "B&R Automation Runtime (AR)"
+  languages: "LD;FBD;SFC;ST;IL (IEC 61131-3)"
+  fieldbuses: "POWERLINK-V1-V2;X2X-Link;Ethernet-TCP-IP;RS232;optional-via-IF-slot:PROFIBUS-CANopen-PROFINET-DeviceNet-ModbusTCP"
+  certifications: "CE;ATEX-Zone2;UL-cULus;HazLoc-cCSAus;DNV;LR;KR;ABS;EAC"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: br-x20-plc-family
+  boardProfileId: br-x20cp1586
+  defaultLanguageSkills[3]:
+    - st-iec61131-br-automation-studio
+    - ld-iec61131-br-automation-studio
+    - fbd-iec61131-br-automation-studio

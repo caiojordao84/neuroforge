@@ -1,0 +1,176 @@
+# METADATA:
+project_name: motor-dc-maker-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: motor-dc-maker
+name: "DC Motor (Maker / Prototyping)"
+family: actuators
+subfamily: maker-prototyping
+category: actuator
+standard: "IEC 60034-1"
+url: null
+image: motor-dc-maker.svg
+symbol: motor-dc-maker-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  voltage_rated:
+    label: "Rated Voltage"
+    unit: V
+    default: 6
+    options: [1.5, 3, 3.7, 5, 6, 9, 12, 24]
+    type: enum
+    editable: true
+  no_load_speed:
+    label: "No-Load Speed"
+    unit: V
+    default: 200
+    min: 10
+    max: 30000
+    type: float
+    editable: false
+  stall_current:
+    label: "Stall Current"
+    unit: A
+    default: 0.7
+    min: 0.01
+    max: 20
+    type: float
+    editable: false
+  stall_torque:
+    label: "Stall Torque"
+    unit: V
+    default: 0.08
+    min: 0.001
+    max: 50
+    type: float
+    editable: false
+  no_load_current:
+    label: "No-Load Current"
+    unit: A
+    default: 0.07
+    min: 0.001
+    max: 5
+    type: float
+    editable: false
+  back_emf_constant:
+    label: "Back-EMF Constant (Ke)"
+    unit: V
+    default: 0.029
+    min: 0.0001
+    max: 5
+    type: float
+    editable: false
+  torque_constant:
+    label: "Torque Constant (Kt)"
+    unit: V
+    default: 0.11
+    min: 0.0001
+    max: 5
+    type: float
+    editable: false
+  armature_resistance:
+    label: "Armature Resistance (Ra)"
+    unit: Ω
+    default: 8.5
+    min: 0.1
+    max: 200
+    type: float
+    editable: false
+  gear_ratio:
+    label: "Gear Ratio (1:N)"
+    unit: V
+    default: 1
+    min: 1
+    max: 1000
+    type: float
+    editable: true
+  motor_type:
+    label: "Motor Type"
+    default: "brushed-dc"
+    options: ["brushed-dc", "coreless-dc", "gearedmotor-dc", "vibration-dc"]
+    type: enum
+    editable: true
+  package:
+    label: "Package / Form Factor"
+    default: "130-size"
+    options: ["N20", "N30", "FF-130", "130-size", "180-size", "280-size", "385-size", "540-size", "775-size"]
+    type: enum
+    editable: true
+  pwm_control:
+    label: "PWM Controllable"
+    default: true
+    type: bool
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[2|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"24V"|"20A"|"motor positive supply terminal"
+  GND|input|ground|null|null|"motor negative supply terminal"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: basic-analog
+  motion: rotary
+  equation: "speed = (voltage_rated - current * armature_resistance) / back_emf_constant; T = torque_constant * current"
+  bidirectional: true
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[4]:
+    - off
+    - running
+    - stall
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "24V"
+  max_current: "20A"
+  max_power: null
+  max_temp: 70
+  min_temp: -10
+warnings[4]:
+  - "Never connect motor directly to MCU GPIO — use a motor driver (H-bridge) or MOSFET"
+  - "Add flyback diodes across motor terminals when using discrete switching elements"
+  - "Stall condition causes maximum current draw — limit duration to avoid thermal damage"
+  - "For geared motors, never backdrive the gearbox beyond rated torque — strip risk"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["dc-source", "dc-psu-prog", "battery", "pwm-source"]
+  forbidden_with: ["ac-source", "ac-source-3phase"]
+  requires: ["dc-source"]
+  typical_context: ["robot", "arduino-project", "rc-vehicle", "fan-control", "maker-prototype"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 50
+  ports_layout: custom
+  port_VCC: {x: 0, y: 15}
+  port_GND: {x: 0, y: 35}
+  label_position: right
+  value_display: "{voltage_rated}V / {no_load_speed}rpm ({motor_type})"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: actuators-family
+  componentProfileId: motor-dc-maker
+  simulationEngine: digital-io
+  paletteGroup: "Actuators > Maker / Prototyping"
+  tags[8]:
+    - motor
+    - dc
+    - maker
+    - brushed
+    - actuator
+    - pwm
+    - arduino
+    - prototyping

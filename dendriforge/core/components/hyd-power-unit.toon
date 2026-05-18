@@ -1,0 +1,136 @@
+# METADATA:
+project_name: hyd-power-unit-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: hyd-power-unit
+name: "Compact Hydraulic Power Unit (Grupo hidráulico compacto)"
+family: hydraulics
+subfamily: pumps
+category: pump
+standard: "ISO 1219-1"
+url: null
+image: hyd-power-unit.svg
+symbol: hyd-power-unit-symbol.svg
+symbol_standard: ISO
+
+## 2. PARAMETERS:
+params:
+  motor_power:
+    label: "Motor Rated Power"
+    unit: W
+    default: 1500
+    min: 500
+    max: 10000
+    type: float
+    editable: true
+  motor_voltage:
+    label: "Motor Voltage"
+    unit: V
+    default: 400
+    options: [230, 400]
+    type: enum
+    editable: true
+  pump_displacement:
+    label: "Pump Displacement"
+    unit: "cm³/rev"
+    default: 2.5
+    type: float
+    editable: true
+  operating_pressure:
+    label: "System Pressure (Relief Setting)"
+    unit: bar
+    default: 150
+    min: 20
+    max: 300
+    type: float
+    editable: true
+  tank_capacity:
+    label: "Tank Capacity"
+    unit: L
+    default: 10
+    min: 2
+    max: 100
+    type: float
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  U|input|power|"{motor_voltage}"|"20A"|"motor phase U"
+  V|input|power|"{motor_voltage}"|"20A"|"motor phase V"
+  W|input|power|"{motor_voltage}"|"20A"|"motor phase W"
+  PE|input|ground|null|null|"protective earth"
+
+## 4b. FLUID PORTS (HYDRAULIC):
+hydraulic_ports[2|]{id|direction|type|pressure_max|flow_max|notes}:
+  P|output|hydraulic|"{operating_pressure}bar"|"10"|"pressure supply line"
+  T|input|hydraulic|"5bar"|"10"|"tank return line"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: fluid-pressure-source
+  motion: rotary
+  bidirectional: false
+  dynamic: true
+  thermal_model: true
+  leakage_model: false
+  noise_model: false
+  states[3]:
+    - off
+    - running
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_pressure: "{operating_pressure}"
+  min_pressure: 0
+  max_voltage: "{motor_voltage}"
+  max_current: "20A"
+  max_power:
+    value: "{motor_power}"
+    unit: W
+  max_temp: 70
+  min_temp: -10
+  ip_rating: "IP54"
+warnings[3]:
+  - "Never run pump without hydraulic fluid in the tank (dry run will destroy pump)"
+  - "Ensure correct motor rotation direction before continuous operation"
+  - "Integrated relief valve sets the maximum system P port pressure"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["hyd-valve-*", "hyd-manifold-block", "hyd-check-valve", "ac-source-3phase"]
+  forbidden_with: ["pneu-*"]
+  requires: ["ac-source-3phase"]
+  typical_context: ["hydraulic-supply", "machine-press", "lift-table"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 80
+  height: 80
+  ports_layout: custom
+  port_U: {x: 10, y: 0}
+  port_V: {x: 20, y: 0}
+  port_W: {x: 30, y: 0}
+  port_PE: {x: 40, y: 0}
+  port_P: {x: 80, y: 30}
+  port_T: {x: 80, y: 60}
+  label_position: bottom
+  value_display: "{operating_pressure}bar / {tank_capacity}L"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: hydraulics-family
+  componentProfileId: hyd-power-unit
+  simulationEngine: hydraulic-motion
+  paletteGroup: "Hydraulics > Power Units"
+  tags[5]:
+    - pump
+    - hpu
+    - power-unit
+    - motor
+    - tank

@@ -1,38 +1,106 @@
+# METADATA:
+project_name: arduino-nano-esp32-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: arduino-nano-esp32
 name: "Arduino Nano ESP32"
-manufacturer: "Generic"
+manufacturer: Arduino
 mcu: "ESP32-S3"
-category: "maker"
-image: "/boards/arduino-nano-esp32.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 16777216
-sram: 524288
-clock_hz: 240000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "esp32-family"
-  boardProfileId: "arduino-nano-esp32"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+category: maker
+image: arduino-nano-esp32.svg
+url: "https://store.arduino.cc/products/arduino-nano-esp32"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 8388608
+  flash_available: 8388608
+  sram: 524288
+  psram: 8388608
+  eeprom: 0
+  clock: 240000000
+  voltage: "3.3V"
+  cores: 2
+  wifi: "802.11b/g/n"
+  bluetooth: "BLE 5.0"
+dims:
+  w: 45.0
+  h: 18.0
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RST|input|null|null
+  AREF|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[22|]{pin|type|pwm|int|label|roles}:
+  43|digital|t|t|"D0 / RX"|uart-rx
+  44|digital|t|t|"D1 / TX"|uart-tx
+  8|digital|t|t|D2|null
+  9|digital|t|t|D3|null
+  10|digital|t|t|D4|null
+  12|digital|t|t|D5|null
+  13|digital|t|t|D6|null
+  14|digital|t|t|D7|null
+  15|digital|t|t|D8|null
+  16|digital|t|t|D9|null
+  17|digital|t|t|"D10 / SS"|spi-ss
+  18|digital|t|t|"D11 / MOSI"|spi-mosi
+  47|digital|t|t|"D12 / MISO"|spi-miso
+  48|digital|t|t|"D13 / SCK / LED"|"spi-sck;status-led"
+  1|analog|t|t|A0|"adc:t"
+  2|analog|t|t|A1|"adc:t"
+  3|analog|t|t|A2|"adc:t"
+  4|analog|t|t|A3|"adc:t"
+  5|analog|t|t|"A4 / SDA"|"adc:t;i2c-sda"
+  6|analog|t|t|"A5 / SCL"|"adc:t;i2c-scl"
+  7|analog|t|t|A6|"adc:t"
+  11|analog|t|t|A7|"adc:t"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uart0:1"|"pins:43,44"
+  i2c|"channels:1"|"sda:5;scl:6"
+  spi|"fspi:1"|"miso:47;mosi:18;sck:48;ss:17"
+  adc|"channels:8"|"pins:1,2,3,4,5,6,7,11"
+usb:
+  type: USB-C
+  chip: "ESP32-S3 native"
+  vid: "0x2341"
+  pid: "0x0063"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "40mA"
+  total_current_limit: "1000mA"
+  warnings[5]:
+    - "A7 (GPIO11) is on ADC2 and will not work while Wi-Fi is active"
+    - "GPIO26-32 are internally connected to SPI flash and must not be used"
+    - "GPIO19 and GPIO20 are reserved for native USB and must not be used"
+    - "Input voltage on VIN must not exceed 12V to avoid regulator damage"
+    - "3V3 pin can supply up to 600mA total including onboard peripherals"
+compatibility:
+  arduinoCore: "2.0.17"
+  pio: espressif32
+  frameworks: "arduino;espidf"
+  languages: arduino-cpp
+  bootloader: esptool
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: esp32-xtensa-family
+  boardProfileId: arduino-nano-esp32
+  defaultLanguageSkills[2]:
+    - arduino-cpp-esp32
+    - rust-embassy-esp32

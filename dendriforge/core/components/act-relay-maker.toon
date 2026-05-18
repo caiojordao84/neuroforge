@@ -1,0 +1,136 @@
+# METADATA:
+project_name: act-relay-maker-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: act-relay-maker
+name: "Maker Relay Module (SPDT)"
+family: actuators
+subfamily: maker-prototyping
+category: switching
+standard: "Generic Module"
+url: null
+image: act-relay-maker.svg
+symbol: act-relay-maker-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  coil_voltage:
+    label: "Coil Control Voltage"
+    unit: V
+    default: 5
+    options: [3.3, 5, 12]
+    type: enum
+    editable: true
+  coil_current:
+    label: "Coil Current"
+    unit: mA
+    default: 70
+    options: [50, 70, 90]
+    type: enum
+    editable: false
+  contact_voltage_max:
+    label: "Max Contact Voltage"
+    unit: V
+    default: 250
+    options: [30, 125, 250]
+    type: enum
+    editable: true
+  contact_current_max:
+    label: "Max Contact Current"
+    unit: A
+    default: 10
+    options: [3, 5, 10]
+    type: enum
+    editable: true
+  active_level:
+    label: "Activation Logic Level"
+    default: "LOW"
+    options: ["LOW", "HIGH"]
+    type: enum
+    editable: true
+  flyback:
+    label: "Flyback Diode Included"
+    default: true
+    type: bool
+    editable: false
+  opto_isolated:
+    label: "Optocoupler Isolated Input"
+    default: true
+    type: bool
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+ports[6|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"12V"|"100mA"|"module power supply (3.3V/5V/12V)"
+  GND|input|ground|null|null|"module ground"
+  IN|input|digital|"12V"|"20mA"|"control input — LOW or HIGH activates coil"
+  COM|passive|power|"250V"|"10A"|"contact common terminal"
+  NO|passive|power|"250V"|"10A"|"normally open contact"
+  NC|passive|power|"250V"|"10A"|"normally closed contact"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: relay-coil
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - de-energised
+    - energised
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "250V"
+  max_current: "10A"
+  max_power:
+    value: 1.5
+    unit: W
+  max_temp: 85
+  min_temp: -25
+warnings[3]:
+  - "VCC must match the coil_voltage option — mixing voltages will damage the module"
+  - "Do not use NC contact on inductive loads without external flyback diode at load side"
+  - "Check active_level setting — incorrect polarity will invert relay logic"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["relay-driver", "relay-driver-opto", "ind-do-bank", "mcu-gpio", "dc-source", "ac-source", "pneu-valve-*", "hyd-valve-*", "act-motor-*"]
+  forbidden_with: []
+  requires: ["dc-source"]
+  typical_context: ["maker-project", "home-automation", "mcu-control", "load-switching", "arduino-shield"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 55
+  ports_layout: custom
+  port_VCC: {x: 0, y: 5}
+  port_GND: {x: 0, y: 20}
+  port_IN: {x: 0, y: 35}
+  port_COM: {x: 60, y: 15}
+  port_NO: {x: 60, y: 30}
+  port_NC: {x: 60, y: 45}
+  label_position: top
+  value_display: "Maker Relay / {coil_voltage}V / {contact_current_max}A / {active_level}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: actuators-family
+  componentProfileId: act-relay-maker
+  simulationEngine: digital-io
+  paletteGroup: "Actuators > Maker Prototyping"
+  tags[6]:
+    - relay
+    - maker
+    - spdt
+    - module
+    - switching
+    - arduino

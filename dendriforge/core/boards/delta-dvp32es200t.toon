@@ -1,0 +1,144 @@
+# METADATA:
+project_name: delta-dvp32es200t-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: delta-dvp32es200t
+name: "Delta DVP32ES200T — DVP-ES2 Series Compact PLC (16DI + 16DO-T, AC)"
+manufacturer: "Delta Electronics"
+cpu: "Delta DVP-ES2 32-bit CPU, 0.54µs/LD instruction"
+category: plc
+form_factor: compact
+standard: "IEC 61131-3"
+image: delta-dvp32es200t.svg
+url: "https://www.delta-emea.com/en-gb/products/PLC-Programmable-Logic-Controllers/DVP-ES2-EX2"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  memory_work: 20KB
+  memory_load: 64KB
+  memory_retain: 4KB
+  supply_voltage: 100V
+  power_consumption: 30W
+  di_integrated: 16
+  do_integrated: 16
+  ai_integrated: 0
+dims:
+  w: 165.0
+  h: 90.0
+  t: 85.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerSupply[4|]{name|direction|voltage|type}:
+  L|input|100V|supply
+  N|input|null|neutral
+  PE|input|null|protective-earth
+  SENSOR_SUPPLY|output|24V|sensor-power
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[3|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|16|"%IX0.0"|"%IX1.7"|null
+  1|0|DO|16|"%QX0.0"|"%QX1.7"|null
+  2|0|mixed|0|null|null|null
+
+## 5. DIGITAL CHANNEL DESCRIPTORS:
+# Format: addr | direction | label | roles
+# Delta uses octal X/Y: X0-X7 = %IX0.0-%IX0.7; X10-X17 = %IX1.0-%IX1.7
+# Y0-Y7 = %QX0.0-%QX0.7; Y10-Y17 = %QX1.0-%QX1.7
+digitalChannels[32|]{addr|direction|label|roles}:
+  "%IX0.0"|input|"X0 (24V DC Sink/Source, 100kHz HSC)"|"di;hsc"
+  "%IX0.1"|input|"X1 (24V DC Sink/Source, 100kHz HSC)"|"di;hsc"
+  "%IX0.2"|input|"X2 (24V DC Sink/Source, 100kHz HSC)"|"di;hsc"
+  "%IX0.3"|input|"X3 (24V DC Sink/Source, 100kHz HSC)"|"di;hsc"
+  "%IX0.4"|input|"X4 (24V DC Sink/Source, 10kHz)"|di
+  "%IX0.5"|input|"X5 (24V DC Sink/Source, 10kHz)"|di
+  "%IX0.6"|input|"X6 (24V DC Sink/Source, 10kHz)"|di
+  "%IX0.7"|input|"X7 (24V DC Sink/Source, 10kHz)"|di
+  "%IX1.0"|input|"X10 (24V DC Sink/Source, 60Hz)"|di
+  "%IX1.1"|input|"X11 (24V DC Sink/Source, 60Hz)"|di
+  "%IX1.2"|input|"X12 (24V DC Sink/Source, 60Hz)"|di
+  "%IX1.3"|input|"X13 (24V DC Sink/Source, 60Hz)"|di
+  "%IX1.4"|input|"X14 (24V DC Sink/Source, 60Hz)"|di
+  "%IX1.5"|input|"X15 (24V DC Sink/Source, 60Hz)"|di
+  "%IX1.6"|input|"X16 (24V DC Sink/Source, 60Hz)"|di
+  "%IX1.7"|input|"X17 (24V DC Sink/Source, 60Hz)"|di
+  "%QX0.0"|output|"Y0 (NPN transistor 30VDC/0.5A, 100kHz PTO)"|"do;fast-counter"
+  "%QX0.1"|output|"Y1 (NPN transistor 30VDC/0.5A, 100kHz PTO)"|"do;fast-counter"
+  "%QX0.2"|output|"Y2 (NPN transistor 30VDC/0.5A, 100kHz PTO)"|"do;fast-counter"
+  "%QX0.3"|output|"Y3 (NPN transistor 30VDC/0.5A, 100kHz PTO)"|"do;fast-counter"
+  "%QX0.4"|output|"Y4 (NPN transistor 30VDC/0.5A, 60Hz)"|do
+  "%QX0.5"|output|"Y5 (NPN transistor 30VDC/0.5A, 60Hz)"|do
+  "%QX0.6"|output|"Y6 (NPN transistor 30VDC/0.5A, 60Hz)"|do
+  "%QX0.7"|output|"Y7 (NPN transistor 30VDC/0.5A, 60Hz)"|do
+  "%QX1.0"|output|"Y10 (NPN transistor 30VDC/0.5A, 60Hz)"|do
+  "%QX1.1"|output|"Y11 (NPN transistor 30VDC/0.5A, 60Hz)"|do
+  "%QX1.2"|output|"Y12 (NPN transistor 30VDC/0.5A, 60Hz)"|do
+  "%QX1.3"|output|"Y13 (NPN transistor 30VDC/0.5A, 60Hz)"|do
+  "%QX1.4"|output|"Y14 (NPN transistor 30VDC/0.5A, 60Hz)"|do
+  "%QX1.5"|output|"Y15 (NPN transistor 30VDC/0.5A, 60Hz)"|do
+  "%QX1.6"|output|"Y16 (NPN transistor 30VDC/0.5A, 60Hz)"|do
+  "%QX1.7"|output|"Y17 (NPN transistor 30VDC/0.5A, 60Hz)"|do
+
+## 6. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"baud:115200"|"proto:Modbus-ASCII/RTU;bus:RS232;port:COM1;role:master-slave"
+  serial2|"baud:921600"|"proto:Modbus-ASCII/RTU;bus:RS485;port:COM2;role:master-slave"
+  serial3|"baud:115200"|"proto:Modbus-ASCII/RTU;bus:RS485;port:COM3;role:master-slave"
+  clock|"resolution:1s"|"type:RTC;fields:YY-MM-DD-WD-HH-MM-SS"
+usb:
+  type: null
+  chip: null
+  vid: null
+  pid: null
+
+## 7. RACKS & EXPANSION:
+# Format: rack | slots | backplane_current | voltage
+racks[1|]{rack|slots|backplane_current|voltage}:
+  0|8|1200mA|5V
+expansion:
+  max_signal_modules: 8
+  max_communication_modules: 0
+  max_signal_boards: 0
+
+## 8. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  supply_voltage: 100V
+  supply_current_max: 1500mA
+  io_output_current_max: 500mA
+  sensor_supply_current: 400mA
+  operating_temp: "0-55°C"
+  storage_temp: "-25-70°C"
+  protection_class: IP20
+  warnings[9]:
+    - "NO USB port on DVP32ES200T; programming via COM1 RS-232 using IFD6530 or USB-RS232 adapter (FTDI-based)"
+    - "I/O addresses use Delta octal notation: X0-X7 (8pts), X10-X17 (8pts) = 16 DI; Y0-Y7 + Y10-Y17 = 16 DO"
+    - "X0-X3 support 100kHz high-speed counting (HSC); X4-X7 support 10kHz; remaining inputs at 60Hz max"
+    - "Y0-Y3 support 100kHz PTO/PWM pulse output (2-axis independent); Y4+ are standard 60Hz switching"
+    - "DO outputs are NPN transistor (sink); load must provide +V — NOT PNP sourcing"
+    - "Max 256 total I/O with expansion modules (octal X0-X377 / Y0-Y377) but limited by 16 Y if X=256 full"
+    - "Supply is 100-240V AC; internal 24V DC sensor supply provided on +24V terminal (limited current)"
+    - "Add -E suffix (DVP32ES200TE) for Ethernet port (10/100 Mbps, Modbus TCP + email + web server)"
+    - "WPLSoft programming is COM-port based RS-232; set 9600-8-E-1 (Modbus ASCII) for default connection"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "WPLSoft v2.x / ISPSoft v3.x"
+  runtime: "DVP-ES2 FW3.x"
+  firmware: "3.x"
+  languages: "LD;IL;SFC"
+  order_ref: "DVP32ES200T"
+
+## 9. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: delta-dvp32es200t
+  defaultLanguageSkills[3]:
+    - ld-wplsoft-dvp
+    - il-dvp-es2
+    - modbus-rtu-dvp

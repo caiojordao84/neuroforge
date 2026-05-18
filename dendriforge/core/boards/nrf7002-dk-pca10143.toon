@@ -1,0 +1,102 @@
+# METADATA:
+project_name: nrf7002-dk-pca10143-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: nrf7002-dk-pca10143
+name: "Nordic Semiconductor nRF7002-DK (PCA10143)"
+manufacturer: "Nordic Semiconductor"
+mcu: "Nordic nRF5340 (dual-core Cortex-M33) + nRF7002 Wi-Fi 6 companion IC"
+category: maker
+image: nrf7002-dk-pca10143.svg
+url: "https://www.nordicsemi.com/Products/Development-hardware/nRF7002-DK"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 1310720
+  flash_available: 1245184
+  sram: 589824
+  eeprom: 0
+  clock: 128000000
+  voltage: "1.8V"
+dims:
+  w: 63.0
+  h: 102.0
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+  VIO_REF|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[18|]{pin|type|pwm|int|label|roles}:
+  20|digital|true|true|"P0.20 / D1 / TX / CTS"|uart-tx
+  22|digital|true|true|"P0.22 / D0 / RX / RTS"|uart-rx
+  15|digital|true|true|"P0.15 / D2"|null
+  23|digital|true|true|"P0.23 / D3 / BTN1"|null
+  21|digital|true|true|"P0.21 / D4"|null
+  3|digital|true|true|"P0.03 / D5"|null
+  4|analog|true|true|"P0.04 / D6 / A0"|"adc:t"
+  5|analog|true|true|"P0.05 / D7 / A1"|"adc:t"
+  6|analog|true|true|"P0.06 / D8 / A2"|"adc:t"
+  7|analog|true|true|"P0.07 / A3"|"adc:t"
+  27|digital|true|true|"P0.27 / D9"|null
+  28|digital|true|true|"P0.28 / D10 / SS / LED1"|"spi-ss;status-led"
+  29|digital|true|true|"P0.29 / D11 / MOSI / LED2"|"spi-mosi;status-led"
+  30|digital|true|true|"P0.30 / D12 / MISO"|spi-miso
+  31|digital|true|true|"P0.31 / D13 / SCK"|spi-sck
+  25|analog|true|true|"P0.25 / D14 / A4 / SDA"|"adc:t;i2c-sda"
+  26|analog|true|true|"P0.26 / D15 / A5 / SCL"|"adc:t;i2c-scl"
+  24|digital|true|true|"P0.24 / BTN2"|null
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uarts:3"|"pins:20,22"
+  i2c|"channels:2"|"sda:25;scl:26"
+  spi|"channels:4"|"miso:30;mosi:29;sck:31;ss:28"
+  adc|"resolution:12bit"|"pins:4;5;6;7;25;26"
+usb:
+  type: Micro-USB
+  chip: native
+  vid: "0x1366"
+  pid: "0x1055"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "4mA"
+  total_current_limit: "50mA"
+  warnings[8]:
+    - "All I/O pins operate at 1.8V; NOT compatible with 3.3V/5V Arduino shields without level shifting"
+    - "nRF7002 is a Wi-Fi companion IC only; connected to nRF5340 via QSPI — not exposed on headers"
+    - "P0.28/P0.29 serve as both LED1/LED2 and SPI SS/MOSI; do not use SPI and LEDs simultaneously"
+    - "P0.23/P0.24 serve as BTN1/BTN2; may conflict with D3 or general GPIO use"
+    - "P0.19/P0.21 are UART0 CTS/RTS; tri-stated when no terminal connected to VCOM"
+    - "nRF5340 dual-core: App core (128MHz/1MB) is user target; Net core (64MHz/256KB) runs protocol stack"
+    - "NFC antenna connector present; NFC pins (P0.09/P0.10) not broken out on Arduino headers"
+    - "Power supply 2.9-5.0V only; board has no 3.3V regulator output on VDD — use VIO_REF for reference"
+compatibility:
+  arduinoCore: "0.0.0"
+  pio: nordicnrf53
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: nrf5340-mcuboot
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: nrf53-family
+  boardProfileId: nrf7002-dk-pca10143
+  defaultLanguageSkills[3]:
+    - zephyr-nrf53
+    - arduino-cpp-nrf53
+    - rust-embassy-nrf53

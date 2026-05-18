@@ -1,0 +1,112 @@
+# METADATA:
+project_name: ind-hmi-numeric-indicator-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: ind-hmi-numeric-indicator
+name: "HMI Numeric Indicator"
+family: industrial
+subfamily: hmi-signaling
+category: instrument
+standard: "IEC 61131-3"
+url: null
+image: ind-hmi-numeric-indicator.svg
+symbol: ind-hmi-numeric-indicator-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  data_type:
+    label: "Data Type"
+    default: "float"
+    options: ["float", "int", "dword"]
+    type: enum
+    editable: true
+  decimal_places:
+    label: "Decimal Places"
+    default: 2
+    min: 0
+    max: 6
+    type: int
+    editable: true
+  unit_label:
+    label: "Engineering Unit Label"
+    default: ""
+    type: string
+    editable: true
+  alarm_high:
+    label: "High Alarm Threshold"
+    default: 100
+    type: float
+    editable: true
+  alarm_low:
+    label: "Low Alarm Threshold"
+    default: 0
+    type: float
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  VALUE_IN|input|analog|null|null|"Process value input (float/int)"
+  ALARM_HI|output|digital|"24V"|"10mA"|"High alarm output — active when value exceeds alarm_high"
+  ALARM_LO|output|digital|"24V"|"10mA"|"Low alarm output — active when value falls below alarm_low"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: function-block-engine
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - normal
+    - alarm
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "24V"
+  max_current: "10mA"
+  max_power: null
+  max_temp: 55
+  min_temp: -10
+  safety_category: null
+warnings[3]:
+  - "Alarm outputs are display-only — do not use as sole safety interlock"
+  - "Set alarm_high above alarm_low to avoid permanent alarm condition"
+  - "Engineering unit label is cosmetic only — does not perform unit conversion"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["plc-*", "ind-hmi-trend-chart", "ind-pid-controller", "sensor-*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["value-display", "process-monitoring", "alarm-indication"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 80
+  height: 50
+  ports_layout: custom
+  port_VALUE_IN: {x: 0, y: 25}
+  port_ALARM_HI: {x: 80, y: 10}
+  port_ALARM_LO: {x: 80, y: 40}
+  label_position: top
+  value_display: "{data_type} / {decimal_places}dp / {unit_label}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: industrial-family
+  componentProfileId: ind-hmi-numeric-indicator
+  simulationEngine: function-block-engine
+  paletteGroup: "Industrial > HMI & Signaling"
+  tags[5]:
+    - hmi-numeric-indicator
+    - hmi-signaling
+    - industrial
+    - numeric-display
+    - alarm

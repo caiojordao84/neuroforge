@@ -1,0 +1,83 @@
+# METADATA:
+project_name: m5stack-core-s3-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: m5stack-core-s3
+name: "M5Stack CoreS3"
+manufacturer: M5Stack
+mcu: "ESP32-S3 Xtensa LX7 dual-core up to 240 MHz; 16MB Flash; 8MB PSRAM Quad; Wi-Fi 2.4 GHz; BLE 5.0; 2.0in 320x240 ILI9342C cap-touch; GC0308 camera; AXP2101 PMU; BMI270 IMU; BM8563 RTC; AW88298 1W I2S amp (G13 DOUT/G14 DIN/G34 BCK/G33 WCK/G0 MCLK); ES7210 dual-mic; 500mAh LiPo; DinBase"
+category: maker
+image: m5stack-core-s3.svg
+url: "https://docs.m5stack.com/en/core/CoreS3"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs: flashtotal 16777216 | flashavailable 16777216 | sram 8388608 | eeprom 0 | clock 240000000 | voltage "3.3V" | cores 2 | wifi "2.4 GHz 802.11 b/g/n" | bluetooth "BLE 5.0"
+dims: w 54.0 | h 54.0 | t 15.5
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+powerPins[6|]{name|direction|voltage|type}:
+  BAT|input|"3.7V"|null
+  HVIN|input|"9-24V"|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  VBAT|output|"3.7V"|null
+
+## 4. GPIO MAP:
+gpio[19|]{pin|type|pwm|int|label|roles}:
+  0|digital|f|f|"GPIO0 — I2S MCLK (ES7210 microphone codec); do not use as free GPIO"|"i2s"
+  1|digital|f|f|"GPIO1 — Grove PORT.A SCL (HY2.0-4P external port)"|"i2c-scl"
+  2|digital|f|f|"GPIO2 — Grove PORT.A SDA (HY2.0-4P external port)"|"i2c-sda"
+  3|digital|f|f|"GPIO3 — LCD CS (ILI9342C; shares HSPI with SD)"|"spi"
+  4|digital|f|f|"GPIO4 — microSD CS (shares HSPI with LCD; max 16GB)"|"spi"
+  5|digital|f|f|"GPIO5 — M-Bus GPIO free (pin 10)"|"di;do"
+  6|digital|f|f|"GPIO6 — M-Bus GPIO free (pin 21)"|"di;do"
+  7|digital|f|f|"GPIO7 — M-Bus GPIO free (pin 22)"|"di;do"
+  8|digital|f|f|"GPIO8 — Grove PORT.B IN (HY2.0-4P)"|"di;do"
+  9|digital|f|f|"GPIO9 — Grove PORT.B OUT (HY2.0-4P)"|"di;do"
+  10|analog|f|f|"GPIO10 — ADC; M-Bus pin 2"|"di;do"
+  11|digital|f|f|"GPIO11 — Internal I2C SCL (AXP2101; FT6336U; BMI270; BM8563; ES7210; AW88298; LTR-553; GC0308; AW9523B); do not use as free GPIO"|"i2c-scl"
+  12|digital|f|f|"GPIO12 — Internal I2C SDA (same internal bus as GPIO11); do not use as free GPIO"|"i2c-sda"
+  13|digital|f|f|"GPIO13 — I2S DOUT to AW88298 speaker amplifier"|"i2s"
+  14|digital|f|f|"GPIO14 — I2S DIN from ES7210 microphone codec"|"i2s"
+  17|digital|f|f|"GPIO17 — Grove PORT.C RX (HY2.0-4P)"|"uart-rx"
+  18|digital|f|f|"GPIO18 — Grove PORT.C TX (HY2.0-4P)"|"uart-tx"
+  43|digital|f|f|"GPIO43 — UART0 TX; M-Bus TXD0; Arduino Serial TX"|"uart-tx"
+  44|digital|f|f|"GPIO44 — UART0 RX; M-Bus RXD0; Arduino Serial RX"|"uart-rx"
+
+## 5. PERIPHERALS & USB:
+peripherals[4|]{peripheral|param|value}:
+  serial|uart0|"tx43|rx44"
+  serial|uart1|"tx18|rx17"
+  i2c|channels2|"sda12|scl11;sda2|scl1"
+  spi|channels1|"mosi37|miso35|sck36|cs-lcd3|cs-sd4"
+usb: type USB-C | chip "ESP32-S3-native" | vid "0x303A" | pid "0x1001"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "40mA"
+  total_current_limit: "500mA"
+  warnings[9]:
+    - "GPIO11/GPIO12 are the internal I2C bus shared by ALL onboard ICs: AXP2101 PMU (0x34), FT6336U touch (0x38), BMI270 IMU (0x69), BMM150 (0x10 via BMI270 aux), BM8563 RTC (0x51), ES7210 mic (0x40), AW88298 amp (0x36), AW9523B expander (0x58), LTR-553 (0x23), GC0308 (0x21); do NOT connect external devices to GPIO11/GPIO12; use Grove PORT.A (GPIO1/GPIO2) for external I2C; address conflicts will cause bus lockup"
+    - "LCD and microSD share HSPI SPI bus (MOSI=G37, SCK=G36, MISO=G35); CS are separate (LCD=G3, SD=G4); firmware must arbitrate SPI bus with mutex when using both; set bus speed to the lower of ILI9342C (40MHz max) and microSD (25MHz max), or use separate SPIClass instances"
+    - "LCD backlight and reset are controlled by AW9523B I/O expander (0x58) and AXP2101 PMU via I2C; there is NO direct GPIO for backlight or LCD reset; use M5Unified or M5GFX library which handles AXP2101/AW9523B automatically; direct GPIO writes for backlight have no effect"
+    - "Touch controller FT6336U interrupt is routed through AW9523B pin P1_2; the ESP32 receives touch events via GPIO21 (AW9523B INT output); software must read touch coordinates over I2C (GPIO11/GPIO12 bus) after the interrupt; GPIO21 only signals touch-detected, not coordinates"
+    - "GPIO0 is I2S MCLK for ES7210 microphone; must be configured as I2S output before enabling audio; GPIO0 is also adjacent to BOOT strapping logic; using GPIO0 as regular GPIO while I2S is active will corrupt audio output"
+    - "Camera uses 11 GPIO pins: G39-G42 (D0-D3), G15, G16, G47, G48 (D4-D7), G45 PCLK, G46 VSYNC, G38 HREF; none of these are available for other use; camera reset and power-down are controlled via AW9523B expander, not direct GPIO"
+    - "AXP2101 PMU controls all power rails (3.3V, 5V, LCD backlight DLDO1, camera power); improper I2C writes to AXP2101 registers can shut down power rails causing immediate reset; always use official M5Stack AXP2101 driver; do NOT write arbitrary values to AXP2101 registers"
+    - "BMM150 magnetometer (0x10) is connected through BMI270 sensor hub auxiliary I2C interface, not directly on the main I2C bus; access BMM150 via BMI270 API passthrough mode; direct I2C 0x10 address scan will not find it; sensor is sensitive to nearby magnets; do not pair with M5Stack accessories containing magnets"
+    - "GPIO19/GPIO20 are native USB D-/D+; do not use as GPIO when USB CDC is active; long-press RESET 3s (green LED on) to enter download mode; long-press POWER 6s to power off; board powers from USB-C 5V, LiPo 3.7V, or HVIN 9-24V on DinBase; do not connect HVIN without DinBase"
+compatibility: pio m5stack-cores3 | frameworks "arduino;espidf" | languages "arduino-cpp;micropython;uiflow2" | bootloader "esp-idf-bootloader"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: esp32-xtensa-family
+  boardProfileId: m5stack-core-s3
+  defaultLanguageSkills[3]:
+    - arduino-cpp-esp32
+    - espidf-c-esp32
+    - uiflow2-m5stack

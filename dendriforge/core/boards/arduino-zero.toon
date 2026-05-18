@@ -1,38 +1,108 @@
-id: arduino-zero
-name: "Arduino Zero"
-manufacturer: "Generic"
-mcu: "ATSAMD21G18"
-category: "maker"
-image: "/boards/arduino-zero.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 262144
-sram: 32768
-clock_hz: 48000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "avr-family"
-  boardProfileId: "arduino-zero"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+# METADATA:
+project_name: arduino-zero-abx00003-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: arduino-zero-abx00003
+name: "Arduino Zero (ABX00003 / A000093)"
+manufacturer: Arduino
+mcu: "Microchip ATSAMD21G18A (ARM Cortex-M0+, 48MHz)"
+category: maker
+image: arduino-zero-abx00003.svg
+url: "https://store.arduino.cc/products/arduino-zero"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 262144
+  flash_available: 245760
+  sram: 32768
+  eeprom: 0
+  clock: 48000000
+  voltage: "3.3V"
+dims:
+  w: 53.0
+  h: 68.0
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+  AREF|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# Encoding: PA.xx = xx; PB.xx = 100+xx
+gpio[22|]{pin|type|pwm|int|label|roles}:
+  11|digital|false|true|"PA11 / D0 / RX (SERCOM0)"|uart-rx
+  10|digital|false|true|"PA10 / D1 / TX (SERCOM0)"|uart-tx
+  14|digital|false|true|"PA14 / D2"|null
+  9|digital|true|true|"PA09 / D3 / PWM (TCC0)"|null
+  8|digital|true|true|"PA08 / D4 / PWM (TCC0)"|null
+  15|digital|true|true|"PA15 / D5 / PWM (TCC0)"|null
+  20|digital|true|true|"PA20 / D6 / PWM (TCC0)"|null
+  21|digital|false|true|"PA21 / D7"|null
+  6|digital|false|true|"PA06 / D8"|null
+  7|digital|true|true|"PA07 / D9 / PWM (TCC1)"|null
+  18|digital|true|true|"PA18 / D10 / PWM (TCC0) / SS"|spi-ss
+  16|digital|true|true|"PA16 / D11 / PWM (TCC2) / MOSI"|spi-mosi
+  19|digital|false|true|"PA19 / D12 / MISO"|spi-miso
+  17|digital|false|true|"PA17 / D13 / SCK / LED"|"spi-sck;status-led"
+  2|analog|false|true|"PA02 / A0 / AIN0 / DAC0"|"adc:t;dac"
+  108|analog|false|true|"PB08 / A1 / AIN2"|"adc:t"
+  109|analog|false|true|"PB09 / A2 / AIN3"|"adc:t"
+  4|analog|false|true|"PA04 / A3 / AIN4"|"adc:t"
+  5|analog|false|true|"PA05 / A4 / AIN5"|"adc:t"
+  102|analog|false|true|"PB02 / A5 / AIN10"|"adc:t"
+  22|digital|false|true|"PA22 / SDA (SERCOM3)"|i2c-sda
+  23|digital|false|true|"PA23 / SCL (SERCOM3)"|i2c-scl
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[5|]{peripheral|param|value}:
+  serial|"uarts:2"|"pins:10,11"
+  i2c|"channels:6"|"sda:22;scl:23"
+  spi|"channels:6"|"miso:19;mosi:16;sck:17;ss:18"
+  adc|"resolution:12bit"|"pins:2;108;109;4;5;102"
+  dac|"resolution:10bit"|"pins:2"
+usb:
+  type: Micro-USB
+  chip: native
+  vid: "0x2341"
+  pid: "0x004D"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "7mA"
+  total_current_limit: "130mA"
+  warnings[8]:
+    - "All I/O pins operate at 3.3V ONLY — NOT 5V tolerant; connecting 5V signals will damage the MCU"
+    - "Two Micro-USB ports: Programming (EDBG, PID 0x804D) and Native (MCU, PID 0x004D); use Programming for IDE"
+    - "A0/PA02 is the only pin with true DAC output (10-bit); remaining analog pins are input only"
+    - "SERCOM architecture provides up to 6 configurable serial interfaces (UART/SPI/I2C) via pin multiplexing"
+    - "No hardware floating-point unit (FPU) — ARM Cortex-M0+ only; use fixed-point math for performance"
+    - "D13/PA17 is shared with SPI SCK and onboard LED; avoid SPI and LED simultaneously"
+    - "EEPROM: not natively available; use FlashStorage library for emulated EEPROM (writes limited by flash)"
+    - "EDBG chip (ATSAMD21J18A) provides SWD debug + USB CDC + virtual COM for programming"
+compatibility:
+  arduinoCore: "1.8.14"
+  pio: samd
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: sam-ba-zero
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: samd21-family
+  boardProfileId: arduino-zero-abx00003
+  defaultLanguageSkills[3]:
+    - arduino-cpp-samd21
+    - platformio-samd
+    - tinygo-samd21

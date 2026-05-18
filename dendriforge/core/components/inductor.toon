@@ -1,0 +1,156 @@
+# METADATA:
+project_name: inductor-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: inductor
+name: "Inductor"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 62024-1"
+url: null
+image: inductor.svg
+symbol: inductor-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  inductance:
+    label: "Inductance"
+    unit: H
+    default: 0.0001
+    min: 0.000000001
+    max: 100
+    type: float
+    editable: true
+  current_rated:
+    label: "Rated Current (DC)"
+    unit: A
+    default: 1
+    min: 0.001
+    max: 1000
+    type: float
+    editable: true
+  current_saturation:
+    label: "Saturation Current"
+    unit: A
+    default: 1.5
+    min: 0.001
+    max: 2000
+    type: float
+    editable: false
+  dcr:
+    label: "DC Resistance (DCR)"
+    unit: Ω
+    default: 0.15
+    min: 0.001
+    max: 100
+    type: float
+    editable: false
+  q_factor:
+    label: "Quality Factor (Q)"
+    unit: V
+    default: 30
+    min: 1
+    max: 1000
+    type: float
+    editable: false
+  self_resonant_freq:
+    label: "Self-Resonant Frequency (SRF)"
+    unit: V
+    default: 10000000
+    min: 1000
+    max: 10000000000
+    type: float
+    editable: false
+  tolerance:
+    label: "Inductance Tolerance"
+    unit: "%"
+    default: 20
+    options: [1, 2, 5, 10, 20]
+    type: enum
+    editable: true
+  core_type:
+    label: "Core Type"
+    default: "ferrite"
+    options: ["air", "ferrite", "iron-powder", "laminated-iron", "MPP", "sendust", "high-flux"]
+    type: enum
+    editable: true
+  winding_type:
+    label: "Winding Type"
+    default: "single"
+    options: ["single", "coupled", "toroidal", "shielded", "unshielded"]
+    type: enum
+    editable: true
+  package:
+    label: "Package"
+    default: "SMD-1210"
+    options: ["SMD-0402", "SMD-0603", "SMD-0805", "SMD-1008", "SMD-1210", "SMD-1812", "SMD-2520", "THT-radial", "THT-axial", "THT-toroid"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[2|]{id|direction|type|voltage_max|current_max|notes}:
+  A|passive|analog|null|null|"terminal A"
+  B|passive|analog|null|null|"terminal B"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: basic-analog
+  equation: "V = inductance * dI/dt; Z_L = j * 2 * pi * f * inductance + dcr"
+  bidirectional: true
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - nominal
+    - saturated
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: null
+  max_current: "{current_rated}"
+  max_power: null
+  max_temp: 125
+  min_temp: -55
+warnings[4]:
+  - "Do not exceed saturation current — inductance drops sharply and switching regulators may lose control"
+  - "DCR causes I²R losses — verify thermal budget at maximum rated current"
+  - "Above self-resonant frequency the inductor behaves capacitively — verify SRF vs operating frequency"
+  - "Unshielded inductors radiate EMI — maintain clearance from sensitive analog and RF circuitry"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["boost-converter", "buck-converter", "filter", "choke", "energy-storage", "resonant-circuit"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 25
+  ports_layout: horizontal
+  port_A: {x: 0, y: 12}
+  port_B: {x: 60, y: 12}
+  label_position: top
+  value_display: "{inductance}H / {current_rated}A ({core_type})"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: inductor
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Passives"
+  tags[6]:
+    - inductor
+    - passive
+    - analog
+    - filter
+    - choke
+    - iec-62024

@@ -1,0 +1,137 @@
+# METADATA:
+project_name: mitsubishi-melsec-fx5u-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: mitsubishi-melsec-fx5u
+name: "Mitsubishi MELSEC iQ-F FX5U-32MR/ES — Compact PLC; 34ns LD instruction; 64K steps Flash; 16DI 24VDC sink/source; 16DO relay 2A 250VAC; 2 AI + 1 AO 12-bit built-in; 6x200kHz HSC; Ethernet 8conn; RS-485 MODBUS; SD card; 100-240VAC"
+manufacturer: "Mitsubishi Electric Corporation"
+mcu: "Mitsubishi MELSEC iQ-F FX5U CPU — 34ns LD instruction; 64K steps non-volatile flash; 0.2ms constant scan; IEC61131-3 LD-ST-FBD-SFC; built-in Ethernet + RS-485; 12-bit 2AI+1AO; 6ch 200kHz HSC; supercap RTC ~10 days"
+category: plc
+image: mitsubishi-melsec-fx5u.svg
+url: "https://www.mitsubishielectric.com/fa/products/faspec/point.page?kisyu=/plcf&formNm=FX5-_M-E-_FX5U-32MR%2FES_10&lang=2"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 262144
+  flash_available: 262144
+  sram: 131072
+  eeprom: 0
+  clock: 0
+  voltage: "230V"
+dims:
+  w: 150.0
+  h: 90.0
+  t: 86.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# /ES = AC power supply (100-240VAC); /DS = DC power supply (24VDC)
+# Input: 100-240VAC 50/60Hz; range 85-264VAC; max 110VA; inrush 100A@264VAC cold
+# 24VDC service power supply output: max 400mA for base unit (32MR/ES with no expansion)
+# CAUTION: do NOT externally power [24+] and [24V] service terminals — this WILL damage the CPU
+# Class D grounding (≤100Ω) required on FG terminal; use ≥2mm² wire
+# FG: Functional Earth for EMC — NOT the same as PE; connect to system earth separately
+powerPins[6|]{name|direction|voltage|type}:
+  L_AC|input|"230V"|null
+  N_AC|null|null|ground
+  FG|null|null|ground
+  SENS_24V|output|"24V"|null
+  SENS_GND|null|null|ground
+  V0V_OUTPUT_COM|null|null|ground
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# DI: X000-X017 (octal addressing, 16 points); 24VDC sink/source; M3 screw detachable terminal
+# X000-X005: 200kHz HSC; 2.5µs ON/OFF delay; 5.3mA@24VDC; 4.3kΩ input resistance
+# X006-X007: 10kHz; 30µs ON / 50µs OFF; 4mA@24VDC; 5.6kΩ
+# X010-X017: standard; 4mA; 5.6kΩ; default 10ms digital filter; configurable 0.2ms-70ms
+# DO: Y000-Y017 (16 relay outputs); 250VAC/30VDC max; 2A/point resistive; ~10ms relay response
+# RELAY OUTPUTS CANNOT generate PWM or pulse output — use FX5U-32MT/ES for pulse output
+# AI: built-in ch1-ch2 (0-10VDC 12-bit); AO: built-in ch1 (0-10VDC 12-bit); screw terminal
+gpio[37|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|true|"X000 / HSC ch0 A-phase — Digital Input 0; 24VDC sink/source; 200kHz high-speed counter input; ON delay 2.5µs; OFF delay 2.5µs; 5.3mA@24VDC; 4.3kΩ; interrupt-capable; pair with X001 for A/B quadrature 200kHz; M3 screw detachable terminal"|"di"
+  1|digital|false|true|"X001 / HSC ch0 B-phase — Digital Input 1; 24VDC sink/source; 200kHz HSC; 2.5µs ON/OFF; interrupt; B-phase pair for X000 quadrature; also ch1 single-phase if configured separately"|"di"
+  2|digital|false|true|"X002 / HSC ch1 A — Digital Input 2; 24VDC; 200kHz HSC; 2.5µs ON/OFF; interrupt"|"di"
+  3|digital|false|true|"X003 / HSC ch1 B — Digital Input 3; 24VDC; 200kHz HSC; 2.5µs ON/OFF; interrupt"|"di"
+  4|digital|false|true|"X004 / HSC ch2 A — Digital Input 4; 24VDC; 200kHz HSC; 2.5µs ON/OFF; interrupt"|"di"
+  5|digital|false|true|"X005 / HSC ch2 B — Digital Input 5; 24VDC; 200kHz HSC; 2.5µs ON/OFF; interrupt; last 200kHz input; X000-X005 = up to 6ch 200kHz when all configured single-phase"|"di"
+  6|digital|false|true|"X006 / HSC ch3 A — Digital Input 6; 24VDC sink/source; 10kHz HSC; ON delay 30µs; OFF delay 50µs; 4mA@24VDC; 5.6kΩ; interrupt"|"di"
+  7|digital|false|true|"X007 / HSC ch3 B — Digital Input 7; 24VDC; 10kHz HSC; 30µs ON/50µs OFF; interrupt; X006-X007 = 2ch 10kHz HSC"|"di"
+  8|digital|false|true|"X010 — Digital Input 8; 24VDC sink/source; standard input; 4mA@24VDC; 5.6kΩ; digital filter default 10ms; configurable 0.2ms-70ms (none-10µs-0.1ms-0.2ms-0.4ms-0.6ms-1ms-5ms-10ms-20ms-70ms); interrupt-capable"|"di"
+  9|digital|false|true|"X011 — Digital Input 9; 24VDC; standard; filter configurable; interrupt"|"di"
+  10|digital|false|true|"X012 — Digital Input 10; 24VDC; standard; interrupt"|"di"
+  11|digital|false|true|"X013 — Digital Input 11; 24VDC; standard; interrupt"|"di"
+  12|digital|false|true|"X014 — Digital Input 12; 24VDC; standard; interrupt"|"di"
+  13|digital|false|true|"X015 — Digital Input 13; 24VDC; standard; interrupt"|"di"
+  14|digital|false|true|"X016 — Digital Input 14; 24VDC; standard; interrupt"|"di"
+  15|digital|false|true|"X017 — Digital Input 15; 24VDC; standard; last built-in DI; interrupt"|"di"
+  16|digital|false|false|"Y000 — Relay Output 0; SPST-NO Form A relay; max 250VAC or 30VDC; 2A resistive per point; min load DC5V 2mA; response ~10ms; mechanical insulation; LED indicator; M3 screw detachable terminal; NO PWM or pulse capability on relay model — use FX5U-32MT/ES for PTO/PWM"|"do"
+  17|digital|false|false|"Y001 — Relay Output 1; same specs as Y000; 2A 250VAC/30VDC; ~10ms"|"do"
+  18|digital|false|false|"Y002 — Relay Output 2; 2A 250VAC/30VDC; relay mechanical insulation"|"do"
+  19|digital|false|false|"Y003 — Relay Output 3; 2A 250VAC/30VDC"|"do"
+  20|digital|false|false|"Y004 — Relay Output 4; 2A 250VAC/30VDC"|"do"
+  21|digital|false|false|"Y005 — Relay Output 5; 2A 250VAC/30VDC"|"do"
+  22|digital|false|false|"Y006 — Relay Output 6; 2A 250VAC/30VDC"|"do"
+  23|digital|false|false|"Y007 — Relay Output 7; 2A 250VAC/30VDC"|"do"
+  24|digital|false|false|"Y010 — Relay Output 8; 2A 250VAC/30VDC"|"do"
+  25|digital|false|false|"Y011 — Relay Output 9; 2A 250VAC/30VDC"|"do"
+  26|digital|false|false|"Y012 — Relay Output 10; 2A 250VAC/30VDC"|"do"
+  27|digital|false|false|"Y013 — Relay Output 11; 2A 250VAC/30VDC"|"do"
+  28|digital|false|false|"Y014 — Relay Output 12; 2A 250VAC/30VDC"|"do"
+  29|digital|false|false|"Y015 — Relay Output 13; 2A 250VAC/30VDC"|"do"
+  30|digital|false|false|"Y016 — Relay Output 14; 2A 250VAC/30VDC"|"do"
+  31|digital|false|false|"Y017 — Relay Output 15; 2A 250VAC/30VDC; last built-in relay output"|"do"
+  32|analog|false|false|"AI ch1 (VIN1) — Built-in Analog Input 1; 0-10VDC unipolar; 12-bit (0-4095 raw); no isolation from CPU; parameter-based scaling; numerical shift; warning output configurable; use twisted shielded pair; max cable per Mitsubishi guidelines; screw terminal on CPU front"|"adc:t"
+  33|analog|false|false|"AI ch2 (VIN2) — Built-in Analog Input 2; 0-10VDC; 12-bit; same specs as AI ch1; shield at CPU end only; do NOT connect to external power source"|"adc:t"
+  34|analog|false|false|"AO ch1 (VOUT) — Built-in Analog Output 1; 0-10VDC; 12-bit (0-4095 raw); no isolation from CPU; parameter-based; scaling; used for e.g. speed reference to inverter; max load capacitance per Mitsubishi guidelines; screw terminal on CPU front"|"adc:t"
+  35|digital|false|false|"ETH (10BASE-T/100BASE-TX) — Built-in Ethernet port; RJ45; 10/100 Mbps; IP configurable static or DHCP; max 8 simultaneous connections; protocols: SLMP-MC-protocol-binary-ASCII, MELSOFT-GX Works3-remote, open-TCP-UDP, MODBUS-TCP-client+server, CC-Link-IE-Field-Basic-V1.200+; hub required for multiple devices"|"do;di"
+  36|digital|false|false|"RS-485 (built-in) — 2-wire half-duplex; RJ45 or terminal block; max cable 50m; 300-115200 bps configurable; protocols: MODBUS-RTU-master+slave-up-to-32-devices-incl-master, Mitsubishi-inverter-protocol-up-to-16-units-FR-series-6-commands, non-procedure; termination resistor: install at both ends for cables >10m"|"do;di"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[7|]{peripheral|param|value}:
+  hsc_builtin|"count:8"|"6ch-200kHz-single-phase-or-3ch-200kHz-A-B-quadrature;2ch-10kHz-single-or-1ch-10kHz-AB;inputs:X000-X007;functions:count-up-down,comparison-output,interrupt-on-match,reset-start-gate;FNC-HSZ-HSCT-DHSCS-DHSCR-DHSZ-instructions"
+  sd_card|"size:32GB"|"SD-SDHC-microSDHC-card-slot;stores:program-backup,data-logging,recipe,GOT-data;read-program-on-power-up-from-SD;write-data-log;max-insertion-500-times-after-first-use;power-off-before-inserting-removing;compatible:up-to-32GB"
+  rtc_supercap|"backup:10days"|"RTC:hardware-real-time-clock;energy:internal-supercapacitor-large-capacity;backup:~10-days-clock-retention-typical-after-power-loss;device-memory:NOT-backed-up-by-supercap;optional-battery-FX3U-32BL-for-device-memory-and-extended-clock-backup"
+  expansion_io|"modules:8"|"max-8-FX5-series-extension-modules-right-of-CPU;types:FX5-16EX-ES-16DI,FX5-16EYR-ES-16relay-DO,FX5-16EYT-16transistor-DO,FX5-8EX-8EYR,FX5-4AD-4ch-AI-12bit,FX5-4DA-4ch-AO,FX5-40SSC-simple-motion,FX5-C16EX-D,FX5-CL-LINK-CC-Link-slave;total-max-256-I-O-with-remote"
+  expansion_board|"slots:1"|"1x-left-side-expansion-board-slot;types:FX5-232ADP-RS232,FX5-485ADP-additional-RS485,FX5-4AD-ADP-4ch-AI,FX5-4DA-ADP-4ch-AO;install-with-power-off-only;not-hot-swappable"
+  programming_ethernet|"tool:GX Works3"|"GX-Works3-via-Ethernet-or-USB-to-GOT-transparent;no-dedicated-USB-port-on-base-unit;program-via-LAN-RJ45;remote-maintenance-via-MELSOFT-iQ-Works;MELSEC-iQ-Works-system-integration;GX-Works2-limited-support"
+  security_functions|"level:industrial"|"file-password:read-write-execute-lock;remote-password:Ethernet-access-control;security-key:optional-hardware-key;CPU-access-password;program-protection-without-battery;anti-tamper-via-parameter-setting"
+usb:
+  type: null
+  chip: null
+  vid: "0x0000"
+  pid: "0x0000"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "400mA"
+  total_current_limit: "400mA"
+  warnings[9]:
+    - "FX5U-32MR/ES uses RELAY outputs (Y000-Y017) which CANNOT generate pulse train output (PTO) or PWM signals — relay switching time is ~10ms which makes it physically impossible to generate frequencies above ~50Hz; for applications requiring pulse output to stepper or servo drives (up to 200 kHz per axis) you MUST use the FX5U-32MT/ES (transistor output) variant; substituting relay for transistor in a motion application will cause all positioning instructions (PLSY, DRVA, DRVI) to fail or produce incorrect pulses"
+    - "The built-in 24VDC service power supply output provides a maximum of 400mA for the FX5U-32MR/ES base unit — when FX5 extension modules are connected, each module draws additional current from this service supply, reducing the available current for external sensors; if the total load exceeds the service supply rating, output voltage drops, digital inputs are disabled, and ALL outputs turn off; always calculate the total service supply current budget before selecting extension modules"
+    - "Do NOT apply external voltage to the [24+] and [24V] service power terminals on the CPU module — these terminals are outputs from the internal regulated supply; applying an external voltage to these terminals will damage the CPU module; some electronic loads with internal bias power supplies may inadvertently back-feed current into these terminals even when not intentionally powered externally"
+    - "The FX5U-32MR/ES has NO dedicated USB programming port — the only permanent programming interface is the built-in Ethernet port (RJ45); direct USB programming is possible only via a GOT HMI transparent pass-through or via the optional FX5-485ADP adapter; always ensure the Ethernet connection is available before deploying to a machine without a screen"
+    - "The built-in RS-485 port supports a maximum of 50m cable length — for longer distances or greater noise immunity, use the FX5-485ADP expansion board which also supports RS-485 but with improved common-mode rejection; install bus termination resistors (110Ω) at both physical ends of the RS-485 bus for cables longer than 10m; missing termination causes reflection and MODBUS CRC errors at higher baud rates"
+    - "The 2 built-in analog inputs (AI ch1, AI ch2) and analog output (AO ch1) accept 0-10VDC ONLY — there is no built-in 4-20mA current input; to measure 4-20mA connect an external precision shunt resistor (500Ω) and measure the resulting 1-5VDC voltage; alternatively install a FX5-4AD or FX5-4AD-ADP expansion module which supports both voltage and current inputs with proper resolution; the built-in AI has no isolation from the CPU logic"
+    - "The SD memory card slot must NOT be inserted or removed more than 500 times after first use — Mitsubishi Electric explicitly states this limit in the official hardware manual due to connector contact degradation; for high-frequency data logging applications that require frequent card swapping, this physical limit must be factored into the system maintenance plan; always power off the CPU before inserting or removing the SD card"
+    - "The FX5U-32MR/ES power supply input is 100-240VAC (range 85-264VAC) — the /DS variant uses 24VDC; never connect a DC voltage source to the AC terminals of the /ES variant as this will destroy the input rectifier; verify the variant suffix before wiring; the terminal designations L, N on the /ES model accept AC only; a connection error will cause irreparable damage to the power supply section"
+    - "The grounding requirement for the FX5U-32MR/ES is Class D (≤100Ω) using a wire of 2mm² or thicker connected to the FG (Functional Ground) terminal — do NOT share the FG ground with heavy electrical equipment, motors, or inverters as this introduces conducted noise that causes false input triggers and Ethernet communication errors; use a dedicated grounding conductor back to the main earth bar; incorrect or shared grounding is the most common cause of intermittent faults on MELSEC iQ-F systems"
+compatibility:
+  sw: "GX Works3 V1.000+ (primary — required for full FX5U features); GX Works2 (limited, no ST or advanced FB); MELSOFT Navigator; iQ Works; GX LogViewer for data logging"
+  languages: "Ladder Diagram (LD);Structured Text (ST);Function Block Diagram (FBD/LD);Sequential Function Chart (SFC / MELSAP3)"
+  frameworks: "IEC61131-3;SLMP;MC-protocol;MODBUS-TCP;MODBUS-RTU;CC-Link-IE-Field-Basic;MELSOFT;AnyWireASLINK-via-expansion;CC-Link-via-FX5-CL-LINK"
+  certifications: "CE;UL;cUL;ATEX-Zone2-Class-I-Div2;KC;UKCA;RCM;EAC"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: mitsubishi-melsec-iq-f-fx5u-family
+  boardProfileId: mitsubishi-melsec-fx5u
+  defaultLanguageSkills[3]:
+    - ladder-gx-works3-fx5u
+    - st-gx-works3-fx5u
+    - fbd-gx-works3-fx5u

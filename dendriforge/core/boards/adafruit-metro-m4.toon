@@ -1,0 +1,101 @@
+# METADATA:
+project_name: adafruit-metro-m4-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: adafruit-metro-m4
+name: "Adafruit Metro M4 Express"
+manufacturer: Adafruit
+mcu: ATSAMD51J19A
+category: maker
+image: adafruit-metro-m4.svg
+url: "https://www.adafruit.com/product/3382"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 524288
+  flash_available: 516096
+  sram: 196608
+  eeprom: 0
+  clock: 120000000
+  voltage: "3.3V"
+dims:
+  w: 68.6
+  h: 53.3
+  t: 3.2
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+  AREF|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[22|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|false|"D0 / RX"|uart-rx
+  1|digital|false|false|"D1 / TX"|uart-tx
+  2|digital|true|true|D2|int0
+  3|digital|true|true|"D3 PWM"|int1
+  4|digital|true|false|"D4 PWM"|null
+  5|digital|true|false|"D5 PWM"|null
+  6|digital|true|false|"D6 PWM"|null
+  7|digital|false|false|D7|null
+  8|digital|false|false|D8|null
+  9|digital|true|false|"D9 PWM"|null
+  10|digital|true|false|"D10 PWM / SS"|spi-ss
+  11|digital|true|false|"D11 PWM / MOSI"|spi-mosi
+  12|digital|false|false|"D12 / MISO"|spi-miso
+  13|digital|false|false|"D13 / LED / SCK"|"spi-sck;status-led"
+  14|analog|false|false|"A0 / DAC0"|"adc:t"
+  15|analog|false|false|"A1 / DAC1"|"adc:t"
+  16|analog|false|false|A2|"adc:t"
+  17|analog|false|false|A3|"adc:t"
+  18|analog|false|false|"A4 / SDA"|"adc:t;i2c-sda"
+  19|analog|false|false|"A5 / SCL"|"adc:t;i2c-scl"
+  20|digital|false|false|"D14 / SDA1"|i2c-sda
+  21|digital|false|false|"D15 / SCL1"|i2c-scl
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uarts:1"|"pins:0,1"
+  i2c|"channels:2"|"sda:18;scl:19"
+  spi|"channels:1"|"miso:12;mosi:11;sck:13;ss:10"
+  dac|"channels:2"|"dac0:14;dac1:15"
+usb:
+  type: "Micro-USB"
+  chip: "ATSAMD51J19A native"
+  vid: "0x239A"
+  pid: "0x8021"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "7mA"
+  total_current_limit: "500mA"
+  warnings[4]:
+    - "Logic level is 3.3V — use level shifters for 5V peripherals"
+    - "Max per-pin I/O current is 7mA; use transistors for higher loads"
+    - "D14/D15 provide second I2C bus via Wire1"
+    - "No EEPROM; emulated in flash with limited write cycles"
+compatibility:
+  arduinoCore: "1.8.19"
+  pio: adafruit
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: uf2
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: samd51-family
+  boardProfileId: adafruit-metro-m4
+  defaultLanguageSkills[2]:
+    - arduino-cpp-samd51
+    - rust-embassy-samd51

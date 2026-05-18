@@ -1,38 +1,138 @@
+# METADATA:
+project_name: tiva-c-launchpad-tm4c123-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: tiva-c-launchpad-tm4c123
-name: "Tiva C LaunchPad TM4C123"
-manufacturer: "Generic"
-mcu: "TM4C123GH6PM"
-category: "maker"
-image: "/boards/tiva-c-launchpad-tm4c123.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 262144
-sram: 32768
-clock_hz: 80000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "avr-family"
-  boardProfileId: "tiva-c-launchpad-tm4c123"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+name: "TI EK-TM4C123GXL Tiva C LaunchPad — TM4C123GH6PM ARM Cortex-M4F 80MHz HW-FPU, 256KB Flash, 32KB RAM, 43 GPIO, USB OTG, 2xCAN, MC-PWM, QEI"
+manufacturer: "Texas Instruments"
+mcu: "TI TM4C123GH6PM — ARM Cortex-M4F 80MHz; IEEE754 FPU; 32-ch uDMA; 2xADC-12bit; 8xUART; 4xSSI; 4xI2C; 2xCAN; USB-OTG"
+category: maker
+image: tiva-c-launchpad-tm4c123.svg
+url: "https://www.ti.com/tool/EK-TM4C123GXL"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 262144
+  flash_available: 262144
+  sram: 32768
+  eeprom: 2048
+  clock: 80000000
+  voltage: "3.3V"
+dims:
+  w: 102.0
+  h: 64.0
+  t: 12.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# 3.3V from onboard LDO; powered via ICDI USB or Device USB; power switch selects source
+# VBAT pad for 3V coin cell to supply Hibernation module RTC when main power off
+powerPins[6|]{name|direction|voltage|type}:
+  VBUS_USB|input|"5V"|null
+  V3V3|output|"3.3V"|null
+  VBAT|input|"3V"|null
+  GND|null|null|ground
+  AGND|null|null|ground
+  WAKE|input|"3.3V"|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# Port naming: PA=Port A, PB=Port B, PC=Port C, PD=Port D, PE=Port E, PF=Port F
+# ALL GPIO: 3.3V logic only — NOT 5V tolerant; output 8mA max per pin
+# PD7 and PF0 are NMI/JTAG-locked: must call GPIO_PORTD/F_LOCK = KEY and COMMIT before use
+# Pins exposed on LaunchPad headers J1-J4 only; full 64-pin LQFP has additional pads
+gpio[43|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|true|"PA0 / UART0-RX — UART0 RX; also routed to ICDI virtual COM port (USB-ICDI); default debug/programming UART; 3.3V ONLY"|"uart-rx;di;do"
+  1|digital|false|true|"PA1 / UART0-TX — UART0 TX; also ICDI virtual COM port TX; 3.3V ONLY"|"uart-tx;di;do"
+  2|digital|false|true|"PA2 / SSI0-CLK — SSI0 serial clock (default); 3.3V ONLY; interrupt"|"di;do;spi"
+  3|digital|false|true|"PA3 / SSI0-FSS — SSI0 frame select / CS (default); 3.3V ONLY; interrupt"|"di;do;spi"
+  4|digital|false|true|"PA4 / SSI0-RX — SSI0 MISO (default); 3.3V ONLY; interrupt"|"di;spi"
+  5|digital|false|true|"PA5 / SSI0-TX — SSI0 MOSI (default); 3.3V ONLY; interrupt"|"di;do;spi"
+  6|digital|false|true|"PA6 / I2C1-SCL / CAN0-RX — I2C1 SCL; alt CAN0 RX; 3.3V ONLY; interrupt"|"di;do;i2c;can"
+  7|digital|false|true|"PA7 / I2C1-SDA / CAN0-TX — I2C1 SDA; alt CAN0 TX; 3.3V ONLY; interrupt — CAN requires external SN65HVD232 or equivalent transceiver"|"di;do;i2c;can"
+  8|digital|false|true|"PB0 / UART1-RX / T2CCP0 — UART1 RX (w/ modem flow); Timer T2 capture; Wake pin (Hibernation); 3.3V ONLY; interrupt"|"uart-rx;di;do"
+  9|digital|false|true|"PB1 / UART1-TX / T2CCP1 — UART1 TX; Timer T2 capture; 3.3V ONLY; interrupt"|"uart-tx;di;do"
+  10|digital|false|true|"PB2 / I2C0-SCL / T3CCP0 — I2C0 SCL (primary); Timer T3 capture; 3.3V ONLY; interrupt"|"di;do;i2c"
+  11|digital|false|true|"PB3 / I2C0-SDA / T3CCP1 — I2C0 SDA (primary); Timer T3 capture; 3.3V ONLY; interrupt"|"di;do;i2c"
+  12|analog|true|true|"PB4 / AIN10 / CAN0-RX / SSI2-CLK / T1CCP0 — ADC AIN10; CAN0 RX (alt); SSI2 CLK; MC PWM-compatible; Timer T1; 3.3V ONLY; interrupt"|"di;do;pwm;adc:t;spi;can"
+  13|analog|true|true|"PB5 / AIN11 / CAN0-TX / SSI2-FSS / T1CCP1 — ADC AIN11; CAN0 TX (alt); SSI2 FSS; Timer T1; 3.3V ONLY; interrupt"|"di;do;pwm;adc:t;spi;can"
+  14|digital|true|true|"PB6 / M0PWM0 / SSI2-RX / T0CCP0 — MC PWM M0PWM0; SSI2 RX; Timer T0; 3.3V ONLY; interrupt"|"di;do;pwm;spi"
+  15|digital|true|true|"PB7 / M0PWM1 / SSI2-TX / T0CCP1 — MC PWM M0PWM1; SSI2 TX; Timer T0; 3.3V ONLY; interrupt"|"di;do;pwm;spi"
+  16|digital|false|false|"PC0 / TCK / SWCLK — JTAG TCK / SWD SWCLK — DEBUG USE ONLY; do NOT use as GPIO unless JTAG disabled; 3.3V ONLY"|null
+  17|digital|false|false|"PC1 / TMS / SWDIO — JTAG TMS / SWD SWDIO — DEBUG USE ONLY; 3.3V ONLY"|null
+  18|digital|false|false|"PC2 / TDI — JTAG TDI — DEBUG USE ONLY; 3.3V ONLY"|null
+  19|digital|false|false|"PC3 / TDO / SWO — JTAG TDO / SWO trace — DEBUG USE ONLY; 3.3V ONLY"|null
+  20|digital|false|true|"PC4 / U4RX / M0PWM6 / IDX1 — UART4 RX; MC PWM M0PWM6; QEI1 index; 3.3V ONLY; interrupt"|"uart-rx;di;do;pwm"
+  21|digital|false|true|"PC5 / U4TX / M0PWM7 / PHA1 — UART4 TX; MC PWM M0PWM7; QEI1 PhA; 3.3V ONLY; interrupt"|"uart-tx;di;do;pwm"
+  22|digital|false|true|"PC6 / U3RX / PHB1 — UART3 RX; QEI1 PhB; 3.3V ONLY; interrupt"|"uart-rx;di;do"
+  23|digital|false|true|"PC7 / U3TX — UART3 TX; 3.3V ONLY; interrupt"|"uart-tx;di;do"
+  24|analog|false|true|"PD0 / AIN7 / SSI3-CLK / SSI1-CLK / I2C3-SCL / M0PWM6 / M1PWM0 / T0CCP0 — ADC AIN7; SSI3/1 CLK; I2C3 SCL; PWM; Timer; 3.3V ONLY; interrupt"|"di;do;pwm;adc:t;spi;i2c"
+  25|analog|false|true|"PD1 / AIN6 / SSI3-FSS / SSI1-FSS / I2C3-SDA / M0PWM7 / M1PWM1 / T0CCP1 — ADC AIN6; SSI3/1 FSS; I2C3 SDA; PWM; 3.3V ONLY; interrupt"|"di;do;pwm;adc:t;spi;i2c"
+  26|analog|false|true|"PD2 / AIN5 / SSI3-RX / SSI1-RX / M0FAULT0 / T3CCP0 — ADC AIN5; SSI3/1 RX (MISO); PWM fault input; Timer; 3.3V ONLY; interrupt"|"di;do;adc:t;spi"
+  27|analog|false|true|"PD3 / AIN4 / SSI3-TX / SSI1-TX / IDX0 / T3CCP1 — ADC AIN4; SSI3/1 TX (MOSI); QEI0 index; Timer; 3.3V ONLY; interrupt"|"di;do;adc:t;spi"
+  28|digital|false|true|"PD4 / U6RX / USB0DM — UART6 RX; USB D- signal — USB function takes priority; do NOT use as GPIO when USB active; 3.3V ONLY; interrupt"|"uart-rx;di"
+  29|digital|false|true|"PD5 / U6TX / USB0DP — UART6 TX; USB D+ signal — USB function takes priority; 3.3V ONLY; interrupt"|"uart-tx;di"
+  30|digital|false|true|"PD6 / U2RX / M0FAULT0 / PHA0 / T4CCP0 — UART2 RX; PWM M0 fault input 0; QEI0 PhA; Timer T4; 3.3V ONLY; interrupt"|"uart-rx;di;do"
+  31|digital|false|true|"PD7 / U2TX / PHB0 / T4CCP1 — UART2 TX; QEI0 PhB; Timer T4; 3.3V ONLY; interrupt — NMI LOCKED by default; must write GPIOLOCK=0x4C4F434B then GPIOCR=0xFF to unlock before use"|"uart-tx;di;do"
+  32|analog|false|true|"PE0 / AIN3 / U7RX — ADC AIN3; UART7 RX; Wake pin (Hibernation); 3.3V ONLY; interrupt"|"uart-rx;di;do;adc:t"
+  33|analog|false|true|"PE1 / AIN2 / U7TX — ADC AIN2; UART7 TX; 3.3V ONLY; interrupt"|"uart-tx;di;do;adc:t"
+  34|analog|false|true|"PE2 / AIN1 — ADC AIN1; 3.3V ONLY; interrupt"|"di;do;adc:t"
+  35|analog|false|true|"PE3 / AIN0 — ADC AIN0; 3.3V ONLY; interrupt"|"di;do;adc:t"
+  36|analog|true|true|"PE4 / AIN9 / U5RX / I2C2-SCL / M0PWM4 / M1PWM2 / CAN0-RX — ADC AIN9; UART5 RX; I2C2 SCL; MC PWM; CAN0 RX (alt); 3.3V ONLY; interrupt"|"uart-rx;di;do;pwm;adc:t;i2c;can"
+  37|analog|true|true|"PE5 / AIN8 / U5TX / I2C2-SDA / M0PWM5 / M1PWM3 / CAN0-TX — ADC AIN8; UART5 TX; I2C2 SDA; MC PWM; CAN0 TX (alt); 3.3V ONLY; interrupt"|"uart-tx;di;do;pwm;adc:t;i2c;can"
+  38|digital|false|true|"PF0 / M1PWM4 / SSI1-RX / CAN0-RX / T0CCP0 / NMI / C0O / SW2 — on-board SW2 (User Button 2); CAN0 RX (alt); PWM; SSI1; Timer; 3.3V ONLY; interrupt — NMI LOCKED by default; write LOCK+COMMIT to unlock before use as GPIO or SW2"|"di;pwm;spi;can"
+  39|digital|true|true|"PF1 / M1PWM5 / SSI1-TX / T0CCP1 / C1O / PHA0 / TRD1 — on-board RGB LED RED; MC PWM M1PWM5; SSI1 TX; QEI0 PhA; Timer; 3.3V ONLY; interrupt"|"di;do;pwm;spi"
+  40|digital|true|true|"PF2 / M0FAULT0 / M1PWM6 / SSI1-CLK / T1CCP0 / TRD0 — on-board RGB LED BLUE; MC PWM M1PWM6; SSI1 CLK; Timer; 3.3V ONLY; interrupt"|"di;do;pwm;spi"
+  41|digital|true|true|"PF3 / M1PWM7 / SSI1-FSS / CAN0-TX / T1CCP1 / TRCLK — on-board RGB LED GREEN; MC PWM M1PWM7; SSI1 FSS; CAN0 TX (alt); Timer; 3.3V ONLY; interrupt"|"di;do;pwm;spi;can"
+  42|digital|false|true|"PF4 / M1FAULT0 / IDX1 / T2CCP0 / USB0EPEN / SW1 — on-board SW1 (User Button 1); MC PWM fault 1; QEI1 index; Timer; USB OTG enable; 3.3V ONLY; interrupt"|"di"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[9|]{peripheral|param|value}:
+  usb_otg|"speed:12Mbit"|"proto:USB2.0-FS+LS-OTG-Host-Device;endpoints:32;connector:Micro-A-B;DM:PD4;DP:PD5;lib:TivaWare-USB;modes:CDC-HID-Bulk-Audio-DFU"
+  uart_0to3|"baud:3000000"|"uart0:RX=PA0,TX=PA1(ICDI-VCP);uart1:RX=PB0,TX=PB1(modem-RTS-CTS);uart2:RX=PD6,TX=PD7;uart3:RX=PC6,TX=PC7;all:IrDA-9bit-ISO7816"
+  uart_4to7|"baud:3000000"|"uart4:RX=PC4,TX=PC5;uart5:RX=PE4,TX=PE5;uart6:RX=PD4,TX=PD5(shared-USB);uart7:RX=PE0,TX=PE1"
+  ssi_0to3|"speed:25Mbit"|"ssi0:CLK=PA2,FSS=PA3,RX=PA4,TX=PA5;ssi1:CLK=PF2,FSS=PF3,RX=PF0,TX=PF1(alt:PD0-3);ssi2:CLK=PB4,FSS=PB5,RX=PB6,TX=PB7;ssi3:CLK=PD0,FSS=PD1,RX=PD2,TX=PD3;modes:Freescale-SPI-MICROWIRE-TI-sync"
+  i2c_0to3|"speed:400kHz"|"i2c0:SCL=PB2,SDA=PB3;i2c1:SCL=PA6,SDA=PA7;i2c2:SCL=PE4,SDA=PE5;i2c3:SCL=PD0,SDA=PD1;all:100-400kHz-master-slave"
+  can_0to1|"speed:1Mbit"|"can0:RX=PA6-or-PB4-or-PE4,TX=PA7-or-PB5-or-PE5;can1:RX=PA6-or-PF0,TX=PA7-or-PF1;proto:CAN2.0A-2.0B;requires-external-transceiver-SN65HVD232"
+  mc_pwm|"channels:16"|"M0PWM:pins-PB6-PB7-PB4-PB5-PE4-PE5-PC4-PC5;M1PWM:PF1-PF2-PF3-PF4-PA6-PA7-PD0-PD1;8-generators-x2;dead-band;fault-inputs-2;QEI0:PD6-PD7-PD3;QEI1:PC5-PC6-PF1"
+  adc_0to1|"resolution:12bit"|"ADC0+ADC1:12-bit-SAR;1MSPS-per-module;12-channels:AIN0-PE3,AIN1-PE2,AIN2-PE1,AIN3-PE0,AIN4-PD3,AIN5-PD2,AIN6-PD1,AIN7-PD0,AIN8-PE5,AIN9-PE4,AIN10-PB4,AIN11-PB5;temp-sensor;16-samples-FIFO"
+  hibernation|"current:5uA"|"wake:PE0-or-RTC;RTC:32768Hz-crystal-on-board;VBAT:coin-cell-pad;GPIORETENTION:supported;lib:TivaWare-Hibernate"
+usb:
+  type: Micro-AB
+  chip: native
+  vid: "0x1CBE"
+  pid: "0x0108"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "8mA"
+  total_current_limit: "250mA"
+  warnings[9]:
+    - "ALL GPIO pins on TM4C123GH6PM are 3.3V ONLY — none are 5V tolerant; applying 5V to any GPIO pin will latch-up or permanently damage the device; use a level shifter (e.g. TXB0108) when interfacing with 5V peripherals"
+    - "PD7 (UART2-TX/NMI) and PF0 (SW2/CAN0-RX/NMI) are LOCKED by default to prevent accidental NMI triggering — before using these as GPIO write 0x4C4F434B to GPIOLOCK and 0xFF to GPIOCR; SW2 on PF0 is also affected and requires unlock"
+    - "PC0-PC3 (JTAG/SWD pins: TCK, TMS, TDI, TDO/SWO) must NOT be used as GPIO unless the JTAG interface is fully disabled — disabling JTAG makes on-board ICDI debugger non-functional; recovery requires a JTAG programmer"
+    - "PD4 and PD5 are the USB D- and D+ signals — these pins cannot be used as GPIO while the USB peripheral is active; if USB is not required they can be reconfigured but output drive strength is 18mA (higher than other pads)"
+    - "Both CAN modules (CAN0 and CAN1) require an external CAN bus transceiver chip (TI SN65HVD232 or equivalent) — the MCU CAN pins output 3.3V CMOS logic and cannot directly drive a CAN bus; the LaunchPad has no on-board CAN transceiver"
+    - "UART0 (PA0/PA1) is shared with the on-board ICDI virtual COM port over USB — when the ICDI USB cable is connected, PA0/PA1 are driven by the ICDI; do NOT connect external devices to PA0/PA1 while using ICDI serial debugging simultaneously"
+    - "The on-board RGB LED uses PF1 (RED), PF2 (BLUE), PF3 (GREEN) — these are shared with SSI1 (CLK/FSS/TX) and MC PWM outputs; using SSI1 will toggle the LED; disable LED GPIO before using SSI1 or PWM on PF1-PF3"
+    - "The Hibernation module shares the 32.768kHz oscillator circuit with the RTC — HIBCLK must be enabled via SysCtlPeripheralEnable(SYSCTL_PERIPH_HIBERNATE) and HibernateEnableExpClk() before any RTC or hibernate functions; without coin-cell on VBAT, RTC resets on power loss"
+    - "The Motion-Control PWM (MCPWM) is a separate module from the standard GPT PWM — MCPWM uses the PWM subsystem (M0PWM/M1PWM), has dedicated dead-band generators and fault inputs; GPT PWM (CCP) and MCPWM cannot share the same pin simultaneously"
+compatibility:
+  sw: "Code Composer Studio (CCS) v6+; IAR Embedded Workbench; Keil MDK-ARM; Energia (Arduino-compatible); PlatformIO (timsp430 or tivac target)"
+  languages: "C;C++;ARM assembly;Energia (C++ subset)"
+  frameworks: "TivaWare for C Series;FreeRTOS;TI-RTOS;CMSIS;Energia"
+  certifications: "FCC;CE;RoHS"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: ti-tivac-tm4c123-family
+  boardProfileId: tiva-c-launchpad-tm4c123
+  defaultLanguageSkills[3]:
+    - c-tivaware-tm4c
+    - cpp-energia-tivac
+    - c-freertos-arm-cortex-m4f

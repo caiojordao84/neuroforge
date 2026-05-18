@@ -1,0 +1,148 @@
+# METADATA:
+project_name: battery-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: battery
+name: "Generic Battery"
+family: electricals
+subfamily: sources
+category: source
+standard: "IEC 60086-1"
+url: null
+image: battery.svg
+symbol: battery-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  nominal_voltage:
+    label: "Nominal Voltage"
+    unit: V
+    default: 12
+    min: 1.2
+    max: 96
+    type: float
+    editable: true
+  capacity:
+    label: "Capacity"
+    unit: V
+    default: 7
+    min: 0.1
+    max: 1000
+    type: float
+    editable: true
+  internal_resistance:
+    label: "Internal Resistance"
+    unit: Ω
+    default: 0.05
+    min: 0.001
+    max: 10
+    type: float
+    editable: false
+  soc:
+    label: "State of Charge"
+    unit: "%"
+    default: 100
+    min: 0
+    max: 100
+    type: float
+    editable: true
+  chemistry:
+    label: "Battery Chemistry"
+    default: "Li-Ion"
+    options: ["Li-Ion", "LiFePO4", "NiMH", "NiCd", "Lead-Acid", "Alkaline"]
+    type: enum
+    editable: true
+  max_charge_current:
+    label: "Max Charge Current"
+    unit: A
+    default: 1
+    min: 0.01
+    max: 500
+    type: float
+    editable: false
+  max_discharge_current:
+    label: "Max Discharge Current"
+    unit: A
+    default: 5
+    min: 0.01
+    max: 1000
+    type: float
+    editable: false
+  cutoff_voltage:
+    label: "Discharge Cutoff Voltage"
+    unit: V
+    default: 10
+    min: 0
+    max: 90
+    type: float
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+ports[2|]{id|direction|type|voltage_max|current_max|notes}:
+  POS|bidirectional|power|"96V"|"1000A"|"positive terminal"
+  NEG|bidirectional|ground|null|null|"negative terminal / GND"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: basic-analog
+  waveform: DC
+  equation: "V_out = nominal_voltage * (soc/100) - I * internal_resistance"
+  bidirectional: true
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[4]:
+    - idle
+    - charging
+    - discharging
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "96V"
+  max_current: "1000A"
+  max_power: null
+  max_temp: 60
+  min_temp: -20
+warnings[4]:
+  - "Never short-circuit battery terminals — risk of fire and explosion"
+  - "Do not charge beyond rated max charge current"
+  - "Do not discharge below cutoff voltage — permanent capacity loss may occur"
+  - "Li-Ion and LiFePO4 cells require a dedicated BMS for safe operation"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["portable-power", "backup-supply", "ev-system", "energy-storage"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 40
+  ports_layout: custom
+  port_POS: {x: 60, y: 10}
+  port_NEG: {x: 60, y: 30}
+  label_position: left
+  value_display: "{nominal_voltage}V / {capacity}Ah ({chemistry})"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: battery
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Sources"
+  tags[6]:
+    - battery
+    - source
+    - dc
+    - energy-storage
+    - rechargeable
+    - portable

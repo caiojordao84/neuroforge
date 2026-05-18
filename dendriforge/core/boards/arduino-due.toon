@@ -1,38 +1,149 @@
+# METADATA:
+project_name: arduino-due-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: arduino-due
 name: "Arduino Due"
-manufacturer: "Generic"
-mcu: "ATSAM3X8E"
-category: "maker"
-image: "/boards/arduino-due.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 524288
-sram: 98304
-clock_hz: 84000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "avr-family"
-  boardProfileId: "arduino-due"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+manufacturer: Arduino
+mcu: AT91SAM3X8E
+category: maker
+image: arduino-due.svg
+url: "https://store.arduino.cc/products/arduino-due"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 524288
+  flash_available: 524288
+  sram: 98304
+  eeprom: 0
+  clock: 84000000
+  voltage: "3.3V"
+dims:
+  w: 101.6
+  h: 53.3
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[8|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+  IOREF|output|"3.3V"|null
+  AREF|input|null|null
+  "3V3 800mA"|output|"3.3V"|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[66|]{pin|type|pwm|int|label|roles}:
+  0|digital|f|f|"D0 / RX0"|uart-rx
+  1|digital|f|f|"D1 / TX0"|uart-tx
+  2|digital|t|t|"D2 PWM"|int0
+  3|digital|t|t|"D3 PWM"|int1
+  4|digital|t|f|"D4 PWM"|null
+  5|digital|t|f|"D5 PWM"|null
+  6|digital|t|f|"D6 PWM"|null
+  7|digital|t|f|"D7 PWM"|null
+  8|digital|t|f|"D8 PWM"|null
+  9|digital|t|f|"D9 PWM"|null
+  10|digital|t|f|"D10 PWM / SS0"|spi-ss
+  11|digital|t|f|"D11 PWM / MOSI"|spi-mosi
+  12|digital|t|f|"D12 PWM / MISO"|spi-miso
+  13|digital|t|f|"D13 / LED / SCK"|"spi-sck;status-led"
+  14|digital|f|f|"D14 / TX3"|uart-tx
+  15|digital|f|f|"D15 / RX3"|uart-rx
+  16|digital|f|f|"D16 / TX2"|uart-tx
+  17|digital|f|f|"D17 / RX2"|uart-rx
+  18|digital|f|t|"D18 / TX1"|uart-tx
+  19|digital|f|t|"D19 / RX1"|uart-rx
+  20|digital|f|t|"D20 / SDA"|i2c-sda
+  21|digital|f|t|"D21 / SCL"|i2c-scl
+  22|digital|f|f|D22|null
+  23|digital|f|f|D23|null
+  24|digital|f|f|D24|null
+  25|digital|f|f|D25|null
+  26|digital|f|f|D26|null
+  27|digital|f|f|D27|null
+  28|digital|f|f|D28|null
+  29|digital|f|f|D29|null
+  30|digital|f|f|D30|null
+  31|digital|f|f|D31|null
+  32|digital|f|f|D32|null
+  33|digital|f|f|D33|null
+  34|digital|f|f|D34|null
+  35|digital|f|f|D35|null
+  36|digital|f|f|D36|null
+  37|digital|f|f|D37|null
+  38|digital|f|f|D38|null
+  39|digital|f|f|D39|null
+  40|digital|f|f|D40|null
+  41|digital|f|f|D41|null
+  42|digital|f|f|D42|null
+  43|digital|f|f|D43|null
+  44|digital|f|f|D44|null
+  45|digital|f|f|D45|null
+  46|digital|f|f|D46|null
+  47|digital|f|f|D47|null
+  48|digital|f|f|D48|null
+  49|digital|f|f|D49|null
+  50|digital|f|f|"D50 / MISO"|spi-miso
+  51|digital|f|f|"D51 / MOSI"|spi-mosi
+  52|digital|f|f|"D52 / SCK"|spi-sck
+  53|digital|f|f|"D53 / SS"|spi-ss
+  54|analog|f|f|A0|"adc:t"
+  55|analog|f|f|A1|"adc:t"
+  56|analog|f|f|A2|"adc:t"
+  57|analog|f|f|A3|"adc:t"
+  58|analog|f|f|A4|"adc:t"
+  59|analog|f|f|A5|"adc:t"
+  60|analog|f|f|A6|"adc:t"
+  61|analog|f|f|A7|"adc:t"
+  62|analog|f|f|A8|"adc:t"
+  63|analog|f|f|A9|"adc:t"
+  64|analog|f|f|A10|"adc:t"
+  65|analog|f|f|A11|"adc:t"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[6|]{peripheral|param|value}:
+  serial|"uarts:4"|"pins:0,1"
+  i2c|"channels:2"|"sda:20;scl:21"
+  spi|"channels:1"|"miso:50;mosi:51;sck:52;ss:53"
+  pwm|"channels:12"|"pins:2;3;4;5;6;7;8;9;10;11;12;13"
+  adc|"channels:12"|"resolution:12"
+  dac|"channels:2"|"pins:54;55"
+usb:
+  type: Micro-USB
+  chip: ATmega16U2
+  vid: "0x2341"
+  pid: "0x003e"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "130mA"
+  total_current_limit: "800mA"
+  warnings[4]:
+    - "All I/O pins operate at 3.3V — NOT 5V tolerant"
+    - "Pins 0/1 shared with Programming USB Serial"
+    - "Pin 13 has onboard LED interference"
+    - "EEPROM not available on SAM3X8E — use Flash emulation"
+compatibility:
+  arduinoCore: "1.6.12"
+  pio: atmelsam
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: sam-ba
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: sam3x-family
+  boardProfileId: arduino-due
+  defaultLanguageSkills[2]:
+    - arduino-cpp-sam
+    - rust-embassy-sam3x

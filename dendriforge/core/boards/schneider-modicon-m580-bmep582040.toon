@@ -1,0 +1,100 @@
+# METADATA:
+project_name: schneider-modicon-m580-bmep582040-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: schneider-modicon-m580-bmep582040
+name: "Schneider Electric Modicon M580 BMEP582040 — ePAC Standalone Processor Level 2; 8MB program RAM; 10Kinst/ms; 2048 DI/DO + 512 AI/AO local; 61 Ethernet devices; 8 RIO drops; 64 dist. devices; 2+4 ETH ports; CIP Safety SIL2; 4GB flash card; 600kH MTBF"
+manufacturer: "Schneider Electric"
+mcu: "Schneider Electric Modicon M580 BMEP582040 CPU — 10Kinst/ms Boolean; 8MB program RAM; 768KB data RAM; 2MB safety RAM; IEC61131-3 LD-FBD-ST-SFC-IL; CIP Safety SIL2; RIO+DIO scanner; Ethernet Modbus TCP + EtherNet/IP; 600,000h MTBF"
+category: plc
+image: schneider-modicon-m580-bmep582040.svg
+url: "https://www.se.com/en/product/BMEP582040/"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 4294967296
+  flash_available: 8388608
+  sram: 9175040
+  eeprom: 0
+  clock: 0
+  voltage: "24V"
+dims:
+  w: 72.0
+  h: 134.6
+  t: 135.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# BMEP582040 has NO external power connector — powered entirely via M580 rack backplane
+# Rack power supplied by separate BME/BMX power supply module: BMXPSP0400 (24VDC) or BMXPSP0600 (115-230VAC)
+# CPU current consumption from backplane: 270mA @ 24VDC
+# Isolation: service ETH port isolated from CPU logic; device network ETH isolated (transformer coupled)
+# PE: chassis earth via rack mounting; rack must be grounded to panel earth ≤1Ω
+powerPins[4|]{name|direction|voltage|type}:
+  BACKPLANE_24V|input|"24V"|null
+  BACKPLANE_5V|input|"5V"|null
+  BACKPLANE_GND|null|null|ground
+  PE_RACK|null|null|ground
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# BMEP582040 has NO integrated field I/O — no DI/DO/AI/AO on the CPU module itself
+# All field I/O via BME/BMX X80 I/O modules in local rack (max 4 racks, 2048 DI/DO, 512 AI/AO)
+# Remote I/O via BMENOC EtherNet/IP RIO module + X80 remote racks (8 RIO drops, 2 racks/drop)
+# Distributed I/O via EtherNet/IP or Modbus TCP adapters on device network (max 64 devices)
+# GPIO map covers the physical communication ports on the CPU front panel
+gpio[3|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|false|"ETH SERVICE — RJ45; 10BASE-T/100BASE-TX; isolated; dedicated programming and maintenance port; use for EcoStruxure Control Expert (Unity Pro) online connection, firmware update, diagnostics; do NOT use for runtime I/O or SCADA; IP address independent of device network ports; isolation transformer-coupled; LED ETH-MS (green/red)"|"do;di"
+  1|digital|false|false|"ETH DEVICE NET PORT 1 — RJ45; 10BASE-T/100BASE-TX; embedded 2-port switch with port 2; protocols: Modbus-TCP-server-client, EtherNet/IP-scanner-adapter, SNMP, DHCP, NTP, TFTP, FTP, HTTP; max 64 concurrent connections; 61 Ethernet devices total on device network; RIO-scanner (8 remote drops); DIO-scanner (64 distributed I/O devices); Global Data; transformer-coupled; LED ETH-NS (green/red)"|"do;di"
+  2|digital|false|false|"ETH DEVICE NET PORT 2 — RJ45; same 2-port switch as port 1; same IP address as port 1; use for daisy-chain or star topology; supports RSTP (Rapid Spanning Tree Protocol) for redundant ring topology with BMENOC modules; max cable 100m copper Cat5e or better"|"do;di"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[9|]{peripheral|param|value}:
+  ethernet_dual_device|"speed:100Mbit"|"2x-RJ45-10-100Mbps-embedded-2-port-switch;1-shared-IP-address;protocols:Modbus-TCP,EtherNet-IP,SNMP,DHCP,NTP,TFTP,FTP,HTTP;RIO-scanner:8-remote-drops-2-X80-racks-per-drop;DIO-scanner:64-distributed-EIP-ModbusTCP-devices;max-61-Ethernet-devices-total;RSTP-ring-support;Cat5e-min"
+  ethernet_service|"speed:100Mbit"|"1x-RJ45-isolated-service-port;programming-maintenance-only;EcoStruxure-Control-Expert-connection;firmware-update;diagnostics;separate-IP-from-device-network;do-NOT-use-for-SCADA-or-runtime-IO"
+  memory_card_flash|"size:4GB"|"expandable-flash-slot;4GB-BMXRMS004GPF-memory-card;stores:program-backup-data-storage-firmware-recipe-SOE-event-log;BACKUP-LED-red-on-fault;recommended-for-all-production-systems;hot-swap-NOT-supported-power-off-first"
+  local_io_rack|"racks:4"|"max-4-local-racks:1-main-BMEXBP0400-0800-1200-1600-plus-up-to-3-extension-racks;X-Bus-or-Ethernet-backplane;modules:BME-BMX-X80-DI-DO-AI-AO-HART-motion-counter-serial-SSI-safety;2048-DI-DO-max,512-AI-AO-max;72-app-specific-channels"
+  remote_io_rio|"drops:8"|"RIO-scanner:8-remote-drops-via-BMENOC0311-or-BMENOC0321-EtherNet-backplane-module;2-X80-racks-per-drop;RIO-rack-types:BMEXBP or BMXXBP;each-RIO-drop-is-a-separate-EtherNet-IP-subnet;dedicated-RIO-network-recommended-for-determinism;DO-NOT-mix-RIO-and-DIO-on-same-network-for-SIL2"
+  distributed_io_dio|"devices:64"|"DIO-scanner:64-distributed-I-O-devices;types:STB-Advantys,OTB,EtherNet-IP-adapters,Modbus-TCP-I-O,ABB-drives-via-EIP,Schneider-ATV-drives;polling-rate-configurable;each-device-consumes-1-of-61-Ethernet-device-slots"
+  cip_safety_sil2|"level:SIL2"|"CIP-Safety-integrated;IEC-61508-up-to-SIL2;safety-RAM:2MB-program+512KB-data;safety-I-O-via-BMESAI0410-BME-safety-modules;safety-PLC-programming-in-EcoStruxure-Control-Expert-Safety-extension;do-NOT-mix-safety-and-standard-tasks-without-correct-isolation;SIL2-requires-full-safety-validation-per-IEC-61508"
+  tasks_structure|"tasks:68"|"1-cyclic-periodic-master-task;1-periodic-fast-task;64-event-tasks;2-auxiliary-tasks;total-68;MAST-task-min-period-1ms;FAST-task-min-1ms;event-tasks:IO-edge-triggered-or-time-triggered;no-continuous-task-concept-differs-from-M221"
+  as_interface|"modules:8"|"8-AS-Interface-modules-max-via-BMXEIA0100-in-local-rack;each-BMXEIA0100-supports-31-slaves-on-AS-i-bus;total-AS-i-slaves:up-to-248;digital-and-analog-AS-i-profiles"
+usb:
+  type: Mini-B
+  chip: native
+  vid: "0x0067"
+  pid: "0xC300"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "270mA"
+  total_current_limit: "270mA"
+  warnings[9]:
+    - "BMEP582040 has NO integrated field I/O on the CPU module — all discrete and analog I/O is provided by separate BME/BMX X80 I/O modules mounted in M580 racks (BMEXBP series); the rack (BMEXBP0400/0800/1200/1600) and at least one power supply module (BMXPSP0400 for 24VDC or BMXPSP0600 for 115-230VAC) MUST be ordered separately; without a rack and power supply the CPU module cannot operate; the CPU occupies slot 00 of the main local rack"
+    - "The 2 device network Ethernet ports share a SINGLE IP address via an embedded 2-port switch — do NOT assign different IP addresses to the two ports; the two-port switch supports linear or ring (RSTP) topology but does NOT provide VLAN separation or routing between network segments; for network segmentation between RIO traffic and SCADA traffic, install a BMENOC0311 or BMENOC0321 Ethernet communication module in the rack which provides an additional isolated Ethernet network with its own IP address"
+    - "The RIO scanner in the BMEP582040 supports a maximum of 8 remote I/O drops, each with up to 2 X80 racks — exceeding 8 RIO drops requires upgrading to a higher-level M580 CPU (BMEP583020 for 16 drops or BMEP584020 for 31 drops); the RIO network must be on a dedicated Ethernet subnet physically separate from the DIO/SCADA network for deterministic response time; mixing RIO and SCADA traffic on the same switch can cause I/O timeouts and controller watchdog faults"
+    - "CIP Safety (SIL2) is integrated in the BMEP582040 but requires specific safety-rated I/O modules (BMESAI0410 etc.) and the EcoStruxure Control Expert Safety programming extension — standard I/O modules cannot be used in safety loops; safety and non-safety tasks must be architecturally isolated per IEC 61508; the safety application requires a separate validation process including FMEA, Safety Requirements Specification, and Factory Acceptance Test; Schneider Electric will not certify a safety application configured only with standard I/O modules"
+    - "The expandable flash memory card (BMXRMS004GPF, 4GB) is STRONGLY RECOMMENDED for all production installations — without the memory card, the program is stored only in volatile RAM and a prolonged power failure or CPU replacement will require a full application re-download from the programming PC; the BACKUP LED turns red if the memory card is faulty or absent; hot-swapping the memory card is NOT supported; always power off the rack before inserting or removing the card"
+    - "The M580 rack power supply (BMXPSP series) current budget must be calculated before populating modules — each BME/BMX I/O module draws 5V and 24V from the rack backplane; the BMXPSP0400 provides 5V/10A and 24V/0.8A; exceeding the budget causes random module faults and CPU resets; for racks with high analog I/O density or motion modules, a second power supply may be needed on the right side of the rack using a BMXXBE1000 bus extension module"
+    - "The Ethernet service port on the BMEP582040 is intended for PROGRAMMING AND MAINTENANCE ONLY — do NOT connect the service port to a production SCADA or historian network; the service port has lower protocol security hardening than the device network ports and is not designed for sustained high-traffic connections; always use the device network ports (Port 1/Port 2) for runtime communications with HMI, SCADA, historians, and remote I/O"
+    - "The BMEP582040 is Level 2 in the M580 hierarchy with 8MB program RAM — this limits program size and variable capacity; for large applications with more than 5,000 IEC program organization units, complex function block libraries, or more than 16 remote I/O drops, the BMEP583020 (16MB), BMEP584020 (32MB) or BMEP585040 (128MB) is required; attempting to download an oversized application returns a memory overflow error and the controller will not go to RUN state"
+    - "The BMEP582040 requires EcoStruxure Control Expert (formerly Unity Pro) V7.0 minimum for programming — older versions of Unity Pro (V6 and below) do not support the M580 architecture, X80 I/O, or CIP Safety; SoMachine V4.x cannot program M580 CPUs; always verify software compatibility before beginning a migration project from M340 or Premium PLCs to M580, as project migration is not automatic and requires manual re-engineering of hardware configuration and communication variables"
+compatibility:
+  sw: "EcoStruxure Control Expert V14+ (primary, formerly Unity Pro V14+); Unity Pro V7.0-V13 (legacy); EcoStruxure Control Expert Safety (SIL2 extension); EcoStruxure Operator Terminal Expert; Vijeo SCADA; FactoryTalk not supported (Schneider ecosystem)"
+  languages: "Instruction List (IL);Structured Text (ST);Ladder Diagram (LD);Function Block Diagram (FBD);Sequential Function Chart (SFC)"
+  frameworks: "IEC61131-3;CIP-Safety-SIL2;Modbus-TCP;EtherNet-IP-scanner-adapter;SNMP;NTP;TFTP;FTP;HTTP;AS-Interface;IEC61508;RSTP"
+  certifications: "CE;UL-508;CSA-C22.2-No142;CSA-C22.2-No213-ClassI-Div2;ATEX-II-3-Gas-Dust-Zone2-22;IECEx;EAC-GOST;RCM;EN-IEC-60079;RoHS;REACH;Green-Premium"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: schneider-modicon-m580-family
+  boardProfileId: schneider-modicon-m580-bmep582040
+  defaultLanguageSkills[3]:
+    - ladder-control-expert-m580
+    - st-control-expert-m580
+    - fbd-control-expert-m580

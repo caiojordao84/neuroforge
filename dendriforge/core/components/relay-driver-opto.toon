@@ -1,0 +1,144 @@
+# METADATA:
+project_name: relay-driver-opto-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: relay-driver-opto
+name: "Relay Driver with Optocoupler"
+family: electricals
+subfamily: semiconductors
+category: semiconductor
+standard: "Generic Driver"
+url: null
+image: relay-driver-opto.svg
+symbol: relay-driver-opto-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  input_voltage:
+    label: "Input Control Voltage"
+    unit: V
+    default: 5
+    options: [3.3, 5, 12, 24]
+    type: enum
+    editable: true
+  led_current:
+    label: "Optocoupler LED Current"
+    unit: mA
+    default: 10
+    options: [5, 10, 15, 20]
+    type: enum
+    editable: true
+  ctr_min:
+    label: "Minimum CTR"
+    unit: "%"
+    default: 50
+    options: [20, 50, 80, 100]
+    type: enum
+    editable: true
+  vce_sat:
+    label: "Driver Saturation Voltage"
+    unit: V
+    default: 0.2
+    min: 0.05
+    max: 1.0
+    type: float
+    editable: false
+  coil_voltage:
+    label: "Relay Coil Voltage"
+    unit: V
+    default: 12
+    options: [5, 6, 9, 12, 24, 48]
+    type: enum
+    editable: true
+  coil_current_max:
+    label: "Max Coil Current"
+    unit: mA
+    default: 500
+    options: [50, 100, 200, 300, 500, 700, 1000]
+    type: enum
+    editable: true
+  isolation_voltage:
+    label: "Isolation Voltage"
+    unit: V
+    default: 2500
+    options: [1000, 1500, 2500, 3750, 5000]
+    type: enum
+    editable: true
+  flyback:
+    label: "Flyback Protection"
+    default: true
+    type: bool
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[6|]{id|direction|type|voltage_max|current_max|notes}:
+  INP|input|digital|"24V"|"20mA"|"control input positive"
+  ING|input|ground|null|null|"control input negative / ground"
+  OUT|output|power|"50V"|"1000mA"|"relay coil output"
+  GND|input|ground|null|null|"driver ground"
+  COM|input|ground|"50V"|null|"flyback diode common"
+  ISO|input|power|"5000V"|"5mA"|"isolated input side reference"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  bidirectional: false
+  dynamic: false
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - off
+    - conducting
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "50V"
+  max_current: "1000mA"
+  max_power:
+    value: 0.8
+    unit: W
+  max_temp: 150
+  min_temp: -55
+warnings[3]:
+  - "Connect COM to the coil supply rail for inductive flyback protection"
+  - "Optocoupler LED must be current-limited according to the input voltage"
+  - "Verify isolation voltage meets the safety requirements of the application"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["mcu-gpio", "relay-coil", "ind-coil", "dc-source"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["relay-interfacing", "industrial-io", "solenoid-driver", "isolated-control"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 50
+  ports_layout: custom
+  port_IN+: {x: 0, y: 10}
+  port_IN-: {x: 0, y: 25}
+  port_OUT: {x: 60, y: 15}
+  port_GND: {x: 20, y: 50}
+  port_COM: {x: 60, y: 35}
+  port_ISO: {x: 30, y: 0}
+  label_position: top
+  value_display: "Relay driver opto / {input_voltage}V / {coil_voltage}V"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: relay-driver-opto
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Semiconductors"
+  tags[4]:
+    - driver
+    - optocoupler
+    - relay
+    - isolated

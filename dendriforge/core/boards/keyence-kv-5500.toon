@@ -1,0 +1,74 @@
+# METADATA:
+project_name: keyence-kv-5500-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: keyence-kv-5500
+name: "Keyence KV-5500"
+manufacturer: Keyence
+cpu: "KV-5500"
+category: plc
+form_factor: modular
+standard: "IEC 61131-3"
+image: keyence-kv-5500.svg
+url: "https://www.keyence.com/products/plc/kv-5500"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  memory_work: 256KB
+  memory_load: 780KB
+  memory_retain: 128KB
+  supply_voltage: 24V
+  power_consumption: 10W
+dims:
+  w: 52.0
+  h: 90.0
+  t: 80.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerPins[3|]{name|direction|voltage|type}:
+  V+|input|"24V"|null
+  V-|input|null|ground
+  SHIELD|input|null|ground
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[2|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|16|"%IX0.0"|"%IX1.7"|null
+  1|0|DO|8|"%QX0.0"|"%QX0.7"|null
+
+## 5. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[3|]{peripheral|param|value}:
+  ethernetip|"port:44818"|"role:scanner-adapter"
+  modbus-tcp|"port:502"|"role:server"
+  serial|"baud:115200;proto:RS232"|"port:RS-232C/RS-485"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "2000mA"
+  total_current_limit: "3200mA"
+  warnings[5]:
+    - "Must be installed in conductive enclosure with IP54 or higher"
+    - "Built-in I/O 40-pin MIL connector NOT included — ordered separately"
+    - "Lithium battery backup for retentive data — 5 years at 25 degrees C"
+    - "No FBD or SFC programming — only LD;ST and KV Script are supported"
+    - "PROFINET and OPC UA not supported on KV-5500 — available on KV-X series"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "KV STUDIO"
+  runtime: "KV-5500 Firmware"
+  languages: "LD;ST"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: keyence-kv-5500
+  defaultLanguageSkills[2]:
+    - ld-iec61131
+    - st-iec61131

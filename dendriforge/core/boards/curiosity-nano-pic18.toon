@@ -1,38 +1,103 @@
+# METADATA:
+project_name: curiosity-nano-pic18f47q43-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: curiosity-nano-pic18
-name: "Curiosity Nano (PIC18)"
-manufacturer: "Generic"
-mcu: "PIC18F47K40"
-category: "maker"
-image: "/boards/curiosity-nano-pic18.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 131072
-sram: 4096
-clock_hz: 64000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "avr-family"
-  boardProfileId: "curiosity-nano-pic18"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+name: "Microchip Curiosity Nano PIC18F47Q43"
+manufacturer: Microchip
+mcu: PIC18F47Q43
+category: embedded
+image: curiosity-nano-pic18.svg
+url: "https://www.microchip.com/en-us/development-tool/DM182030"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 131072
+  flash_available: 131072
+  sram: 8192
+  eeprom: 0
+  clock: 64000000
+  voltage: "5V"
+dims:
+  w: 60.0
+  h: 23.0
+  t: 8.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[4|]{name|direction|voltage|type}:
+  5V|input|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[24|]{pin|type|pwm|int|label|roles}:
+  0|digital|t|f|"RA0 / D0"|null
+  1|analog|t|t|"RA1 / A0"|"adc:t;pwm;int0"
+  2|analog|t|t|"RA2 / A1"|"adc:t;pwm;int1"
+  3|analog|f|f|"RA3 / A2"|"adc:t;vref"
+  4|analog|f|f|"RA4 / A3"|"adc:t"
+  5|analog|t|f|"RA5 / A4"|"adc:t;pwm"
+  6|analog|t|f|"RA6 / A5"|"adc:t;pwm"
+  7|analog|t|f|"RA7 / A6"|"adc:t;pwm"
+  8|analog|t|f|"RB0 / A7"|"adc:t;pwm;int2"
+  9|analog|t|f|"RB1 / A8"|"adc:t;pwm"
+  10|analog|t|f|"RB2 / A9"|"adc:t;i2c-sda;pwm"
+  11|analog|t|f|"RB3 / A10"|"adc:t;i2c-scl;pwm"
+  12|digital|t|f|"RB4 / D4"|spi-mosi
+  13|digital|t|f|"RB5 / D5"|spi-miso
+  14|digital|t|f|"RB6 / D6"|"spi-sck;status-led"
+  15|digital|t|f|"RB7 / D7"|spi-ss
+  16|analog|t|f|"RC0 / A11"|"adc:t;pwm"
+  17|analog|t|f|"RC1 / A12"|"adc:t;pwm"
+  18|analog|t|f|"RC2 / A13"|"adc:t;pwm;dac"
+  19|digital|f|f|"RC3 / D8"|null
+  20|digital|f|f|"RC4 / D9"|null
+  21|digital|f|f|"RC5 / D10"|null
+  22|digital|f|f|"RC6 / D11"|uart-tx
+  23|digital|f|f|"RC7 / D12"|uart-rx
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[6|]{peripheral|param|value}:
+  serial|"uarts:4"|"pins:22,23"
+  i2c|"channels:3"|"sda:10;scl:11"
+  spi|"channels:2"|"miso:13;mosi:12;sck:14;ss:15"
+  adc|"channels:45"|"pins:1,2,3,4,5,6,7,8,9,10,11,16,17,18"
+  pwm|"channels:16"|null
+  dac|"channels:1"|"pins:18"
+usb:
+  type: Micro-USB
+  chip: nEDBG
+  vid: "0x03EB"
+  pid: "0x2183"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "20mA"
+  total_current_limit: "200mA"
+  warnings[4]:
+    - "RA3 is input-only — cannot be used as digital output"
+    - "PIC18F47Q43 has no hardware EEPROM — uses Flash program memory for emulation"
+    - "On-board nEDBG debugger shares USB connection with application"
+    - "Four independent UART modules available — configurable on any PPS-mappable pins"
+compatibility:
+  arduinoCore: "3.0.2"
+  pio: microchip-pic
+  frameworks: mplabx
+  languages: "c-cpp"
+  bootloader: nEDBG
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: pic18-family
+  boardProfileId: curiosity-nano-pic18
+  defaultLanguageSkills[2]:
+    - c-cpp-pic18
+    - xc8-pic18

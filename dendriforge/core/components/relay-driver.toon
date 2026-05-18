@@ -1,0 +1,100 @@
+# METADATA:
+project_name: relay-driver-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: relay-driver
+name: "Relay Driver (Darlington Pair/NPN)"
+family: electricals
+subfamily: semiconductors
+category: semiconductor
+standard: "Generic Driver"
+url: null
+image: relay-driver.svg
+symbol: relay-driver-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  v_ce_sat:
+    label: "Collector-Emitter Saturation Voltage"
+    unit: V
+    default: 1.1
+    type: float
+    editable: false
+  i_c_max:
+    label: "Max Collector Current"
+    unit: mA
+    default: 500
+    type: int
+    editable: true
+  gain_min:
+    label: "Minimum DC Current Gain"
+    unit: null
+    default: 1000
+    type: int
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  IN|input|digital|"5V"|"25mA"|"Base/Input control"
+  OUT|output|power|"50V"|"500mA"|"Collector/Load output"
+  GND|input|ground|null|null|"Common emitter/ground"
+  COM|input|ground|"50V"|null|"Flyback diode common"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  bidirectional: false
+  dynamic: false
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - off
+    - conducting
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "50V"
+  max_current: "500mA"
+  max_power:
+    value: 0.6
+    unit: W
+  max_temp: 150
+  min_temp: -55
+warnings[1]:
+  - "Common (COM) pin must be connected to load VCC for inductive protection"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["mcu-gpio", "ind-coil", "relay-coil"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["relay-interfacing", "solenoid-driver"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 40
+  height: 40
+  ports_layout: custom
+  port_IN: {x: 0, y: 20}
+  port_OUT: {x: 40, y: 10}
+  port_GND: {x: 20, y: 40}
+  port_COM: {x: 40, y: 30}
+  label_position: top
+  value_display: "{name}"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: relay-driver
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Semiconductors"
+  tags[3]:
+    - driver
+    - npn
+    - darlington

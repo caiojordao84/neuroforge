@@ -1,0 +1,91 @@
+# METADATA:
+project_name: seeed-studio-xiao-esp32c3-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: seeed-studio-xiao-esp32c3
+name: "Seeed Studio XIAO ESP32C3"
+manufacturer: "Seeed Studio"
+mcu: "Espressif ESP32-C3 (RISC-V single-core 32-bit)"
+category: maker
+image: seeed-studio-xiao-esp32c3.svg
+url: "https://www.seeedstudio.com/Seeed-XIAO-ESP32C3-p-5431.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 4194304
+  flash_available: 3932160
+  sram: 409600
+  eeprom: 0
+  clock: 160000000
+  voltage: "3.3V"
+dims:
+  w: 17.5
+  h: 21.0
+  t: 3.5
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[5|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[11|]{pin|type|pwm|int|label|roles}:
+  0|analog|true|true|"D0 / A0 / RX"|"adc:t;uart-rx"
+  1|analog|true|true|"D1 / A1 / TX"|"adc:t;uart-tx"
+  2|analog|true|true|"D2 / A2"|"adc:t"
+  3|analog|true|true|"D3 / A3 / SDA"|"adc:t;i2c-sda"
+  4|analog|true|true|"D4 / A4 / SCL"|"adc:t;i2c-scl"
+  5|digital|true|true|"D5 / SCK"|spi-sck
+  6|digital|true|true|"D6 / MISO"|spi-miso
+  7|digital|true|true|"D7 / MOSI / LED"|"spi-mosi;status-led"
+  8|digital|true|true|D8|null
+  9|digital|true|true|D9|null
+  10|digital|true|true|D10|null
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uarts:1"|"pins:0,1"
+  i2c|"channels:1"|"sda:3;scl:4"
+  spi|"channels:1"|"miso:6;mosi:7;sck:5;ss:null"
+  adc|"resolution:12bit"|"pins:0;1;2;3;4"
+usb:
+  type: USB-C
+  chip: native
+  vid: "0x303A"
+  pid: "0x1001"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "40mA"
+  total_current_limit: "200mA"
+  warnings[5]:
+    - "All I/O pins operate at 3.3V; not 5V tolerant"
+    - "GPIO11 is connected to flash; do not use for general I/O"
+    - "ADC2 unavailable when Wi-Fi is active"
+    - "Antenna must be external (U.FL); no PCB antenna on this variant"
+    - "Boot button on GPIO9; avoid pulling HIGH at boot"
+compatibility:
+  arduinoCore: "2.0.5"
+  pio: espressif32
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: esp32c3-boot
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: esp32-family
+  boardProfileId: seeed-studio-xiao-esp32c3
+  defaultLanguageSkills[3]:
+    - arduino-cpp-esp32
+    - micropython-esp32
+    - rust-embassy-esp32

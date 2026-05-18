@@ -1,0 +1,107 @@
+# METADATA:
+project_name: avr-xplained-mini-atmega328p-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: avr-xplained-mini-atmega328p
+name: "AVR Xplained Mini — ATmega328P (ATMEGA328P-XMINI)"
+manufacturer: "Microchip Technology (formerly Atmel)"
+mcu: "ATmega328P (AVR 8-bit, 16MHz@5V / 8MHz@3.3V)"
+category: maker
+image: avr-xplained-mini-atmega328p.svg
+url: "https://www.microchip.com/en-us/development-tool/atmega328p-xmini"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 32768
+  flash_available: 32256
+  sram: 2048
+  eeprom: 1024
+  clock: 16000000
+  voltage: "5V"
+dims:
+  w: 57.15
+  h: 38.10
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  VCC|input|null|null
+  AVCC|input|null|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+  AREF|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[22|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|false|"PD0 / D0 / RXD (USART0)"|uart-rx
+  1|digital|false|false|"PD1 / D1 / TXD (USART0)"|uart-tx
+  2|digital|false|true|"PD2 / D2 / INT0 / BTN"|btn
+  3|digital|true|true|"PD3 / D3 / INT1 / OC2B"|null
+  4|digital|false|false|"PD4 / D4 / T0 / XCK"|null
+  5|digital|true|false|"PD5 / D5 / OC0B / T1"|null
+  6|digital|true|false|"PD6 / D6 / OC0A / AIN0"|null
+  7|digital|false|false|"PD7 / D7 / AIN1"|null
+  8|digital|false|false|"PB0 / D8 / ICP1 / CLKO"|null
+  9|digital|true|false|"PB1 / D9 / OC1A"|null
+  10|digital|true|false|"PB2 / D10 / SS / OC1B"|spi-ss
+  11|digital|true|false|"PB3 / D11 / MOSI / OC2A"|spi-mosi
+  12|digital|false|false|"PB4 / D12 / MISO"|spi-miso
+  13|digital|false|false|"PB5 / D13 / SCK / LED"|"spi-sck;status-led"
+  14|analog|false|false|"PC0 / A0 / ADC0"|"adc:t"
+  15|analog|false|false|"PC1 / A1 / ADC1"|"adc:t"
+  16|analog|false|false|"PC2 / A2 / ADC2"|"adc:t"
+  17|analog|false|false|"PC3 / A3 / ADC3"|"adc:t"
+  18|analog|false|false|"PC4 / A4 / ADC4 / SDA (TWI)"|"adc:t;i2c-sda"
+  19|analog|false|false|"PC5 / A5 / ADC5 / SCL (TWI)"|"adc:t;i2c-scl"
+  20|analog|false|false|"ADC6 (input only, TQFP/QFN)"|"adc:t"
+  21|analog|false|false|"ADC7 (input only, TQFP/QFN)"|"adc:t"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[5|]{peripheral|param|value}:
+  serial|"uarts:1"|"pins:0,1;bridge:mEDBG"
+  i2c|"channels:1"|"sda:18;scl:19"
+  spi|"channels:1"|"mosi:11;miso:12;sck:13;ss:10"
+  adc|"resolution:10bit"|"pins:14;15;16;17;18;19;20;21"
+  debugwire|"interface:SWD-like"|"via:mEDBG;chip:ATmega32U4"
+usb:
+  type: Micro-USB
+  chip: mEDBG
+  vid: "0x03EB"
+  pid: "0x2140"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "40mA"
+  total_current_limit: "200mA"
+  warnings[8]:
+    - "mEDBG runs on a separate ATmega32U4; provides USB CDC virtual COM (UART bridge), ISP programming and debugWIRE"
+    - "Target MCU clock supplied by mEDBG: 16 MHz @5V or 8 MHz @3.3V; do NOT change CKSEL/SUT fuses — board becomes unrecoverable"
+    - "ATmega328P has NO native USB port; all USB connectivity is exclusively via the mEDBG chip"
+    - "debugWIRE enables via DWEN hfuse (0x99); this DISABLES ISP — exit debug mode first (Disable debugWIRE) to restore ISP"
+    - "ADC6 and ADC7 are input-only analog pins (TQFP/QFN packages only); not routed on PDIP-28 variant"
+    - "Only 1 hardware USART, 1 SPI and 1 TWI — unlike 168PB; plan peripherals accordingly"
+    - "Board is Arduino Uno R3 shield compatible (J200-J203) at 5V; optiboot bootloader required for standard Arduino IDE upload"
+    - "EEPROM is 1KB; available without external library using avr/eeprom.h; endurance ~100000 write cycles per address"
+compatibility:
+  arduinoCore: "1.8.3"
+  pio: atmelavr
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: "optiboot-atmega328p"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: avr-family
+  boardProfileId: avr-xplained-mini-atmega328p
+  defaultLanguageSkills[3]:
+    - arduino-cpp-avr
+    - platformio-atmelavr
+    - avr-gcc-c

@@ -1,0 +1,137 @@
+# METADATA:
+project_name: pneu-valve-5-3-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: pneu-valve-5-3
+name: "5/3 Directional Control Valve (Válvula 5/3 Vias)"
+family: pneumatics
+subfamily: directional-valves
+category: valve
+standard: "ISO 1219-1"
+url: null
+image: pneu-valve-5-3.svg
+symbol: pneu-valve-5-3-symbol.svg
+symbol_standard: ISO
+
+## 2. PARAMETERS:
+params:
+  center_position:
+    label: "Center Position Type (Tipo de Centro)"
+    default: "closed"
+    options: ["closed", "exhaust", "pressure"]
+    type: enum
+    editable: true
+  actuation_type:
+    label: "Actuation Type (Acionamento)"
+    default: "solenoid"
+    options: ["solenoid", "manual-lever", "pneumatic-pilot"]
+    type: enum
+    editable: true
+  return_type:
+    label: "Return Mechanism (Retorno)"
+    default: "spring"
+    options: ["spring", "pneumatic-pilot"]
+    type: enum
+    editable: true
+  supply_pressure:
+    label: "Max Supply Pressure"
+    unit: bar
+    default: 10
+    min: 2
+    max: 16
+    type: float
+    editable: false
+  flow_rate:
+    label: "Nominal Flow Rate"
+    unit: "l/min"
+    default: 1000
+    min: 200
+    max: 10000
+    type: float
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  SOL_A_VCC|input|power|"24V"|"500mA"|"solenoid A power (actuate position A)"
+  SOL_A_GND|input|ground|null|null|"solenoid A ground"
+  SOL_B_VCC|input|power|"24V"|"500mA"|"solenoid B power (actuate position B)"
+  SOL_B_GND|input|ground|null|null|"solenoid B ground"
+
+## 4b. FLUID PORTS (PNEUMATIC):
+pneumatic_ports[5|]{id|direction|type|pressure_max|flow_nominal|notes}:
+  P|input|pneumatic|"10bar"|"{flow_rate}"|"supply pressure port (1)"
+  A|bidirectional|pneumatic|"10bar"|"{flow_rate}"|"work port A (4)"
+  B|bidirectional|pneumatic|"10bar"|"{flow_rate}"|"work port B (2)"
+  EA|exhaust|pneumatic|null|null|"exhaust port for A (5)"
+  EB|exhaust|pneumatic|null|null|"exhaust port for B (3)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: pneumatic-valve
+  motion: none
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - center-state     # Default rest state
+    - position-a-active
+    - position-b-active
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_pressure: 10
+  min_pressure: 2
+  max_voltage: "24V"
+  max_current: "500mA"
+  max_power: null
+  max_temp: 60
+  min_temp: -10
+  ip_rating: "IP65"
+warnings[3]:
+  - "Closed center will trap air in cylinder lines, enabling intermediate stopping."
+  - "Exhaust center will vent both cylinder chambers, leaving the rod free to move externally."
+  - "Pressure center will apply pressure to both cylinder chambers simultaneously."
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["pneu-cylinder-da-*", "pneu-frl-unit", "pneu-flow-control-*", "relay-*", "plc-*", "mcu-*", "ind-do-bank", "dc-source", "ac-source"]
+  forbidden_with: ["hyd-*"]
+  requires: ["pneu-frl-unit"]
+  typical_context: ["cylinder-intermediate-stopping", "position-hold", "directional-control"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 120
+  height: 60
+  ports_layout: custom
+  port_EA: {x: 30, y: 0}
+  port_P: {x: 60, y: 0}
+  port_EB: {x: 90, y: 0}
+  port_A: {x: 35, y: 60}
+  port_B: {x: 85, y: 60}
+  port_SOL_A_VCC: {x: 0, y: 20}
+  port_SOL_A_GND: {x: 0, y: 40}
+  port_SOL_B_VCC: {x: 120, y: 20}
+  port_SOL_B_GND: {x: 120, y: 40}
+  label_position: bottom
+  value_display: "5/3 {center_position}-center"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: pneumatics-family
+  componentProfileId: pneu-valve-5-3
+  simulationEngine: pneumatic-motion
+  paletteGroup: "Pneumatics > Directional Valves"
+  tags[6]:
+    - valve
+    - 5/3
+    - directional
+    - pneumatic
+    - center-closed
+    - double-acting

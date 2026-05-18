@@ -1,0 +1,132 @@
+# METADATA:
+project_name: cmd-selector-3pos-spring-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: cmd-selector-3pos-spring
+name: "Selector Switch 3-Position Spring Return"
+family: command-elements
+subfamily: selectors
+category: command
+standard: "IEC 60947-5-1"
+url: null
+image: cmd-selector-3pos-spring.svg
+symbol: cmd-selector-3pos-spring-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  contact_config:
+    label: "Contact Configuration"
+    default: "2NO"
+    options: ["2NO", "2NO+2NC", "1CO+1NO"]
+    type: enum
+    editable: true
+  positions:
+    label: "Number of Positions"
+    default: 3
+    options: [3]
+    type: enum
+    editable: false
+  voltage_rating:
+    label: "Voltage Rating"
+    unit: V
+    default: 240
+    options: [24, 110, 240, 400]
+    type: enum
+    editable: false
+  current_rating:
+    label: "Current Rating"
+    unit: A
+    default: 10
+    type: float
+    editable: false
+  is_maintained:
+    label: "Maintained Action"
+    default: false
+    type: bool
+    editable: false
+  return_position:
+    label: "Spring Return Position"
+    default: "center"
+    options: ["center"]
+    type: enum
+    editable: false
+  color:
+    label: "Knob Color"
+    default: "black"
+    options: ["black", "grey", "red"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  NO1_IN|input|digital|"400V"|"10A"|"NO contact 1 input — closes at position left (1)"
+  NO1_OUT|output|digital|"400V"|"10A"|"NO contact 1 output — closes at position left (1)"
+  NO2_IN|input|digital|"400V"|"10A"|"NO contact 2 input — closes at position right (2)"
+  NO2_OUT|output|digital|"400V"|"10A"|"NO contact 2 output — closes at position right (2)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: contact-block
+  trigger: user-interaction
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[4]:
+    - center
+    - left
+    - right
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "400V"
+  max_current: "10A"
+  max_power: null
+  max_temp: 55
+  min_temp: -25
+  ip_rating: "IP65"
+  safety_category: null
+warnings[3]:
+  - "Do not exceed rated voltage or current on contact terminals"
+  - "This is a spring-return selector — knob returns to center when released"
+  - "Verify panel cutout dimensions before mounting (IEC 60947-5-1)"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["ind-contact-no", "ind-contact-nc", "ind-coil", "ind-di-bank", "plc-*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["jog-forward-reverse", "momentary-mode-command", "inch-control"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 60
+  ports_layout: custom
+  port_NO1_IN: {x: 0, y: 15}
+  port_NO1_OUT: {x: 60, y: 15}
+  port_NO2_IN: {x: 0, y: 45}
+  port_NO2_OUT: {x: 60, y: 45}
+  label_position: bottom
+  value_display: "{contact_config} / {positions}pos spring / {color}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: command-elements-family
+  componentProfileId: cmd-selector-3pos-spring
+  simulationEngine: digital-io
+  paletteGroup: "Command Elements > Selectors"
+  tags[6]:
+    - selector
+    - command
+    - selectors
+    - three-position
+    - spring-return
+    - momentary

@@ -1,0 +1,103 @@
+# METADATA:
+project_name: arduino-mkr-wan-1310-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: arduino-mkr-wan-1310
+name: "Arduino MKR WAN 1310"
+manufacturer: Arduino
+mcu: "SAMD21 (ARM Cortex-M0+)"
+category: maker
+image: arduino-mkr-wan-1310.svg
+url: "https://store.arduino.cc/products/arduino-mkr-wan-1310"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 262144
+  flash_available: 253952
+  sram: 32768
+  eeprom: 0
+  clock: 48000000
+  voltage: "3.3V"
+dims:
+  w: 25.0
+  h: 67.64
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[7|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  VCC|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+  AREF|input|null|null
+  VBAT|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[22|]{pin|type|pwm|int|label|roles}:
+  0|digital|true|true|D0|null
+  1|digital|true|true|D1|null
+  2|digital|true|false|D2|null
+  3|digital|true|false|D3|null
+  4|digital|true|true|D4|null
+  5|digital|true|true|D5|null
+  6|digital|true|true|D6|null
+  7|digital|true|true|D7|null
+  8|digital|false|true|"D8 / MISO"|spi-miso
+  9|digital|false|false|"D9 / SCK"|spi-sck
+  10|digital|true|false|"D10 / MOSI"|spi-mosi
+  11|digital|false|false|"D11 / SDA"|i2c-sda
+  12|digital|false|false|"D12 / SCL"|i2c-scl
+  13|digital|false|false|"D13 / RX"|uart-rx
+  14|digital|false|false|"D14 / TX / LED"|"uart-tx;status-led"
+  15|analog|false|false|"A0 / DAC"|"adc:t;dac"
+  16|analog|false|true|"A1"|"adc:t"
+  17|analog|false|true|"A2"|"adc:t"
+  18|analog|true|false|"A3"|"adc:t"
+  19|analog|true|false|"A4"|"adc:t"
+  20|analog|false|false|"A5"|"adc:t"
+  21|analog|false|false|"A6"|"adc:t"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uarts:1"|"pins:13,14"
+  i2c|"channels:1"|"sda:11;scl:12"
+  spi|"channels:1"|"miso:8;mosi:10;sck:9"
+  dac|"channels:1"|"pin:15"
+usb:
+  type: Micro-USB
+  chip: native
+  vid: "0x2341"
+  pid: "0x8057"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "7mA"
+  total_current_limit: "200mA"
+  warnings[5]:
+    - "Operating voltage is 3.3V; do NOT connect 5V signals directly"
+    - "Pin 14 (TX) shares the onboard yellow LED"
+    - "LoRa module (Murata CMWX1ZZABZ) uses internal SPI; not user-accessible on header"
+    - "ECC508 crypto chip shares I2C bus"
+    - "QSPI 2MB external flash is not mapped to program space"
+compatibility:
+  arduinoCore: "1.8.14"
+  pio: atmelsam
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: arduino-samd-bootloader
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: samd-family
+  boardProfileId: arduino-mkr-wan-1310
+  defaultLanguageSkills[2]:
+    - arduino-cpp-samd
+    - rust-embassy-samd

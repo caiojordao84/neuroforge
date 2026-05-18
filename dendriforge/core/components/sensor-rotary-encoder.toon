@@ -1,0 +1,105 @@
+# METADATA:
+project_name: sensor-rotary-encoder-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: sensor-rotary-encoder
+name: "Manual Rotary Encoder (Encoder Rotativo Manual)"
+family: sensors
+subfamily: motion-position
+category: sensor
+standard: "IEC 60947-5-2"
+url: null
+image: sensor-rotary-encoder.svg
+symbol: sensor-rotary-encoder-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  pulses_per_rev:
+    label: "Pulses Per Revolution (PPR)"
+    default: 20
+    options: [12, 15, 20, 24, 30]
+    type: enum
+    editable: true
+  has_pushbutton:
+    label: "Integrated Pushbutton"
+    default: true
+    type: bool
+    editable: false
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 5
+    options: [3.3, 5, 12, 24]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[5|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"{supply_voltage}"|"50mA"|"encoder supply voltage"
+  GND|input|ground|null|null|"encoder ground"
+  OUT_A|output|digital|"{supply_voltage}"|"20mA"|"quadrature channel A"
+  OUT_B|output|digital|"{supply_voltage}"|"20mA"|"quadrature channel B"
+  SW_OUT|output|digital|"{supply_voltage}"|"20mA"|"pushbutton switch output (active low)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: digital-io
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - idle
+    - rotating
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "{supply_voltage}"
+  max_current: "50mA"
+  max_power: null
+  max_temp: 70
+  min_temp: -10
+  ip_rating: "IP54"
+  safety_category: null
+warnings[2]:
+  - "Hardware debouncing (RC filter) is highly recommended for channels A, B, and SW"
+  - "Output channels are typically open-collector and may require external pull-up resistors"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["mcu-*", "plc-*", "ind-di-bank"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["hmi-navigation", "menu-selection", "parameter-adjustment"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 40
+  height: 50
+  ports_layout: custom
+  port_VCC: {x: 10, y: 0}
+  port_GND: {x: 30, y: 0}
+  port_OUT_A: {x: 0, y: 50}
+  port_OUT_B: {x: 20, y: 50}
+  port_SW_OUT: {x: 40, y: 50}
+  label_position: top
+  value_display: "{pulses_per_rev} PPR"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: sensors-family
+  componentProfileId: sensor-rotary-encoder
+  simulationEngine: digital-io
+  paletteGroup: "Sensors > Motion & Position"
+  tags[5]:
+    - encoder
+    - rotary
+    - quadrature
+    - manual
+    - hmi

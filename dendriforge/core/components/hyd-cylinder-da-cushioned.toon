@@ -1,0 +1,148 @@
+# METADATA:
+project_name: hyd-cylinder-da-cushioned-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: hyd-cylinder-da-cushioned
+name: "Double-Acting Cushioned Hydraulic Cylinder (Cilindro hid. DA com amortecimento)"
+family: hydraulics
+subfamily: hydraulic-actuators
+category: actuator
+standard: "ISO 6020-2"
+url: null
+image: hyd-cylinder-da-cushioned.svg
+symbol: hyd-cylinder-da-cushioned-symbol.svg
+symbol_standard: ISO
+
+## 2. PARAMETERS:
+params:
+  bore:
+    label: "Bore Diameter"
+    unit: mm
+    default: 63
+    options: [25, 32, 40, 50, 63, 80, 100, 125, 160]
+    type: enum
+    editable: true
+  rod_diameter:
+    label: "Rod Diameter"
+    unit: mm
+    default: 45
+    type: float
+    editable: false
+  stroke:
+    label: "Stroke"
+    unit: mm
+    default: 250
+    min: 25
+    max: 5000
+    type: float
+    editable: true
+  operating_pressure:
+    label: "Operating Pressure"
+    unit: bar
+    default: 160
+    min: 10
+    max: 350
+    type: float
+    editable: true
+  port_size:
+    label: "Port Size"
+    default: "G1/2"
+    options: ["G1/4", "G3/8", "G1/2", "G3/4", "G1"]
+    type: enum
+    editable: true
+  cushioning:
+    label: "Cushioning Type"
+    default: "adjustable"
+    options: ["fixed", "adjustable"]
+    type: enum
+    editable: true
+  initial_position:
+    label: "Initial Position"
+    default: "retracted"
+    options: ["retracted", "extended"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[0|]{}:
+
+## 4b. FLUID PORTS (HYDRAULIC):
+hydraulic_ports[2|]{id|direction|type|pressure_max|flow_max|notes}:
+  A|bidirectional|hydraulic|"{operating_pressure}bar"|null|"port A — extend (piston side)"
+  B|bidirectional|hydraulic|"{operating_pressure}bar"|null|"port B — retract (rod side)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: hydraulic-linear-actuator
+  motion: linear
+  bidirectional: true
+  dynamic: true
+  position_feedback: true
+  velocity_model: simplified
+  thermal_model: false
+  leakage_model: true
+  noise_model: false
+  states[4]:
+    - retracted
+    - extending
+    - extended
+    - retracting
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_pressure: "{operating_pressure}"
+  min_pressure: 10
+  max_voltage: null
+  max_current: null
+  max_power: null
+  max_temp: 80
+  min_temp: -20
+  max_force:
+    extend: "calc:pi*(bore/2)^2 * operating_pressure * 0.1"
+    retract: "calc:pi*((bore/2)^2-(rod_diameter/2)^2) * operating_pressure * 0.1"
+  ip_rating: null
+warnings[3]:
+  - "Differential area between piston and rod side causes speed/force asymmetry during extend vs retract strokes"
+  - "Adjust cushioning throttle valves carefully to prevent pressure peaks at the stroke ends"
+  - "Use a 4/2 or 4/3 directional control valve for standard operation"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["hyd-valve-4-2-*", "hyd-valve-4-3-*", "hyd-flow-control-*", "hyd-check-valve", "hyd-manifold-block"]
+  forbidden_with: ["pneu-*", "act-motor-*"]
+  requires: ["hyd-power-unit"]
+  typical_context: ["heavy-lifting", "pressing", "clamping", "high-load-positioning"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 120
+  height: 40
+  ports_layout: custom
+  port_A: {x: 20, y: 0}
+  port_B: {x: 100, y: 0}
+  label_position: bottom
+  value_display: "DA-Cush Ø{bore}mm × {stroke}mm"
+  animated: true
+
+## 7b. SENSOR SLOTS:
+sensor_slots[2|]{id|position|compatible_sensors}:
+  S1|retracted-end|["hyd-pressure-switch-no", "sensor-limit-switch"]
+  S2|extended-end|["hyd-pressure-switch-no", "sensor-limit-switch"]
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: hydraulics-family
+  componentProfileId: hyd-cylinder-da-cushioned
+  simulationEngine: hydraulic-motion
+  paletteGroup: "Hydraulics > Hydraulic Actuators"
+  tags[6]:
+    - cylinder
+    - hydraulic
+    - double-acting
+    - cushioned
+    - actuator
+    - linear

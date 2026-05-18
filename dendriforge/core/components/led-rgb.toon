@@ -1,0 +1,163 @@
+# METADATA:
+project_name: led-rgb-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: led-rgb
+name: "RGB LED"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60810"
+url: null
+image: led-rgb.svg
+symbol: led-rgb-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  led_type:
+    label: "RGB LED Type"
+    default: "common-cathode"
+    options: ["common-cathode", "common-anode", "addressable-ws2812", "addressable-sk6812"]
+    type: enum
+    editable: true
+  vf_red:
+    label: "Red Forward Voltage"
+    unit: V
+    default: 2.0
+    min: 1.6
+    max: 3.4
+    type: float
+    editable: false
+  vf_green:
+    label: "Green Forward Voltage"
+    unit: V
+    default: 3.2
+    min: 1.8
+    max: 3.8
+    type: float
+    editable: false
+  vf_blue:
+    label: "Blue Forward Voltage"
+    unit: V
+    default: 3.2
+    min: 1.8
+    max: 3.8
+    type: float
+    editable: false
+  if_rated:
+    label: "Rated Forward Current per Channel"
+    unit: A
+    default: 0.02
+    options: [0.002, 0.005, 0.01, 0.02, 0.03, 0.05, 0.1]
+    type: enum
+    editable: true
+  if_max:
+    label: "Absolute Max Forward Current per Channel"
+    unit: A
+    default: 0.03
+    min: 0.003
+    max: 0.5
+    type: float
+    editable: false
+  brightness:
+    label: "Brightness"
+    unit: "%"
+    default: 50
+    min: 0
+    max: 100
+    type: float
+    editable: true
+  common_pin_current:
+    label: "Common Pin Current"
+    unit: A
+    default: 0.06
+    min: 0.001
+    max: 2
+    type: float
+    editable: false
+  package:
+    label: "Package"
+    default: "5050"
+    options: ["0402", "0603", "0805", "1206", "3535", "5050", "5630", "ws2812-5050", "sk6812-mini-e", "rgb-bar"]
+    type: enum
+    editable: true
+  interface:
+    label: "Control Interface"
+    default: "analog-rgb"
+    options: ["analog-rgb", "pwm-rgb", "addressable-digital"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  R|input|power|"5V"|"100mA"|"red channel anode/cathode"
+  G|input|power|"5V"|"100mA"|"green channel anode/cathode"
+  B|input|power|"5V"|"100mA"|"blue channel anode/cathode"
+  COM|input|power|"5V"|"300mA"|"common pin (anode or cathode depending on type)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: basic-analog
+  equation: "I_R = (V_R - vf_red)/R_R; I_G = (V_G - vf_green)/R_G; I_B = (V_B - vf_blue)/R_B; brightness = f(I_R,I_G,I_B)"
+  bidirectional: false
+  dynamic: false
+  thermal_model: false
+  noise_model: false
+  states[4]:
+    - off
+    - red
+    - green
+    - blue
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "5V"
+  max_current: "300mA"
+  max_power: null
+  max_temp: 85
+  min_temp: -40
+warnings[4]:
+  - "Each color channel requires its own current-limiting resistor or constant-current driver"
+  - "Common-anode and common-cathode variants are not interchangeable without rewiring"
+  - "Addressable RGB LEDs require strict data timing and supply decoupling near the package"
+  - "Do not exceed per-channel current limits — color shift and thermal damage may occur"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["status-indicator", "lighting", "display", "ambient-lighting", "visual-feedback"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 50
+  ports_layout: custom
+  port_R: {x: 0, y: 10}
+  port_G: {x: 0, y: 25}
+  port_B: {x: 0, y: 40}
+  port_COM: {x: 60, y: 25}
+  label_position: top
+  value_display: "RGB {led_type} / {package} / {brightness}%"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: led-rgb
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Passives"
+  tags[7]:
+    - led
+    - rgb
+    - diode
+    - light
+    - indicator
+    - passive
+    - optical

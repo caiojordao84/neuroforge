@@ -1,38 +1,100 @@
+# METADATA:
+project_name: arduino-nano-r3-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: arduino-nano
-name: "Arduino Nano"
-manufacturer: "Generic"
-mcu: "ATmega328P"
-category: "maker"
-image: "/boards/arduino-nano.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 32768
-sram: 2048
-clock_hz: 16000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "avr-family"
-  boardProfileId: "arduino-nano"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+name: Arduino Nano R3
+manufacturer: Arduino
+mcu: ATmega328P
+category: maker
+image: arduino-nano-r3.svg
+url: https://docs.arduino.cc/hardware/nano
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 32768
+  flash_available: 30720
+  sram: 2048
+  eeprom: 1024
+  clock: 16000000
+  voltage: 5V
+  dims:
+    w: 45.0
+    h: 18.0
+    t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[7]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|5V|null
+  3V3|output|3.3V|null
+  GND|null|null|ground
+  RESET|input|null|null
+  IOREF|output|5V|null
+  AREF|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[22]{pin|type|pwm|int|label|roles}:
+  0|digital|f|f|D0|uart-rx
+  1|digital|f|f|D1|uart-tx
+  2|digital|f|t|D2|int0
+  3|digital|t|t|D3|int1
+  4|digital|f|f|D4|null
+  5|digital|t|f|D5|null
+  6|digital|t|f|D6|null
+  7|digital|f|f|D7|null
+  8|digital|f|f|D8|null
+  9|digital|t|f|D9|null
+  10|digital|t|f|D10|spi-ss
+  11|digital|t|f|D11|spi-mosi
+  12|digital|f|f|D12|spi-miso
+  13|digital|f|f|"D13 LED"|"spi-sck;status-led"
+  14|analog|f|f|A0|adct
+  15|analog|f|f|A1|adct
+  16|analog|f|f|A2|adct
+  17|analog|f|f|A3|adct
+  18|analog|f|f|A4|"adct;i2c-sda"
+  19|analog|f|f|A5|"adct;i2c-scl"
+  20|analog|f|f|A6|adct
+  21|analog|f|f|A7|adct
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[3]{peripheral|param|value}:
+  serial|pins|"0,1"
+  i2c|"sda;scl"|"18;19"
+  spi|"miso;mosi;sck;ss"|"12;11;13;10"
+usb:
+  type: Mini-USB
+  chip: FT232RL
+  vid: "0x0403"
+  pid: "0x6001"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  maxiocurrent: 40mA
+  totalcurrentlimit: 200mA
+  warnings[3]:
+    - "Pins D0/D1 shared with USB Serial"
+    - "Pin D13 has onboard LED interference"
+    - "A6 and A7 are analog-input only, no digital I/O"
+compatibility:
+  arduinoCore: "1.8.19"
+  pio: atmelavr
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: optiboot
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: avr-family
+  boardProfileId: arduino-nano-r3
+  defaultLanguageSkills[2]:
+    - arduino-cpp-avr
+    - rust-embassy-avr

@@ -1,0 +1,119 @@
+# METADATA:
+project_name: sensor-ultrasonic-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: sensor-ultrasonic
+name: "Ultrasonic Proximity Sensor (Sensor Ultrassónico)"
+family: sensors
+subfamily: motion-position
+category: sensor
+standard: "IEC 60947-5-2"
+url: null
+image: sensor-ultrasonic.svg
+symbol: sensor-ultrasonic-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  output_type:
+    label: "Output Type"
+    default: "PNP-NO"
+    options: ["PNP-NO", "PNP-NC", "NPN-NO", "NPN-NC", "analog-0-10V", "pulse-width"]
+    type: enum
+    editable: true
+  range:
+    label: "Sensing Range"
+    unit: m
+    default: 2.0
+    min: 0.1
+    max: 6.0
+    type: float
+    editable: true
+  beam_angle:
+    label: "Beam Angle"
+    unit: "°"
+    default: 15
+    min: 5
+    max: 30
+    type: float
+    editable: true
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 24
+    options: [5, 12, 24]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"24V"|"50mA"|"supply +"
+  GND|input|ground|null|null|"supply -"
+  TRIG|input|digital|"24V"|"10mA"|"trigger input (for pulse-width mode)"
+  OUT|output|digital|"24V"|"200mA"|"signal out / echo"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: threshold
+  trigger: distance
+  trigger_source: external
+  output_logic: "{output_type}"
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - idle
+    - measuring
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "{supply_voltage}"
+  max_current: "200mA"
+  max_power: null
+  max_temp: 70
+  min_temp: -25
+  ip_rating: "IP65"
+  safety_category: null
+warnings[3]:
+  - "Acoustic reflections from strongly angled surfaces may cause false negatives"
+  - "Soft materials (fabric, foam) absorb sound and reduce effective sensing range"
+  - "TRIG port is only required when output_type is set to pulse-width mode"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["ind-di-bank", "ind-ai-bank", "plc-*", "relay-*"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["object-detection", "collision-avoidance", "distance-measurement"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 40
+  height: 50
+  ports_layout: custom
+  port_VCC: {x: 20, y: 0}
+  port_GND: {x: 20, y: 50}
+  port_TRIG: {x: 0, y: 25}
+  port_OUT: {x: 40, y: 25}
+  label_position: top
+  value_display: "{range}m / ∠{beam_angle}°"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: sensors-family
+  componentProfileId: sensor-ultrasonic
+  simulationEngine: digital-io
+  paletteGroup: "Sensors > Motion & Position"
+  tags[5]:
+    - sensor
+    - ultrasonic
+    - proximity
+    - distance
+    - position

@@ -1,0 +1,98 @@
+# METADATA:
+project_name: nucleo-32-l031k6-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: stm32-nucleo-32-l031k6
+name: "STMicroelectronics STM32 Nucleo-32 L031K6"
+manufacturer: STMicroelectronics
+mcu: STM32L031K6
+category: embedded
+image: stm32-nucleo-32-l031k6.svg
+url: "https://www.st.com/en/evaluation-tools/nucleo-l031k6.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 32768
+  flash_available: 32768
+  sram: 8192
+  eeprom: 256
+  clock: 32000000
+  voltage: "3.3V"
+dims:
+  w: 48.0
+  h: 25.0
+  t: 10.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[4|]{name|direction|voltage|type}:
+  5V|input|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[18|]{pin|type|pwm|int|label|roles}:
+  0|digital|f|f|"D0 / RX"|uart-rx
+  1|digital|f|f|"D1 / TX"|uart-tx
+  2|digital|f|t|"D2 / PA10"|null
+  3|digital|f|t|"D3 / PB3"|null
+  4|digital|f|f|"D4 / PB4"|null
+  5|digital|f|f|"D5 / PB5"|null
+  6|digital|f|f|"D6 / PB6"|spi-ss
+  7|digital|f|f|"D7 / PA8"|null
+  8|digital|f|f|"D8 / PA9"|null
+  9|digital|f|f|"D9 / PB7"|null
+  10|digital|f|f|"D11 / PA7"|spi-mosi
+  11|digital|f|f|"D12 / PA6"|spi-miso
+  12|digital|f|f|"D13 / PA5"|"spi-sck;status-led"
+  13|analog|f|f|"A0 / PA0"|"adc:t"
+  14|analog|f|f|"A1 / PA1"|"adc:t"
+  15|analog|f|f|"A2 / PA4"|"adc:t;dac"
+  16|analog|f|f|"A3 / PC0"|"adc:t"
+  17|analog|f|f|"A4 / PC1"|"adc:t"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[6|]{peripheral|param|value}:
+  serial|"uarts:2"|"pins:0,1"
+  i2c|"channels:1"|"sda:9;scl:6"
+  spi|"channels:1"|"miso:11;mosi:10;sck:12;ss:6"
+  adc|"channels:12"|"pins:13,14,15,16,17"
+  pwm|"channels:4"|null
+  dac|"channels:1"|"pins:15"
+usb:
+  type: Micro-USB
+  chip: "ST-LINK-V2-1"
+  vid: "0x0483"
+  pid: "0x374B"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "3mA"
+  total_current_limit: "200mA"
+  warnings[5]:
+    - "Arduino Nano header compatible — 3.3V logic level only; not 5V tolerant"
+    - "Ultra-low-power Cortex-M0+ — GPIO drive strength limited to 3mA per pin"
+    - "PB6 serves as both SPI SS and I2C SCL — only one function active at a time"
+    - "On-board ST-LINK V2-1 debugger shares Micro-USB connection with application"
+    - "PA0 is shared with WKUP button on some revisions — check board silkscreen"
+compatibility:
+  arduinoCore: "2.1.0"
+  pio: ststm32
+  frameworks: "arduino;mbed"
+  languages: arduino-cpp
+  bootloader: stlink-v2-1
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: stm32-family
+  boardProfileId: stm32-nucleo-32-l031k6
+  defaultLanguageSkills[2]:
+    - arduino-cpp-stm32
+    - c-cpp-hal-stm32

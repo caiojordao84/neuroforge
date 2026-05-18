@@ -1,0 +1,105 @@
+# METADATA:
+project_name: eaton-easye4-uc12rc1-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: eaton-easye4-uc12rc1
+name: "Eaton easyE4 EASY-E4-UC-12RC1 — Smart Relay Nano PLC, 8DI/4AI/4DO-Relay, 24V UC, Ethernet, RTC, Display"
+manufacturer: "Eaton Industries GmbH (Moeller series)"
+mcu: "Proprietary embedded core — nano PLC, <2ms response, DCF77-sync RTC, integrated web server"
+category: plc
+image: eaton-easye4-uc12rc1.svg
+url: "https://www.eaton.com/gb/en-gb/catalog/industrial-control--drives--automation---sensors/easyE4-programmable-relays.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 0
+  flash_available: 0
+  sram: 0
+  eeprom: 0
+  clock: 0
+  voltage: "24V"
+dims:
+  w: 71.5
+  h: 90.0
+  t: 58.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# Screw terminal supply (L+/L or +24V/0V)
+powerPins[4|]{name|direction|voltage|type}:
+  L_PLUS_24V|input|"24V"|null
+  L_NEUTRAL|null|null|ground
+  N_INPUT_COM|null|null|ground
+  PE_SCREEN|null|null|ground
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# Inputs I1..I8: digital 24VDC/24VAC; I1..I4 dual-use as 0-10V analog (12-bit)
+# Outputs Q1..Q4: relay make-contact NO, 8A/250VAC
+# Ethernet: RJ45 10/100Mbps
+# SD slot: Micro SD (optional, program transfer only)
+# Expansion: side connector (proprietary easyConnect)
+gpio[15|]{pin|type|pwm|int|label|roles}:
+  1|analog|false|true|"I1 — DI or AI (0-10V, 12-bit); also DCF77 time sync input; max 24VDC/AC; interrupt-capable"|"di;adc:t"
+  2|analog|false|true|"I2 — DI or AI (0-10V, 12-bit); max 24VDC/AC; interrupt-capable"|"di;adc:t"
+  3|analog|false|true|"I3 — DI or AI (0-10V, 12-bit); max 24VDC/AC; interrupt-capable"|"di;adc:t"
+  4|analog|false|true|"I4 — DI or AI (0-10V, 12-bit); max 24VDC/AC; interrupt-capable"|"di;adc:t"
+  5|digital|false|false|"I5 — DI only; 24VDC/AC; fast input for counting/frequency"|di
+  6|digital|false|false|"I6 — DI only; 24VDC/AC"|di
+  7|digital|false|false|"I7 — DI only; 24VDC/AC"|di
+  8|digital|false|false|"I8 — DI only; 24VDC/AC"|di
+  11|digital|false|false|"Q1 — Relay output NO make-contact; 8A/250VAC; 8A/30VDC resistive; NOT short-circuit protected"|do
+  12|digital|false|false|"Q2 — Relay output NO make-contact; 8A/250VAC; 8A/30VDC resistive; NOT short-circuit protected"|do
+  13|digital|false|false|"Q3 — Relay output NO make-contact; 8A/250VAC; 8A/30VDC resistive; NOT short-circuit protected"|do
+  14|digital|false|false|"Q4 — Relay output NO make-contact; 8A/250VAC; 8A/30VDC resistive; NOT short-circuit protected"|do
+  30|digital|false|false|"Ethernet / RJ45 — 10/100Mbps; Modbus TCP client+server; easyNet NET; web server; easySoft online; SMTP email alarm"|"eth"
+  40|digital|false|false|"Micro SD slot — program transfer and data logging ONLY; MEMORY-SDU-A1 2GB; NOT hot-swappable during operation"|null
+  50|digital|false|false|"Expansion connector (easyConnect) — up to 11 expansion modules; mixed AC/DC/UC; max 188 total I/O per cluster"|null
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  ethernet|"speed:100Mbit"|"proto:Modbus-TCP-client-server;easyNet-NET;web-server;SMTP;connector:RJ45;cluster:8-devices;clusters:10"
+  rtc|"resolution:1s"|"sync:DCF77-via-I1;battery-backed:yes;accuracy:ppm-class"
+  analog_in|"resolution:12bit"|"range:0-10V;channels:4;pins:1-2-3-4;configurable-as-DI-or-AI"
+  expansion|"max-modules:11"|"connector:easyConnect-proprietary;types:UC-DC-AC-relay-transistor-analog-temp;total-io:188"
+usb:
+  type: none
+  chip: none
+  vid: "0x0000"
+  pid: "0x0000"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "10mA"
+  total_current_limit: "2000mA"
+  warnings[9]:
+    - "easyE4 has NO USB interface — programming is done exclusively via Ethernet (easySoft 7 online) or Micro SD card; never attempt USB connection"
+    - "Relay outputs Q1..Q4 are NOT short-circuit protected — external fuse protection is mandatory; inductive loads require freewheeling diode or RC snubber"
+    - "Analog inputs I1..I4 (0-10V, 12-bit) share the same terminals as digital inputs — configure each channel as DI or AI in easySoft 7; do NOT apply >10V to analog-configured inputs"
+    - "Input I1 doubles as DCF77 time synchronization input — connect DCF77 receiver here; when used for DCF77, I1 cannot be used as process input simultaneously"
+    - "Micro SD card must NOT be removed during program execution or data logging — always stop the program or de-energize before removing; SD slot is for programming and data logging only, not real-time I/O"
+    - "easyNet cluster communication (NET): only base units with Ethernet can be NET masters; max 8 devices per cluster via Ethernet switch; do NOT use cross-cable for NET clusters with >2 devices"
+    - "The EASY-E4-UC-12RC1 has 4 relay outputs max — for transistor (solid-state) outputs use EASY-E4-DC-12TC1; relay outputs have max 8A but switching frequency must not exceed mechanical relay life (10M cycles)"
+    - "easySoft 7 license (EASYSOFT-SWLIC, 197226) is SOLD SEPARATELY — the device includes only the firmware; starter box EASY-BOX-E4-UC1 bundles the license + patch cable"
+    - "Expansion modules connect via proprietary side plug (EASY-E4-CONNECT1) — standard DIN rail does not mechanically link them; the connector transfers both power and easyNet communication to expansions"
+compatibility:
+  sw: "easySoft 7 (EASYSOFT-SWLIC)"
+  languages: "LD;FBD;ST;EDP (IEC 61131-3 subset)"
+  protocols: "Modbus-TCP;easyNet-NET;HTTP-web-server;SMTP;DCF77"
+  expansions: "EASY-E4-UC-8RE1;EASY-E4-UC-16RE1;EASY-E4-DC-8TE1;EASY-E4-DC-16TE1;EASY-E4-DC-6AE1;EASY-E4-DC-4PE1;EASY-E4-AC-8RE1;EASY-E4-AC-16RE1"
+  certifications: "CE;cULus-UL61010;CSA-C22.2-61010;IEC-61131-2;EN-61000-6-2;EN-61000-6-3;IP20"
+  hmi: "XV-102-A0-35TQRB-1E4 (3.5in touch panel);XV300 (via Modbus TCP)"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: eaton-easye4-smart-relay-family
+  boardProfileId: eaton-easye4-uc12rc1
+  defaultLanguageSkills[3]:
+    - ld-iec61131-easysoft7
+    - fbd-iec61131-easysoft7
+    - st-iec61131-easysoft7

@@ -1,0 +1,125 @@
+# METADATA:
+project_name: bb-830-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: bb-830
+name: "Breadboard 830 Points"
+family: electricals
+subfamily: passives
+category: accessory
+standard: "IEC 60068-2-21"
+url: null
+image: bb-830.svg
+symbol: bb-830-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  total_points:
+    label: "Total Tie Points"
+    default: 830
+    min: 830
+    max: 830
+    type: int
+    editable: false
+  tie_strip_rows:
+    label: "Tie Strip Rows"
+    default: 63
+    min: 63
+    max: 63
+    type: int
+    editable: false
+  columns:
+    label: "Columns per Row"
+    default: 10
+    min: 10
+    max: 10
+    type: int
+    editable: false
+  rail_holes:
+    label: "Power Rail Holes per Side"
+    default: 50
+    min: 50
+    max: 50
+    type: int
+    editable: false
+  contact_rating:
+    label: "Contact Current Rating"
+    unit: A
+    default: 1
+    min: 0.5
+    max: 2
+    type: float
+    editable: false
+  wire_gauge:
+    label: "Compatible Wire Gauge"
+    default: "22-26AWG"
+    options: ["22-26AWG", "24-28AWG"]
+    type: enum
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  VRAIL_A_POS|passive|power|"50V"|"2A"|"Power rail A positive bus"
+  VRAIL_A_NEG|passive|ground|null|null|"Power rail A negative bus"
+  VRAIL_B_POS|passive|power|"50V"|"2A"|"Power rail B positive bus"
+  VRAIL_B_NEG|passive|ground|null|null|"Power rail B negative bus"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  bidirectional: true
+  dynamic: false
+  thermal_model: false
+  noise_model: false
+  states[1]:
+    - nominal
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "50V"
+  max_current: "2A"
+  max_power: null
+  max_temp: 70
+  min_temp: -10
+warnings[3]:
+  - "Do not exceed 1A per tie-point contact — use PCB for higher current circuits"
+  - "Breadboard contacts degrade with repeated use — replace if intermittent contact occurs"
+  - "Not suitable for high-frequency signals above 1MHz due to stray capacitance"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["prototyping", "lab-testing", "circuit-development"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 120
+  height: 80
+  ports_layout: custom
+  port_VRAIL_A_POS: {x: 0, y: 10}
+  port_VRAIL_A_NEG: {x: 0, y: 25}
+  port_VRAIL_B_POS: {x: 0, y: 55}
+  port_VRAIL_B_NEG: {x: 0, y: 70}
+  label_position: top
+  value_display: "830pts / {tie_strip_rows}rows x {columns}cols"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: bb-830
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Passives"
+  tags[5]:
+    - breadboard
+    - prototyping
+    - passive
+    - solderless
+    - accessory

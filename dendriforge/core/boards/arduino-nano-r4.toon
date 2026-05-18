@@ -1,0 +1,103 @@
+# METADATA:
+project_name: arduino-nano-r4-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: arduino-nano-r4
+name: "Arduino Nano R4"
+manufacturer: Arduino
+mcu: "Renesas RA4M1 (ARM Cortex-M4)"
+category: maker
+image: arduino-nano-r4.svg
+url: "https://store.arduino.cc/products/arduino-nano-r4"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 262144
+  flash_available: 253952
+  sram: 32768
+  eeprom: 8192
+  clock: 48000000
+  voltage: "5V"
+dims:
+  w: 18.0
+  h: 45.0
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[7|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+  IOREF|output|"5V"|null
+  VRTC|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[22|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|false|"D0 / RX"|uart-rx
+  1|digital|false|false|"D1 / TX"|uart-tx
+  2|digital|false|true|D2|int0
+  3|digital|false|true|D3|int1
+  4|digital|false|false|D4|null
+  5|digital|true|false|"D5 PWM"|null
+  6|digital|true|false|"D6 PWM"|null
+  7|digital|false|false|D7|null
+  8|digital|false|false|D8|null
+  9|digital|true|false|"D9 PWM"|null
+  10|digital|true|false|"D10 PWM / SS"|spi-ss
+  11|digital|true|false|"D11 PWM / MOSI"|spi-mosi
+  12|digital|false|false|"D12 / MISO"|spi-miso
+  13|digital|false|false|"D13 / SCK / LED"|"spi-sck;status-led"
+  14|analog|false|false|"A0 / DAC"|"adc:t;dac"
+  15|analog|false|false|"A1 / OPAMP+"|"adc:t"
+  16|analog|false|false|"A2 / OPAMP-"|"adc:t"
+  17|analog|false|false|"A3 / OPAMP OUT"|"adc:t"
+  18|analog|false|false|"A4 / SDA"|"adc:t;i2c-sda"
+  19|analog|false|false|"A5 / SCL"|"adc:t;i2c-scl"
+  20|digital|true|false|"D20 PWM / CAN TX"|can-tx
+  21|digital|false|false|"D21 / CAN RX"|can-rx
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[5|]{peripheral|param|value}:
+  serial|"uarts:1"|"pins:0,1"
+  i2c|"channels:2"|"sda:18;scl:19"
+  spi|"channels:1"|"miso:12;mosi:11;sck:13;ss:10"
+  dac|"channels:1"|"pin:14"
+  adc|"resolution:14bit"|"pins:14;15;16;17;18;19"
+usb:
+  type: USB-C
+  chip: native
+  vid: "0x2341"
+  pid: "0x0070"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "8mA"
+  total_current_limit: "200mA"
+  warnings[4]:
+    - "Pins 0/1 shared with hardware UART"
+    - "Pin 13 has onboard RGB LED interference"
+    - "CAN bus requires external transceiver"
+    - "Qwiic connector operates at 3.3V logic; GPIO at 5V"
+compatibility:
+  arduinoCore: "1.0.0"
+  pio: renesas-ra
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: renesas-ra-bootloader
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: renesas-ra-family
+  boardProfileId: arduino-nano-r4
+  defaultLanguageSkills[2]:
+    - arduino-cpp-ra
+    - rust-embassy-ra

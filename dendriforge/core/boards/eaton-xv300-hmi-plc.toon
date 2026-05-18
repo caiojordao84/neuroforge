@@ -1,0 +1,104 @@
+# METADATA:
+project_name: eaton-xv300-hmi-plc-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: eaton-xv300-xv303-70-c00-a00-1c
+name: "Eaton XV300 HMI-PLC (XV-303-70-C00-A00-1C) — Cortex-A9 800MHz, 512MB RAM, 7in PCT, WEC7P, CoDeSys, 2xEth"
+manufacturer: "Eaton Industries GmbH"
+mcu: "ARM Cortex-A9 800MHz + GPU (graphics processing unit, WEC7P OS)"
+category: plc
+image: eaton-xv300-hmi-plc.svg
+url: "https://www.eaton.com/en/products/industrialcontrols-drives-automation-sensors/xv300-hmi-plc.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 1073741824
+  flash_available: 1073741824
+  sram: 536870912
+  eeprom: 131072
+  clock: 800000000
+  voltage: "24V"
+dims:
+  w: 196.0
+  h: 135.0
+  t: 51.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# 2-pin screw terminal + functional earth on housing (manual section 3.4.2)
+powerPins[3|]{name|direction|voltage|type}:
+  PWR_24V|input|"24V"|null
+  PWR_GND|null|null|ground
+  FE_EARTH|null|null|ground
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# HMI-PLC — no free GPIO; pins represent physical interface connectors
+# Pin scheme: RS232=101+, RS485=201+, CAN=301+, ETH=401+, USB=501+, SD=601, PB=701, SWD=801
+# Only key active signal pins listed (not all 9 SUB-D positions)
+gpio[14|]{pin|type|pwm|int|label|roles}:
+  102|digital|false|false|"COM1 RS232 SUB-D9 pin2 / RXD — non-isolated; max 115.2kbps; Modbus RTU/ASCII, proprietary PLCs"|uart-rx
+  103|digital|false|false|"COM1 RS232 SUB-D9 pin3 / TXD — non-isolated; max 115.2kbps"|uart-tx
+  105|digital|false|false|"COM1 RS232 SUB-D9 pin5 / GND signal reference"|null
+  203|digital|false|false|"COM2 RS485 SUB-D9 pin3 / B(+) — non-isolated; max 115.2kbps; Modbus RTU; half-duplex; max 32 nodes"|uart-tx
+  208|digital|false|false|"COM2 RS485 SUB-D9 pin8 / A(-) — non-isolated; differential pair with pin3"|uart-rx
+  205|digital|false|false|"COM2 RS485 SUB-D9 pin5 / GND signal reference"|null
+  302|digital|false|false|"CAN1 SUB-D9 pin2 / CAN_L — non-isolated; CANopen/J1939/CanLayer2; max 1Mbps; max 64 nodes"|"can"
+  307|digital|false|false|"CAN1 SUB-D9 pin7 / CAN_H — non-isolated; differential pair with pin2"|"can"
+  303|digital|false|false|"CAN1 SUB-D9 pin3 / CAN_GND / shield reference"|null
+  401|digital|false|false|"Ethernet 1 / RJ45 LAN1 — 10/100Mbps; CAT5e/6; Modbus TCP; EtherNet-IP; PROFINET; EtherCAT; TCP-IP"|"eth;plk-mn"
+  402|digital|false|false|"Ethernet 2 (optional) / RJ45 LAN2 — 10/100Mbps; independent from ETH1; field level separation from control level"|"eth"
+  501|digital|false|false|"USB Host / Type-A USB2.0 — non-isolated; 500mA full power; memory sticks accessories ONLY"|"usb-host"
+  502|digital|false|false|"USB Device / Type-B USB2.0 — non-isolated; maintenance programming ONLY; not for production comms"|"usb-dev"
+  601|digital|false|false|"SD card slot / SDSC SDHC SDA-2.0 — memory expansion; system update; boot from SD; remove only when de-energized"|null
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[6|]{peripheral|param|value}:
+  ethernet1|"speed:100Mbit"|"proto:Modbus-TCP;EtherNet-IP;PROFINET;EtherCAT;OPC-UA;INA2000;connector:RJ45-CAT5e"
+  ethernet2_opt|"speed:100Mbit"|"proto:same-as-ETH1;independent-subnet;field-control-separation;optional-order-code:C"
+  rs232_com1|"baud:115200"|"isolation:no;proto:Modbus-RTU;ASCII;proprietary-PLC;connector:SUB-D9;pins:2-RXD;3-TXD;5-GND"
+  rs485_com2|"baud:115200"|"isolation:no;proto:Modbus-RTU;RS485-ASCII;connector:SUB-D9;pins:3-B-plus;8-A-minus;5-GND"
+  can1|"speed:1Mbps"|"isolation:no;proto:CANopen;J1939;CanLayer2;DeviceNet-optional;connector:SUB-D9;pins:2-CANL;7-CANH;3-GND"
+  profibus_opt|"speed:12Mbps"|"proto:PROFIBUS-DP;isolation:no;connector:SUB-D9-socket;optional-order-code:B"
+usb:
+  type: USB-B
+  chip: native
+  vid: "0x0B7B"
+  pid: "0x0003"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "500mA"
+  total_current_limit: "600mA"
+  warnings[9]:
+    - "XV300 has NO free GPIO pins — all physical I/O is via serial/fieldbus interfaces; for digital/analog I/O use XN300 slice I/O or SmartWire-DT expansion (optional interface)"
+    - "All interfaces (RS232/RS485/CAN/PROFIBUS) are NON-galvanically isolated — GND of all bus modules must be connected; disconnect connectors only when de-energized"
+    - "USB Host and USB Device ports are for MAINTENANCE ONLY (memory sticks, firmware update, Automation Studio); do NOT use for real-time production communication"
+    - "SD card must ONLY be inserted or removed when the XV300 is de-energized — removing during write operation will corrupt data or destroy the card"
+    - "Second Ethernet (ETH2), PROFIBUS-DP, and SmartWire-DT are OPTIONAL interfaces — must be specified at ordering time (see part number interface code); cannot be added in the field"
+    - "PLC runtime (XSOFT-CODESYS-2 or CODESYS-3) is a SEPARATE software license — bundle code 1C/1E includes it; bare HMI bundle 1B/1D requires separate LIC-PLC-A license"
+    - "Non-volatile data memory is 128 kB — this is shared among all PLC retain/remanent variables; plan variable allocation carefully in CoDeSys %M / RETAIN declarations"
+    - "Operating temperature is 0..50°C only (UL listing); unit must not be used in safety-relevant applications (no SIL/PLe rating); do NOT use for emergency stop or safety functions"
+    - "ATEX Zone 22 (dust) approval: must be correctly mounted in enclosure before energizing; de-energize before disconnecting any plug; XV300 is NOT approved for Zone 0/1/20/21"
+compatibility:
+  os: "Windows Embedded Compact 7 Pro (WEC7P)"
+  hmi_sw: "Galileo 10 runtime (integrated)"
+  plc_sw: "XSOFT-CODESYS-2 / XSOFT-CODESYS-3 (optional license)"
+  vis_sw: "Visual Designer (optional bundle 1D/1E)"
+  languages: "LD;FBD;SFC;ST;IL (IEC 61131-3 via CoDeSys)"
+  protocols: "Modbus-TCP;Modbus-RTU;EtherNet-IP;PROFINET;EtherCAT;CANopen;J1939;PROFIBUS-DP;OPC-UA;SmartWire-DT"
+  certifications: "CE;UL-61010-2-201;cUL;ATEX-Zone22;DNV-GL;RoHS"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: eaton-xv-hmi-plc-family
+  boardProfileId: eaton-xv300-xv303-70-c00-a00-1c
+  defaultLanguageSkills[3]:
+    - st-iec61131-codesys-xsoft
+    - ld-iec61131-codesys-xsoft
+    - hmi-galileo10-eaton

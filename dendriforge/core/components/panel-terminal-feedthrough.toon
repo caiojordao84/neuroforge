@@ -1,0 +1,106 @@
+# METADATA:
+project_name: panel-terminal-feedthrough-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: panel-terminal-feedthrough
+name: "Feedthrough Terminal Block (Borne de Passagem)"
+family: panel-infrastructure
+subfamily: terminals
+category: distribution
+standard: "IEC 60947-7-1"
+url: null
+image: panel-terminal-feedthrough.svg
+symbol: panel-terminal-feedthrough-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  wire_cross_section:
+    label: "Wire Cross Section"
+    unit: "mm²"
+    default: 2.5
+    options: [1.5, 2.5, 4.0, 6.0, 10.0, 16.0]
+    type: enum
+    editable: true
+  rated_voltage:
+    label: "Rated Voltage"
+    unit: V
+    default: 800
+    min: 250
+    max: 1000
+    type: float
+    editable: false
+  rated_current:
+    label: "Rated Current"
+    unit: A
+    default: 24
+    min: 10
+    max: 76
+    type: float
+    editable: false
+  color:
+    label: "Color"
+    default: "grey"
+    options: ["grey", "blue", "green-yellow", "red", "black"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[2|]{id|direction|type|voltage_max|current_max|notes}:
+  L_IN|passive|power|"800V"|"24A"|"line input"
+  L_OUT|passive|power|"800V"|"24A"|"line output"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  bidirectional: true
+  dynamic: false
+  thermal_model: false
+  noise_model: false
+  states[1]:
+    - nominal
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "800V"
+  max_current: "24A"
+  max_power: null
+  max_temp: 105
+  min_temp: -40
+warnings[2]:
+  - "Tighten screw terminals to recommended torque"
+  - "Green-yellow color should be strictly reserved for PE (Protective Earth) connections"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["din-rail", "control-panel", "wire-distribution"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 20
+  height: 60
+  ports_layout: horizontal
+  port_L_IN: {x: 0, y: 30}
+  port_L_OUT: {x: 20, y: 30}
+  label_position: top
+  value_display: "{wire_cross_section}mm²"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: panel-infrastructure-family
+  componentProfileId: panel-terminal-feedthrough
+  simulationEngine: digital-io
+  paletteGroup: "Panel Infrastructure > Terminals"
+  tags[4]:
+    - terminal-block
+    - borne
+    - din-rail
+    - feedthrough

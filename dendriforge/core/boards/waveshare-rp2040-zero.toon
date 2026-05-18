@@ -1,0 +1,104 @@
+# METADATA:
+project_name: waveshare-rp2040-zero-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: waveshare-rp2040-zero
+name: "Waveshare RP2040-Zero"
+manufacturer: Waveshare
+mcu: RP2040
+category: maker
+image: waveshare-rp2040-zero.svg
+url: "https://www.waveshare.com/rp2040-zero.htm"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 2097152
+  flash_available: 1048576
+  sram: 264000
+  eeprom: 0
+  clock: 125000000
+  voltage: "3.3V"
+  cores: 2
+dims:
+  w: 25.0
+  h: 18.0
+  t: 3.2
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[4|]{name|direction|voltage|type}:
+  VBUS|input|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  VSYS|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[27|]{pin|type|pwm|int|label|roles}:
+  0|digital|true|true|"GP0 / BOOT"|null
+  1|digital|true|false|"GP1 / TX"|uart-tx
+  2|digital|true|false|"GP2 / RX"|uart-rx
+  3|digital|true|true|GP3|null
+  4|digital|true|true|"GP4 / SDA"|i2c-sda
+  5|digital|true|true|"GP5 / SCL"|i2c-scl
+  6|digital|true|false|"GP6 / SCK"|spi-sck
+  7|digital|true|false|"GP7 / CS"|spi-ss
+  8|digital|true|false|"GP8 / MISO"|spi-miso
+  9|digital|true|false|"GP9 / MOSI"|spi-mosi
+  10|digital|true|true|GP10|null
+  11|digital|true|true|GP11|null
+  12|digital|true|true|GP12|null
+  13|digital|true|true|GP13|null
+  14|digital|true|true|GP14|null
+  15|digital|true|true|GP15|null
+  16|digital|true|false|"GP16 / LED"|"status-led;ws2812"
+  17|digital|true|true|GP17|null
+  18|digital|true|true|"GP18 / SDA1"|i2c-sda
+  19|digital|true|true|"GP19 / SCL1"|i2c-scl
+  20|digital|true|true|GP20|null
+  21|digital|true|true|GP21|null
+  22|digital|true|true|GP22|null
+  23|digital|true|true|GP23|null
+  26|analog|true|false|GP26|"adc:t"
+  27|analog|true|false|GP27|"adc:t"
+  28|analog|true|false|GP28|"adc:t"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[3|]{peripheral|param|value}:
+  serial|"uart0:1"|"pins:1,2"
+  i2c|"i2c0:1"|"sda:4;scl:5"
+  spi|"spi0:1"|"miso:8;mosi:9;sck:6;ss:7"
+usb:
+  type: USB-C
+  chip: "RP2040 native"
+  vid: "0x2E8A"
+  pid: "0x000A"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "16mA"
+  total_current_limit: "300mA"
+  warnings[4]:
+    - "GP24 and GP25 are used internally by QSPI flash — not accessible"
+    - "GP16 drives onboard WS2812 RGB LED; Neopixel library required"
+    - "GP0 is the BOOTSEL button; must be held LOW at power-on to enter UF2 mode"
+    - "ADC resolution is 12-bit with 3.3V reference; do not exceed 3.3V on analog pins"
+compatibility:
+  arduinoCore: "3.9.0"
+  pio: raspberrypi
+  frameworks: "arduino;mbit;pico-sdk"
+  languages: arduino-cpp
+  bootloader: uf2
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: rp2040-family
+  boardProfileId: waveshare-rp2040-zero
+  defaultLanguageSkills[2]:
+    - arduino-cpp-rp2040
+    - rust-embassy-rp2040

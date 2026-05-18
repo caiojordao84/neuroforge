@@ -1,0 +1,120 @@
+# METADATA:
+project_name: sensor-ldr-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: sensor-ldr
+name: "LDR Light Dependent Resistor"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60747-7"
+url: null
+image: sensor-ldr.svg
+symbol: sensor-ldr-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  resistance_dark:
+    label: "Dark Resistance"
+    unit: Ω
+    default: 1000000
+    min: 100000
+    max: 10000000
+    type: float
+    editable: false
+  resistance_light:
+    label: "Light Resistance (10 lux)"
+    unit: Ω
+    default: 1000
+    min: 100
+    max: 10000
+    type: float
+    editable: false
+  gamma:
+    label: "Gamma (slope)"
+    unit: Ω
+    default: 0.7
+    min: 0.5
+    max: 1.0
+    type: float
+    editable: false
+  package:
+    label: "Package"
+    default: "THT-5mm"
+    options: ["THT-5mm", "THT-10mm", "THT-12mm", "SMD"]
+    type: enum
+    editable: true
+  spectral_peak:
+    label: "Spectral Peak Response"
+    default: "540nm"
+    options: ["540nm", "560nm", "610nm"]
+    type: enum
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+ports[2|]{id|direction|type|voltage_max|current_max|notes}:
+  A|passive|analog|null|null|"terminal A (no polarity)"
+  B|passive|analog|null|null|"terminal B (no polarity)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: lookup-table
+  equation: "R = resistance_light * (lux ^ -gamma)"
+  bidirectional: true
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - dark
+    - illuminated
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "150V"
+  max_current: "100mA"
+  max_power:
+    value: 200
+    unit: W
+  max_temp: 75
+  min_temp: -30
+warnings[3]:
+  - "Resistance varies nonlinearly with illuminance — use lookup table for accurate simulation"
+  - "Do not exceed maximum power dissipation"
+  - "Response time is slow (tens of ms) — not suitable for fast optical switching"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: ["resistor"]
+  typical_context: ["light-sensing", "automatic-lighting", "twilight-switch"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 20
+  ports_layout: horizontal
+  port_A: {x: 0, y: 10}
+  port_B: {x: 60, y: 10}
+  label_position: top
+  value_display: "{resistance_light}Ω @ 10lux"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: sensor-ldr
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Passives"
+  tags[6]:
+    - ldr
+    - photoresistor
+    - passive
+    - light-sensor
+    - analog
+    - electricals

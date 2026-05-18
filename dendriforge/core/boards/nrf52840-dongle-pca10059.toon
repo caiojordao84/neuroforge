@@ -1,0 +1,98 @@
+# METADATA:
+project_name: nrf52840-dongle-pca10059-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: nrf52840-dongle-pca10059
+name: "Nordic Semiconductor nRF52840 Dongle (PCA10059)"
+manufacturer: "Nordic Semiconductor"
+mcu: "Nordic nRF52840 (ARM Cortex-M4F with FPU)"
+category: maker
+image: nrf52840-dongle-pca10059.svg
+url: "https://www.nordicsemi.com/Products/Development-hardware/nRF52840-Dongle"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 1048576
+  flash_available: 983040
+  sram: 262144
+  eeprom: 0
+  clock: 64000000
+  voltage: "3.3V"
+dims:
+  w: 15.0
+  h: 37.0
+  t: 1.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[4|]{name|direction|voltage|type}:
+  USB|input|"5V"|null
+  VDD|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# P0.xx = pin xx; P1.xx = pin 32+xx
+gpio[15|]{pin|type|pwm|int|label|roles}:
+  2|analog|true|true|"P0.02 / AIN0"|"adc:t"
+  3|digital|true|true|"P0.03"|null
+  4|analog|true|true|"P0.04 / AIN2"|"adc:t"
+  5|digital|true|true|"P0.05"|null
+  6|digital|true|true|"P0.06 / LED1 (Green)"|status-led
+  7|digital|true|true|"P0.07"|null
+  8|digital|true|true|"P0.08 / LED2 (Red)"|status-led
+  12|digital|true|true|"P0.12 / LED4 (Blue)"|status-led
+  13|digital|true|true|"P0.13"|null
+  15|digital|true|true|"P0.15"|null
+  17|digital|true|true|"P0.17"|null
+  20|digital|true|true|"P0.20"|null
+  29|analog|true|true|"P0.29 / AIN5"|"adc:t"
+  31|analog|true|true|"P0.31 / AIN7"|"adc:t"
+  38|digital|true|true|"P1.06 / BTN1 / RESET"|null
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uarts:2"|"pins:null"
+  i2c|"channels:2"|"sda:null;scl:null"
+  spi|"channels:3"|"miso:null;mosi:null;sck:null;ss:null"
+  adc|"resolution:12bit"|"pins:2;4;29;31"
+usb:
+  type: USB-A
+  chip: native
+  vid: "0x1915"
+  pid: "0x521F"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "4mA"
+  total_current_limit: "15mA"
+  warnings[8]:
+    - "All I/O pins operate at 3.3V (1.7-3.6V range); NOT 5V tolerant"
+    - "Only 15 GPIO exposed on edge castellation; no Arduino headers present"
+    - "P0.09/P0.10 are NFC1/NFC2 antenna pins; shared with GPIO — disable NFC in firmware to use as GPIO"
+    - "P0.06/P0.08/P1.09/P0.12 are LED1/LED2/LED3/LED4 — reconfigure in code for general GPIO"
+    - "P1.06 is BUTTON1 and also SW2 RESET; do not tie HIGH at power-on"
+    - "P0.18 is RESET button (SW1); not exposed on edge castellation"
+    - "No SEGGER J-Link onboard; flashing via USB DFU bootloader (nrfutil) only"
+    - "UART/SPI/I2C have no fixed default pin mapping; assign any available GPIO via PSEL registers"
+compatibility:
+  arduinoCore: "1.1.1"
+  pio: nordicnrf52
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: nrf52840-open-dfu
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: nrf52-family
+  boardProfileId: nrf52840-dongle-pca10059
+  defaultLanguageSkills[3]:
+    - zephyr-nrf52
+    - arduino-cpp-nrf52
+    - rust-embassy-nrf52

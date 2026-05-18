@@ -1,0 +1,93 @@
+# METADATA:
+project_name: seeed-studio-xiao-nrf52840-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: seeed-studio-xiao-nrf52840
+name: "Seeed Studio XIAO nRF52840"
+manufacturer: "Seeed Studio"
+mcu: "Nordic nRF52840 (ARM Cortex-M4 FPU)"
+category: maker
+image: seeed-studio-xiao-nrf52840.svg
+url: "https://www.seeedstudio.com/Seeed-XIAO-BLE-nRF52840-p-5201.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 1048576
+  flash_available: 983040
+  sram: 262144
+  eeprom: 0
+  clock: 64000000
+  voltage: "3.3V"
+dims:
+  w: 17.5
+  h: 21.0
+  t: 3.5
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+  VBAT|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[11|]{pin|type|pwm|int|label|roles}:
+  0|analog|true|true|"D0 / A0 / P0.02"|"adc:t"
+  1|analog|true|true|"D1 / A1 / P0.03"|"adc:t"
+  2|analog|true|true|"D2 / A2 / P0.28"|"adc:t"
+  3|analog|true|true|"D3 / A3 / P0.29"|"adc:t"
+  4|analog|true|true|"D4 / A4 / SDA / P0.04"|"adc:t;i2c-sda"
+  5|analog|true|true|"D5 / A5 / SCL / P0.05"|"adc:t;i2c-scl"
+  6|digital|true|true|"D6 / TX / P1.11"|uart-tx
+  7|digital|true|true|"D7 / RX / P1.12"|uart-rx
+  8|digital|true|true|"D8 / SCK / P1.13"|spi-sck
+  9|digital|true|true|"D9 / MISO / P1.14"|spi-miso
+  10|digital|true|true|"D10 / MOSI / P1.15"|"spi-mosi;status-led"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uarts:1"|"pins:6,7"
+  i2c|"channels:1"|"sda:4;scl:5"
+  spi|"channels:1"|"miso:9;mosi:10;sck:8;ss:null"
+  adc|"resolution:12bit"|"pins:0;1;2;3;4;5"
+usb:
+  type: USB-C
+  chip: native
+  vid: "0x2886"
+  pid: "0x0045"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "15mA"
+  total_current_limit: "200mA"
+  warnings[6]:
+    - "All I/O pins operate at 3.3V; not 5V tolerant"
+    - "ADC reference is 0.6V internal; use analogReference() accordingly"
+    - "RGB LED uses P0.26/P0.30/P0.06; not available on pin headers"
+    - "2MB QSPI flash available for LittleFS; requires Adafruit_SPIFlash"
+    - "NFC pins (P0.09/P0.10) not broken out on standard headers"
+    - "LiPo battery charging built-in via VBAT pin; charge current 50mA"
+compatibility:
+  arduinoCore: "1.1.1"
+  pio: nordicnrf52
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: adafruit-nrf52-bootloader
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: nrf52-family
+  boardProfileId: seeed-studio-xiao-nrf52840
+  defaultLanguageSkills[3]:
+    - arduino-cpp-nrf52
+    - zephyr-nrf52
+    - rust-embassy-nrf52

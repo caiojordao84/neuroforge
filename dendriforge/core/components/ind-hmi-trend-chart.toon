@@ -1,0 +1,121 @@
+# METADATA:
+project_name: ind-hmi-trend-chart-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: ind-hmi-trend-chart
+name: "HMI Trend Chart"
+family: industrial
+subfamily: hmi-signaling
+category: function-block
+standard: "IEC 61131-3"
+url: null
+image: ind-hmi-trend-chart.svg
+symbol: ind-hmi-trend-chart-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  channels:
+    label: "Number of Channels"
+    default: 4
+    min: 1
+    max: 16
+    type: int
+    editable: true
+  time_window:
+    label: "Time Window"
+    unit: V
+    default: 60
+    min: 1
+    max: 86400
+    type: float
+    editable: true
+  sample_rate:
+    label: "Sample Rate"
+    unit: V
+    default: 1
+    min: 0.1
+    max: 100
+    type: float
+    editable: true
+  data_type:
+    label: "Data Type"
+    default: "float"
+    options: ["float", "int", "bool"]
+    type: enum
+    editable: true
+  history_depth:
+    label: "History Depth (samples)"
+    default: 3600
+    min: 100
+    max: 1000000
+    type: int
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  DATA_IN|input|analog|null|null|"Process variable input (float/int)"
+  TRIGGER|input|digital|"24V"|"10mA"|"External trigger for snapshot or clear"
+  STATUS|output|digital|"24V"|"10mA"|"Chart active / buffer overflow status"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: function-block-engine
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - idle
+    - recording
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "24V"
+  max_current: "10mA"
+  max_power: null
+  max_temp: 55
+  min_temp: -10
+  safety_category: null
+warnings[3]:
+  - "High sample_rate with many channels increases HMI CPU load significantly"
+  - "Buffer overflow clears oldest samples — increase history_depth if needed"
+  - "Trend chart is a display-only function block — does not affect process control"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["plc-*", "ind-hmi-numeric-indicator", "ind-pid-controller"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["process-monitoring", "alarm-analysis", "data-logging"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 100
+  height: 60
+  ports_layout: custom
+  port_DATA_IN: {x: 0, y: 20}
+  port_TRIGGER: {x: 0, y: 45}
+  port_STATUS: {x: 100, y: 30}
+  label_position: top
+  value_display: "{channels}ch / {time_window}s / {sample_rate}Hz"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: industrial-family
+  componentProfileId: ind-hmi-trend-chart
+  simulationEngine: function-block-engine
+  paletteGroup: "Industrial > HMI & Signaling"
+  tags[6]:
+    - hmi-trend-chart
+    - hmi-signaling
+    - industrial
+    - trend
+    - monitoring
+    - function-block

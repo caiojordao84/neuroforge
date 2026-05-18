@@ -1,0 +1,116 @@
+# METADATA:
+project_name: resistor-color-code-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: resistor-color-code
+name: "Resistor Color Code Reference"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60062"
+url: null
+image: resistor-color-code.svg
+symbol: resistor-color-code-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  num_bands:
+    label: "Number of Bands"
+    default: 4
+    options: [4, 5, 6]
+    type: enum
+    editable: true
+  band1:
+    label: "Band 1 (1st significant digit)"
+    default: "brown"
+    options: ["black", "brown", "red", "orange", "yellow", "green", "blue", "violet", "grey", "white"]
+    type: enum
+    editable: true
+  band2:
+    label: "Band 2 (2nd significant digit)"
+    default: "black"
+    options: ["black", "brown", "red", "orange", "yellow", "green", "blue", "violet", "grey", "white"]
+    type: enum
+    editable: true
+  band3:
+    label: "Band 3 (3rd significant digit / multiplier on 4-band)"
+    default: "brown"
+    options: ["black", "brown", "red", "orange", "yellow", "green", "blue", "violet", "grey", "white", "gold", "silver"]
+    type: enum
+    editable: true
+  band4:
+    label: "Band 4 (multiplier on 5/6-band / tolerance on 4-band)"
+    default: "gold"
+    options: ["black", "brown", "red", "orange", "yellow", "green", "blue", "violet", "grey", "white", "gold", "silver"]
+    type: enum
+    editable: true
+  band5:
+    label: "Band 5 (tolerance on 5/6-band)"
+    default: "brown"
+    options: ["brown", "red", "green", "blue", "violet", "grey", "gold", "silver"]
+    type: enum
+    editable: true
+  band6:
+    label: "Band 6 (temp. coefficient — 6-band only)"
+    default: "brown"
+    options: ["black", "brown", "red", "orange", "yellow", "green", "blue", "violet", "grey", "white"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[0|]{}:
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: lookup-table
+  bidirectional: false
+  dynamic: false
+  thermal_model: false
+  noise_model: false
+  states[1]:
+    - nominal
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: null
+  max_current: null
+  max_power: null
+  max_temp: null
+  min_temp: null
+warnings[2]:
+  - "Band 1 must never be black (black = 0, not valid as first significant digit)"
+  - "6-band temp coefficient band values map to ppm/°C — consult IEC 60062 table"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["resistor"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["resistor-identification", "color-code-lookup", "component-reference"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 80
+  height: 30
+  ports_layout: horizontal
+  label_position: bottom
+  value_display: "{band1}/{band2}/{band3}/{band4}"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: resistor-color-code
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Passives"
+  tags[5]:
+    - resistor
+    - color-code
+    - lookup-table
+    - reference
+    - iec-60062

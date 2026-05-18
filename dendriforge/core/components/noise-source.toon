@@ -1,0 +1,133 @@
+# METADATA:
+project_name: noise-source-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: noise-source
+name: "Noise Source"
+family: electricals
+subfamily: sources
+category: source
+standard: "IEC 60050-702"
+url: null
+image: noise-source.svg
+symbol: noise-source-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  noise_type:
+    label: "Noise Type"
+    default: "white"
+    options: ["white", "pink", "brown", "blue", "violet", "gaussian"]
+    type: enum
+    editable: true
+  amplitude:
+    label: "Amplitude (RMS)"
+    unit: V
+    default: 0.1
+    min: 0
+    max: 10
+    type: float
+    editable: true
+  bandwidth:
+    label: "Bandwidth"
+    unit: V
+    default: 100000
+    min: 1
+    max: 1000000000
+    type: float
+    editable: true
+  spectral_density:
+    label: "Spectral Density (V/sqrt(Hz))"
+    unit: V
+    default: 0.000001
+    min: 0
+    max: 1
+    type: float
+    editable: false
+  dc_offset:
+    label: "DC Offset"
+    unit: V
+    default: 0
+    min: -10
+    max: 10
+    type: float
+    editable: true
+  output_impedance:
+    label: "Output Impedance"
+    unit: Ω
+    default: 50
+    options: [50, 600]
+    type: enum
+    editable: true
+  output_enabled:
+    label: "Output Enabled"
+    default: true
+    type: bool
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[2|]{id|direction|type|voltage_max|current_max|notes}:
+  OUT|output|analog|"10V"|"200mA"|"noise signal output"
+  GND|output|ground|null|null|"signal ground / chassis reference"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  waveform: noise
+  equation: "V_out = dc_offset + amplitude * noise(noise_type, bandwidth, t)"
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: true
+  states[2]:
+    - off
+    - running
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "10V"
+  max_current: "200mA"
+  max_power: null
+  max_temp: 50
+  min_temp: -10
+warnings[3]:
+  - "Do not connect output to low-impedance loads without impedance matching"
+  - "DC offset combined with amplitude peaks must not exceed max_voltage"
+  - "Bandwidth parameter is software-limited; actual hardware bandwidth depends on implementation"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["emc-testing", "snr-measurement", "filter-characterisation", "amplifier-testing"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 50
+  ports_layout: custom
+  port_OUT: {x: 60, y: 15}
+  port_GND: {x: 60, y: 35}
+  label_position: left
+  value_display: "{noise_type} / {amplitude}Vrms / {bandwidth}Hz"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: noise-source
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Sources"
+  tags[6]:
+    - noise-source
+    - source
+    - noise
+    - analog
+    - signal
+    - laboratory

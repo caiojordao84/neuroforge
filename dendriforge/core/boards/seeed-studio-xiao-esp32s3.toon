@@ -1,0 +1,92 @@
+# METADATA:
+project_name: seeed-studio-xiao-esp32s3-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: seeed-studio-xiao-esp32s3
+name: "Seeed Studio XIAO ESP32S3"
+manufacturer: "Seeed Studio"
+mcu: "Espressif ESP32-S3R8 (Xtensa LX7 dual-core 32-bit)"
+category: maker
+image: seeed-studio-xiao-esp32s3.svg
+url: "https://www.seeedstudio.com/XIAO-ESP32S3-p-5627.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 8388608
+  flash_available: 7864320
+  sram: 8781824
+  eeprom: 0
+  clock: 240000000
+  voltage: "3.3V"
+dims:
+  w: 17.5
+  h: 21.0
+  t: 3.5
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[5|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[11|]{pin|type|pwm|int|label|roles}:
+  0|analog|true|true|"D0 / A0 / IO2"|"adc:t"
+  1|analog|true|true|"D1 / A1 / IO3"|"adc:t"
+  2|analog|true|true|"D2 / A2 / IO4"|"adc:t"
+  3|analog|true|true|"D3 / A3 / IO5"|"adc:t"
+  4|analog|true|true|"D4 / A4 / SDA / IO6"|"adc:t;i2c-sda"
+  5|analog|true|true|"D5 / A5 / SCL / IO7"|"adc:t;i2c-scl"
+  6|analog|true|true|"D6 / A6 / SCK / IO8"|"adc:t;spi-sck"
+  7|analog|true|true|"D7 / A7 / MISO / IO9"|"adc:t;spi-miso"
+  8|analog|true|true|"D8 / A8 / MOSI / IO10"|"adc:t;spi-mosi"
+  9|digital|true|true|"D9 / RX / IO20 / SS"|"uart-rx;spi-ss"
+  10|digital|true|true|"D10 / TX / IO21 / LED"|"uart-tx;status-led"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uarts:1"|"pins:9,10"
+  i2c|"channels:1"|"sda:4;scl:5"
+  spi|"channels:1"|"miso:7;mosi:8;sck:6;ss:9"
+  adc|"resolution:12bit"|"pins:0;1;2;3;4;5;6;7;8"
+usb:
+  type: USB-C
+  chip: native
+  vid: "0x303A"
+  pid: "0x1001"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "40mA"
+  total_current_limit: "200mA"
+  warnings[6]:
+    - "All I/O pins operate at 3.3V; not 5V tolerant"
+    - "ADC2 (IO11-IO20) unavailable when Wi-Fi is active"
+    - "GPIO0 used for boot mode; avoid pulling LOW at power-on"
+    - "IO35-IO37 connected to internal flash; not available on headers"
+    - "8MB PSRAM shares SPI bus; avoid conflicts on IO35-IO37"
+    - "USB OTG capable; shares IO19/IO20 with UART0 RX"
+compatibility:
+  arduinoCore: "2.0.11"
+  pio: espressif32
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: esp32s3-boot
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: esp32-family
+  boardProfileId: seeed-studio-xiao-esp32s3
+  defaultLanguageSkills[3]:
+    - arduino-cpp-esp32
+    - micropython-esp32
+    - rust-embassy-esp32

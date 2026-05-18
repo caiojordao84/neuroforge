@@ -1,0 +1,138 @@
+# METADATA:
+project_name: hyd-valve-4-3-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: hyd-valve-4-3
+name: "4/3 Directional Control Valve (Válvula hidráulica 4/3 Vias)"
+family: hydraulics
+subfamily: directional-valves
+category: valve
+standard: "ISO 1219-1"
+url: null
+image: hyd-valve-4-3.svg
+symbol: hyd-valve-4-3-symbol.svg
+symbol_standard: ISO
+
+## 2. PARAMETERS:
+params:
+  center_position:
+    label: "Center Position Type (Tipo de Centro)"
+    default: "closed"
+    options: ["closed", "tandem", "open", "float"]
+    type: enum
+    editable: true
+  actuation_type:
+    label: "Actuation Type (Acionamento)"
+    default: "solenoid"
+    options: ["solenoid", "manual-lever", "hydraulic-pilot"]
+    type: enum
+    editable: true
+  return_type:
+    label: "Return Mechanism (Retorno)"
+    default: "spring"
+    options: ["spring", "hydraulic-pilot"]
+    type: enum
+    editable: true
+  operating_pressure:
+    label: "Max Operating Pressure"
+    unit: bar
+    default: 250
+    min: 10
+    max: 350
+    type: float
+    editable: false
+  flow_rate:
+    label: "Nominal Flow Rate"
+    unit: "l/min"
+    default: 40
+    min: 5
+    max: 150
+    type: float
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  SOL_A_VCC|input|power|"24V"|"1.5A"|"solenoid A power (actuate position A)"
+  SOL_A_GND|input|ground|null|null|"solenoid A ground"
+  SOL_B_VCC|input|power|"24V"|"1.5A"|"solenoid B power (actuate position B)"
+  SOL_B_GND|input|ground|null|null|"solenoid B ground"
+
+## 4b. FLUID PORTS (HYDRAULIC):
+hydraulic_ports[4|]{id|direction|type|pressure_max|flow_max|notes}:
+  P|input|hydraulic|"250bar"|"{flow_rate}"|"pressure supply port"
+  T|output|hydraulic|"10bar"|"{flow_rate}"|"tank return port"
+  A|bidirectional|hydraulic|"250bar"|"{flow_rate}"|"work port A"
+  B|bidirectional|hydraulic|"250bar"|"{flow_rate}"|"work port B"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: hydraulic-valve
+  motion: none
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  leakage_model: true
+  noise_model: false
+  states[3]:
+    - center-state     # Default rest state
+    - position-a-active
+    - position-b-active
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_pressure: 250
+  min_pressure: 0
+  max_voltage: "24V"
+  max_current: "1.5A"
+  max_power: null
+  max_temp: 80
+  min_temp: -20
+  ip_rating: "IP65"
+warnings[4]:
+  - "Closed center traps fluid in A/B, blocking actuator movement (internal leakage may cause drift)."
+  - "Tandem center connects P->T, unloading pump, while A/B are blocked."
+  - "Open center connects P, T, A, B together; used to freely move actuator and unload pump."
+  - "Float center blocks P but connects A/B->T; actuator floats but pump is under pressure."
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["hyd-cylinder-da-*", "hyd-motor-*", "hyd-power-unit", "hyd-check-valve", "relay-*", "plc-*", "mcu-*", "ind-do-bank", "dc-source", "ac-source"]
+  forbidden_with: ["pneu-*"]
+  requires: ["hyd-power-unit"]
+  typical_context: ["directional-control", "load-holding", "pump-unloading"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 120
+  height: 60
+  ports_layout: custom
+  port_P: {x: 50, y: 0}
+  port_T: {x: 70, y: 0}
+  port_A: {x: 50, y: 60}
+  port_B: {x: 70, y: 60}
+  port_SOL_A_VCC: {x: 0, y: 20}
+  port_SOL_A_GND: {x: 0, y: 40}
+  port_SOL_B_VCC: {x: 120, y: 20}
+  port_SOL_B_GND: {x: 120, y: 40}
+  label_position: bottom
+  value_display: "4/3 {center_position}-center"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: hydraulics-family
+  componentProfileId: hyd-valve-4-3
+  simulationEngine: hydraulic-motion
+  paletteGroup: "Hydraulics > Directional Valves"
+  tags[7]:
+    - valve
+    - 4/3
+    - directional
+    - hydraulic
+    - center-closed
+    - solenoid
+    - double-acting

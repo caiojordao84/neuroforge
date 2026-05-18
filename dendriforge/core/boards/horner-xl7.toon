@@ -1,0 +1,78 @@
+# METADATA:
+project_name: horner-xl7-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: horner-xl7
+name: "Horner Automation XL7 OCS"
+manufacturer: "Horner Automation"
+cpu: "HE-XW1E5"
+category: plc
+form_factor: compact
+standard: "IEC 61131-3"
+image: horner-xl7.svg
+url: "https://hornerautomation.com/product/xl7"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  memory_work: 100KB
+  memory_load: 2048KB
+  memory_retain: 32KB
+  supply_voltage: 24V
+  power_consumption: 4W
+dims:
+  w: 210.0
+  h: 144.0
+  t: 69.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerPins[3|]{name|direction|voltage|type}:
+  V+|input|"24V"|null
+  V-|input|null|ground
+  SHIELD|input|null|ground
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[4|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|12|"%IX0.0"|"%IX1.3"|null
+  1|0|DO|12|"%QX0.0"|"%QX1.3"|null
+  2|0|AI|2|"%IW0"|"%IW1"|null
+  3|0|AO|2|"%QW0"|"%QW1"|null
+
+## 5. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  ethernetip|"port:44818"|"role:scanner-adapter"
+  modbus-tcp|"port:502"|"role:master-slave"
+  canopen|"address:1"|"baud:500kbps"
+  opc-ua|"port:4840"|null
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "4000mA"
+  total_current_limit: "5000mA"
+  warnings[5]:
+    - "Class 2 power supply required for UL compliance"
+    - "Digital outputs must be supplied from the same source as the OCS unit"
+    - "Battery-backed retentive memory (32KB) — loss of battery loses retained registers"
+    - "Integrated 7-inch resistive touchscreen HMI (800x480 WVGA 65K colors)"
+    - "Dual CAN ports — CAN1 dedicated CsCAN; CAN2 configurable as CANopen or DeviceNet"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "Cscape 10.x"
+  runtime: "XL7 OCS Firmware"
+  languages: "LD;FBD;ST;IL;SFC"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: horner-xl7
+  defaultLanguageSkills[3]:
+    - ld-iec61131
+    - st-iec61131
+    - fbd-iec61131

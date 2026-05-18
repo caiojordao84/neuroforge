@@ -1,0 +1,106 @@
+# METADATA:
+project_name: nrf52-dk-pca10040-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: nrf52-dk-pca10040
+name: "Nordic Semiconductor nRF52-DK (PCA10040)"
+manufacturer: "Nordic Semiconductor"
+mcu: "Nordic nRF52832 (ARM Cortex-M4F with FPU)"
+category: maker
+image: nrf52-dk-pca10040.svg
+url: "https://www.nordicsemi.com/Products/Development-hardware/nRF52-DK"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 524288
+  flash_available: 491520
+  sram: 65536
+  eeprom: 0
+  clock: 64000000
+  voltage: "3.3V"
+dims:
+  w: 63.0
+  h: 102.0
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+  VDD|output|"3.3V"|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[22|]{pin|type|pwm|int|label|roles}:
+  11|digital|true|true|"P0.11 / D0"|null
+  12|digital|true|true|"P0.12 / D1"|null
+  13|digital|true|true|"P0.13 / D2 / BTN1"|null
+  14|digital|true|true|"P0.14 / D3 / BTN2"|null
+  15|digital|true|true|"P0.15 / D4 / BTN3"|null
+  16|digital|true|true|"P0.16 / D5 / BTN4"|null
+  17|digital|true|true|"P0.17 / D6 / LED1"|status-led
+  18|digital|true|true|"P0.18 / D7 / LED2"|status-led
+  19|digital|true|true|"P0.19 / D8 / LED3"|status-led
+  20|digital|true|true|"P0.20 / D9 / LED4"|status-led
+  22|digital|true|true|"P0.22 / D10 / SS"|spi-ss
+  23|digital|true|true|"P0.23 / D11 / MOSI"|spi-mosi
+  24|digital|true|true|"P0.24 / D12 / MISO"|spi-miso
+  25|digital|true|true|"P0.25 / D13 / SCK"|spi-sck
+  3|analog|true|true|"P0.03 / A0 / AIN1"|"adc:t"
+  4|analog|true|true|"P0.04 / A1 / AIN2"|"adc:t"
+  28|analog|true|true|"P0.28 / A2 / AIN4"|"adc:t"
+  29|analog|true|true|"P0.29 / A3 / AIN5"|"adc:t"
+  30|analog|true|true|"P0.30 / A4 / AIN6 / SDA"|"adc:t;i2c-sda"
+  31|analog|true|true|"P0.31 / A5 / AIN7 / SCL"|"adc:t;i2c-scl"
+  6|digital|true|true|"P0.06 / TX / VCOM"|uart-tx
+  8|digital|true|true|"P0.08 / RX / VCOM"|uart-rx
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uarts:2"|"pins:6,8"
+  i2c|"channels:2"|"sda:30;scl:31"
+  spi|"channels:3"|"miso:24;mosi:23;sck:25;ss:22"
+  adc|"resolution:12bit"|"pins:3;4;28;29;30;31"
+usb:
+  type: Micro-USB
+  chip: native
+  vid: "0x1366"
+  pid: "0x0101"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "4mA"
+  total_current_limit: "50mA"
+  warnings[8]:
+    - "All I/O pins operate at 3.3V (1.7-3.6V range); NOT 5V tolerant"
+    - "P0.13-P0.16 serve as BTN1-BTN4 by default; reconfigure in code for general GPIO"
+    - "P0.17-P0.20 serve as LED1-LED4 by default; reconfigure in code for general GPIO"
+    - "P0.06/P0.08 routed to SEGGER VCOM0 by default; also usable as regular UART0"
+    - "P0.09/P0.10 reserved for NFC antenna; do not use as GPIO without disabling NFC in SysFS"
+    - "P0.00/P0.01 reserved for 32.768kHz LFXO crystal; do not use for general I/O"
+    - "RESET pin is not configured out-of-the-box; requires separate flash of reset-pin config tool"
+    - "Current measurement pins P0.02/VDD exposed on header; do not short to GND"
+compatibility:
+  arduinoCore: "0.0.0"
+  pio: nordicnrf52
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: nrf52832-bootloader
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: nrf52-family
+  boardProfileId: nrf52-dk-pca10040
+  defaultLanguageSkills[3]:
+    - arduino-cpp-nrf52
+    - zephyr-nrf52
+    - rust-embassy-nrf52

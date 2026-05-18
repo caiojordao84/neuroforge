@@ -1,0 +1,90 @@
+# METADATA:
+project_name: seeed-studio-xiao-samd21-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: seeed-studio-xiao-samd21
+name: "Seeed Studio XIAO SAMD21"
+manufacturer: "Seeed Studio"
+mcu: "Microchip SAMD21G18 (ARM Cortex-M0+)"
+category: maker
+image: seeed-studio-xiao-samd21.svg
+url: "https://www.seeedstudio.com/Seeeduino-XIAO-Arduino-Microcontroller-SAMD21-Cortex-M0-p-4426.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 262144
+  flash_available: 253952
+  sram: 32768
+  eeprom: 0
+  clock: 48000000
+  voltage: "3.3V"
+dims:
+  w: 17.5
+  h: 20.0
+  t: 3.5
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[5|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+  5V|output|"5V"|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[11|]{pin|type|pwm|int|label|roles}:
+  0|analog|false|true|"A0 / D0 / DAC"|"adc:t;dac"
+  1|analog|true|true|"A1 / D1"|"adc:t"
+  2|analog|true|true|"A2 / D2"|"adc:t"
+  3|analog|true|true|"A3 / D3"|"adc:t"
+  4|analog|true|true|"A4 / D4 / SDA"|"adc:t;i2c-sda"
+  5|analog|true|true|"A5 / D5 / SCL"|"adc:t;i2c-scl"
+  6|analog|true|true|"A6 / D6 / TX"|"adc:t;uart-tx"
+  7|analog|true|true|"A7 / D7 / RX"|"adc:t;uart-rx"
+  8|analog|true|true|"A8 / D8 / SCK"|"adc:t;spi-sck"
+  9|analog|true|true|"A9 / D9 / MISO"|"adc:t;spi-miso"
+  10|analog|true|true|"A10 / D10 / MOSI / LED"|"adc:t;spi-mosi;status-led"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uarts:1"|"pins:6,7"
+  i2c|"channels:1"|"sda:4;scl:5"
+  spi|"channels:1"|"miso:9;mosi:10;sck:8;ss:null"
+  dac|"channels:1"|"pin:0"
+usb:
+  type: USB-C
+  chip: native
+  vid: "0x2886"
+  pid: "0x802F"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "7mA"
+  total_current_limit: "200mA"
+  warnings[5]:
+    - "All I/O pins operate at 3.3V; do not exceed 3.3V on any I/O"
+    - "Pin 5 and pin 7 cannot be used as interrupts simultaneously"
+    - "DAC output only on pin 0 (A0); 10-bit resolution"
+    - "ADC is 12-bit; use analogReadResolution(12) in sketch"
+    - "No onboard voltage regulator protection against reverse polarity"
+compatibility:
+  arduinoCore: "1.8.14"
+  pio: atmelsam
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: uf2-samd
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: samd21-family
+  boardProfileId: seeed-studio-xiao-samd21
+  defaultLanguageSkills[2]:
+    - arduino-cpp-samd
+    - circuitpython-samd

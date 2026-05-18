@@ -1,0 +1,125 @@
+# METADATA:
+project_name: h-bridge-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: h-bridge
+name: "Generic H-Bridge Motor Driver"
+family: actuators
+subfamily: motor-drives
+category: actuator
+standard: "Generic Semiconductor"
+url: null
+image: h-bridge.svg
+symbol: h-bridge-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  nominal_voltage:
+    label: "Nominal Motor Voltage"
+    unit: V
+    default: 12.0
+    min: 4.5
+    max: 46.0
+    type: float
+    editable: true
+  logic_voltage:
+    label: "Logic Supply Voltage"
+    unit: V
+    default: 5.0
+    min: 4.5
+    max: 7.0
+    type: float
+    editable: true
+  max_current_per_channel:
+    label: "Max Continuous Current"
+    unit: A
+    default: 2.0
+    type: float
+    editable: false
+  pwm_frequency_max:
+    label: "Max PWM Frequency"
+    unit: kHz
+    default: 20
+    type: int
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+# Format: id | direction | type | voltage_max | current_max | notes
+ports[8|]{id|direction|type|voltage_max|current_max|notes}:
+  V_MOTOR|input|power|"{nominal_voltage}"|null|"Motor power supply"
+  V_LOGIC|input|power|"{logic_voltage}"|null|"Logic power supply"
+  GND|input|ground|null|null|"Common ground"
+  IN1|input|digital|"{logic_voltage}"|null|"Direction/PWM input 1"
+  IN2|input|digital|"{logic_voltage}"|null|"Direction/PWM input 2"
+  ENA|input|pwm|"{logic_voltage}"|null|"Enable/PWM input channel A"
+  OUT1|output|power|"{nominal_voltage}"|"{max_current_per_channel}"|"Motor output 1"
+  OUT2|output|power|"{nominal_voltage}"|"{max_current_per_channel}"|"Motor output 2"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: digital-io
+  motion: none
+  bidirectional: true
+  dynamic: true
+  feedback: false
+  thermal_model: true
+  noise_model: false
+  states[4]:
+    - standby
+    - forward
+    - reverse
+    - brake
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "46V"
+  max_current: "2.5A"
+  max_power:
+    value: 25
+    unit: W
+  max_temp: 150
+  min_temp: -25
+warnings[2]:
+  - "Provide flyback diodes for inductive loads if not integrated"
+  - "Heatsink required for continuous operation above 1A"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["act-motor-dc", "ind-do-bank", "mcu-gpio", "pwm-output"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["dc-motor-control", "robotics", "stepper-driver-stage"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 80
+  height: 80
+  ports_layout: custom
+  port_V_MOTOR: {x: 40, y: 0}
+  port_V_LOGIC: {x: 20, y: 0}
+  port_GND: {x: 60, y: 0}
+  port_IN1: {x: 0, y: 30}
+  port_IN2: {x: 0, y: 50}
+  port_ENA: {x: 0, y: 70}
+  port_OUT1: {x: 80, y: 30}
+  port_OUT2: {x: 80, y: 50}
+  label_position: bottom
+  value_display: "{nominal_voltage}V / {max_current_per_channel}A"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: actuators-family
+  componentProfileId: h-bridge
+  simulationEngine: digital-io
+  paletteGroup: "Actuators > motor-drives"
+  tags[4]:
+    - motor-driver
+    - h-bridge
+    - l298-type
+    - dc-control

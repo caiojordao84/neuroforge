@@ -1,0 +1,113 @@
+# METADATA:
+project_name: raspberry-pi-zero-2-w-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: raspberry-pi-zero-2-w
+name: "Raspberry Pi Zero 2 W"
+manufacturer: "Raspberry Pi Foundation"
+mcu: RP3A0-AU
+category: embedded
+image: raspberry-pi-zero-2-w.svg
+url: "https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 0
+  flash_available: 0
+  sram: 536870912
+  eeprom: 0
+  clock: 1000000000
+  voltage: "3.3V"
+  cores: 4
+  wifi: "802.11b/g/n"
+  bluetooth: "v4.2 BR/EDR+BLE"
+dims:
+  w: 65.0
+  h: 30.0
+  t: 5.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[8|]{name|direction|voltage|type}:
+  5V_1|input|"5V"|null
+  5V_2|input|"5V"|null
+  3V3_1|output|"3.3V"|null
+  3V3_2|output|"3.3V"|null
+  GND_1|null|null|ground
+  GND_2|null|null|ground
+  GND_3|null|null|ground
+  GND_4|null|null|ground
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[28|]{pin|type|pwm|int|label|roles}:
+  2|digital|f|t|"GPIO2 / SDA1"|i2c-sda
+  3|digital|f|t|"GPIO3 / SCL1"|i2c-scl
+  4|digital|f|t|"GPIO4 / GPCLK0"|null
+  5|digital|f|t|GPIO5|null
+  6|digital|f|t|GPIO6|null
+  7|digital|f|t|"GPIO7 / CE1"|spi-ss
+  8|digital|f|t|"GPIO8 / CE0"|spi-ss
+  9|digital|f|t|"GPIO9 / MISO"|spi-miso
+  10|digital|f|t|"GPIO10 / MOSI"|spi-mosi
+  11|digital|f|t|"GPIO11 / SCLK"|spi-sck
+  12|digital|t|t|"GPIO12 / PWM0"|null
+  13|digital|t|t|"GPIO13 / PWM1"|null
+  14|digital|f|f|"GPIO14 / TXD0"|uart-tx
+  15|digital|f|f|"GPIO15 / RXD0"|uart-rx
+  16|digital|f|t|GPIO16|null
+  17|digital|f|t|GPIO17|null
+  18|digital|t|t|"GPIO18 / PCM_CLK"|null
+  19|digital|t|t|"GPIO19 / PCM_FS"|null
+  20|digital|f|t|"GPIO20 / PCM_DIN"|null
+  21|digital|f|t|"GPIO21 / PCM_DOUT"|null
+  22|digital|f|t|GPIO22|null
+  23|digital|f|t|GPIO23|null
+  24|digital|f|t|GPIO24|null
+  25|digital|f|t|GPIO25|null
+  26|digital|f|t|GPIO26|null
+  27|digital|f|t|GPIO27|null
+  0|digital|f|f|"GPIO0 / ID_SD"|null
+  1|digital|f|f|"GPIO1 / ID_SC"|null
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uarts:1"|"pins:14,15"
+  i2c|"channels:1"|"sda:2;scl:3"
+  spi|"channels:1"|"miso:9;mosi:10;sck:11;ss:8"
+  pwm|"channels:2"|"pwm0:12;pwm1:13"
+usb:
+  type: Micro-USB-OTG
+  chip: onboard
+  vid: "0x2E8A"
+  pid: "0x0003"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "16mA"
+  total_current_limit: "800mA"
+  warnings[6]:
+    - "GPIO0/GPIO1 (pins 27/28) are reserved for HAT EEPROM ID — avoid general use"
+    - "No onboard ADC — external ADC required for analog inputs"
+    - "GPIO2/GPIO3 have onboard pull-up resistors (1.8kΩ)"
+    - "3.3V I/O only — do NOT connect 5V signals to GPIO pins"
+    - "Micro USB OTG port shares power and data — cannot use as host without adapter"
+    - "Flash storage via microSD only — no onboard flash"
+compatibility:
+  pio: raspberrypi
+  frameworks: "linux;bare-metal"
+  languages: "python;c-cpp"
+  bootloader: rpi-bootloader
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: rpi-arm-cortex-a53-family
+  boardProfileId: raspberry-pi-zero-2-w
+  defaultLanguageSkills[2]:
+    - python-rpi
+    - c-cpp-bare-metal-rpi

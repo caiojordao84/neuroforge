@@ -1,38 +1,101 @@
-id: siemens-s7-1500-cpu-1516c
-name: "Siemens S7-1500 CPU 1516C"
-manufacturer: "Generic"
-mcu: "Siemens"
-category: "industrial"
-image: "/boards/siemens-s7-1500-cpu-1516c.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 0
-sram: 1048576
-clock_hz: 0
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "plc-family"
-  boardProfileId: "siemens-s7-1500-cpu-1516c"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+# METADATA:
+project_name: siemens-s7-1500-cpu-1516-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: siemens-s7-1500-cpu-1516
+name: "Siemens SIMATIC S7-1500 CPU 1516-3 PN/DP — Modular PLC, 10ns bit op, 1MB+5MB work memory, 2xPROFINET IRT+RT, 1xPROFIBUS DP, 32KB I/O image, 262144 DI/DO, OPC UA, Motion, no built-in I/O"
+manufacturer: "Siemens AG"
+mcu: "Siemens proprietary CPU 1516-3 PN/DP — 10ns bit op; 12ns word; 16ns fixed; 64ns FP; 2xPROFINET (X1-IRT 2-port, X2-RT 1-port); 1xPROFIBUS-DP 12Mbps; TIA Portal LAD-FBD-STL-SCL-GRAPH"
+category: plc
+image: siemens-s7-1500-cpu-1516-3-pn-dp.svg
+url: "https://www.siemens.com/global/en/products/automation/systems/industrial/plc/simatic-s7-1500.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 34359738368
+  flash_available: 7340032
+  sram: 7340032
+  eeprom: 0
+  clock: 0
+  voltage: "24V"
+dims:
+  w: 70.0
+  h: 147.0
+  t: 129.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# CPU 1516-3 PN/DP does NOT have its own power supply — it draws from S7-1500 system backplane bus
+# A separate System Power Supply (PS) module (e.g. 6EP1333-4BA00 PS 25W 24VDC) is MANDATORY on the rail
+# Backplane supply: 24VDC, range 19.2-28.8VDC; CPU infeed to bus: 12W; CPU draw from bus: 6.7W (balanced)
+# PE: Protective Earth via mounting rail — CPU chassis bonded to rail; rail must be earthed to PE
+powerPins[5|]{name|direction|voltage|type}:
+  L_PLUS_BACKPLANE|input|"24V"|null
+  M_BACKPLANE|null|null|ground
+  PE_RAIL|null|null|ground
+  INFEED_TO_BUS|output|"24V"|null
+  DRAW_FROM_BUS|input|"24V"|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# CPU 1516-3 PN/DP has NO integrated field I/O — all DI, DO, AI, AO via ET 200MP I/O modules on the rail
+# or distributed via PROFINET IO devices or PROFIBUS DP slaves
+# The GPIO map represents the 3 communication interface connectors on the CPU front face
+gpio[3|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|false|"X1-P1 / PROFINET IRT port 1 — RJ45; 10/100 Mbps; auto-MDI-X; isolated; part of integrated 2-port switch on X1; supports IRT sync cycle 250µs-4ms; PROFINET IO controller+IO device; up to 256 PROFINET IO devices on X1; protocols: PROFINET-IRT-RT, S7-comm, TCP-IP, UDP, ISO-on-TCP, Modbus-TCP, OPC-UA"|"do;di"
+  1|digital|false|false|"X1-P2 / PROFINET IRT port 2 — RJ45; 10/100 Mbps; integrated switch with P1; IRT backbone or star topology; line-bus ring topology possible with MRP; all X1 specs same as P1"|"do;di"
+  2|digital|false|false|"X2 / PROFINET RT — RJ45; 10/100 Mbps; 1 port; auto-MDI-X; isolated; standard RT only (no IRT); up to 256 PROFINET IO devices independent of X1; used for network separation (supervisor-level or DMZ); protocols same as X1 minus IRT"|"do;di"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[12|]{peripheral|param|value}:
+  profinet_x1_irt|"speed:100Mbit"|"interface:X1;ports:2x-RJ45-2-port-switch;mode:IRT-and-RT;sync-cycle:250us-to-4ms;RT-cycle:1ms-min;IO-devices-max:256;topology:line-star-ring-tree-MRP;protocols:PROFINET-IO-ctrl+device,S7-comm,TCP-IP,UDP,ISO-on-TCP-RFC1006,Modbus-TCP-V4plus,OPC-UA-V2.6plus,WebServer,HTTPS,SNMP,DCP,LLDP;IRT-requires-IRT-capable-switches-SCALANCE-X"
+  profinet_x2_rt|"speed:100Mbit"|"interface:X2;ports:1x-RJ45;mode:RT-only-no-IRT;IO-devices-max:256-independent-of-X1;use:network-separation-supervisor-DMZ-OPC-UA-separate-segment;protocols:same-as-X1-minus-IRT"
+  profibus_x3_dp|"speed:12Mbit"|"interface:X3;connector:9-pin-Sub-D-female;mode:DP-master-and-DP-slave;master:DPV0-V1-V2-up-to-124-slaves-at-12Mbps;slave:DPV0-V1;speeds:9.6kbps-19.2-93.75-187.5-500-1500-3000-6000-12000kbps;equidistant-bus-cycle;isochronous-DPV2;requires-bus-terminator-on-last-device;cable:max-1200m-at-9.6kbps-or-100m-at-12Mbps"
+  memory_card|"size:32GB"|"SIMATIC-Memory-Card-MANDATORY-program-not-stored-in-CPU;types:4MB-12MB-24MB-2GB-4GB-32GB;microSD-based;stores:program-project-firmware-update-data-logs;RTC-backup:maintenance-free-via-card;remove-hot:no-CPU-stops;compatible:all-S7-1500-CPUs"
+  display_cpu|"diagonal:61mm"|"2.4in-TFT-color;resolution:160x120;4096-colors;6-function-keys+mode-selector;shows:diagnostics-IP-config-module-info-error-messages;STOP-RUN-MRES-switch;force-display-off-possible"
+  motion_control|"axes:4"|"technology-objects:to-V2.0-4-axes-per-technology;MC_MoveAbsolute-MC_MoveRelative-MC_MoveVelocity-MC_Home-MC_Halt;drive-connection:via-PROFINET-PROFIdrive-or-analog-setpoint-via-AO-module;cam-sequences-and-following-motion;T-CPU-1516T-variant-for-advanced-CNC-kinematics"
+  pid_control|"loops:unlimited"|"PID_Compact:self-tuning-pretuning-fine-tuning;PID_3Step:valve-positioner;PID_Temp:temperature-cascade;sampling-configurable;output:AO-module-or-PWM-via-DO-module"
+  webserver|"protocol:HTTPS"|"user-defined-web-pages;standard-diagnostics-pages;CSV-download;variable-access-via-AWP-commands;HTTPS-certificate;accessible-from-X1-and-X2;user-accounts-with-roles"
+  opcua|"version:V2.6"|"OPC-UA-server-from-V2.6-firmware;security:Basic256Sha256;certificate-management-in-TIA-Portal;namespace:instance-data-PLC-tags;method-nodes;subscription;requires-STEP7-V15plus;no-OPC-UA-from-V1.x"
+  expansion_rack|"slots:32"|"S7-1500-ET-200MP-rack;max-31-I-O-modules-per-CPU-rack;additional-racks-via-active-backplane-bus-module-BM;types:DI-DO-AI-AO-HSC-PTO-relay-safety-F-modules;all-hot-swap-capable"
+  cm_modules|"protocols:multi"|"Communication-Modules-CM-left-of-CPU;types:CM-PtP-RS232-RS422-RS485,CM-1242-PROFIBUS,CP-1543-1-Ethernet,CP-1545-1-OPC-UA-hardware-accelerated,CP-1616-PROFINET;Modbus-RTU-ASCII-USS-3964R-via-CM-PtP"
+  security|"level:industrial"|"CPU-access-protection:4-levels;block-know-how-protection;copy-protection-via-memory-card-serial;communication-firewall:integrated;TLS-encrypted-OPC-UA;HTTPS-web;Profisafe-via-F-modules-only-on-F-CPU-variant"
+usb:
+  type: null
+  chip: null
+  vid: "0x0000"
+  pid: "0x0000"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "0mA"
+  total_current_limit: "12000mA"
+  warnings[9]:
+    - "CPU 1516-3 PN/DP has NO integrated field I/O (no DI, DO, AI, AO on the CPU module itself) — all physical I/O requires ET 200MP I/O modules installed on the same S7-1500 mounting rail or distributed PROFINET/PROFIBUS I/O slaves; a bare CPU with no I/O modules performs no field acquisition"
+    - "A SIMATIC Memory Card is MANDATORY — the CPU has no internal program memory; without a valid SIMATIC Memory Card the CPU cannot execute any program and will fault on power-up; the card stores the program, project, and data; use only Siemens original SIMATIC Memory Cards (6ES79... part numbers)"
+    - "PROFINET IRT (Isochronous Real-Time) on X1 requires ALL network nodes (switches, I/O devices) to be IRT-capable — standard PROFINET switches such as unmanaged switches will break IRT sync; use only SCALANCE X-200 IRT or X-300 IRT managed switches in the IRT segment; mixing IRT and non-IRT devices on the same segment downgrades all devices to RT mode"
+    - "PROFIBUS DP on X3 requires correct bus termination — the first and last physical devices on the PROFIBUS cable segment MUST have bus terminators activated (120Ω resistor network); missing or double termination causes reflection artifacts, CRC errors and slave timeouts; never terminate a device in the middle of the segment"
+    - "The system power supply (PS module) must be separately ordered and installed on the mounting rail to the left of the CPU — the CPU does not accept 24VDC directly via screw terminals; the PS module infeed and the CPU backplane current budget must both be calculated; max backplane current budget is defined by the PS module rating (e.g. PS 60W = 2.5A @ 24VDC into bus)"
+    - "OPC UA server is only available from firmware V2.6 and TIA Portal V15 — CPU 1516-3 PN/DP with firmware V1.x or V2.0/V2.1 does NOT support OPC UA; always check the CPU firmware version before designing an OPC UA architecture; firmware update requires a new or reformatted SIMATIC Memory Card"
+    - "Motion control technology objects (MC) require the technology license — from TIA Portal V14 motion control FBs are licensed per axis; the CPU 1516-3 supports up to 4 motion axes total; for more axes or kinematic transformations use the CPU 1516T-3 PN/DP (Technology CPU variant) which supports CNC kinematics and cam disk editors"
+    - "The PROFIBUS interface X3 and PROFINET interface X1 operate independently with separate IP/DP address spaces — they do NOT bridge or route between each other automatically; to route between PROFINET and PROFIBUS devices use the CPU routing functionality (enable in TIA Portal network view) or a dedicated CP 1616 / IE/PB link gateway module"
+    - "The S7-1500 mounting rail is NOT compatible with S7-300 or S7-400 mounting systems — S7-300 signal modules, power supplies and the IM 153 interface modules are physically and electrically incompatible with S7-1500 rails; migration from S7-300/400 to S7-1500 requires new hardware including rail, PS, CPU and I/O modules; STEP 7 project migration via TIA Portal migration tool is recommended but requires manual program review"
+compatibility:
+  sw: "TIA Portal STEP 7 V12+ (V12-V19+); STEP 7 Classic V5.x NOT compatible; TIA Portal Professional for SCL + Graph + Safety; PLCSIM Advanced for simulation"
+  languages: "Ladder Diagram (LAD);Function Block Diagram (FBD);Statement List (STL/IL);Structured Control Language (SCL/ST);S7-GRAPH (SFC);Cause and Effect Matrix"
+  frameworks: "IEC61131-3;TIA Portal;PROFINET-IRT-RT;PROFIBUS-DPV0-V1-V2;Modbus-TCP-RTU-via-CM;S7-comm;OPC-UA;Web-Server;PROFIsafe-via-F-modules;PROFIdrive;PLCopen-MC"
+  certifications: "CE;cULus;UL;FM;RCM;EAC;UKCA;Marine-DNV-GL;IEC61511-SIL2-via-F-variant"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: siemens-simatic-s7-1500-family
+  boardProfileId: siemens-s7-1500-cpu-1516
+  defaultLanguageSkills[3]:
+    - ladder-tia-portal-s7-1500
+    - scl-tia-portal-s7-1500
+    - fbd-tia-portal-s7-1500

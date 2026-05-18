@@ -1,0 +1,136 @@
+# METADATA:
+project_name: cmd-mushroom-head-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: cmd-mushroom-head
+name: "Mushroom Head Pushbutton"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60947-5-1"
+url: null
+image: cmd-mushroom-head.svg
+symbol: cmd-mushroom-head-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  contact_type:
+    label: "Contact Type"
+    default: "normally-open"
+    options: ["normally-open", "normally-closed", "changeover"]
+    type: enum
+    editable: true
+  actuation_force:
+    label: "Actuation Force"
+    unit: N
+    default: 4.0
+    options: [2.5, 4.0, 6.0, 8.0]
+    type: enum
+    editable: true
+  head_diameter:
+    label: "Head Diameter"
+    unit: mm
+    default: 40
+    options: [30, 40, 60]
+    type: enum
+    editable: true
+  ip_rating:
+    label: "Ingress Protection"
+    default: "IP65"
+    options: ["IP54", "IP65", "IP67"]
+    type: enum
+    editable: true
+  reset_type:
+    label: "Reset Type"
+    default: "manual"
+    options: ["manual", "spring-return"]
+    type: enum
+    editable: true
+  mechanical_life:
+    label: "Mechanical Life"
+    unit: cycles
+    default: 1000000
+    min: 100000
+    max: 10000000
+    type: float
+    editable: false
+  electrical_life:
+    label: "Electrical Life"
+    unit: cycles
+    default: 200000
+    min: 10000
+    max: 1000000
+    type: float
+    editable: false
+  package:
+    label: "Package"
+    default: "22mm panel"
+    options: ["22mm panel", "30mm panel", "40mm mushroom", "enclosed"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[2|]{id|direction|type|voltage_max|current_max|notes}:
+  COM|input|ground|null|null|"common terminal"
+  NO|output|digital|"250V"|"10A"|"normally-open contact"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - open
+    - closed
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "250V"
+  max_current: "10A"
+  max_power: null
+  max_temp: 70
+  min_temp: -25
+warnings[3]:
+  - "This is a standard control pushbutton, not a safety-rated emergency stop"
+  - "Respect AC/DC contact ratings separately; DC switching is more demanding"
+  - "Use an arc suppression network for inductive loads"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["mcu-gpio", "relay-coil", "ind-load", "dc-source"]
+  forbidden_with: ["ac-source"]
+  requires: []
+  typical_context: ["operator-panel", "manual-control", "start-stop", "machine-control"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 40
+  ports_layout: horizontal
+  port_COM: {x: 0, y: 20}
+  port_NO: {x: 60, y: 20}
+  label_position: top
+  value_display: "Mushroom / {contact_type} / {head_diameter}mm"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: cmd-mushroom-head
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Switches"
+  tags[7]:
+    - pushbutton
+    - mushroom
+    - switch
+    - operator
+    - control
+    - manual
+    - iec-60947-5-1

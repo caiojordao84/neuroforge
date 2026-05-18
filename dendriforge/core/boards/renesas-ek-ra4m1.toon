@@ -1,0 +1,105 @@
+# METADATA:
+project_name: renesas-ek-ra4m1-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: renesas-ek-ra4m1
+name: "Renesas EK-RA4M1 Evaluation Kit (RTK7EKA4M1S00001BE)"
+manufacturer: Renesas
+mcu: "Renesas R7FA4M1AB3CFP (ARM Cortex-M4F, 48MHz)"
+category: maker
+image: renesas-ek-ra4m1-rtk7eka4m1s00001be.svg
+url: "https://www.renesas.com/en/design-resources/boards-kits/ek-ra4m1"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 262144
+  flash_available: 237568
+  sram: 32768
+  eeprom: 8192
+  clock: 48000000
+  voltage: "3.3V"
+dims:
+  w: 97.0
+  h: 125.0
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  VBUS|input|"5V"|null
+  VCC|output|"3.3V"|null
+  VCC_USB|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+  VREF|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# Encoding: port*100 + pin (P4.11 = 411, P0.00 = 0, P1.01 = 101)
+gpio[20|]{pin|type|pwm|int|label|roles}:
+  411|digital|false|true|"P411 / D0 / RX (SCI4)"|uart-rx
+  410|digital|false|true|"P410 / D1 / TX (SCI4)"|uart-tx
+  104|digital|false|true|"P104 / D2"|null
+  105|digital|true|true|"P105 / D3 / PWM (GPT2A)"|null
+  106|digital|false|true|"P106 / D4 / LED1 (Blue)"|status-led
+  500|digital|true|true|"P500 / D5 / PWM (GPT_OPS)"|null
+  501|digital|true|true|"P501 / D6 / PWM (GPT5B)"|null
+  408|digital|false|true|"P408 / D7"|null
+  304|digital|false|true|"P304 / D8"|null
+  303|digital|true|true|"P303 / D9 / PWM (GPT7B)"|null
+  103|digital|true|true|"P103 / D10 / SS (SPI0)"|spi-ss
+  101|digital|true|true|"P101 / D11 / MOSI (SPI0)"|spi-mosi
+  100|digital|false|true|"P100 / D12 / MISO (SPI0)"|spi-miso
+  102|digital|false|true|"P102 / D13 / SCK (SPI0)"|spi-sck
+  0|analog|false|true|"P000 / A0 / AN000"|"adc:t"
+  1|analog|false|true|"P001 / A1 / AN001"|"adc:t"
+  2|analog|false|true|"P002 / A2 / AN002"|"adc:t"
+  3|analog|false|true|"P003 / A3 / AN003"|"adc:t"
+  401|digital|false|true|"P401 / A4 / SDA (IIC0)"|i2c-sda
+  400|digital|false|true|"P400 / A5 / SCL (IIC0)"|i2c-scl
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uarts:4"|"pins:410,411"
+  i2c|"channels:2"|"sda:401;scl:400"
+  spi|"channels:2"|"miso:100;mosi:101;sck:102;ss:103"
+  adc|"resolution:14bit"|"pins:0;1;2;3"
+usb:
+  type: Micro-USB
+  chip: native
+  vid: "0x045B"
+  pid: "0x023A"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "8mA"
+  total_current_limit: "200mA"
+  warnings[8]:
+    - "NOTE: there is no FPB-RA4M1; the correct Renesas RA4M1 board is the EK-RA4M1"
+    - "I/O voltage 3.3V by default; MCU supports 1.8-5.5V but board LDO outputs 3.3V"
+    - "P106 (D4) shared with LED1 (blue); reconfigure in code for general GPIO"
+    - "P415/P414 are LED2 (green) and LED3 (red) — on MCU expansion header, not Arduino"
+    - "P005 is USER switch S1 — has hardware debounce filter via RC circuit"
+    - "USB-FS target (J9) and SEGGER debug (J11) are separate Micro-USB connectors"
+    - "14-bit ADC on A0-A3; additional analog channels available on expansion headers J1/J2"
+    - "CAN requires external transceiver; CAN pads exposed on expansion headers only"
+compatibility:
+  arduinoCore: "1.2.0"
+  pio: renesas-ra
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: renesas-ra-dfu
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: renesas-ra-family
+  boardProfileId: renesas-ek-ra4m1
+  defaultLanguageSkills[3]:
+    - arduino-cpp-renesas-ra
+    - e2studio-fsp
+    - keil-mdk-ra

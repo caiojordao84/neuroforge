@@ -1,0 +1,118 @@
+# METADATA:
+project_name: maker-oled-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: maker-oled
+name: "OLED Display"
+family: electricals
+subfamily: semiconductors
+category: signal
+standard: "IEC 61747-1"
+url: null
+image: maker-oled.svg
+symbol: maker-oled-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  resolution:
+    label: "Resolution"
+    default: "128x64"
+    options: ["128x32", "128x64", "96x16", "64x48"]
+    type: enum
+    editable: true
+  size:
+    label: "Screen Size"
+    default: "0.96in"
+    options: ["0.49in", "0.91in", "0.96in", "1.3in"]
+    type: enum
+    editable: true
+  interface:
+    label: "Interface"
+    default: "I2C"
+    options: ["I2C", "SPI"]
+    type: enum
+    editable: true
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 3
+    options: [3, 5]
+    type: enum
+    editable: true
+  color:
+    label: "Display Color"
+    default: "white"
+    options: ["white", "blue", "yellow-blue", "green"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"5V"|"30mA"|"DC supply positive"
+  GND|input|ground|null|null|"DC supply negative"
+  SCL|input|i2c|"5V"|"5mA"|"I2C clock / SPI clock"
+  SDA|bidirectional|i2c|"5V"|"5mA"|"I2C data / SPI MOSI"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: script
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - off
+    - displaying
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "5V"
+  max_current: "30mA"
+  max_power: null
+  max_temp: 70
+  min_temp: -40
+  ip_rating: null
+  safety_category: null
+warnings[3]:
+  - "OLED pixels degrade with prolonged static display — implement screen saver"
+  - "Current draw varies with number of lit pixels — up to 30mA at full brightness"
+  - "Use I2C pull-up resistors of 4.7k when operating at 3.3V"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["mcu-*", "comm-i2c-bus"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["compact-ui", "sensor-dashboard", "wearable-display"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 40
+  ports_layout: custom
+  port_VCC: {x: 0, y: 5}
+  port_GND: {x: 0, y: 15}
+  port_SCL: {x: 0, y: 27}
+  port_SDA: {x: 0, y: 37}
+  label_position: top
+  value_display: "{resolution} / {size} / {color}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: maker-oled
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Semiconductors"
+  tags[6]:
+    - oled
+    - display
+    - semiconductors
+    - i2c
+    - graphic
+    - maker

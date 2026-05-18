@@ -1,0 +1,138 @@
+# METADATA:
+project_name: dc-psu-prog-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: dc-psu-prog
+name: "Programmable DC Laboratory Power Supply"
+family: electricals
+subfamily: sources
+category: source
+standard: "IEC 61010-1"
+url: "https://www.joy-it.net/en/products/JT-PS1440-C-Pro"
+image: dc-psu-prog.svg
+symbol: dc-psu-prog-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  voltage:
+    label: "Output Voltage"
+    unit: V
+    default: 12
+    min: 0
+    max: 60
+    type: float
+    editable: true
+  current_limit:
+    label: "Current Limit"
+    unit: A
+    default: 1
+    min: 0
+    max: 24
+    type: float
+    editable: true
+  ovp_threshold:
+    label: "OVP Threshold"
+    unit: V
+    default: 62
+    min: 0
+    max: 66
+    type: float
+    editable: true
+  ocp_threshold:
+    label: "OCP Threshold"
+    unit: A
+    default: 25
+    min: 0
+    max: 26
+    type: float
+    editable: true
+  output_enabled:
+    label: "Output Enabled"
+    default: true
+    type: bool
+    editable: true
+  memory_slot:
+    label: "Memory Slot"
+    default: 0
+    options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    type: enum
+    editable: true
+  operating_mode:
+    label: "Operating Mode"
+    default: "CV"
+    options: ["CV", "CC"]
+    type: enum
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  AC_IN|input|power|"250V"|"10A"|"AC mains input 230V"
+  POS|output|power|"60V"|"24A"|"positive DC output terminal"
+  NEG|output|ground|null|null|"negative DC output terminal / GND"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  waveform: DC
+  equation: "V_out = voltage; I_out = min(I_load, current_limit)"
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - off
+    - on
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "60V"
+  max_current: "24A"
+  max_power:
+    value: 1440
+    unit: W
+  max_temp: 40
+  min_temp: -10
+warnings[4]:
+  - "Input must be 230V AC — do not connect to other voltages"
+  - "Never short-circuit the output terminals"
+  - "OVP and OCP must be configured before use in sensitive circuits"
+  - "Step-down operation only — output voltage must be below input-derived rail"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["lab-bench", "battery-charging", "device-under-test", "burn-in-test"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 80
+  height: 60
+  ports_layout: custom
+  port_AC_IN: {x: 0, y: 10}
+  port_POS: {x: 80, y: 15}
+  port_NEG: {x: 80, y: 45}
+  label_position: top
+  value_display: "{voltage}V / {current_limit}A"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: dc-psu-prog
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Sources"
+  tags[6]:
+    - dc-power-supply
+    - programmable
+    - laboratory
+    - source
+    - bench-instrument
+    - adjustable

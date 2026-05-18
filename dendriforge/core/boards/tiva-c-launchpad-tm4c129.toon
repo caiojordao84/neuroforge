@@ -1,38 +1,145 @@
+# METADATA:
+project_name: tiva-c-launchpad-tm4c129-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: tiva-c-launchpad-tm4c129
-name: "Tiva C LaunchPad TM4C129"
-manufacturer: "Generic"
-mcu: "TM4C1294NCPDT"
-category: "maker"
-image: "/boards/tiva-c-launchpad-tm4c129.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 1048576
-sram: 262144
-clock_hz: 120000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "avr-family"
-  boardProfileId: "tiva-c-launchpad-tm4c129"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+name: "TI EK-TM4C1294XL Connected LaunchPad — TM4C1294NCPDT ARM Cortex-M4F 120MHz, 1MB Flash, 256KB RAM, 90 GPIO, On-chip ETH MAC+PHY, USB OTG, 2xCAN, 10xI2C"
+manufacturer: "Texas Instruments"
+mcu: "TI TM4C1294NCPDT — ARM Cortex-M4F 120MHz; IEEE754 FPU; 32-ch uDMA; On-chip ETH MAC+PHY; 2xADC-12bit-2MSPS; 8xUART; 4xSSI; 10xI2C; 2xCAN; USB-OTG"
+category: maker
+image: tiva-c-launchpad-tm4c129.svg
+url: "https://www.ti.com/tool/EK-TM4C1294XL"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 1048576
+  flash_available: 1048576
+  sram: 262144
+  eeprom: 6144
+  clock: 120000000
+  voltage: "3.3V"
+dims:
+  w: 124.5
+  h: 55.9
+  t: 10.8
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# 3.3V from on-board LDO; powered by ICDI USB or Device USB
+# Power switch selects ICDI USB vs Device USB as source
+# VBAT pad: connect 3V coin cell for Hibernation RTC when main power off
+powerPins[6|]{name|direction|voltage|type}:
+  VBUS_ICDI|input|"5V"|null
+  VBUS_DEVICE|input|"5V"|null
+  V3V3|output|"3.3V"|null
+  VBAT|input|"3V"|null
+  GND|null|null|ground
+  AGND|null|null|ground
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# ALL GPIO: 3.3V logic ONLY — NOT 5V tolerant; output 8mA max per pin
+# TM4C1294NCPDT has ports PA-PQ (up to 90 I/O pins, 128-pin TQFP)
+# LaunchPad BoosterPack XL J1-J4 expose the most commonly used pins
+# Ports PH, PJ exposed on inner headers; PK-PQ on extension area
+gpio[46|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|true|"PA0 / UART0-RX / I2C9-SCL / CAN0-RX — UART0 RX (ICDI VCP); I2C9 SCL; CAN0 RX alt; 3.3V ONLY; interrupt"|"uart-rx;di;do;i2c;can"
+  1|digital|false|true|"PA1 / UART0-TX / I2C9-SDA / CAN0-TX — UART0 TX (ICDI VCP); I2C9 SDA; CAN0 TX alt; 3.3V ONLY; interrupt"|"uart-tx;di;do;i2c;can"
+  2|digital|false|true|"PA2 / SSI0-CLK / I2C8-SCL — SSI0 CLK; I2C8 SCL; 3.3V ONLY; interrupt"|"di;do;spi;i2c"
+  3|digital|false|true|"PA3 / SSI0-FSS / I2C8-SDA — SSI0 CS; I2C8 SDA; 3.3V ONLY; interrupt"|"di;do;spi;i2c"
+  4|digital|false|true|"PA4 / SSI0-MISO / UART3-RX / I2C7-SCL — SSI0 RX; UART3 RX; I2C7 SCL; 3.3V ONLY; interrupt"|"di;spi;uart-rx;i2c"
+  5|digital|false|true|"PA5 / SSI0-MOSI / UART3-TX / I2C7-SDA — SSI0 TX; UART3 TX; I2C7 SDA; 3.3V ONLY; interrupt"|"di;do;spi;uart-tx;i2c"
+  6|digital|false|true|"PA6 / UART2-RX / I2C6-SCL — UART2 RX; I2C6 SCL; 3.3V ONLY; interrupt"|"uart-rx;di;do;i2c"
+  7|digital|false|true|"PA7 / UART2-TX / I2C6-SDA — UART2 TX; I2C6 SDA; 3.3V ONLY; interrupt"|"uart-tx;di;do;i2c"
+  8|digital|false|true|"PB0 / UART1-RX / I2C5-SCL / CAN1-RX / T4CCP0 — UART1 RX; I2C5 SCL; CAN1 RX; Timer T4; 3.3V ONLY; interrupt"|"uart-rx;di;do;i2c;can"
+  9|digital|false|true|"PB1 / UART1-TX / I2C5-SDA / CAN1-TX / T4CCP1 — UART1 TX; I2C5 SDA; CAN1 TX; Timer T4; 3.3V ONLY; interrupt"|"uart-tx;di;do;i2c;can"
+  10|digital|false|true|"PB2 / I2C0-SCL / T5CCP0 — I2C0 SCL (primary); Timer T5; 3.3V ONLY; interrupt"|"di;do;i2c"
+  11|digital|false|true|"PB3 / I2C0-SDA / T5CCP1 — I2C0 SDA (primary); Timer T5; 3.3V ONLY; interrupt"|"di;do;i2c"
+  12|analog|false|true|"PB4 / AIN10 / SSI1-CLK / CAN0-RX / T1CCP0 — ADC AIN10; SSI1 CLK; CAN0 RX alt; UART1-CTS alt; Timer T1; 3.3V ONLY; interrupt"|"di;do;adc:t;spi;can"
+  13|analog|false|true|"PB5 / AIN11 / SSI1-FSS / CAN0-TX / T1CCP1 — ADC AIN11; SSI1 FSS; CAN0 TX alt; UART1-RTS alt; Timer T1; 3.3V ONLY; interrupt"|"di;do;adc:t;spi;can"
+  14|digital|false|false|"PC0 / TCK / SWCLK — JTAG TCK / SWD SWCLK — DEBUG ONLY; do NOT reconfigure unless JTAG is intentionally disabled; 3.3V ONLY"|null
+  15|digital|false|false|"PC1 / TMS / SWDIO — JTAG TMS / SWD SWDIO — DEBUG ONLY; 3.3V ONLY"|null
+  16|digital|false|false|"PC2 / TDI — JTAG TDI — DEBUG ONLY; 3.3V ONLY"|null
+  17|digital|false|false|"PC3 / TDO / SWO — JTAG TDO / SWO trace — DEBUG ONLY; 3.3V ONLY"|null
+  18|digital|false|true|"PC4 / UART7-RX / T6CCP0 — UART7 RX; Timer T6; 3.3V ONLY; interrupt"|"uart-rx;di;do"
+  19|digital|false|true|"PC5 / UART7-TX / T6CCP1 — UART7 TX; Timer T6; 3.3V ONLY; interrupt"|"uart-tx;di;do"
+  20|digital|false|true|"PC6 / UART5-RX / T7CCP0 — UART5 RX; Timer T7; 3.3V ONLY; interrupt"|"uart-rx;di;do"
+  21|digital|false|true|"PC7 / UART5-TX / T7CCP1 — UART5 TX; Timer T7; 3.3V ONLY; interrupt"|"uart-tx;di;do"
+  22|analog|false|true|"PD0 / AIN15 / SSI2-MISO / I2C7-SCL / T0CCP0 — ADC AIN15; SSI2 RX; I2C7 SCL alt; Timer T0; 3.3V ONLY; interrupt"|"di;do;adc:t;spi;i2c"
+  23|analog|false|true|"PD1 / AIN14 / SSI2-MOSI / I2C7-SDA / T0CCP1 — ADC AIN14; SSI2 TX; I2C7 SDA alt; Timer T0; 3.3V ONLY; interrupt"|"di;do;adc:t;spi;i2c"
+  24|analog|false|true|"PD2 / AIN13 / SSI2-FSS / T1CCP0 — ADC AIN13; SSI2 FSS; Timer T1; 3.3V ONLY; interrupt"|"di;do;adc:t;spi"
+  25|analog|false|true|"PD3 / AIN12 / SSI2-CLK / T1CCP1 — ADC AIN12; SSI2 CLK; Timer T1; 3.3V ONLY; interrupt"|"di;do;adc:t;spi"
+  26|analog|false|true|"PD4 / AIN7 / T3CCP0 — ADC AIN7; Timer T3; 3.3V ONLY; interrupt"|"di;do;adc:t"
+  27|analog|false|true|"PD5 / AIN6 / T3CCP1 — ADC AIN6; Timer T3; 3.3V ONLY; interrupt"|"di;do;adc:t"
+  28|analog|false|true|"PD6 / AIN5 / T4CCP0 — ADC AIN5; Timer T4; 3.3V ONLY; interrupt"|"di;do;adc:t"
+  29|analog|false|true|"PD7 / AIN4 / T4CCP1 / NMI — ADC AIN4; Timer T4; 3.3V ONLY; interrupt — NMI LOCKED by default; write GPIOLOCK=0x4C4F434B then GPIOCR=0xFF to unlock"|"di;do;adc:t"
+  30|analog|false|true|"PE0 / AIN3 — ADC AIN3; 3.3V ONLY; interrupt"|"di;do;adc:t"
+  31|analog|false|true|"PE1 / AIN2 — ADC AIN2; 3.3V ONLY; interrupt"|"di;do;adc:t"
+  32|analog|false|true|"PE2 / AIN1 — ADC AIN1; 3.3V ONLY; interrupt"|"di;do;adc:t"
+  33|analog|false|true|"PE3 / AIN0 — ADC AIN0; 3.3V ONLY; interrupt"|"di;do;adc:t"
+  34|analog|true|true|"PE4 / AIN9 / M0PWM4 / I2C2-SCL — ADC AIN9; MC PWM M0PWM4; I2C2 SCL alt; 3.3V ONLY; interrupt"|"di;do;pwm;adc:t;i2c"
+  35|analog|true|true|"PE5 / AIN8 / M0PWM5 / I2C2-SDA — ADC AIN8; MC PWM M0PWM5; I2C2 SDA alt; 3.3V ONLY; interrupt"|"di;do;pwm;adc:t;i2c"
+  36|digital|true|true|"PF0 / M0PWM0 / SSI3-MISO / ETH0LED0 / NMI — MC PWM M0PWM0; SSI3 RX; Ethernet LED0; on-board LED D4; 3.3V ONLY; interrupt — NMI LOCKED; unlock before use"|"di;do;pwm;spi"
+  37|digital|true|true|"PF1 / M0PWM1 / SSI3-MOSI — MC PWM M0PWM1; SSI3 TX; 3.3V ONLY; interrupt"|"di;do;pwm;spi"
+  38|digital|true|true|"PF2 / M0PWM2 / SSI3-FSS — MC PWM M0PWM2; SSI3 FSS; 3.3V ONLY; interrupt"|"di;do;pwm;spi"
+  39|digital|true|true|"PF3 / M0PWM3 / SSI3-CLK — MC PWM M0PWM3; SSI3 CLK; 3.3V ONLY; interrupt"|"di;do;pwm;spi"
+  40|digital|true|true|"PF4 / M0FAULT0 / ETH0LED1 — MC PWM fault input 0; Ethernet LED1; on-board LED D3; 3.3V ONLY; interrupt"|"di;do;pwm"
+  41|digital|true|true|"PG0 / M0PWM6 / I2C1-SCL — MC PWM M0PWM6; I2C1 SCL; 3.3V ONLY; interrupt"|"di;do;pwm;i2c"
+  42|digital|true|true|"PG1 / M0PWM7 / I2C1-SDA — MC PWM M0PWM7; I2C1 SDA; 3.3V ONLY; interrupt"|"di;do;pwm;i2c"
+  43|digital|false|true|"PJ0 / T1CCP0 / SW1 — on-board SW1 (User Button 1); Timer T1; 3.3V ONLY; interrupt"|"di"
+  44|digital|false|true|"PJ1 / T1CCP1 / SW2 — on-board SW2 (User Button 2); Timer T1; 3.3V ONLY; interrupt"|"di"
+  45|digital|false|true|"PN0 / LED-D2 — on-board LED D2; 3.3V ONLY; interrupt"|"di;do"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[12|]{peripheral|param|value}:
+  ethernet_maphy|"speed:100Mbit"|"proto:IEEE802.3-10-100Mbps;MAC+PHY:on-chip-integrated;RMII+MII;IEEE1588v2-PTP;EEE-802.3az;connector:RJ45-on-board-with-magnetics;lib:TivaWare-Ethernet-LwIP;leds:PF0-LED0-PF4-LED1"
+  usb_otg|"speed:12Mbit"|"proto:USB2.0-FS+LS-OTG-Host-Device;endpoints:32;connector:Micro-A-B;DM:PL6;DP:PL7;lib:TivaWare-USB;modes:CDC-HID-Bulk-Audio-DFU"
+  uart_0to3|"baud:3000000"|"uart0:RX=PA0,TX=PA1(ICDI-VCP);uart1:RX=PB0,TX=PB1,CTS=PB4,RTS=PB5;uart2:RX=PA6,TX=PA7;uart3:RX=PA4,TX=PA5;all:IrDA-9bit-ISO7816"
+  uart_4to7|"baud:3000000"|"uart4:RX=PK0,TX=PK1;uart5:RX=PC6,TX=PC7;uart6:RX=PP0,TX=PP1;uart7:RX=PC4,TX=PC5"
+  ssi_0to3|"speed:25Mbit"|"ssi0:CLK=PA2,FSS=PA3,RX=PA4,TX=PA5;ssi1:CLK=PB4,FSS=PB5,RX=PE4,TX=PE5(alt);ssi2:CLK=PD3,FSS=PD2,RX=PD0,TX=PD1;ssi3:CLK=PF3,FSS=PF2,RX=PF0,TX=PF1;modes:Freescale-SPI-MICROWIRE-TI-sync"
+  i2c_0to9|"speed:3400kHz"|"i2c0:PB2-PB3;i2c1:PG0-PG1;i2c2:PL1-PL0(alt:PN5-PN4);i2c3:PK4-PK5;i2c4:PK6-PK7;i2c5:PB0-PB1;i2c6:PA6-PA7;i2c7:PA4-PA5;i2c8:PA2-PA3;i2c9:PA0-PA1;all:100-400-1000-3400kHz"
+  can_0to1|"speed:1Mbit"|"can0:RX=PA0-or-PB4,TX=PA1-or-PB5;can1:RX=PB0,TX=PB1;proto:CAN2.0A-2.0B;requires-external-SN65HVD232-transceiver-per-bus"
+  mc_pwm|"channels:8"|"M0PWM0-7:PF0-PF3-PE4-PE5-PG0-PG1;4-generators;dead-band;1x-fault-input;QEI:PL1-PhA-PL2-PhB-PL3-IDX"
+  adc_0to1|"resolution:12bit"|"ADC0+ADC1:12-bit-SAR;2MSPS-per-module;20-channels:AIN0-PE3..AIN11-PB5,AIN12-PD3,AIN13-PD2,AIN14-PD1,AIN15-PD0,AIN16-PK0,AIN17-PK1,AIN18-PK2,AIN19-PK3;temp-sensor;16-sample-FIFO"
+  hibernation|"current:5uA"|"wake:GPIO-or-RTC;RTC:32768Hz-crystal-on-board;VBAT:coin-cell-pad;GPIORETENTION:supported;lib:TivaWare-Hibernate"
+  timers|"count:8"|"8x32bit-GPT(16x16bit);8x64bit-wideGPT(16x32bit);SysTick;2xWatchdog;IEEE1588-PTP-timers-in-ETH"
+  epi|"width:32bit"|"EPI:external-parallel-interface;SDRAM-SRAM-FPGAs-LCD-host-bus;up-to-60MHz;pins:PK0-PK7-PH0-PH3-etc"
+usb:
+  type: Micro-AB
+  chip: native
+  vid: "0x1CBE"
+  pid: "0x0108"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "8mA"
+  total_current_limit: "300mA"
+  warnings[9]:
+    - "ALL GPIO pins on TM4C1294NCPDT are 3.3V ONLY — none are 5V tolerant; applying 5V logic to any pin causes latch-up or permanent damage; always use a level-shifting buffer (e.g. TXB0108) between Teensy/5V Arduino and TM4C1294"
+    - "PD7 and PF0 are NMI-LOCKED by default — write GPIOLOCK=0x4C4F434B then GPIOCR=0xFF to the respective port before using PD7 or PF0 as GPIO; PF0 is also the on-board LED D4 and requires unlock for GPIO use"
+    - "PC0-PC3 (TCK, TMS, TDI, TDO/SWO) are dedicated JTAG/SWD pins — do NOT reassign unless JTAG is fully and intentionally disabled; disabling JTAG permanently prevents use of the on-board ICDI debugger until re-flashed via UART bootloader"
+    - "Both CAN buses (CAN0: PA0/PA1 or PB4/PB5; CAN1: PB0/PB1) require an external transceiver chip (TI SN65HVD232 or ISO1042) — the MCU outputs 3.3V CMOS levels; the EK-TM4C1294XL board has NO on-board CAN transceiver"
+    - "UART0 (PA0/PA1) is shared with the on-board ICDI virtual COM port — when ICDI USB is connected, PA0/PA1 receive drive from the ICDI UART bridge; do NOT connect external UART devices to PA0/PA1 while using the ICDI serial console"
+    - "I2C9 shares pins PA0/PA1 with UART0 and CAN0 — enabling I2C9 on PA0/PA1 simultaneously with UART0 or CAN0 on the same pins will cause bus contention and data corruption; select the desired function exclusively via GPIO peripheral mux"
+    - "The on-chip Ethernet PHY has dedicated power supply requirements — the PHY runs from an internal 1.2V LDO; external decoupling capacitors on the PHY supply pins are mandatory per TI layout guidelines; poor decoupling causes link instability at 100Mbps"
+    - "The EPI (External Peripheral Interface) can drive SDRAM, SRAM or HOST-BUS but its pins (PK0-PK7, PH0-PH3 etc.) overlap with ADC inputs, I2C and UART — enabling EPI disables all overlapping peripheral functions; plan resource allocation before layout"
+    - "The on-board Ethernet RJ45 connector uses integrated magnetics — do NOT substitute a bare-pin RJ45 connector without adding discrete magnetics; the Ethernet PHY requires 1:1 isolation transformers per IEEE 802.3 for proper operation and EMC compliance"
+compatibility:
+  sw: "Code Composer Studio (CCS) v6+; IAR Embedded Workbench; Keil MDK-ARM; Energia (Arduino-compatible); PlatformIO (tivac target)"
+  languages: "C;C++;ARM assembly;Energia (C++ subset)"
+  frameworks: "TivaWare for C Series 2.1+;LwIP;FreeRTOS;TI-RTOS;CMSIS;Energia"
+  certifications: "FCC;CE;RoHS"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: ti-tivac-tm4c129-family
+  boardProfileId: tiva-c-launchpad-tm4c129
+  defaultLanguageSkills[3]:
+    - c-tivaware-tm4c129
+    - c-lwip-ethernet-tm4c129
+    - c-freertos-arm-cortex-m4f

@@ -1,38 +1,85 @@
+# METADATA:
+project_name: controllogix-5580-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: controllogix-5580
-name: "ControlLogix 5580"
-manufacturer: "Generic"
-mcu: "Allen-Bradley"
-category: "industrial"
-image: "/boards/controllogix-5580.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 0
-sram: 2097152
-clock_hz: 0
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "plc-family"
-  boardProfileId: "controllogix-5580"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+name: "Allen-Bradley ControlLogix 5580"
+manufacturer: "Rockwell Automation"
+cpu: "1756-L85E"
+category: plc
+form_factor: rack
+standard: "IEC 61131-3"
+image: controllogix-5580.svg
+url: "https://rockwellautomation.com/products/controllogix.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  supply_voltage: 24V
+  memory_work: 16384KB
+  memory_load: 16384KB
+  memory_retain: 4096KB
+  power_consumption: 5W
+dims:
+  w: 126.0
+  h: 125.0
+  t: 59.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerPins[3|]{name|direction|voltage|type}:
+  L+|input|24V|null
+  M|null|null|ground
+  PE|null|null|ground
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[4|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  1|0|DI|32|"%IX0.0"|"%IX3.7"|null
+  2|0|DO|32|"%QX0.0"|"%QX3.7"|null
+  3|0|AI|16|"%IW0"|"%IW15"|null
+  4|0|AO|8|"%QW0"|"%QW7"|null
+
+## 5. RACK CONFIGURATION:
+# Format: rack | slots | backplane_current | voltage
+racks[1|]{rack|slots|backplane_current|voltage}:
+  0|10|8000mA|5.1V
+
+## 6. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  ethernetip|"port:44818"|"mode:dual-switch;speed:1Gbps"
+  modbus-tcp|"port:502"|"role:server;max_connections:256"
+  opc-ua|"port:4840"|"security:basic256sha256;max_sessions:50"
+  devicenet|"address:63"|"baud:500kbps;max_nodes:64"
+
+## 7. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "2000mA"
+  total_current_limit: "8000mA"
+  operating_temp: "0-60C"
+  protection_class: IP20
+  warnings[4]:
+    - "Studio 5000 v33 or later required for 5580 series controllers"
+    - "I/O modules shown are representative; actual configuration depends on installed hardware"
+    - "Backplane current must not exceed chassis rating across all installed modules"
+    - "Firmware update requires FactoryTalk Activation Manager for digital signatures"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "Studio 5000 v33+"
+  runtime: "Firmware 33.011+"
+  languages: "LD;FBD;ST;SFC"
+
+## 8. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: controllogix-5580
+  defaultLanguageSkills[4]:
+    - ld-iec61131
+    - fbd-iec61131
+    - st-iec61131
+    - sfc-iec61131

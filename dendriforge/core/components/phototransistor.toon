@@ -1,0 +1,102 @@
+# METADATA:
+project_name: {elementName}-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: phototransistor
+name: "Phototransistor"
+family: electricals
+subfamily: semiconductors
+category: semiconductor
+standard: "IEC 60617"
+url: null
+image: phototransistor.svg
+symbol: phototransistor-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  max_vce:
+    label: "Max Collector-Emitter Voltage"
+    unit: V
+    default: 30
+    type: float
+    editable: false
+  max_ic:
+    label: "Max Collector Current"
+    unit: mA
+    default: 20
+    type: float
+    editable: false
+  wavelength:
+    label: "Peak Wavelength"
+    unit: nm
+    default: 850
+    type: float
+    editable: true
+  package:
+    label: "Package"
+    default: "THT 5mm"
+    options: ["THT 3mm", "THT 5mm", "SMD 0805", "SMD 1206"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[2|]{id|direction|type|voltage_max|current_max|notes}:
+  C|input|analog|"30V"|"20mA"|"collector"
+  E|output|analog|"30V"|"20mA"|"emitter"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: analog-transfer
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - cutoff
+    - active
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "30V"
+  max_current: "20mA"
+  max_power:
+    value: 0.15
+    unit: W
+  max_temp: 85
+  min_temp: -40
+warnings[1]:
+  - "Avoid exceeding maximum Collector-Emitter voltage (Vce)."
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["light-sensing", "optical-isolation"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 40
+  height: 40
+  ports_layout: custom
+  port_C: {x: 20, y: 0}
+  port_E: {x: 20, y: 40}
+  label_position: top
+  value_display: "{name}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: phototransistor
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Semiconductors"
+  tags[3]:
+    - phototransistor
+    - semiconductor
+    - sensor

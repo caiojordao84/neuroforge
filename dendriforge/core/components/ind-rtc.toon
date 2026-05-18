@@ -1,0 +1,108 @@
+# METADATA:
+project_name: ind-rtc-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: ind-rtc
+name: "Industrial Real-Time Clock (Relógio de tempo real)"
+family: industrial
+subfamily: process-modules
+category: function-block
+standard: "IEC 61131-3"
+url: null
+image: ind-rtc.svg
+symbol: ind-rtc-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  time_zone:
+    label: "Time Zone (UTC Offset)"
+    default: 0
+    min: -12
+    max: 14
+    type: int
+    editable: true
+  sync_mode:
+    label: "Synchronization Mode"
+    default: "NTP"
+    options: ["NTP", "Manual", "GPS"]
+    type: enum
+    editable: true
+  update_interval:
+    label: "Update Interval"
+    unit: "ms"
+    default: 1000
+    min: 100
+    max: 60000
+    type: int
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  EN|input|bool|null|null|"enable clock updates"
+  SYNC|input|bool|null|null|"trigger manual sync"
+  TIMESTAMP|output|dword|null|null|"current UNIX timestamp"
+  VALID|output|bool|null|null|"time is valid / synced"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: function-block-engine
+  equation: "TIMESTAMP = current_time_ms; VALID = true"
+  bidirectional: false
+  dynamic: true
+  real_time: true
+  scan_cycle_aware: true
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - active
+    - disabled
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: null
+  max_current: null
+  max_power: null
+  max_temp: null
+  min_temp: null
+  ip_rating: null
+  safety_category: null
+warnings[2]:
+  - "Timestamp output is a 32-bit DWORD, ensure PLC handles epoch rollover"
+  - "NTP sync requires network connectivity block"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["plc-*", "ind-*", "comm-*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["time-synchronization", "event-logging", "scheduling"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 80
+  height: 60
+  ports_layout: custom
+  port_EN: {x: 0, y: 15}
+  port_SYNC: {x: 0, y: 45}
+  port_TIMESTAMP: {x: 80, y: 15}
+  port_VALID: {x: 80, y: 45}
+  label_position: top
+  value_display: "RTC"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: industrial-family
+  componentProfileId: ind-rtc
+  simulationEngine: function-block-engine
+  paletteGroup: "Industrial > Process Modules"
+  tags[4]:
+    - rtc
+    - time
+    - function-block
+    - industrial

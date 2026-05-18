@@ -1,0 +1,83 @@
+# METADATA:
+project_name: esp32-s3-relay-6ch-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: esp32-s3-relay-6ch
+name: "Waveshare ESP32-S3 Relay 6CH"
+manufacturer: Waveshare
+mcu: "ESP32-S3 Xtensa LX7 dual-core up to 240 MHz; 16MB flash; 8MB PSRAM; WiFi 802.11 b/g/n; BLE 5.0; 6x SPDT relay 10A; isolated RS485; 7-30V DC; Pico-HAT header; DIN-rail"
+category: maker
+image: esp32-s3-relay-6ch.svg
+url: "https://www.waveshare.com/wiki/ESP32-S3-Relay-6CH"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs: flashtotal 16777216 | flashavailable 16777216 | sram 8388608 | eeprom 0 | clock 240000000 | voltage "3.3V" | cores 2 | wifi "802.11 b/g/n" | bluetooth "BLE 5.0"
+dims: w 120.0 | h 96.0 | t 27.5
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+powerPins[4|]{name|direction|voltage|type}:
+  VIN|input|"7-30V"|null
+  GND|null|null|ground
+  USB5V|input|"5V"|null
+  3V3|output|"3.3V"|null
+
+## 4. GPIO MAP:
+gpio[22|]{pin|type|pwm|int|label|roles}:
+  1|digital|t|f|"GPIO1 — Relay 1 (active-HIGH; optocoupler; SPDT 10A 250VAC/30VDC; ADC1-CH0)"|"do"
+  2|digital|t|f|"GPIO2 — Relay 2 (active-HIGH; strapping: HIGH=SPI boot; ADC1-CH1)"|"do"
+  3|digital|t|f|"GPIO3 — Relay 3 (active-HIGH; ADC1-CH2)"|"do"
+  4|digital|t|f|"GPIO4 — Relay 4 (active-HIGH; ADC1-CH3)"|"do"
+  5|digital|t|f|"GPIO5 — Relay 5 (active-HIGH; ADC1-CH4)"|"do"
+  6|digital|t|f|"GPIO6 — Relay 6 (active-HIGH; ADC1-CH5)"|"do"
+  8|digital|f|f|"GPIO8 — RS485 DE/RE control (HIGH=TX; LOW=RX; SP3485; strapping: ROM msgs; ADC1-CH7)"|"do"
+  9|analog|f|f|"GPIO9 — Free GPIO Pico-HAT; ADC1-CH8; TOUCH9"|"di;do"
+  10|analog|f|f|"GPIO10 — Free GPIO Pico-HAT; ADC1-CH9; TOUCH10"|"di;do"
+  11|analog|f|f|"GPIO11 — Free GPIO Pico-HAT; ADC2-CH0 (avoid with WiFi)"|"di;do"
+  12|analog|f|f|"GPIO12 — Free GPIO Pico-HAT; ADC2-CH1 (avoid with WiFi)"|"di;do"
+  13|analog|f|f|"GPIO13 — Free GPIO Pico-HAT; ADC2-CH2 (avoid with WiFi)"|"di;do"
+  14|analog|f|f|"GPIO14 — Free GPIO Pico-HAT; ADC2-CH3 (avoid with WiFi)"|"di;do"
+  15|analog|f|f|"GPIO15 — Free GPIO Pico-HAT; ADC2-CH4 (avoid with WiFi)"|"di;do"
+  16|analog|f|f|"GPIO16 — Free GPIO Pico-HAT; ADC2-CH5 (avoid with WiFi)"|"di;do"
+  17|digital|f|f|"GPIO17 — RS485 TX (SP3485 DI); UART1-TX"|"uart-tx"
+  18|digital|f|f|"GPIO18 — RS485 RX (SP3485 RO); UART1-RX"|"uart-rx"
+  19|digital|f|f|"GPIO19 — USB D- (native USB CDC/JTAG); do not use as GPIO when USB active"|"di;do"
+  20|digital|f|f|"GPIO20 — USB D+ (native USB CDC/JTAG); do not use as GPIO when USB active"|"di;do"
+  21|digital|f|t|"GPIO21 — Free GPIO Pico-HAT; interrupt-capable"|"di;do"
+  38|digital|f|f|"GPIO38 — Free GPIO Pico-HAT"|"di;do"
+  48|digital|t|f|"GPIO48 — Onboard status LED (active-HIGH; PWM; strapping on some HW revisions)"|"status-led"
+
+## 5. PERIPHERALS & USB:
+peripherals[4|]{peripheral|param|value}:
+  serial|uart1|"tx17|rx18"
+  i2c|channels1|"sda21|scl38"
+  adc|channels2|"adc1:pins1,2,3,4,5,6,8,9,10"
+  pwm|channels8|"ledc-any-gpio"
+usb: type USB-C | chip "ESP32-S3-native" | vid "0x303A" | pid "0x1001"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "40mA"
+  total_current_limit: "1200mA"
+  warnings[9]:
+    - "GPIO1-GPIO6 drive relay coils via optocouplers; GPIO only sources signal (~5mA); relay coil powered by internal 5V; relay contact max 10A 250VAC or 30VDC (SRD-05VDC-SL-C); never connect loads exceeding 10A to relay contacts"
+    - "GPIO2 is a strapping pin; must be HIGH at boot for normal SPI boot; pulling LOW at power-on forces download mode; add 10k pull-up if relay driver circuit can backfeed GPIO2 LOW during power-on transients"
+    - "GPIO8 is a strapping pin; HIGH at reset enables ROM UART messages on UART0; ensure GPIO8 is LOW (RS485 RX mode) before reset to avoid unexpected serial output on boot"
+    - "ADC2 channels (GPIO11-GPIO20) unreliable during active WiFi TX; use only ADC1 (GPIO1-GPIO10) for analog sensing concurrent with WiFi"
+    - "GPIO19/GPIO20 are native USB D-/D+; do not use as GPIO when USB CDC or JTAG is active; only free for GPIO in non-USB applications"
+    - "RS485 isolated via digital isolator; RS485-GND terminal must be connected to bus common ground at remote device; floating RS485-GND causes common-mode noise and Modbus CRC errors; isolation rated typically 2500V RMS"
+    - "Relay contacts are electrically independent but share PCB proximity; mains voltage on one relay can capacitively couple to adjacent contacts; maintain IEC 60664-1 creepage/clearance for mains-rated applications"
+    - "DC input 7-30V via screw terminal; below 7V relay coils may chatter; above 30V input protection may be damaged; install TVS diode on input rail when sharing supply with inductive loads"
+    - "GPIO48 onboard status LED; also a strapping pin on some HW revisions; verify silkscreen revision before using GPIO48 for application logic"
+compatibility: pio esp32s3box | frameworks "arduino;espidf" | languages "arduino-cpp;micropython;rust-embassy" | bootloader "esp-idf-bootloader"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: esp32-xtensa-family
+  boardProfileId: esp32-s3-relay-6ch
+  defaultLanguageSkills[2]:
+    - arduino-cpp-esp32
+    - espidf-c-esp32

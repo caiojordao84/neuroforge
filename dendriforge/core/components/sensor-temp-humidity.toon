@@ -1,0 +1,114 @@
+# METADATA:
+project_name: sensor-temp-humidity-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: sensor-temp-humidity
+name: "Temperature and Humidity Sensor (Temperatura e humidade)"
+family: sensors
+subfamily: environment
+category: sensor
+standard: "IEC 60947-5-2"
+url: null
+image: sensor-temp-humidity.svg
+symbol: sensor-temp-humidity-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  output_type:
+    label: "Output Type"
+    default: "analog-0-10V"
+    options: ["analog-0-10V", "analog-4-20mA"]
+    type: enum
+    editable: true
+  temp_range_min:
+    label: "Temp Min"
+    unit: "°C"
+    default: -20
+    min: -40
+    max: 0
+    type: float
+    editable: true
+  temp_range_max:
+    label: "Temp Max"
+    unit: "°C"
+    default: 80
+    min: 50
+    max: 120
+    type: float
+    editable: true
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 24
+    options: [12, 24]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"24V"|"100mA"|"supply +"
+  GND|input|ground|null|null|"supply -"
+  OUT_T|output|analog|"10V"|"20mA"|"temperature analog output"
+  OUT_H|output|analog|"10V"|"20mA"|"humidity analog output"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: analog-transfer
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - idle
+    - measuring
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "24V"
+  max_current: "100mA"
+  max_power: null
+  max_temp: 85
+  min_temp: -25
+  ip_rating: "IP65"
+  safety_category: null
+warnings[2]:
+  - "Ensure analog ground is properly referenced to PLC analog ground"
+  - "Avoid prolonged exposure to condensing humidity to prevent sensor drift"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["ind-ai-bank", "plc-*"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["hvac", "greenhouse", "industrial-climate-control"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 50
+  height: 50
+  ports_layout: vertical
+  port_VCC: {x: 0, y: 10}
+  port_GND: {x: 0, y: 40}
+  port_OUT_T: {x: 50, y: 15}
+  port_OUT_H: {x: 50, y: 35}
+  label_position: top
+  value_display: "T/H Sensor"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: sensors-family
+  componentProfileId: sensor-temp-humidity
+  simulationEngine: digital-io
+  paletteGroup: "Sensors > Environment"
+  tags[4]:
+    - sensor
+    - temperature
+    - humidity
+    - environment

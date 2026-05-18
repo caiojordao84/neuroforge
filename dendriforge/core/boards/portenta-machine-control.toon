@@ -1,38 +1,119 @@
+# METADATA:
+project_name: portenta-machine-control-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: portenta-machine-control
-name: "Portenta Machine Control"
-manufacturer: "Generic"
-mcu: "Arduino"
-category: "industrial"
-image: "/boards/portenta-machine-control.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 0
-sram: 16777216
-clock_hz: 480000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "avr-family"
-  boardProfileId: "portenta-machine-control"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+name: "Arduino Portenta Machine Control"
+manufacturer: Arduino
+cpu: "STM32H747XI"
+category: plc
+form_factor: compact
+standard: "IEC 61131-3"
+image: portenta-machine-control.svg
+url: "https://store.arduino.cc/products/portenta-machine-control"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  supply_voltage: 24V
+  memory_work: 1024KB
+  memory_load: 2048KB
+  power_consumption: 3W
+  di_integrated: 8
+  do_integrated: 8
+  ai_integrated: 4
+  ao_integrated: 2
+dims:
+  w: 122.0
+  h: 92.0
+  t: 65.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerPins[4|]{name|direction|voltage|type}:
+  24V|input|24V|null
+  GND|null|null|ground
+  3V3|output|3.3V|null
+  PE|null|null|ground
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[4|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|8|"%IX0.0"|"%IX0.7"|null
+  1|0|DO|8|"%QX0.0"|"%QX0.7"|null
+  2|0|AI|4|"%IW0"|"%IW3"|null
+  3|0|AO|2|"%QW0"|"%QW1"|null
+
+## 5. DIGITAL CHANNEL DESCRIPTORS:
+# Format: addr | direction | label | roles
+digitalChannels[16|]{addr|direction|label|roles}:
+  "%IX0.0"|input|I1|di
+  "%IX0.1"|input|I2|di
+  "%IX0.2"|input|I3|di
+  "%IX0.3"|input|I4|di
+  "%IX0.4"|input|I5|di
+  "%IX0.5"|input|I6|di
+  "%IX0.6"|input|I7|di
+  "%IX0.7"|input|I8|di
+  "%QX0.0"|output|RELAY1|do
+  "%QX0.1"|output|RELAY2|do
+  "%QX0.2"|output|RELAY3|do
+  "%QX0.3"|output|RELAY4|do
+  "%QX0.4"|output|RELAY5|do
+  "%QX0.5"|output|RELAY6|do
+  "%QX0.6"|output|RELAY7|do
+  "%QX0.7"|output|RELAY8|do
+
+## 6. ANALOG CHANNEL DESCRIPTORS:
+# Format: addr | direction | resolution | range | label
+analogChannels[6|]{addr|direction|resolution|range|label}:
+  "%IW0"|input|12|"0-10V;4-20mA"|AI1
+  "%IW1"|input|12|"0-10V;4-20mA"|AI2
+  "%IW2"|input|12|"0-10V;4-20mA"|AI3
+  "%IW3"|input|12|"0-10V;4-20mA"|AI4
+  "%QW0"|output|12|"0-10V"|AO1
+  "%QW1"|output|12|"0-10V"|AO2
+
+## 7. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[5|]{peripheral|param|value}:
+  ethernet|"port:80"|"speed:10-100Mbps"
+  modbus-tcp|"port:502"|"role:server"
+  modbus-rtu|"baud:115200"|"proto:RS485"
+  canopen|"address:1"|"channels:2"
+  opc-ua|"port:4840"|"security:basic256sha256"
+usb:
+  type: "USB-C"
+  function: "programming;data-logging"
+
+## 8. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "500mA"
+  total_current_limit: "2000mA"
+  operating_temp: "-20-50C"
+  storage_temp: "-40-85C"
+  protection_class: IP20
+  warnings[4]:
+    - "Relay outputs rated 250VAC/30VDC at 2A max per channel"
+    - "Analog inputs support both 0-10V and 4-20mA modes per channel"
+    - "Two independent CAN bus interfaces with galvanic isolation"
+    - "Mounting orientation must be vertical on DIN rail for proper cooling"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "Arduino PLC IDE 1.0.3+"
+  runtime: "Arduino Mbed OS"
+  languages: "LD;FBD;ST;SFC;IL"
+  order_ref: ABX00048
+
+## 9. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: portenta-machine-control
+  defaultLanguageSkills[3]:
+    - st-iec61131
+    - ld-plc-ide
+    - fbd-plc-ide

@@ -1,0 +1,102 @@
+# METADATA:
+project_name: nrf9160-dk-pca10090-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: nrf9160-dk-pca10090
+name: "Nordic Semiconductor nRF9160-DK (PCA10090)"
+manufacturer: "Nordic Semiconductor"
+mcu: "Nordic nRF9160 SiP (ARM Cortex-M33 + LTE-M/NB-IoT modem)"
+category: maker
+image: nrf9160-dk-pca10090.svg
+url: "https://www.nordicsemi.com/Products/Development-hardware/nRF9160-DK"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 1048576
+  flash_available: 983040
+  sram: 262144
+  eeprom: 0
+  clock: 64000000
+  voltage: "1.8V"
+dims:
+  w: 63.0
+  h: 102.0
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+  VIO_REF|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[18|]{pin|type|pwm|int|label|roles}:
+  28|digital|true|true|"P0.28 / D0 / RX"|uart-rx
+  29|digital|true|true|"P0.29 / D1 / TX"|uart-tx
+  30|digital|true|true|"P0.30 / D2 / SDA"|i2c-sda
+  31|digital|true|true|"P0.31 / D3 / SCL"|i2c-scl
+  10|digital|true|true|"P0.10 / D4"|null
+  11|digital|true|true|"P0.11 / D5"|null
+  12|digital|true|true|"P0.12 / D6"|null
+  13|analog|true|true|"P0.13 / D7 / A0"|"adc:t"
+  16|analog|true|true|"P0.16 / D8 / A3 / MISO"|"adc:t;spi-miso"
+  17|analog|true|true|"P0.17 / D9 / A4 / MOSI"|"adc:t;spi-mosi"
+  18|analog|true|true|"P0.18 / D10 / A5 / SCK"|"adc:t;spi-sck"
+  19|digital|true|true|"P0.19 / D11 / MOSI-ALT"|spi-mosi
+  20|digital|true|true|"P0.20 / D12 / MISO-ALT"|spi-miso
+  21|digital|true|true|"P0.21 / D13 / TRACECLK"|null
+  14|analog|true|true|"P0.14 / A1"|"adc:t"
+  15|analog|true|true|"P0.15 / A2"|"adc:t"
+  2|digital|true|true|"P0.02 / LED1"|status-led
+  6|digital|true|true|"P0.06 / BTN1"|null
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uarts:4"|"pins:29,28"
+  i2c|"channels:2"|"sda:30;scl:31"
+  spi|"channels:3"|"miso:20;mosi:19;sck:18;ss:null"
+  adc|"resolution:12bit"|"pins:13;14;15;16;17;18"
+usb:
+  type: Micro-USB
+  chip: native
+  vid: "0x1366"
+  pid: "0x1015"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "4mA"
+  total_current_limit: "50mA"
+  warnings[8]:
+    - "I/O voltage is 1.8V by default (SW11); switchable to 3.0V — NOT 3.3V or 5V tolerant"
+    - "P0.28/P0.29/P0.26/P0.27 used by VCOM0 to interface MCU by default; reroute via nRF52840"
+    - "P0.00/P0.01/P0.14/P0.15 reserved for VCOM2 (APP2) UART to interface MCU"
+    - "P0.02-P0.09 connected to LEDs, buttons, and switches via nRF52840 analog routing"
+    - "P0.17/P0.18/P0.19/P0.21-P0.25 shared with nRF52840 board control routing"
+    - "External QSPI flash (8MB MX25R6435F) on separate bus; not accessible on headers"
+    - "nRF52840 onboard as board controller and BT5 coprocessor; not the primary target"
+    - "Running 3.0V GPIO (SW11) under heavy load may degrade LTE RF performance"
+compatibility:
+  arduinoCore: "2.7.0"
+  pio: nordicnrf91
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: nrf9160-mcuboot
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: nrf91-family
+  boardProfileId: nrf9160-dk-pca10090
+  defaultLanguageSkills[3]:
+    - zephyr-nrf91
+    - arduino-cpp-nrf91
+    - rust-embassy-nrf91

@@ -1,0 +1,121 @@
+# METADATA:
+project_name: openplc-esp32-devkitc-v4-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: openplc-esp32-devkitc-v4
+name: "OpenPLC Native Runtime — ESP32-DevKitC V4 (ESP-WROOM-32, 240MHz, 4MB Flash)"
+manufacturer: Espressif
+mcu: "ESP32-D0WD-V3 (Xtensa LX6 dual-core, 240MHz, 520KB SRAM)"
+category: maker
+image: openplc-esp32-devkitc-v4.svg
+url: "https://openplcproject.com/runtime/arduino/"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 4194304
+  flash_available: 3670016
+  sram: 532480
+  eeprom: 0
+  clock: 240000000
+  voltage: "3.3V"
+dims:
+  w: 28.0
+  h: 48.0
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[5|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  EN|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# OpenPLC v3 ESP32 IEC addresses (native runtime, NO slave offset):
+# DI: GPIO34=%IX0.0, GPIO35=%IX0.1, GPIO32=%IX0.2, GPIO33=%IX0.3
+#     GPIO25=%IX0.4, GPIO26=%IX0.5, GPIO27=%IX0.6, GPIO14=%IX0.7
+#     GPIO12=%IX1.0, GPIO13=%IX1.1
+# DO: GPIO19=%QX0.0, GPIO18=%QX0.1, GPIO5=%QX0.2, GPIO17=%QX0.3
+#     GPIO16=%QX0.4, GPIO4=%QX0.5, GPIO2=%QX0.6, GPIO15=%QX0.7
+# AI: GPIO36=%IW0, GPIO39=%IW1, GPIO34=%IW2, GPIO35=%IW3
+# AO: GPIO25=%QW0 (DAC1), GPIO26=%QW1 (DAC2)
+gpio[28|]{pin|type|pwm|int|label|roles}:
+  34|analog|false|false|"GPIO34 / %IX0.0 (DI) / %IW2 (AI) / ADC1_CH6 — input only"|"di;adc:t"
+  35|analog|false|false|"GPIO35 / %IX0.1 (DI) / %IW3 (AI) / ADC1_CH7 — input only"|"di;adc:t"
+  32|digital|true|true|"GPIO32 / %IX0.2 (DI) / ADC1_CH4 / TOUCH9"|di
+  33|digital|true|true|"GPIO33 / %IX0.3 (DI) / ADC1_CH5 / TOUCH8"|di
+  25|analog|true|false|"GPIO25 / %IX0.4 (DI) / %QW0 (AO/DAC1) / ADC1_CH8"|"di;dac"
+  26|analog|true|false|"GPIO26 / %IX0.5 (DI) / %QW1 (AO/DAC2) / ADC2_CH9"|"di;dac"
+  27|digital|true|true|"GPIO27 / %IX0.6 (DI) / ADC2_CH7 / TOUCH7"|di
+  14|digital|true|true|"GPIO14 / %IX0.7 (DI) / ADC2_CH6 / TOUCH6 / MTMS"|di
+  12|digital|true|true|"GPIO12 / %IX1.0 (DI) / ADC2_CH5 / TOUCH5 / MTDI"|di
+  13|digital|true|true|"GPIO13 / %IX1.1 (DI) / ADC2_CH4 / TOUCH4 / MTCK"|di
+  19|digital|true|false|"GPIO19 / %QX0.0 (DO) / MISO"|"do;spi-miso"
+  18|digital|true|false|"GPIO18 / %QX0.1 (DO) / SCK"|"do;spi-sck"
+  5|digital|true|false|"GPIO5 / %QX0.2 (DO) / SS / VSPI_CS0"|"do;spi-ss"
+  17|digital|true|false|"GPIO17 / %QX0.3 (DO) / UART2_TX"|"do;uart-tx"
+  16|digital|true|false|"GPIO16 / %QX0.4 (DO) / UART2_RX"|"do;uart-rx"
+  4|digital|true|true|"GPIO4 / %QX0.5 (DO) / ADC2_CH0 / TOUCH0"|do
+  2|digital|true|false|"GPIO2 / %QX0.6 (DO) / ADC2_CH2 / TOUCH2 / LED"|"do;status-led"
+  15|digital|true|true|"GPIO15 / %QX0.7 (DO) / ADC2_CH3 / TOUCH3 / MTDO"|do
+  36|analog|false|false|"GPIO36 / %IW0 (AI) / ADC1_CH0 / VP — input only"|"adc:t"
+  39|analog|false|false|"GPIO39 / %IW1 (AI) / ADC1_CH3 / VN — input only"|"adc:t"
+  0|digital|true|true|"GPIO0 / BOOT / ADC2_CH1 / TOUCH1 — free GPIO (boot mode caution)"|null
+  1|digital|false|false|"GPIO1 / UART0_TX (USB serial TX — reserved)"|uart-tx
+  3|digital|false|false|"GPIO3 / UART0_RX (USB serial RX — reserved)"|uart-rx
+  21|digital|true|false|"GPIO21 / SDA (I2C)"|i2c-sda
+  22|digital|true|false|"GPIO22 / SCL (I2C)"|i2c-scl
+  23|digital|true|false|"GPIO23 / MOSI"|spi-mosi
+  9|digital|false|false|"GPIO9 / D2 (Flash — do NOT use in standard boards)"|null
+  10|digital|false|false|"GPIO10 / D3 (Flash — do NOT use in standard boards)"|null
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[5|]{peripheral|param|value}:
+  serial|"uarts:3"|"uart0:1,3(USB);uart1:configurable;uart2:16,17"
+  i2c|"channels:2"|"sda:21;scl:22"
+  spi|"channels:4"|"miso:19;mosi:23;sck:18;ss:5"
+  adc|"resolution:12bit"|"pins:36;39;34;35;32;33;25;26;27;14;12;13;4;2;15;0"
+  dac|"resolution:8bit"|"pins:25;26"
+usb:
+  type: Micro-USB
+  chip: CP2102
+  vid: "0x10C4"
+  pid: "0xEA60"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "40mA"
+  total_current_limit: "1200mA"
+  warnings[9]:
+    - "ESP32 in OpenPLC v3 runs the FULL PLC Runtime NATIVELY — it is NOT a Modbus slave; IEC addresses start at %IX0.0 (no offset 100)"
+    - "GPIO36/39/34/35 are INPUT-ONLY hardware pins — no internal pull-up/down, no output; never assign as DO or AO in I/O Config"
+    - "GPIO25 and GPIO26 are dual-function: DI (%IX0.4/%IX0.5) AND AO (%QW0/%QW1 DAC); OpenPLC uses them as AO by default — do not use simultaneously as DI"
+    - "GPIO1/GPIO3 are UART0 (USB programming/debug serial) — MUST remain reserved; assigning them to I/O will break USB communication"
+    - "GPIO9/10/11 are connected to internal SPI flash memory — using them will crash the ESP32; never assign in OpenPLC I/O Config"
+    - "GPIO0 is boot mode pin — must be HIGH during normal boot; adding external pull-down will prevent booting; usable as I/O after boot"
+    - "GPIO12 must be LOW at boot (if HIGH, selects 1.8V flash voltage and likely crashes); safe as I/O after boot"
+    - "All I/O runs at 3.3V — NOT 5V tolerant; connecting 5V signals will permanently damage the chip"
+    - "OpenPLC ESP32 firmware uses Arduino-ESP32 core; ADC accuracy is limited (~11dB attenuation = 150-2450mV range); use external ADC for precision"
+compatibility:
+  arduinoCore: "2.0.x"
+  pio: espressif32
+  frameworks: "openplc-v3"
+  languages: "LD;ST;FBD;SFC;IL"
+  bootloader: "esp32-bootloader"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: esp32-family
+  boardProfileId: openplc-esp32-devkitc-v4
+  defaultLanguageSkills[3]:
+    - ld-openplc-editor
+    - st-iec61131-openplc
+    - fbd-openplc-editor

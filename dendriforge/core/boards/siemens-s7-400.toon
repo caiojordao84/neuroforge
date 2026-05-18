@@ -1,0 +1,93 @@
+# METADATA:
+project_name: siemens-s7-400-cpu-414-3pndp-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: siemens-s7-400
+name: "Siemens SIMATIC S7-400 CPU 414-3 PN/DP"
+manufacturer: Siemens
+cpu: "CPU 414-3 PN/DP"
+category: plc
+form_factor: rack
+standard: "IEC 61131-3"
+image: siemens-s7-400.svg
+url: "https://mall.industry.siemens.com/mall/en/WW/Catalog/Product/6ES7414-3EM05-0AB0"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  supply_voltage: 24V
+  memory_work: 4096KB
+  memory_load: 65536KB
+  memory_retain: 2048KB
+  power_consumption: 10W
+  di_max: 65536
+  do_max: 65536
+  ai_max: 4096
+  ao_max: 4096
+dims:
+  w: 125.0
+  h: 125.0
+  t: 160.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerPins[3|]{name|direction|voltage|type}:
+  L+|input|24V|null
+  M|null|null|ground
+  PE|null|null|ground
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[4|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  4|0|DI|32|"%IX0.0"|"%IX3.7"|null
+  5|0|DO|32|"%QX0.0"|"%QX3.7"|null
+  6|0|AI|8|"%IW256"|"%IW263"|null
+  7|0|AO|4|"%QW256"|"%QW259"|null
+
+## 5. RACK CONFIGURATION:
+# Format: rack | slots | backplane_current | voltage
+racks[3|]{rack|slots|backplane_current|voltage}:
+  0|18|5000mA|5V
+  1|18|4000mA|5V
+  2|18|4000mA|5V
+
+## 6. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[3|]{peripheral|param|value}:
+  profibus|"address:2"|"baud:12Mbps;role:master"
+  profinet|"port:80"|"speed:100Mbps;mode:switch;ports:3"
+  serial|"baud:187500"|"proto:RS485;standard:MPI"
+service:
+  type: "MPI/DP"
+  connector: "DB9"
+  protocol: "MPI"
+
+## 7. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "5000mA"
+  total_current_limit: "5000mA"
+  operating_temp: "0-60C"
+  protection_class: IP20
+  warnings[4]:
+    - "Central rack (UR1/UR2) requires dedicated PS 407 power supply module"
+    - "Maximum 21 expansion racks (ER) with IM 460/461 interface modules"
+    - "PROFINET switch supports up to 32 devices per segment"
+    - "STEP 7 V5.5 required; TIA Portal partial support for S7-400 legacy"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "STEP 7 V5.5"
+  runtime: "S7-400 V6.0"
+  languages: "LD;FBD;ST;SFC"
+
+## 8. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: siemens-s7-400
+  defaultLanguageSkills[3]:
+    - st-iec61131
+    - ld-step7
+    - fbd-step7

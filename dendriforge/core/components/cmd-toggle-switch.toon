@@ -1,0 +1,134 @@
+# METADATA:
+project_name: cmd-toggle-switch-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: cmd-toggle-switch
+name: "Toggle Switch (Basculante)"
+family: command-elements
+subfamily: selectors
+category: command
+standard: "IEC 60947-5-1"
+url: null
+image: cmd-toggle-switch.svg
+symbol: cmd-toggle-switch-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  contact_config:
+    label: "Contact Configuration"
+    default: "SPDT"
+    options: ["SPST-NO", "SPST-NC", "SPDT", "DPST", "DPDT"]
+    type: enum
+    editable: true
+  positions:
+    label: "Number of Positions"
+    default: 2
+    options: [2, 3]
+    type: enum
+    editable: true
+  voltage_rating:
+    label: "Voltage Rating"
+    unit: V
+    default: 240
+    options: [24, 110, 240, 400]
+    type: enum
+    editable: false
+  current_rating:
+    label: "Current Rating"
+    unit: A
+    default: 10
+    type: float
+    editable: false
+  is_maintained:
+    label: "Maintained Action"
+    default: true
+    type: bool
+    editable: false
+  color:
+    label: "Lever Color"
+    default: "black"
+    options: ["black", "grey", "red", "yellow", "white"]
+    type: enum
+    editable: true
+  illuminated:
+    label: "Illuminated"
+    default: false
+    type: bool
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[6|]{id|direction|type|voltage_max|current_max|notes}:
+  COM1_IN|input|digital|"400V"|"10A"|"Pole 1 common input terminal"
+  NO1_OUT|output|digital|"400V"|"10A"|"Pole 1 NO output — closed at ON position"
+  NC1_OUT|output|digital|"400V"|"10A"|"Pole 1 NC output — closed at OFF position"
+  COM2_IN|input|digital|"400V"|"10A"|"Pole 2 common input terminal (DPDT only)"
+  NO2_OUT|output|digital|"400V"|"10A"|"Pole 2 NO output — closed at ON position (DPDT only)"
+  NC2_OUT|output|digital|"400V"|"10A"|"Pole 2 NC output — closed at OFF position (DPDT only)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: contact-block
+  trigger: user-interaction
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - off
+    - on
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "400V"
+  max_current: "10A"
+  max_power: null
+  max_temp: 55
+  min_temp: -25
+  ip_rating: "IP65"
+  safety_category: null
+warnings[3]:
+  - "Do not exceed rated voltage or current on any contact terminal"
+  - "Toggle switch is maintained — lever holds position until manually actuated"
+  - "For SPST/SPDT configurations leave unused pole ports disconnected"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["ind-contact-no", "ind-contact-nc", "ind-coil", "ind-di-bank", "plc-*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["on-off-control", "circuit-enable", "manual-bypass"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 50
+  height: 70
+  ports_layout: custom
+  port_COM1_IN: {x: 0, y: 15}
+  port_NO1_OUT: {x: 50, y: 10}
+  port_NC1_OUT: {x: 50, y: 25}
+  port_COM2_IN: {x: 0, y: 50}
+  port_NO2_OUT: {x: 50, y: 45}
+  port_NC2_OUT: {x: 50, y: 60}
+  label_position: bottom
+  value_display: "{contact_config} / {positions}pos / {color}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: command-elements-family
+  componentProfileId: cmd-toggle-switch
+  simulationEngine: digital-io
+  paletteGroup: "Command Elements > Selectors"
+  tags[6]:
+    - toggle-switch
+    - command
+    - selectors
+    - basculante
+    - maintained
+    - on-off

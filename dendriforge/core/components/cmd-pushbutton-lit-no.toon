@@ -1,0 +1,143 @@
+# METADATA:
+project_name: cmd-pushbutton-lit-no-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: cmd-pushbutton-lit-no
+name: "Pushbutton Illuminated NO"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60947-5-1"
+url: null
+image: cmd-pushbutton-lit-no.svg
+symbol: cmd-pushbutton-lit-no-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  led_voltage:
+    label: "LED Voltage"
+    unit: V
+    default: 24
+    options: [3.3, 5, 12, 24]
+    type: enum
+    editable: true
+  led_current:
+    label: "LED Current"
+    unit: mA
+    default: 10
+    options: [5, 10, 15, 20]
+    type: enum
+    editable: true
+  contact_rating_ac:
+    label: "AC Contact Rating"
+    unit: A
+    default: 10
+    options: [3, 5, 10, 16]
+    type: enum
+    editable: true
+  contact_rating_dc:
+    label: "DC Contact Rating"
+    unit: A
+    default: 6
+    options: [1, 3, 6, 8, 10]
+    type: enum
+    editable: true
+  ip_rating:
+    label: "Ingress Protection"
+    default: "IP65"
+    options: ["IP40", "IP54", "IP65", "IP67"]
+    type: enum
+    editable: true
+  mechanical_life:
+    label: "Mechanical Life"
+    unit: cycles
+    default: 1000000
+    min: 100000
+    max: 10000000
+    type: float
+    editable: false
+  electrical_life:
+    label: "Electrical Life"
+    unit: cycles
+    default: 200000
+    min: 10000
+    max: 1000000
+    type: float
+    editable: false
+  package:
+    label: "Package"
+    default: "22mm panel"
+    options: ["16mm panel", "22mm panel", "30mm panel", "DIN-rail", "enclosed"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  COM|input|ground|null|null|"common terminal"
+  NO|output|digital|"250V"|"10A"|"normally-open contact"
+  LEDA|input|power|"24V"|"20mA"|"indicator LED anode"
+  LEDK|input|ground|null|null|"indicator LED cathode"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - open
+    - closed
+    - illuminated
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "250V"
+  max_current: "10A"
+  max_power: null
+  max_temp: 70
+  min_temp: -25
+warnings[3]:
+  - "Indicator LED requires correct polarity and current limiting"
+  - "Respect AC/DC contact ratings separately; DC switching is more demanding"
+  - "Use an arc suppression network for inductive loads"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["mcu-gpio", "relay-coil", "ind-load", "dc-source"]
+  forbidden_with: ["ac-source"]
+  requires: []
+  typical_context: ["start-button", "manual-control", "operator-panel", "illuminated-control"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 40
+  ports_layout: custom
+  port_COM: {x: 0, y: 20}
+  port_NO: {x: 60, y: 20}
+  port_LEDA: {x: 30, y: 0}
+  port_LEDK: {x: 30, y: 40}
+  label_position: top
+  value_display: "Illuminated NO / {led_voltage}V / {led_current}mA"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: cmd-pushbutton-lit-no
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Switches"
+  tags[7]:
+    - pushbutton
+    - illuminated
+    - no
+    - switch
+    - operator
+    - control
+    - iec-60947-5-1

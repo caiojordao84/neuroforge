@@ -1,0 +1,140 @@
+# METADATA:
+project_name: cmd-pushbutton-changeover-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: cmd-pushbutton-changeover
+name: "Pushbutton Changeover"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60947-5-1"
+url: null
+image: cmd-pushbutton-changeover.svg
+symbol: cmd-pushbutton-changeover-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  contact_state:
+    label: "Contact State"
+    default: "changeover"
+    options: ["changeover", "momentary", "spring-return"]
+    type: enum
+    editable: true
+  actuation_force:
+    label: "Actuation Force"
+    unit: N
+    default: 3.0
+    options: [1.5, 2.5, 3.5, 5.0]
+    type: enum
+    editable: true
+  ip_rating:
+    label: "Ingress Protection"
+    default: "IP65"
+    options: ["IP40", "IP54", "IP65", "IP67"]
+    type: enum
+    editable: true
+  contact_rating_ac:
+    label: "AC Contact Rating"
+    unit: A
+    default: 5
+    options: [1, 3, 5, 10]
+    type: enum
+    editable: true
+  contact_rating_dc:
+    label: "DC Contact Rating"
+    unit: A
+    default: 3
+    options: [0.5, 1, 3, 5, 6]
+    type: enum
+    editable: true
+  mechanical_life:
+    label: "Mechanical Life"
+    unit: cycles
+    default: 1000000
+    min: 100000
+    max: 10000000
+    type: float
+    editable: false
+  electrical_life:
+    label: "Electrical Life"
+    unit: cycles
+    default: 100000
+    min: 10000
+    max: 1000000
+    type: float
+    editable: false
+  package:
+    label: "Package"
+    default: "22mm panel"
+    options: ["16mm panel", "22mm panel", "30mm panel", "DIN-rail", "enclosed"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  COM|input|ground|null|null|"common terminal"
+  NO|output|digital|"250V"|"5A"|"normally-open contact"
+  NC|output|digital|"250V"|"5A"|"normally-closed contact"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - open
+    - closed-no
+    - closed-nc
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "250V"
+  max_current: "5A"
+  max_power: null
+  max_temp: 70
+  min_temp: -25
+warnings[3]:
+  - "The common terminal switches between NO and NC depending on actuation"
+  - "Respect AC/DC contact ratings separately; DC switching is more demanding"
+  - "Use an arc suppression network for inductive loads"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["mcu-gpio", "relay-coil", "ind-load", "dc-source"]
+  forbidden_with: ["ac-source"]
+  requires: []
+  typical_context: ["selector", "manual-control", "operator-panel"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 30
+  ports_layout: horizontal
+  port_COM: {x: 0, y: 15}
+  port_NO: {x: 60, y: 10}
+  port_NC: {x: 60, y: 20}
+  label_position: top
+  value_display: "Changeover / {contact_state} / {ip_rating}"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: cmd-pushbutton-changeover
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Switches"
+  tags[7]:
+    - pushbutton
+    - changeover
+    - momentary
+    - switch
+    - operator
+    - control
+    - iec-60947-5-1

@@ -1,38 +1,111 @@
+# METADATA:
+project_name: raspberry-pi-pico-2-w-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: raspberry-pi-pico-2-w
 name: "Raspberry Pi Pico 2 W"
-manufacturer: "Generic"
-mcu: "RP2350A"
-category: "industrial"
-image: "/boards/raspberry-pi-pico-2-w.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 4194304
-sram: 532480
-clock_hz: 150000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "rp2040-family"
-  boardProfileId: "raspberry-pi-pico-2-w"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+manufacturer: "Raspberry Pi"
+mcu: RP2350
+category: maker
+image: raspberry-pi-pico-2-w.svg
+url: "https://www.raspberrypi.com/products/raspberry-pi-pico-2-w/"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 4194304
+  flash_available: 4194304
+  sram: 532480
+  eeprom: 0
+  clock: 150000000
+  voltage: "3.3V"
+  wifi: "802.11n 2.4GHz"
+  bluetooth: "BLE 5.2"
+dims:
+  w: 21.0
+  h: 51.0
+  t: 1.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  VBUS|input|"5V"|null
+  VSYS|input|"5V"|null
+  3V3|output|"3.3V"|null
+  3V3_EN|input|"3.3V"|null
+  GND|null|null|ground
+  ADC_VREF|input|"3.3V"|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[26|]{pin|type|pwm|int|label|roles}:
+  0|digital|t|t|GP0|"uart-tx;i2c-sda;spi-rx"
+  1|digital|t|t|GP1|"uart-rx;i2c-scl;spi-csn"
+  2|digital|t|t|GP2|"uart-cts;i2c-sda;spi-sck"
+  3|digital|t|t|GP3|"uart-rts;i2c-scl;spi-tx"
+  4|digital|t|t|GP4|"uart-tx;i2c-sda;spi-rx"
+  5|digital|t|t|GP5|"uart-rx;i2c-scl;spi-csn"
+  6|digital|t|t|GP6|"uart-cts;i2c-sda;spi-sck"
+  7|digital|t|t|GP7|"uart-rts;i2c-scl;spi-tx"
+  8|digital|t|t|GP8|"uart-tx;i2c-sda;spi-rx"
+  9|digital|t|t|GP9|"uart-rx;i2c-scl;spi-csn"
+  10|digital|t|t|GP10|"uart-cts;i2c-sda;spi-sck"
+  11|digital|t|t|GP11|"uart-rts;i2c-scl;spi-tx"
+  12|digital|t|t|GP12|"uart-tx;i2c-sda;spi-rx"
+  13|digital|t|t|GP13|"uart-rx;i2c-scl;spi-csn"
+  14|digital|t|t|GP14|"uart-cts;i2c-sda;spi-sck"
+  15|digital|t|t|GP15|"uart-rts;i2c-scl;spi-tx"
+  16|digital|t|t|GP16|"uart-tx;i2c-sda;spi-rx"
+  17|digital|t|t|GP17|"uart-rx;i2c-scl;spi-csn"
+  18|digital|t|t|GP18|"uart-cts;i2c-sda;spi-sck"
+  19|digital|t|t|GP19|"uart-rts;i2c-scl;spi-tx"
+  20|digital|t|t|GP20|"uart-tx;i2c-sda"
+  21|digital|t|t|GP21|"uart-rx;i2c-scl"
+  22|digital|t|t|GP22|null
+  26|analog|f|t|"GP26 / A0"|"adc:t"
+  27|analog|f|t|"GP27 / A1"|"adc:t"
+  28|analog|f|t|"GP28 / A2"|"adc:t"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[6|]{peripheral|param|value}:
+  serial|"uarts:2"|"pins:0,1"
+  i2c|"channels:2"|"sda:0;scl:1"
+  spi|"channels:2"|"miso:0;mosi:3;sck:2;ss:1"
+  pwm|"channels:24"|null
+  adc|"channels:3"|"pins:26,27,28"
+  adc|"channels:1"|"temp:internal"
+usb:
+  type: Micro-USB
+  chip: RP2350
+  vid: "0x2E8A"
+  pid: "0x0010"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "4mA"
+  total_current_limit: "300mA"
+  warnings[5]:
+    - "GPIO logic level is 3.3V only — not 5V tolerant"
+    - "GP23, GP24, GP25, GP29 are used by the CYW43439 wireless chip — not exposed as GPIO"
+    - "GP26-GP28 shared with ADC inputs; avoid high-impedance floating"
+    - "ADC reference is 3.3V; ADC_VREF pin must not exceed VSYS"
+    - "WiFi and BLE cannot be used simultaneously on the CYW43439 — only one at a time"
+compatibility:
+  arduinoCore: "4.0.1"
+  pio: raspberrypi
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: rp2350-boot
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: rp2350-family
+  boardProfileId: raspberry-pi-pico-2-w
+  defaultLanguageSkills[3]:
+    - arduino-cpp-rp2350
+    - micropython-rp2350
+    - rust-embassy-rp2350

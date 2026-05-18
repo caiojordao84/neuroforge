@@ -1,0 +1,103 @@
+# METADATA:
+project_name: adafruit-feather-esp32-s3-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: adafruit-feather-esp32-s3
+name: "Adafruit Feather ESP32-S3"
+manufacturer: Adafruit
+mcu: "ESP32-S3"
+category: maker
+image: adafruit-feather-esp32-s3.svg
+url: "https://www.adafruit.com/product/5380"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 4194304
+  flash_available: 4194304
+  sram: 327680
+  psram: 2097152
+  eeprom: 0
+  clock: 240000000
+  voltage: "3.3V"
+  cores: 2
+  wifi: "802.11b/g/n"
+  bluetooth: "BLE 5.0"
+dims:
+  w: 51.0
+  h: 23.0
+  t: 3.2
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[5|]{name|direction|voltage|type}:
+  VBAT|input|null|null
+  VUSB|input|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  EN|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[20|]{pin|type|pwm|int|label|roles}:
+  0|digital|t|t|"D0 / RX"|uart-rx
+  1|digital|t|t|"D1 / TX"|uart-tx
+  2|digital|t|t|D2|null
+  3|digital|t|t|D3|null
+  4|digital|t|t|D4|null
+  5|digital|t|t|D5|null
+  6|digital|t|t|D6|null
+  7|digital|t|t|D7|null
+  8|digital|t|t|D8|null
+  9|digital|t|t|D9|null
+  10|digital|t|t|"D10 / SS"|spi-ss
+  11|digital|t|t|"D11 / MOSI"|spi-mosi
+  12|digital|t|t|"D12 / MISO"|spi-miso
+  13|digital|t|t|"D13 / SCK / LED"|"spi-sck;status-led"
+  14|analog|t|t|A0|"adc:t"
+  15|analog|t|t|A1|"adc:t"
+  16|analog|t|t|A2|"adc:t"
+  17|analog|t|t|A3|"adc:t"
+  18|analog|t|t|"A4 / SDA"|"adc:t;i2c-sda"
+  19|analog|t|t|"A5 / SCL"|"adc:t;i2c-scl"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uart0:1"|"pins:0,1"
+  i2c|"channels:1"|"sda:18;scl:19"
+  spi|"channels:1"|"miso:12;mosi:11;sck:13;ss:10"
+  adc|"channels:6"|"pins:14,15,16,17,18,19"
+usb:
+  type: USB-C
+  chip: "ESP32-S3 native"
+  vid: "0x239A"
+  pid: "0x80F5"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "40mA"
+  total_current_limit: "1000mA"
+  warnings[5]:
+    - "Strapping pins GPIO46 and GPIO45 must not be pulled low at boot"
+    - "GPIO0 must be HIGH at boot; LOW enters download mode"
+    - "ADC1 pins available during Wi-Fi; ADC2 pins unavailable during Wi-Fi"
+    - "Neopixel data pin shares pin with D/C or GPIO — check variant"
+    - "PSRAM shares certain GPIO with flash on QIO modes — avoid conflicts"
+compatibility:
+  arduinoCore: "2.0.17"
+  pio: espressif32
+  frameworks: "arduino;espidf"
+  languages: arduino-cpp
+  bootloader: uf2
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: esp32-xtensa-family
+  boardProfileId: adafruit-feather-esp32-s3
+  defaultLanguageSkills[2]:
+    - arduino-cpp-esp32
+    - rust-embassy-esp32

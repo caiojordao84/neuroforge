@@ -1,0 +1,150 @@
+# METADATA:
+project_name: ac-source-3phase-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: ac-source-3phase
+name: "Programmable Three-Phase AC Power Source"
+family: electricals
+subfamily: sources
+category: source
+standard: "IEC 61010-1 / IEC 60038"
+url: null
+image: ac-source-3phase.svg
+symbol: ac-source-3phase-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  voltage_ln:
+    label: "Line-to-Neutral Voltage (L-N)"
+    unit: V
+    default: 230
+    min: 0
+    max: 300
+    type: float
+    editable: true
+  voltage_ll:
+    label: "Line-to-Line Voltage (L-L)"
+    unit: V
+    default: 400
+    min: 0
+    max: 690
+    type: float
+    editable: false
+  frequency:
+    label: "Frequency"
+    unit: Hz
+    default: 50
+    options: [50, 60]
+    type: enum
+    editable: true
+  current_limit:
+    label: "Current Limit per Phase"
+    unit: A
+    default: 10
+    min: 0
+    max: 100
+    type: float
+    editable: true
+  phase_sequence:
+    label: "Phase Sequence"
+    default: "RST"
+    options: ["RST", "RTS"]
+    type: enum
+    editable: true
+  wiring:
+    label: "Wiring Configuration"
+    default: "WYE-N"
+    options: ["WYE-N", "WYE", "DELTA"]
+    type: enum
+    editable: true
+  phase_angle_offset:
+    label: "Phase Angle Offset"
+    unit: V
+    default: 0
+    min: 0
+    max: 360
+    type: float
+    editable: true
+  output_enabled:
+    label: "Output Enabled"
+    default: true
+    type: bool
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[6|]{id|direction|type|voltage_max|current_max|notes}:
+  L1|output|power|"300V"|"100A"|"phase L1 / R"
+  L2|output|power|"300V"|"100A"|"phase L2 / S"
+  L3|output|power|"300V"|"100A"|"phase L3 / T"
+  N|output|ground|null|null|"neutral wire"
+  PE|output|ground|null|null|"protective earth"
+  AC_IN|input|power|"690V"|"100A"|"AC mains 3-phase input"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  waveform: sine
+  equation: "V_L1 = voltage_ln*sin(2*pi*f*t); V_L2 = voltage_ln*sin(2*pi*f*t - 2*pi/3); V_L3 = voltage_ln*sin(2*pi*f*t + 2*pi/3)"
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - off
+    - on
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "690V"
+  max_current: "100A"
+  max_power: null
+  max_temp: 40
+  min_temp: -10
+warnings[4]:
+  - "Ensure correct phase sequence before connecting motor loads"
+  - "Never short-circuit phase-to-phase or phase-to-PE terminals"
+  - "OVP/OCP protection must be configured before energising sensitive loads"
+  - "Verify load wiring (WYE or DELTA) matches source configuration before enabling output"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["motor-drive-testing", "three-phase-load-test", "power-quality-analysis", "lab-bench"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 90
+  height: 80
+  ports_layout: custom
+  port_AC_IN: {x: 0, y: 10}
+  port_L1: {x: 90, y: 10}
+  port_L2: {x: 90, y: 30}
+  port_L3: {x: 90, y: 50}
+  port_N: {x: 90, y: 65}
+  port_PE: {x: 90, y: 80}
+  label_position: top
+  value_display: "{voltage_ln}V L-N / {voltage_ll}V L-L / {frequency}Hz"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: ac-source-3phase
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Sources"
+  tags[7]:
+    - ac-source
+    - three-phase
+    - programmable
+    - laboratory
+    - source
+    - wye
+    - delta

@@ -1,0 +1,114 @@
+# METADATA:
+project_name: "m5stack-core2-profile"
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: "m5stack-core2"
+name: "M5Stack Core2"
+manufacturer: M5Stack
+mcu: "ESP32-D0WDQ6-V3"
+category: maker
+image: "m5stack-core2.svg"
+url: "https://docs.m5stack.com/en/core/core2"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 16777216
+  flash_available: 16777216
+  sram: 520000
+  psram: 8388608
+  eeprom: 0
+  clock: 240000000
+  voltage: "3.3V"
+  cores: 2
+  wifi: "802.11b/g/n"
+  bluetooth: "v4.2 BR/EDR+BLE"
+  display: "2.0 inch ILI9342C 320x240 TFT"
+  touchscreen: capacitive
+  imu: MPU6886
+  rtc: BM8563
+  speaker: true
+dims:
+  w: 54.0
+  h: 54.0
+  t: 12.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[4|]{name|direction|voltage|type}:
+  VBUS|input|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  BAT|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[26|]{pin|type|pwm|int|label|roles}:
+  0|digital|t|t|G0|"axp192-irq"
+  1|digital|t|t|"G1 / TX0"|uart-tx
+  2|digital|t|t|"G2 / RX0"|uart-rx
+  12|digital|t|t|G12|null
+  13|digital|t|t|"G13 / Port C SDA"|i2c-sda
+  14|digital|t|t|"G14 / Port C SCL"|i2c-scl
+  15|digital|t|t|G15|null
+  16|digital|t|t|G16|null
+  17|digital|t|t|G17|null
+  18|digital|t|t|"G18 / SCK"|spi-sck
+  19|digital|t|t|"G19 / MISO"|spi-miso
+  20|digital|t|t|"G20 / MOSI"|spi-mosi
+  21|digital|t|t|G21|null
+  22|digital|t|t|"G22 / SS"|spi-ss
+  23|digital|t|t|G23|null
+  25|digital|t|t|G25|null
+  26|digital|t|t|G26|null
+  27|digital|t|t|G27|null
+  32|digital|t|t|"G32 / Port A SDA"|i2c-sda
+  33|digital|t|t|"G33 / Port A SCL"|i2c-scl
+  34|analog|f|f|G34|"adc:t;input-only"
+  35|analog|f|f|G35|"adc:t;input-only"
+  36|analog|f|f|"G36 / VP"|"adc:t;input-only"
+  37|digital|t|t|G37|null
+  38|digital|t|t|G38|null
+  39|analog|f|f|"G39 / VN"|"adc:t;input-only"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uart0:1"|"pins:1,2"
+  i2c|"port-a:1"|"sda:32;scl:33"
+  i2c|"port-c:1"|"sda:13;scl:14"
+  spi|"fspi:1"|"miso:19;mosi:20;sck:18;ss:22"
+usb:
+  type: USB-C
+  chip: CH9102F
+  vid: "0x1A86"
+  pid: "0x55D4"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "40mA"
+  total_current_limit: "1000mA"
+  warnings[6]:
+    - "G3, G4 used internally by IPS display bus — do NOT use"
+    - "G5 used internally by RTC interrupt and LCD backlight — do NOT use"
+    - "G6 used internally by touch panel interrupt — do NOT use"
+    - "G7, G8, G9 used internally by I2S speaker — do NOT use"
+    - "G34, G35, G36, G39 are input-only with no internal pull-up"
+    - "Built-in 390mAh LiPo battery; do not apply external voltage to BAT pin"
+compatibility:
+  arduinoCore: "2.0.17"
+  pio: espressif32
+  frameworks: "arduino;espidf"
+  languages: arduino-cpp
+  bootloader: esptool
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: esp32-xtensa-family
+  boardProfileId: "m5stack-core2"
+  defaultLanguageSkills[2]:
+    - arduino-cpp-esp32
+    - rust-embassy-esp32

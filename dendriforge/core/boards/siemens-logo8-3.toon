@@ -1,0 +1,114 @@
+# METADATA:
+project_name: siemens-logo8-3-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: siemens-logo8-3
+name: "Siemens LOGO! 8.3"
+manufacturer: Siemens
+cpu: "LOGO! 0BA8"
+category: plc
+form_factor: compact
+standard: "IEC 61131-3"
+image: siemens-logo8-3.svg
+url: "https://mall.industry.siemens.com/mall/en/WW/Catalog/Products/10302488"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 10
+  memory_work: 400KB
+  memory_load: 400KB
+  memory_retain: 400KB
+  supply_voltage: 24V
+  power_consumption: 4W
+  di_integrated: 8
+  do_integrated: 4
+  ai_integrated: 4
+dims:
+  w: 71.5
+  h: 90.0
+  t: 60.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerSupply[3|]{name|direction|voltage|type}:
+  L+|input|24V|supply
+  M|input|null|ground
+  PE|input|null|protective-earth
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[3|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|8|"%IX0.0"|"%IX0.7"|null
+  1|0|DO|4|"%QX0.0"|"%QX0.3"|null
+  2|0|AI|4|"%IW0"|"%IW6"|null
+
+## 5. DIGITAL CHANNEL DESCRIPTORS:
+# Format: addr | direction | label | roles
+digitalChannels[12|]{addr|direction|label|roles}:
+  "%IX0.0"|input|"I1"|di
+  "%IX0.1"|input|"I2"|di
+  "%IX0.2"|input|"I3"|di
+  "%IX0.3"|input|"I4"|di
+  "%IX0.4"|input|"I5"|"di;fast-counter"
+  "%IX0.5"|input|"I6"|"di;fast-counter"
+  "%IX0.6"|input|"I7"|di
+  "%IX0.7"|input|"I8"|di
+  "%QX0.0"|output|"Q1"|do
+  "%QX0.1"|output|"Q2"|do
+  "%QX0.2"|output|"Q3"|do
+  "%QX0.3"|output|"Q4"|do
+
+## 6. ANALOG CHANNEL DESCRIPTORS:
+# Format: addr | direction | resolution | range | label
+analogChannels[4|]{addr|direction|resolution|range|label}:
+  "%IW0"|input|10|"0-10V"|"AI1 (I1)"
+  "%IW2"|input|10|"0-10V"|"AI2 (I2)"
+  "%IW4"|input|10|"0-10V"|"AI3 (I3)"
+  "%IW6"|input|10|"0-10V"|"AI4 (I4)"
+
+## 7. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[2|]{peripheral|param|value}:
+  ethernet|"port:102"|"proto:LOGO!-Net;web-server:true"
+  modbus-tcp|"port:502"|"role:server"
+
+## 8. RACKS & EXPANSION:
+# Format: rack | slots | backplane_current | voltage
+racks[1|]{rack|slots|backplane_current|voltage}:
+  0|8|1000mA|24V
+expansion:
+  max_digital_modules: 8
+  max_analog_modules: 8
+  max_di: 24
+  max_do: 20
+  max_ai: 8
+  max_ao: 8
+
+## 9. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  supply_voltage: 24V
+  operating_temp: "0-55C"
+  storage_temp: "-40-70C"
+  protection_class: IP20
+  warnings[3]:
+    - "Inputs I1-I4 can be used as analog inputs AI1-AI4 (0-10V); cannot use simultaneously as digital and analog"
+    - "Fast counter inputs I5 and I6 support high-speed counting functions"
+    - "Maximum 8 expansion modules per base unit; use LOGO! DM8/DM16 for digital and AM2/AM2AQ for analog"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "LOGO! Soft Comfort V8.3"
+  runtime: "LOGO! 0BA8 FW"
+  languages: "FBD;LD"
+  order_ref: "6ED1052-1MD08-0BA2"
+
+## 10. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: siemens-logo8-3
+  defaultLanguageSkills[2]:
+    - fbd-logo-soft
+    - ld-logo-soft

@@ -1,0 +1,95 @@
+# METADATA:
+project_name: hyd-tank-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: hyd-tank
+name: "Hydraulic Tank / Reservoir (Tanque hidráulico)"
+family: hydraulics
+subfamily: pumps
+category: accessory
+standard: "ISO 1219-1"
+url: null
+image: hyd-tank.svg
+symbol: hyd-tank-symbol.svg
+symbol_standard: ISO
+
+## 2. PARAMETERS:
+params:
+  capacity:
+    label: "Tank Capacity"
+    unit: L
+    default: 50
+    min: 1
+    max: 5000
+    type: float
+    editable: true
+  return_pressure:
+    label: "Return Line Pressure"
+    unit: bar
+    default: 0
+    type: float
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+ports[0|]{}:
+
+## 4b. FLUID PORTS (HYDRAULIC):
+hydraulic_ports[1|]{id|direction|type|pressure_max|flow_max|notes}:
+  T|input|hydraulic|"5bar"|null|"tank return line (drain/exhaust)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: fluid-pressure-source
+  motion: none
+  bidirectional: false
+  dynamic: false
+  thermal_model: false
+  leakage_model: false
+  noise_model: false
+  states[1]:
+    - nominal
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_pressure: 5
+  min_pressure: 0
+  max_voltage: null
+  max_current: null
+  max_power: null
+  max_temp: 90
+  min_temp: -20
+warnings[1]:
+  - "Atmospheric pressure reservoir for hydraulic fluid return and leakage drain lines."
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["hyd-*"]
+  forbidden_with: ["pneu-*"]
+  requires: []
+  typical_context: ["fluid-return", "reservoir", "drain", "exhaust"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 40
+  height: 40
+  ports_layout: custom
+  port_T: {x: 20, y: 0}
+  label_position: bottom
+  value_display: "{capacity} L"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: hydraulics-family
+  componentProfileId: hyd-tank
+  simulationEngine: hydraulic-motion
+  paletteGroup: "Hydraulics > Power Units"
+  tags[4]:
+    - tank
+    - reservoir
+    - return
+    - hydraulic

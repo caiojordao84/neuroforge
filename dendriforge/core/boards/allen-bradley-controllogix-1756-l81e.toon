@@ -1,0 +1,101 @@
+# METADATA:
+project_name: allen-bradley-controllogix-1756-l81e-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: allen-bradley-controllogix-1756-l81e
+name: "Allen-Bradley ControlLogix 5580 — 1756-L81E; 3MB user memory; 1Gb EtherNet/IP; 60+40 nodes; 256 axes CIP Motion; OPC UA 300 nodes; 128k DI/DO; 4k AI/AO; 32 tasks; 2GB SD; role-based security; redundancy; no built-in I/O or PSU"
+manufacturer: "Rockwell Automation / Allen-Bradley"
+mcu: "Rockwell Automation ControlLogix 5580 CPU — 3MB user RAM; 32 tasks; 100 programs/task; 1Gb EtherNet/IP embedded; CIP Motion; OPC UA; role-based security; 2GB SD NVM; digitally-signed firmware; redundancy capable"
+category: plc
+image: allen-bradley-controllogix-1756-l81e.svg
+url: "https://www.rockwellautomation.com/en-us/products/details.1756-l81e.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 2147483648
+  flash_available: 3145728
+  sram: 3145728
+  eeprom: 0
+  clock: 0
+  voltage: "5V"
+dims:
+  w: 54.0
+  h: 147.0
+  t: 129.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# 1756-L81E has NO built-in power supply — requires a separate 1756-PA or 1756-PB power supply module in chassis
+# Standard AC supplies: 1756-PA50 (120/240VAC 50W), 1756-PA75 (120/240VAC 75W)
+# Standard DC supplies: 1756-PB50 (24VDC 50W), 1756-PB75 (24VDC 75W)
+# CPU draws: 1.20A @ 5.1VDC backplane; 2.0mA @ 1.2VDC; total power dissipation 6.2W
+# Isolation: 30VDC continuous Basic Insulation — ETH to backplane, USB to backplane, USB to ETH
+# ESM (Energy Storage Module): embedded non-removable; maintains RTC after power loss (no user battery)
+# PE: Protective Earth via chassis mounting; chassis must be grounded to machine frame / PE
+powerPins[5|]{name|direction|voltage|type}:
+  BACKPLANE_5V|input|"5V"|null
+  BACKPLANE_12V|input|"12V"|null
+  BACKPLANE_24V|input|"24V"|null
+  BACKPLANE_GND|null|null|ground
+  PE_CHASSIS|null|null|ground
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# 1756-L81E has NO integrated field I/O (no DI, DO, AI, AO on CPU module itself)
+# All physical I/O is via 1756 ControlLogix I/O modules in local chassis slots or remote chassis/distributed I/O
+# GPIO map represents the physical communication connectors on the CPU front panel
+gpio[2|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|false|"ETH1 / Gigabit EtherNet/IP — RJ45; 10/100/1000 Mbps auto-MDI-X; isolated 30VDC cont; embedded port; 60 EtherNet/IP nodes on this port alone; total 100 nodes incl. via 1756-ENxT modules; protocols: EtherNet/IP-CIP, CIP-Motion up to 256 axes family-wide, CIP-Security TLS-DTLS, OPC-UA 300 nodes, PCCC-on-EIP, open-socket-TCP-UDP; I/O pkt rate: 28,000pps without CIP Security; wire category 2"|"do;di"
+  1|digital|false|false|"USB / Type-A — USB 2.0 Full Speed 12 Mbps; TEMPORARY programming ONLY; NOT for permanent connection; NOT for use in hazardous locations; wire category 3; use: Studio 5000 upload-download, firmware update, online edits; cable max 3m; isolation 30VDC cont Basic Insulation to backplane"|"do;di"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[10|]{peripheral|param|value}:
+  ethernet_ip_1gb|"speed:1000Mbit"|"1x-RJ45-10-100-1000Mbps;60-EtherNet-IP-nodes-embedded-port;100-total-incl-via-1756-ENxT;protocols:EtherNet-IP-CIP,CIP-Motion-256-axes,CIP-Security-TLS-DTLS,OPC-UA-300-nodes,PCCC-on-EIP,TCP-UDP-open-socket;IO-pkt-rate:28000pps;cable:Cat5e-min-Cat6-recommended-for-1Gbps"
+  sd_card_nvm|"size:2GB"|"1784-SD2-2GB-SD-card-ships-pre-installed;stores:program-firmware-data-logs-recipes;load-on-powerup;store-retrieve-via-MSG;options:1784-SD1-1GB,1784-SD2-2GB,1784-SD4-4GB;do-NOT-remove-during-RUN;use-only-Rockwell-1784-SD-cards"
+  esm_rtc|"type:embedded"|"Energy-Storage-Module-ESM:embedded-non-removable-internal;replaces-legacy-1756-BATM-battery;RTC-holdup:typically-days-@-25C;L81E-NSE-variant-has-NO-ESM-no-RTC-holdup-after-power-loss;charging-time:typ-15-min-after-full-discharge"
+  display_alphanumeric|"chars:4"|"4-char-alpha-numeric-LED-display-front-panel;shows:IP-address,diagnostic-codes,fault-codes,RUN-PROG-mode;RUN-PROG-REM-mode-selector-switch;supports-diagnostic-keypad-navigation"
+  cip_motion_eip|"axes:256"|"CIP-Motion-over-EtherNet/IP;family-max-256-axes;L81E-3MB-typically-supports-4-32-axes-depending-on-application;drives:Kinetix-5100-5300-5500-5700-6000-6500;PLCopen-MC-FBs;V-profile-S-curve-Camming;SERCOS-via-1756-MxK-module-in-chassis;requires-Studio5000-V21+"
+  redundancy|"type:full"|"controller-redundancy:primary+secondary-chassis;modules:1756-RM2-or-1756-RM3;synchronization:crossload-via-backplane-or-dedicated-fiber;switchover:sub-100ms-typical;in-redundancy:motion-NOT-supported,CIP-Safety-NOT-supported,DeviceNet-NOT-supported;requires-matched-firmware-in-both-chassis"
+  opcua_server|"nodes:300"|"OPC-UA-server-from-firmware-V32-Studio5000-V32+;300-OPC-UA-nodes-max-L81E;security:Basic256Sha256-TLS;certificate-in-Studio5000;namespace:controller-tags;subscription-pub-sub;see-pub-1756-UM023;requires-L82E+ for more-nodes"
+  cip_security|"version:TLS"|"CIP-Security:ODVA-certified;modes:integrity-only-or-integrity-and-confidentiality;protocols:TLS-DTLS;I/O-rate-reduced-from-28000pps-to-14000pps-integrity-only-or-7000pps-both;certificate-management-in-Studio5000-or-FactoryTalk;requires-firmware-V32+"
+  io_modules_local|"slots:17"|"1756-A4-4slot,1756-A7-7slot,1756-A10-10slot,1756-A13-13slot,1756-A17-17slot;CPU-occupies-1-slot;remote-chassis-via-1756-EN2T-or-1756-EN4TR;types:1756-DI,1756-DO,1756-AIFR-AI,1756-AO,1756-IF,1756-OF,1756-HSC,1756-IB32,1756-OB32;max-128000-DI-DO,4000-AI-AO"
+  tasks_programs|"tasks:32"|"32-tasks:1-continuous+31-periodic-event;100-programs-per-task;event-types:MESSAGE-CONSUMED-TAG-MOTION-AXIS-WATCH;EtherNet-IP-connections:see-node-limit;open-sockets:32;MSG-instructions:concurrent-32-per-controller;FBDC-FBD-periodic-min-250us"
+usb:
+  type: Type-A
+  chip: native
+  vid: "0x1A86"
+  pid: "0x7523"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "1200mA"
+  total_current_limit: "1200mA"
+  warnings[9]:
+    - "1756-L81E has NO integrated field I/O and NO built-in power supply — a separate 1756-PA50, 1756-PA75, 1756-PB50, or 1756-PB75 power supply must be installed in the chassis; the chassis (1756-A4 through 1756-A17) must also be ordered separately; without a chassis and power supply the CPU cannot operate"
+    - "The embedded 1Gb EtherNet/IP port supports up to 60 EtherNet/IP nodes directly — each 1756-ENxT communication module in the chassis adds its own node pool (256 nodes per 1756-EN2T, up to 1000 I/O nodes per 1756-EN4TR); total node count across all paths is 100 for L81E; exceeding node limits causes I/O connection faults; use L83E or L85E for larger systems"
+    - "CIP Motion (Integrated Motion over EtherNet/IP) reduces available EtherNet/IP I/O bandwidth — each motion axis consumes controller resources (memory, scan time, packet rate); the L81E (3MB) is appropriate for small motion applications of 4-16 axes; for 32+ axes use at minimum the L83E (10MB); for 256 axes the L85E (40MB) is required"
+    - "The 1756-L81E-NSE (No Stored Energy) variant has NO internal Energy Storage Module — RTC will lose time on every power loss; the NSE variant was designed for applications where the Energy Arbitration standard (IEC 62368-1 or UL 991) prohibits stored energy devices; substituting NSE for standard L81E in time-critical or coordinated-motion applications will cause timestamp faults and motion discontinuity after every power cycle"
+    - "Controller redundancy with the 1756-RM2 or 1756-RM3 is supported but has significant restrictions: Integrated Motion over EtherNet/IP is NOT supported in redundancy mode; CIP Safety is NOT supported; DeviceNet and ControlNet local modules are NOT supported; both primary and secondary chassis must have identical I/O module types and firmware revisions; firmware mismatch causes immediate redundancy disqualification"
+    - "CIP Security requires firmware V32 and Studio 5000 V32 minimum — enabling CIP Security reduces I/O packet rate from 28,000 pps to 14,000 pps (integrity only) or 7,000 pps (integrity + confidentiality); all devices in the security zone must support CIP Security; devices without CIP Security support must be placed in a separate unprotected zone; mixed secure and unsecured devices in the same EtherNet/IP zone is not supported"
+    - "OPC UA server requires firmware V32 and Studio 5000 V32 — the L81E supports a maximum of 300 OPC UA nodes; each OPC UA node corresponds to one controller tag accessible from outside; for more OPC UA nodes use L82E (1000 nodes), L83E (2000), L84E (5000) or L85E (20,000); OPC UA requires a certificate deployed to the controller from Studio 5000 — connections without valid certificates are rejected by default"
+    - "The USB port on the 1756-L81E is Type-A (USB 2.0) for temporary programming only — it must NOT be used as a permanent network connection; wire category 3 rating means high-noise environments require shielded cable; do NOT use the USB port in classified hazardous locations (Class I Div 2 ATEX Zone 2) as the USB port is not rated for use in explosive atmospheres; use EtherNet/IP for all permanent communications"
+    - "The 1756-L81E requires a NEMA 1 or equivalent windowless metal enclosure to comply with CE EMC (EN 61000-6-4 Industrial Emissions) — operating the controller outside of a metal enclosure invalidates CE certification; the open-style (IP20) rating of the module provides NO protection against dust, liquids, or physical contact; always install in a suitable industrial enclosure with proper ventilation to maintain the 0-60°C operating range"
+compatibility:
+  sw: "Studio 5000 Logix Designer V21+ (V21-V35+); RSLogix 5000 V16-V20 (legacy read-only); FactoryTalk View SE/ME for HMI; FactoryTalk Historian; FactoryTalk AssetCentre; PLCSIM Advanced not supported for ControlLogix 5580"
+  languages: "Relay Ladder Logic (RLL/LD);Function Block Diagram (FBD);Structured Text (ST);Sequential Function Chart (SFC)"
+  frameworks: "IEC61131-3;EtherNet-IP-CIP;CIP-Motion;CIP-Security-TLS-DTLS;CIP-Sync;OPC-UA;PCCC;ControlNet-via-1756-CN2;DeviceNet-via-1756-DNB;SERCOS-via-1756-MxK;FactoryTalk;Studio5000;PlantPAx"
+  certifications: "cULus;FM-Class-I-Div2;CE;RCM;ATEX-II-3G-Ex-ec-IIC-T4;IECEx;UKCA;KC;CCC;EtherNet-IP-ODVA;CIP-Security-ODVA"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: allen-bradley-controllogix-5580-family
+  boardProfileId: allen-bradley-controllogix-1756-l81e
+  defaultLanguageSkills[3]:
+    - ladder-studio5000-controllogix
+    - fbd-studio5000-controllogix
+    - st-studio5000-controllogix

@@ -1,0 +1,110 @@
+# METADATA:
+project_name: optocoupler-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: optocoupler
+name: "Optocoupler (PC817 Type)"
+family: electricals
+subfamily: semiconductors
+category: semiconductor
+standard: "IEC 60747-5-5"
+url: null
+image: optocoupler.svg
+symbol: optocoupler-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  ctr:
+    label: "Current Transfer Ratio"
+    unit: "%"
+    default: 100
+    min: 50
+    max: 600
+    type: float
+    editable: true
+  forward_voltage:
+    label: "Forward Voltage (LED)"
+    unit: V
+    default: 1.2
+    type: float
+    editable: false
+  isolation_voltage:
+    label: "Isolation Voltage"
+    unit: V
+    default: 5000
+    type: float
+    editable: false
+  max_collector_current:
+    label: "Max Collector Current"
+    unit: mA
+    default: 50
+    type: float
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+# Format: id | direction | type | voltage_max | current_max | notes
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  A|input|analog|"6V"|"50mA"|"Anode (LED Input)"
+  K|output|analog|null|null|"Cathode (LED Input)"
+  C|passive|analog|"80V"|"50mA"|"Collector (Phototransistor)"
+  E|passive|analog|null|null|"Emitter (Phototransistor)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: threshold
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - idle
+    - conducting
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "80V"
+  max_current: "50mA"
+  max_power:
+    value: 0.2
+    unit: W
+  max_temp: 110
+  min_temp: -30
+warnings[2]:
+  - "Do not exceed isolation voltage limits between input and output sides"
+  - "Reverse voltage on LED side (K-A) must not exceed 6V"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: ["resistor"]
+  typical_context: ["logic-isolation", "signal-coupling", "high-voltage-protection"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 40
+  height: 40
+  ports_layout: custom
+  port_A: {x: 0, y: 10}
+  port_K: {x: 0, y: 30}
+  port_C: {x: 40, y: 10}
+  port_E: {x: 40, y: 30}
+  label_position: top
+  value_display: "{ctr}% CTR"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: optocoupler
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Semiconductors"
+  tags[3]:
+    - optocoupler
+    - isolator
+    - semiconductor

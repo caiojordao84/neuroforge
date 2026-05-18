@@ -1,0 +1,119 @@
+# METADATA:
+project_name: pullup-resistor-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: pullup-resistor
+name: "Pull-Up Resistor"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60062"
+url: null
+image: pullup-resistor.svg
+symbol: pullup-resistor-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  resistance:
+    label: "Resistance"
+    unit: Ω
+    default: 10000
+    options: [1000, 2200, 4700, 10000, 47000, 100000]
+    type: enum
+    editable: true
+  vcc:
+    label: "Pull-Up Voltage (Vcc)"
+    unit: V
+    default: 3.3
+    options: [1.8, 2.5, 3.3, 5]
+    type: enum
+    editable: true
+  power_rating:
+    label: "Power Rating"
+    unit: W
+    default: 0.125
+    options: [0.063, 0.125, 0.25, 0.5]
+    type: enum
+    editable: true
+  tolerance:
+    label: "Tolerance"
+    unit: "%"
+    default: 1
+    options: [0.1, 0.5, 1, 5]
+    type: enum
+    editable: true
+  package:
+    label: "Package"
+    default: "SMD-0402"
+    options: ["SMD-0402", "SMD-0603", "SMD-0805", "SMD-1206", "THT"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"5V"|"200mA"|"supply rail connection (high side)"
+  SIG|bidirectional|digital|"5V"|"200mA"|"signal line pulled high"
+  GND|input|ground|null|null|"ground reference (unused for pure pull-up)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ohms-law
+  equation: "V_SIG = vcc - I_sink * resistance; I_static = vcc / resistance"
+  bidirectional: true
+  dynamic: false
+  thermal_model: false
+  noise_model: false
+  states[1]:
+    - nominal
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "5V"
+  max_current: "200mA"
+  max_power:
+    value: "{power_rating}"
+    unit: W
+  max_temp: 125
+  min_temp: -55
+warnings[3]:
+  - "Low resistance values increase static current draw — use 10k or higher for low-power designs"
+  - "Ensure pull-up voltage matches the logic level of the driven signal line"
+  - "On open-drain / open-collector buses (I2C, 1-Wire) pull-up value affects rise time and max speed"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["i2c-bus", "gpio-input", "open-drain", "reset-line", "button-debounce"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 50
+  height: 60
+  ports_layout: custom
+  port_VCC: {x: 25, y: 0}
+  port_SIG: {x: 50, y: 30}
+  port_GND: {x: 25, y: 60}
+  label_position: right
+  value_display: "{resistance}Ω to {vcc}V"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: pullup-resistor
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Passives"
+  tags[6]:
+    - pull-up
+    - resistor
+    - passive
+    - digital
+    - logic
+    - bus

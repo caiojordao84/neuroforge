@@ -1,0 +1,177 @@
+# METADATA:
+project_name: display-16seg-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: display-16seg
+name: "16-Segment Display"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60810"
+url: null
+image: display-16seg.svg
+symbol: display-16seg-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  digits:
+    label: "Number of Digits"
+    default: 1
+    options: [1, 2, 4]
+    type: enum
+    editable: true
+  color:
+    label: "LED Color"
+    default: "red"
+    options: ["red", "green", "blue", "amber", "white"]
+    type: enum
+    editable: true
+  display_type:
+    label: "Display Type"
+    default: "common-cathode"
+    options: ["common-cathode", "common-anode"]
+    type: enum
+    editable: true
+  vf_segment:
+    label: "Segment Forward Voltage"
+    unit: V
+    default: 2.0
+    min: 1.5
+    max: 4.5
+    type: float
+    editable: false
+  if_rated:
+    label: "Rated Segment Current"
+    unit: A
+    default: 0.02
+    options: [0.005, 0.01, 0.02, 0.03, 0.05]
+    type: enum
+    editable: true
+  if_max:
+    label: "Absolute Max Segment Current"
+    unit: A
+    default: 0.03
+    min: 0.005
+    max: 0.1
+    type: float
+    editable: false
+  brightness:
+    label: "Brightness"
+    unit: "%"
+    default: 50
+    min: 0
+    max: 100
+    type: float
+    editable: true
+  package:
+    label: "Package"
+    default: "18-pin"
+    options: ["18-pin", "20-pin", "24-pin", "28-pin", "30-pin"]
+    type: enum
+    editable: true
+  decimal_point:
+    label: "Decimal Point"
+    default: true
+    type: bool
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[18|]{id|direction|type|voltage_max|current_max|notes}:
+  A|input|power|"5V"|"100mA"|"segment a"
+  B|input|power|"5V"|"100mA"|"segment b"
+  C|input|power|"5V"|"100mA"|"segment c"
+  D|input|power|"5V"|"100mA"|"segment d"
+  E|input|power|"5V"|"100mA"|"segment e"
+  F|input|power|"5V"|"100mA"|"segment f"
+  G|input|power|"5V"|"100mA"|"segment g"
+  H|input|power|"5V"|"100mA"|"segment h"
+  I|input|power|"5V"|"100mA"|"segment i"
+  J|input|power|"5V"|"100mA"|"segment j"
+  K|input|power|"5V"|"100mA"|"segment k"
+  L|input|power|"5V"|"100mA"|"segment l"
+  M|input|power|"5V"|"100mA"|"segment m"
+  N|input|power|"5V"|"100mA"|"segment n"
+  O|input|power|"5V"|"100mA"|"segment o"
+  DP|input|power|"5V"|"100mA"|"decimal point"
+  CA|input|power|"5V"|"100mA"|"common anode / cathode 1"
+  CB|input|power|"5V"|"100mA"|"common anode / cathode 2"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: basic-analog
+  equation: "segments = {a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,dp}; brightness = f(if_rated)"
+  bidirectional: false
+  dynamic: false
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - off
+    - active
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "5V"
+  max_current: "100mA"
+  max_power: null
+  max_temp: 85
+  min_temp: -40
+warnings[4]:
+  - "Each segment requires its own current-limiting resistor or constant-current driver"
+  - "Common-anode and common-cathode variants require inverted drive logic"
+  - "Do not drive all segments simultaneously without checking supply current budget"
+  - "Use multiplexing timing within persistence-of-vision limits to avoid flicker"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["alphanumeric-display", "clock-display", "panel-meter", "counter", "status-display"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 90
+  height: 70
+  ports_layout: custom
+  port_A: {x: 20, y: 0}
+  port_B: {x: 35, y: 0}
+  port_C: {x: 50, y: 0}
+  port_D: {x: 65, y: 0}
+  port_E: {x: 65, y: 70}
+  port_F: {x: 50, y: 70}
+  port_G: {x: 35, y: 70}
+  port_H: {x: 20, y: 70}
+  port_I: {x: 0, y: 20}
+  port_J: {x: 0, y: 35}
+  port_K: {x: 0, y: 50}
+  port_L: {x: 90, y: 20}
+  port_M: {x: 90, y: 35}
+  port_N: {x: 90, y: 50}
+  port_O: {x: 45, y: 35}
+  port_DP: {x: 90, y: 60}
+  port_CA: {x: 10, y: 35}
+  port_CB: {x: 80, y: 35}
+  label_position: top
+  value_display: "16-seg {digits} digit(s) / {display_type} / {color}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: display-16seg
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Passives"
+  tags[7]:
+    - sixteen-segment
+    - display
+    - led
+    - alphanumeric
+    - passive
+    - indicator
+    - optical

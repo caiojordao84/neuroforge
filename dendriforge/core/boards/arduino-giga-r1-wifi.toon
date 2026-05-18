@@ -1,0 +1,156 @@
+# METADATA:
+project_name: arduino-giga-r1-wifi-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: arduino-giga-r1-wifi
+name: "Arduino GIGA R1 WiFi"
+manufacturer: Arduino
+mcu: "STM32H747XI (Cortex-M7 480MHz + Cortex-M4 240MHz)"
+category: maker
+image: arduino-giga-r1-wifi.svg
+url: "https://store.arduino.cc/products/giga-r1wifi"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 2097152
+  flash_available: 2031616
+  sram: 1048576
+  eeprom: 0
+  clock: 480000000
+  voltage: "3.3V"
+dims:
+  w: 53.0
+  h: 101.0
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[9|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+  IOREF|output|"3.3V"|null
+  AREF|input|null|null
+  VRTC|input|null|null
+  OFF|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[70|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|true|"D0 / RX0"|uart-rx
+  1|digital|false|true|"D1 / TX0"|uart-tx
+  2|digital|true|true|"D2 PWM"|null
+  3|digital|true|true|"D3 PWM"|null
+  4|digital|true|true|"D4 PWM"|null
+  5|digital|true|true|"D5 PWM"|null
+  6|digital|true|true|"D6 PWM"|null
+  7|digital|true|true|"D7 PWM"|null
+  8|digital|true|true|"D8 PWM / SCL2"|i2c-scl
+  9|digital|true|true|"D9 PWM / SDA2"|i2c-sda
+  10|digital|true|true|"D10 PWM / CS"|spi-ss
+  11|digital|true|true|"D11 PWM / COPI"|spi-mosi
+  12|digital|true|true|"D12 PWM / CIPO"|spi-miso
+  13|digital|true|true|"D13 PWM / SCK / LED"|"spi-sck;status-led"
+  14|digital|false|true|"D14 / TX3"|uart-tx
+  15|digital|false|true|"D15 / RX3"|uart-rx
+  16|digital|false|true|"D16 / TX2"|uart-tx
+  17|digital|false|true|"D17 / RX2"|uart-rx
+  18|digital|false|true|"D18 / TX1"|uart-tx
+  19|digital|false|true|"D19 / RX1"|uart-rx
+  20|digital|false|true|"D20 / SDA"|i2c-sda
+  21|digital|false|true|"D21 / SCL"|i2c-scl
+  22|digital|false|true|D22|null
+  23|digital|false|true|D23|null
+  24|digital|false|true|D24|null
+  25|digital|false|true|D25|null
+  26|digital|false|true|D26|null
+  27|digital|false|true|D27|null
+  28|digital|false|true|D28|null
+  29|digital|false|true|D29|null
+  30|digital|false|true|D30|null
+  31|digital|false|true|D31|null
+  32|digital|false|true|D32|null
+  33|digital|false|true|D33|null
+  34|digital|false|true|D34|null
+  35|digital|false|true|D35|null
+  36|digital|false|true|D36|null
+  37|digital|false|true|D37|null
+  38|digital|false|true|D38|null
+  39|digital|false|true|D39|null
+  40|digital|false|true|D40|null
+  41|digital|false|true|D41|null
+  42|digital|false|true|D42|null
+  43|digital|false|true|D43|null
+  44|digital|false|true|D44|null
+  45|digital|false|true|D45|null
+  46|digital|false|true|D46|null
+  47|digital|false|true|D47|null
+  48|digital|false|true|D48|null
+  49|digital|false|true|D49|null
+  50|digital|false|true|D50|null
+  51|digital|false|true|D51|null
+  52|digital|false|true|D52|null
+  53|digital|false|true|D53|null
+  54|analog|false|false|A0|"adc:t"
+  55|analog|false|false|A1|"adc:t"
+  56|analog|false|false|A2|"adc:t"
+  57|analog|false|false|A3|"adc:t"
+  58|analog|false|false|A4|"adc:t"
+  59|analog|false|false|A5|"adc:t"
+  60|analog|false|false|A6|"adc:t"
+  61|analog|false|false|"A7 / MIC"|"adc:t"
+  62|analog|false|false|A8|"adc:t"
+  63|analog|false|false|A9|"adc:t"
+  64|analog|false|false|A10|"adc:t"
+  65|analog|false|false|A11|"adc:t"
+  66|analog|false|false|"DAC0 / AUDIO L"|"adc:t;dac"
+  67|analog|false|false|"DAC1 / AUDIO R"|"adc:t;dac"
+  68|digital|false|true|CANRX|can-rx
+  69|digital|false|true|CANTX|can-tx
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[6|]{peripheral|param|value}:
+  serial|"uarts:4"|"pins:0,1"
+  i2c|"channels:3"|"sda:20;scl:21"
+  spi|"channels:2"|"miso:12;mosi:11;sck:13;ss:10"
+  dac|"channels:2"|"pins:66;67"
+  adc|"resolution:16bit"|"pins:54;55;56;57;58;59;60;61;62;63;64;65"
+  pwm|"channels:12"|"pins:2;3;4;5;6;7;8;9;10;11;12;13"
+usb:
+  type: USB-C
+  chip: native
+  vid: "0x2341"
+  pid: "0x0266"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "8mA"
+  total_current_limit: "800mA"
+  warnings[5]:
+    - "Logic level is 3.3V — not 5V tolerant; Mega shields must be verified"
+    - "CAN bus requires an external transceiver"
+    - "D54-D75 on camera/display connectors; not on main headers"
+    - "USB-A host port activated via PA_15 signal"
+    - "Dual-core: M7 runs Arduino/MicroPython; M4 runs secondary sketch via RPC"
+compatibility:
+  arduinoCore: "4.0.2"
+  pio: ststm32
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: stm32h7-dfu
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: stm32h7-family
+  boardProfileId: arduino-giga-r1-wifi
+  defaultLanguageSkills[3]:
+    - arduino-cpp-stm32
+    - micropython-stm32
+    - rust-embassy-stm32

@@ -1,0 +1,131 @@
+# METADATA:
+project_name: hyd-valve-2-2-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: hyd-valve-2-2
+name: "2/2 Directional Control Valve (Válvula hidráulica 2/2 Vias)"
+family: hydraulics
+subfamily: directional-valves
+category: valve
+standard: "ISO 1219-1"
+url: null
+image: hyd-valve-2-2.svg
+symbol: hyd-valve-2-2-symbol.svg
+symbol_standard: ISO
+
+## 2. PARAMETERS:
+params:
+  normal_state:
+    label: "Normal State (Estado de Repouso)"
+    default: "normally-closed"
+    options: ["normally-closed", "normally-open"]
+    type: enum
+    editable: true
+  actuation_type:
+    label: "Actuation Type (Acionamento)"
+    default: "solenoid"
+    options: ["solenoid", "manual-lever", "hydraulic-pilot"]
+    type: enum
+    editable: true
+  return_type:
+    label: "Return Mechanism (Retorno)"
+    default: "spring"
+    options: ["spring", "solenoid", "hydraulic-pilot"]
+    type: enum
+    editable: true
+  operating_pressure:
+    label: "Max Operating Pressure"
+    unit: bar
+    default: 250
+    min: 10
+    max: 350
+    type: float
+    editable: false
+  flow_rate:
+    label: "Nominal Flow Rate"
+    unit: "l/min"
+    default: 40
+    min: 5
+    max: 150
+    type: float
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  SOL_A_VCC|input|power|"24V"|"1.5A"|"solenoid A power (actuate state)"
+  SOL_A_GND|input|ground|null|null|"solenoid A ground"
+  SOL_B_VCC|input|power|"24V"|"1.5A"|"solenoid B power (return) - leave unconnected if return_type is spring"
+  SOL_B_GND|input|ground|null|null|"solenoid B ground"
+
+## 4b. FLUID PORTS (HYDRAULIC):
+hydraulic_ports[2|]{id|direction|type|pressure_max|flow_max|notes}:
+  P|input|hydraulic|"250bar"|"{flow_rate}"|"pressure supply port"
+  A|output|hydraulic|"250bar"|"{flow_rate}"|"work port A"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: hydraulic-valve
+  motion: none
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  leakage_model: true
+  noise_model: false
+  states[2]:
+    - state-0  # Default rest state
+    - state-1  # Actuated state
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_pressure: 250
+  min_pressure: 0
+  max_voltage: "24V"
+  max_current: "1.5A"
+  max_power: null
+  max_temp: 80
+  min_temp: -20
+  ip_rating: "IP65"
+warnings[3]:
+  - "If return_type is 'spring', SOL_B electrical ports are non-functional and should be ignored."
+  - "Simulation model dynamically maps internal port connections based on 'normal_state' parameter."
+  - "A 2/2 valve cannot exhaust trapped fluid. Ensure safe pressure relief mechanisms exist in the circuit."
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["hyd-cylinder-*", "hyd-power-unit", "hyd-flow-control-*", "hyd-check-valve", "relay-*", "plc-*", "mcu-*", "ind-do-bank", "dc-source", "ac-source"]
+  forbidden_with: ["pneu-*"]
+  requires: ["hyd-power-unit"]
+  typical_context: ["pressure-isolation", "flow-shutoff", "load-holding"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 80
+  height: 60
+  ports_layout: custom
+  port_P: {x: 40, y: 0}
+  port_A: {x: 40, y: 60}
+  port_SOL_A_VCC: {x: 0, y: 20}
+  port_SOL_A_GND: {x: 0, y: 40}
+  port_SOL_B_VCC: {x: 80, y: 20}
+  port_SOL_B_GND: {x: 80, y: 40}
+  label_position: bottom
+  value_display: "2/2 {actuation_type} / {return_type}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: hydraulics-family
+  componentProfileId: hyd-valve-2-2
+  simulationEngine: hydraulic-motion
+  paletteGroup: "Hydraulics > Directional Valves"
+  tags[6]:
+    - valve
+    - 2/2
+    - directional
+    - hydraulic
+    - solenoid
+    - isolation

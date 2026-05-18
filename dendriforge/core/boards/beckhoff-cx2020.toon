@@ -1,38 +1,71 @@
+# METADATA:
+project_name: beckhoff-cx2020-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: beckhoff-cx2020
-name: "Beckhoff CX2020"
-manufacturer: "Generic"
-mcu: "Beckhoff"
-category: "industrial"
-image: "/boards/beckhoff-cx2020.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 0
-sram: 4294967296
-clock_hz: 2000000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "plc-family"
-  boardProfileId: "beckhoff-cx2020"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+name: "Beckhoff CX2020 Embedded PC"
+manufacturer: "Beckhoff Automation"
+cpu: "Intel Celeron 827E 1.4 GHz"
+category: plc
+form_factor: softplc
+standard: "IEC 61131-3"
+image: beckhoff-cx2020.svg
+url: "https://www.beckhoff.com/en-en/products/ipc/embedded-pcs/cx2000-intel-celeron-core-i3-i5-i7/cx2020.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  memory_work: 2097152KB
+  memory_load: 4194304KB
+  memory_retain: 128KB
+  supply_voltage: "24V"
+  power_consumption: "18W"
+dims:
+  w: 144.0
+  h: 100.0
+  t: 91.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerPins[3|]{name|direction|voltage|type}:
+  24V_IN|input|"24V"|null
+  0V|null|null|ground
+  PE|null|null|ground
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[0|]{slot|rack|type|channels|addr_start|addr_end|current}:
+
+## 5. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  ethernet|"port:851"|"proto:EtherCAT-Master;ADS"
+  modbus-tcp|"port:502"|"role:client-server"
+  profinet|"port:34964"|"proto:PROFINET-RT"
+  opc-ua|"port:4840"|null
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "2000mA"
+  total_current_limit: "2000mA"
+  warnings[2]:
+    - "Requires CX2100 power supply module to operate E-bus/K-bus"
+    - "Ensure cooling clearances above and below the Embedded PC"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "TwinCAT 3 XAE"
+  runtime: "TwinCAT 3 XAR"
+  languages: "LD;FBD;ST;SFC;IL"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: beckhoff-cx2020
+  defaultLanguageSkills[3]:
+    - st-twincat3
+    - ld-twincat3
+    - fbd-twincat3

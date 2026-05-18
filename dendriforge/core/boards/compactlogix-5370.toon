@@ -1,38 +1,138 @@
+# METADATA:
+project_name: compactlogix-5370-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+# 1. DEVICE IDENTIFICATION:
 id: compactlogix-5370
-name: "CompactLogix 5370"
-manufacturer: "Generic"
-mcu: "Allen-Bradley"
-category: "industrial"
-image: "/boards/compactlogix-5370.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 0
-sram: 0
-clock_hz: 0
-voltage_mv: 3300
+name: CompactLogix 5370
+manufacturer: Rockwell Automation / Allen-Bradley
+mcu: Intel Atom (x86 embedded)
+category: plc
+image: compactlogix-5370.svg
+url: https://literature.rockwellautomation.com/idc/groups/literature/documents/um/1769-um021_-en-p.pdf
+
+# 2. VARIANTS:
+# Format: variant_id | sku | family | user_memory | io_expansion | eip_nodes | motion_axes | safety | coated
+variants[14]:
+  - l16er|1769-L16ER-BB1B|L1|512KB|4|16|null|f|f
+  - l18er|1769-L18ER-BB1B|L1|1MB|4|16|null|f|f
+  - l18erm|1769-L18ERM-BB1B|L1|1MB|4|16|2|f|f
+  - l18erm-k|1769-L18ERM-BB1BK|L1|1MB|4|16|2|f|t
+  - l19er|1769-L19ER-BB1B|L1|1MB|4|16|null|f|f
+  - l24er|1769-L24ER-QB1B|L2|750KB|4|8|null|f|f
+  - l24er-qbfc1b|1769-L24ER-QBFC1B|L2|750KB|4|8|null|f|f
+  - l27erm|1769-L27ERM-QBFC1B|L2|1MB|4|16|4|f|f
+  - l30er|1769-L30ER|L3|1MB|16|32|null|f|f
+  - l30erm|1769-L30ERM|L3|1MB|16|32|null|f|f
+  - l33er|1769-L33ER|L3|2MB|16|32|null|f|f
+  - l33erm|1769-L33ERM|L3|2MB|16|32|8|f|f
+  - l37erm|1769-L37ERM|L3|4MB|30|64|16|f|f
+  - l37erms|1769-L37ERMS|L3|4MB+1.5MB-safety|30|64|16|t|f
+  - l38erm|1769-L38ERM|L3|5MB|30|80|16|f|f
+  - l38erms|1769-L38ERMS|L3|5MB+1.5MB-safety|30|80|16|t|f
+
+# 3. TECH SPECS (COMMON TO ALL VARIANTS):
+specs:
+  logic_engine: Logix5000 | backplane: 1769-CompactBus | clock: configurable | voltage: 24 | voltage_unit: VDC
+  sd_card_default: 1GB | sd_card_max: 2GB | battery: f | energy_storage: capacitor-based
+  tasks_continuous: 1 | tasks_periodic_event: 32 | programs_per_task: 100
+dims_l1:
+  w: 40.0 | h: 115.0 | t: 91.0
+dims_l2:
+  w: 160.0 | h: 115.0 | t: 91.0
+dims_l3:
+  w: 80.0 | h: 115.0 | t: 91.0
+
+# 4. ELECTRICAL PROFILE (POWER):
+# Format: name | direction | voltage | type
+powerPins[4]:
+  - PWR+|input|24|main-power
+  - PWR-|input|null|ground
+  - PE|null|null|protective-earth
+  - BATT|null|null|no-battery-capacitor-based
+
+# 5. I/O MAP (L2 EMBEDDED — 1769-L24ER-QBFC1B as reference):
+# Format: pin | type | direction | range | label | roles
+# Note: L1/L3 without suffix have no embedded I/O — I/O via 1769 expansion modules only
+embedded_inputs[20]:
+  - DI0|digital|input|0-24VDC|DC Input 0|sink-source
+  - DI1|digital|input|0-24VDC|DC Input 1|sink-source
+  - DI2|digital|input|0-24VDC|DC Input 2|sink-source
+  - DI3|digital|input|0-24VDC|DC Input 3|sink-source
+  - DI4|digital|input|0-24VDC|DC Input 4|sink-source
+  - DI5|digital|input|0-24VDC|DC Input 5|sink-source
+  - DI6|digital|input|0-24VDC|DC Input 6|sink-source
+  - DI7|digital|input|0-24VDC|DC Input 7|sink-source
+  - DI8|digital|input|0-24VDC|DC Input 8|sink-source
+  - DI9|digital|input|0-24VDC|DC Input 9|sink-source
+  - DI10|digital|input|0-24VDC|DC Input 10|sink-source
+  - DI11|digital|input|0-24VDC|DC Input 11|sink-source
+  - DI12|digital|input|0-24VDC|DC Input 12|sink-source
+  - DI13|digital|input|0-24VDC|DC Input 13|sink-source
+  - DI14|digital|input|0-24VDC|DC Input 14|sink-source
+  - DI15|digital|input|0-24VDC|DC Input 15|sink-source
+  - AI0|analog|input|0-10V/0-20mA|Analog Input 0|adc:t,universal
+  - AI1|analog|input|0-10V/0-20mA|Analog Input 1|adc:t,universal
+  - AI2|analog|input|0-10V/0-20mA|Analog Input 2|adc:t,universal
+  - AI3|analog|input|0-10V/0-20mA|Analog Input 3|adc:t,universal
+embedded_outputs[18]:
+  - DO0|digital|output|24VDC|DC Output 0|source
+  - DO1|digital|output|24VDC|DC Output 1|source
+  - DO2|digital|output|24VDC|DC Output 2|source
+  - DO3|digital|output|24VDC|DC Output 3|source
+  - DO4|digital|output|24VDC|DC Output 4|source
+  - DO5|digital|output|24VDC|DC Output 5|source
+  - DO6|digital|output|24VDC|DC Output 6|source
+  - DO7|digital|output|24VDC|DC Output 7|source
+  - DO8|digital|output|24VDC|DC Output 8|source
+  - DO9|digital|output|24VDC|DC Output 9|source
+  - DO10|digital|output|24VDC|DC Output 10|source
+  - DO11|digital|output|24VDC|DC Output 11|source
+  - DO12|digital|output|24VDC|DC Output 12|source
+  - DO13|digital|output|24VDC|DC Output 13|source
+  - DO14|digital|output|24VDC|DC Output 14|source
+  - DO15|digital|output|24VDC|DC Output 15|source
+  - AO0|analog|output|0-10V/0-20mA|Analog Output 0|dac:t
+  - AO1|analog|output|0-10V/0-20mA|Analog Output 1|dac:t
+high_speed_counters[4]:
+  - HSC0|counter|input|100kHz|HSC 0|encoder,pulse
+  - HSC1|counter|input|100kHz|HSC 1|encoder,pulse
+  - HSC2|counter|input|100kHz|HSC 2|encoder,pulse
+  - HSC3|counter|input|100kHz|HSC 3|encoder,pulse
+
+# 6. PERIPHERALS & CONNECTIVITY:
+# Format: peripheral | param | value
+peripherals[5]:
+  - ethernet|ports:2|standard:10/100BaseT|topology:linear,ring,star|protocol:EtherNet/IP,Modbus-TCP,CIP
+  - dlr|Device-Level-Ring:t|topology:ring-redundancy|note:all-variants
+  - usb|type:USB-A|mode:programming+diagnostics|note:local-only
+  - sd-card|slot:t|default:1GB|max:2GB|function:program-save-restore,data-log
+  - motion-cip|protocol:CIP-Motion|axes:variant-dependent|kinematics:t|note:ERM-variants-only
+
+# 7. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  operating_temp_min: 0C | operating_temp_max: 60C | storage_temp_min: -40C | storage_temp_max: 85C
+  protection: IP20 | din_rail: t | panel_mount: t | humidity: 5-95pct-non-condensing
+  warnings[6]:
+    - No embedded I/O on L1/L3 base models — requires 1769 expansion modules
+    - Battery-free design uses capacitor — verify energy hold-up time for application
+    - SD card max 2GB — larger cards not supported
+    - USB port is local programming only — not for runtime data
+    - Safety variants (ERMS/ERMSK) require Compact GuardLogix firmware
+    - Conformally coated variants (K suffix) mandatory for harsh environments
+compatibility:
+  studio5000: v21-or-later | rslogix5000: v21-or-later | firmware: Logix5000
+  plc_languages: ladder,fbd,st,sfc,il | iec_standard: IEC-61131-3
+  protocols: EtherNet/IP,Modbus-TCP,CIP,DeviceNet,ControlNet
+  motion: CIP-Motion,Kinematics | safety: IEC-61508-SIL2,ISO-13849-PLd
+
+# 8. AGENT SKILLS:
 neuroforge:
-  boardFamilySkillId: "plc-family"
-  boardProfileId: "compactlogix-5370"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+  boardFamilySkillId: compactlogix-family
+  boardProfileId: compactlogix-5370
+  defaultLanguageSkills[2]: structured-text-iec61131, ladder-diagram-iec61131
+  plcIdeSupport: t
+  variantIds[16]: l16er,l18er,l18erm,l18erm-k,l19er,l24er,l24er-qbfc1b,l27erm,l30er,l30erm,l33er,l33erm,l37erm,l37erms,l38erm,l38erms

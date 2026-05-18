@@ -1,0 +1,130 @@
+# METADATA:
+project_name: cmd-selector-2pos-nonc-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: cmd-selector-2pos-nonc
+name: "Selector Switch 2-Position NO/NC"
+family: command-elements
+subfamily: selectors
+category: command
+standard: "IEC 60947-5-1"
+url: null
+image: cmd-selector-2pos-nonc.svg
+symbol: cmd-selector-2pos-nonc-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  contact_config:
+    label: "Contact Configuration"
+    default: "1NO+1NC"
+    options: ["1NO", "1NC", "1NO+1NC"]
+    type: enum
+    editable: true
+  positions:
+    label: "Number of Positions"
+    default: 2
+    options: [2]
+    type: enum
+    editable: false
+  voltage_rating:
+    label: "Voltage Rating"
+    unit: V
+    default: 240
+    options: [24, 110, 240, 400]
+    type: enum
+    editable: false
+  current_rating:
+    label: "Current Rating"
+    unit: A
+    default: 10
+    type: float
+    editable: false
+  is_maintained:
+    label: "Maintained Action"
+    default: true
+    type: bool
+    editable: false
+  color:
+    label: "Knob Color"
+    default: "black"
+    options: ["black", "grey", "red"]
+    type: enum
+    editable: true
+  illuminated:
+    label: "Illuminated"
+    default: false
+    type: bool
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  NO_IN|input|digital|"400V"|"10A"|"NO contact input terminal"
+  NO_OUT|output|digital|"400V"|"10A"|"NO contact output terminal"
+  NC_IN|input|digital|"400V"|"10A"|"NC contact input terminal"
+  NC_OUT|output|digital|"400V"|"10A"|"NC contact output terminal"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: contact-block
+  trigger: user-interaction
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - position-0
+    - position-1
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "400V"
+  max_current: "10A"
+  max_power: null
+  max_temp: 55
+  min_temp: -25
+  ip_rating: "IP65"
+  safety_category: null
+warnings[3]:
+  - "Do not exceed rated voltage or current on contact terminals"
+  - "This is a maintained selector — position holds after actuation"
+  - "Verify panel cutout dimensions before mounting (IEC 60947-5-1)"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["ind-contact-no", "ind-contact-nc", "ind-coil", "ind-di-bank", "plc-*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["manual-mode-selection", "local-remote-control", "on-off-control"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 50
+  height: 50
+  ports_layout: custom
+  port_NO_IN: {x: 0, y: 15}
+  port_NO_OUT: {x: 50, y: 15}
+  port_NC_IN: {x: 0, y: 35}
+  port_NC_OUT: {x: 50, y: 35}
+  label_position: bottom
+  value_display: "{contact_config} / {positions}pos / {color}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: command-elements-family
+  componentProfileId: cmd-selector-2pos-nonc
+  simulationEngine: digital-io
+  paletteGroup: "Command Elements > Selectors"
+  tags[6]:
+    - selector
+    - command
+    - selectors
+    - two-position
+    - no-nc
+    - maintained

@@ -1,38 +1,75 @@
+# METADATA:
+project_name: berghof-b-ipc-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: berghof-b-ipc
-name: "Berghof B-IPC"
-manufacturer: "Generic"
-mcu: "Berghof"
-category: "industrial"
-image: "/boards/berghof-b-ipc.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 0
-sram: 4294967296
-clock_hz: 1000000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "plc-family"
-  boardProfileId: "berghof-b-ipc"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+name: "Berghof B-Ipc High-Performance Controller"
+manufacturer: "Berghof Automation"
+cpu: "ARM Cortex-A9 Dual Core"
+category: plc
+form_factor: modular
+standard: "IEC 61131-3"
+image: berghof-b-ipc.svg
+url: "https://www.berghof-automation.com/en/products/b-ipc-prime"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  memory_work: 524288KB
+  memory_load: 2097152KB
+  memory_retain: 512KB
+  supply_voltage: 24V
+  power_consumption: 15W
+dims:
+  w: 45.0
+  h: 100.0
+  t: 115.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerPins[3|]{name|direction|voltage|type}:
+  L+|input|24V|null
+  M|null|null|ground
+  PE|null|null|ground
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+# Nota: O B-Ipc é modular via EtherCAT/CANopen; slots físicos dependem da expansão
+ioModules[2|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|mixed|8|"%IX0.0"|"%IX0.7"|null
+  1|0|mixed|8|"%QX0.0"|"%QX0.7"|null
+
+## 5. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  ethernet|"port:1;port:2"|"proto:EtherCAT;Modbus-TCP;EtherNet/IP"
+  can|"channels:1"|"proto:CANopen;J1939"
+  serial|"proto:RS232;RS485"|"baud:115200"
+  usb|"type:USB-A"|"version:2.0"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "500mA"
+  total_current_limit: "2000mA"
+  warnings[3]:
+    - "Requires EtherCAT bus coupler for remote I/O expansion"
+    - "Fanless design: Ensure vertical mounting for convection"
+    - "Retain memory requires proper shutdown handling or UPS"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "CODESYS V3.5"
+  runtime: "Berghof CODESYS Runtime"
+  languages: "LD;FBD;ST;SFC;CFC"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: berghof-b-ipc
+  defaultLanguageSkills[3]:
+    - st-codesys-v3
+    - ld-codesys-v3
+    - fbd-codesys-v3

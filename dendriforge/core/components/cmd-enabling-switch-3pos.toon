@@ -1,0 +1,130 @@
+# METADATA:
+project_name: cmd-enabling-switch-3pos-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: cmd-enabling-switch-3pos
+name: "Enabling Switch 3 Positions"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60204-1"
+url: null
+image: cmd-enabling-switch-3pos.svg
+symbol: cmd-enabling-switch-3pos-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  contact_layout:
+    label: "Contact Layout"
+    default: "1NC+1NO"
+    options: ["1NC", "1NC+1NO", "2NC"]
+    type: enum
+    editable: true
+  position_count:
+    label: "Position Count"
+    default: 3
+    options: [3]
+    type: enum
+    editable: false
+  center_position:
+    label: "Center Position"
+    default: "enabled"
+    options: ["enabled", "spring-loaded"]
+    type: enum
+    editable: true
+  ip_rating:
+    label: "Ingress Protection"
+    default: "IP65"
+    options: ["IP54", "IP65", "IP67"]
+    type: enum
+    editable: true
+  safety_rating:
+    label: "Safety Category"
+    default: "PL d"
+    options: ["PL d", "PL e", "SIL2", "SIL3"]
+    type: enum
+    editable: true
+  mechanical_life:
+    label: "Mechanical Life"
+    unit: cycles
+    default: 1000000
+    min: 100000
+    max: 10000000
+    type: float
+    editable: false
+  package:
+    label: "Package"
+    default: "pendant"
+    options: ["pendant", "handheld", "controller"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  COM|input|ground|null|null|"common terminal"
+  NC|output|digital|"250V"|"5A"|"safety contact"
+  NO|output|digital|"250V"|"5A"|"enable contact"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - released
+    - enabled
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "250V"
+  max_current: "5A"
+  max_power: null
+  max_temp: 70
+  min_temp: -25
+warnings[4]:
+  - "The center position must be used for enabling; release should disable motion"
+  - "This switch does not replace a safety relay or emergency stop device"
+  - "Use monitored safety channels and validate the stop function separately"
+  - "Do not bypass the switch or defeat the spring-return mechanism"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["safety-relay", "plc-safety-input", "dc-source"]
+  forbidden_with: ["ac-source"]
+  requires: ["safety-relay"]
+  typical_context: ["teach-pendant", "jog-control", "machine-safety"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 70
+  height: 40
+  ports_layout: custom
+  port_COM: {x: 0, y: 20}
+  port_NC: {x: 70, y: 15}
+  port_NO: {x: 70, y: 25}
+  label_position: top
+  value_display: "Enable / {position_count} pos / {center_position}"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: cmd-enabling-switch-3pos
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Switches"
+  tags[7]:
+    - enabling-switch
+    - safety
+    - switch
+    - operator
+    - control
+    - teach-pendant
+    - iec-60204-1

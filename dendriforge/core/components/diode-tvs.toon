@@ -1,0 +1,150 @@
+# METADATA:
+project_name: diode-tvs-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: diode-tvs
+name: "TVS Diode"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 61643-321"
+url: null
+image: diode-tvs.svg
+symbol: diode-tvs-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  vrwm:
+    label: "Reverse Standoff Voltage (Vrwm)"
+    unit: V
+    default: 5
+    options: [3.3, 5, 6, 12, 15, 24, 33, 48, 58, 64, 75, 100, 150, 200, 400]
+    type: enum
+    editable: true
+  vbr:
+    label: "Breakdown Voltage (Vbr)"
+    unit: V
+    default: 6.4
+    min: 3.5
+    max: 600
+    type: float
+    editable: false
+  vc:
+    label: "Clamping Voltage (Vc)"
+    unit: V
+    default: 9.2
+    min: 4
+    max: 1000
+    type: float
+    editable: false
+  ipP:
+    label: "Peak Pulse Current (Ipp)"
+    unit: A
+    default: 10
+    options: [1, 2, 5, 10, 20, 30, 50, 100, 150]
+    type: enum
+    editable: true
+  power_pulse:
+    label: "Peak Pulse Power"
+    unit: W
+    default: 400
+    options: [150, 200, 400, 600, 800, 1000, 1500, 3000]
+    type: enum
+    editable: true
+  leakage_current:
+    label: "Reverse Leakage Current"
+    unit: A
+    default: 0.000001
+    min: 0
+    max: 0.01
+    type: float
+    editable: false
+  capacitance:
+    label: "Junction Capacitance"
+    unit: V
+    default: 50
+    min: 1
+    max: 5000
+    type: float
+    editable: false
+  polarity:
+    label: "Polarity"
+    default: "unidirectional"
+    options: ["unidirectional", "bidirectional"]
+    type: enum
+    editable: true
+  package:
+    label: "Package"
+    default: "SMAJ"
+    options: ["SOD-123", "SOD-323", "SMA", "SMB", "SMC", "SMF", "SMD-DFN", "SMAJ", "SMBJ", "SMCJ"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[2|]{id|direction|type|voltage_max|current_max|notes}:
+  A|input|power|"1000V"|"200A"|"anode"
+  K|output|ground|null|null|"cathode"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: lookup-table
+  equation: "V_clamp = clamp(vrwm, vbr, vc) under surge; I = function of surge waveform"
+  bidirectional: false
+  dynamic: true
+  thermal_model: true
+  noise_model: false
+  states[3]:
+    - standby
+    - clamping
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "1000V"
+  max_current: "200A"
+  max_power: "{power_pulse}W"
+  max_temp: 175
+  min_temp: -55
+warnings[4]:
+  - "TVS diodes are for transient suppression, not continuous regulation"
+  - "Pick Vrwm above normal operating voltage but below the protected circuit's absolute maximum"
+  - "Board layout must minimise inductance with short, wide traces to the TVS device"
+  - "Check pulse rating for the actual surge waveform and repetition rate"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["esd-protection", "surge-protection", "automotive", "data-lines", "power-input-protection"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 50
+  height: 30
+  ports_layout: horizontal
+  port_A: {x: 0, y: 15}
+  port_K: {x: 50, y: 15}
+  label_position: top
+  value_display: "TVS Vrwm={vrwm}V / Vc={vc}V"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: diode-tvs
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Passives"
+  tags[7]:
+    - diode
+    - tvs
+    - passive
+    - surge-protection
+    - semiconductor
+    - clamp
+    - iec-61643

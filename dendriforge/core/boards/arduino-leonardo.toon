@@ -1,38 +1,100 @@
+# METADATA:
+project_name: arduino-leonardo-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: arduino-leonardo
 name: "Arduino Leonardo"
-manufacturer: "Generic"
-mcu: "ATmega32U4"
-category: "maker"
-image: "/boards/arduino-leonardo.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 32768
-sram: 2048
-clock_hz: 16000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "avr-family"
-  boardProfileId: "arduino-leonardo"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+manufacturer: Arduino
+mcu: ATmega32U4
+category: maker
+image: arduino-leonardo.svg
+url: "https://store.arduino.cc/products/arduino-leonardo-with-headers"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 32768
+  flash_available: 28672
+  sram: 2560
+  eeprom: 1024
+  clock: 16000000
+  voltage: "5V"
+dims:
+  w: 68.6
+  h: 53.3
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[7|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+  IOREF|output|"5V"|null
+  AREF|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[20|]{pin|type|pwm|int|label|roles}:
+  0|digital|f|f|"D0 / RX"|uart-rx
+  1|digital|f|f|"D1 / TX"|uart-tx
+  2|digital|f|t|"D2 / SDA"|"int0;i2c-sda"
+  3|digital|t|t|"D3 PWM / SCL"|"int1;i2c-scl"
+  4|digital|f|f|"D4 / A6"|"adc:t"
+  5|digital|t|f|"D5 PWM"|null
+  6|digital|t|f|"D6 PWM / A7"|"adc:t"
+  7|digital|f|f|D7|null
+  8|digital|f|f|"D8 / A8"|"adc:t"
+  9|digital|t|f|"D9 PWM / A9"|"adc:t"
+  10|digital|t|f|"D10 PWM / A10 / SS"|"adc:t;spi-ss"
+  11|digital|t|f|"D11 PWM / MOSI"|spi-mosi
+  12|digital|f|f|"D12 / A11 / MISO"|"adc:t;spi-miso"
+  13|digital|t|f|"D13 LED / SCK"|"spi-sck;status-led"
+  14|analog|f|f|A0|"adc:t"
+  15|analog|f|f|A1|"adc:t"
+  16|analog|f|f|A2|"adc:t"
+  17|analog|f|f|A3|"adc:t"
+  18|analog|f|f|A4|"adc:t"
+  19|analog|f|f|A5|"adc:t"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uarts:1"|"pins:0,1"
+  i2c|"channels:1"|"sda:2;scl:3"
+  spi|"channels:1"|"miso:12;mosi:11;sck:13;ss:10"
+  adc|"resolution:10"|"channels:12"
+usb:
+  type: Micro-USB
+  chip: ATmega32U4
+  vid: "0x2341"
+  pid: "0x8036"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "40mA"
+  total_current_limit: "200mA"
+  warnings[4]:
+    - "Pins 0/1 shared with USB Serial (Serial1)"
+    - "Pin 13 has onboard LED interference"
+    - "USB HID native via ATmega32U4 — no secondary USB chip"
+    - "Polyfuse protects USB over 500mA"
+compatibility:
+  arduinoCore: "1.8.19"
+  pio: atmelavr
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: caterina
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: avr-family
+  boardProfileId: arduino-leonardo
+  defaultLanguageSkills[2]:
+    - arduino-cpp-avr
+    - rust-embassy-avr

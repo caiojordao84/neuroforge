@@ -1,0 +1,117 @@
+# METADATA:
+project_name: schneider-modicon-m262-tm262l20mese8t-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: schneider-modicon-m262-tm262l20mese8t
+name: "Schneider Electric Modicon M262 Logic Controller (TM262L20MESE8T)"
+manufacturer: "Schneider Electric"
+cpu: "Modicon M262 Logic 3ns/instruction"
+category: plc
+form_factor: compact
+standard: "IEC 61131-3"
+image: schneider-modicon-m262-tm262l20mese8t.svg
+url: "https://www.se.com/en/product/TM262L20MESE8T"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  memory_work: 32768KB
+  memory_load: 1048576KB
+  memory_retain: 512KB
+  supply_voltage: 24V
+  power_consumption: 15W
+  di_integrated: 4
+  do_integrated: 4
+  ai_integrated: 0
+dims:
+  w: 125.0
+  h: 100.0
+  t: 100.5
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerSupply[4|]{name|direction|voltage|type}:
+  L+|input|24V|supply
+  M|input|null|ground
+  PE|input|null|protective-earth
+  SENSOR_SUPPLY|output|24V|sensor-power
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[3|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|4|"%IX0.0"|"%IX0.3"|null
+  1|0|DO|4|"%QX0.0"|"%QX0.3"|null
+  2|0|mixed|0|null|null|null
+
+## 5. DIGITAL CHANNEL DESCRIPTORS:
+# Format: addr | direction | label | roles
+digitalChannels[8|]{addr|direction|label|roles}:
+  "%IX0.0"|input|"DI 0.0 Fast (HSC)"|"di;hsc"
+  "%IX0.1"|input|"DI 0.1 Fast (HSC)"|"di;hsc"
+  "%IX0.2"|input|"DI 0.2 Fast (HSC)"|"di;hsc"
+  "%IX0.3"|input|"DI 0.3 Fast (HSC)"|"di;hsc"
+  "%QX0.0"|output|"DO 0.0 Fast (Src)"|"do;fast-counter"
+  "%QX0.1"|output|"DO 0.1 Fast (Src)"|"do;fast-counter"
+  "%QX0.2"|output|"DO 0.2 Fast (Src)"|"do;fast-counter"
+  "%QX0.3"|output|"DO 0.3 Fast (Src)"|"do;fast-counter"
+
+## 6. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[6|]{peripheral|param|value}:
+  ethernetip|"port:44818"|"protocol:EtherNet/IP;role:scanner-adapter;speed:100Mbps"
+  modbus-tcp|"port:502"|"role:client-server;max_connections:8"
+  opc-ua|"port:4840"|"security:tls1.2;max_connections:4"
+  mqtt|"port:8883"|"tls:true;qos:0-2"
+  canopen|"baud:1000"|"role:master;profile:DS301"
+  serial|"baud:115200"|"proto:RS485;standard:Modbus-RTU"
+usb:
+  type: "USB-A-Mini"
+  function: "programming;configuration"
+  vid: "0x0496"
+  pid: "0x0301"
+
+## 7. RACKS & EXPANSION:
+# Format: rack | slots | backplane_current | voltage
+racks[1|]{rack|slots|backplane_current|voltage}:
+  0|14|4000mA|5V
+expansion:
+  max_signal_modules: 14
+  max_communication_modules: 4
+  max_signal_boards: 0
+
+## 8. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  supply_voltage: 24V
+  supply_current_max: 1200mA
+  io_output_current_max: 500mA
+  sensor_supply_current: 400mA
+  operating_temp: "0-55°C"
+  storage_temp: "-25-70°C"
+  protection_class: IP20
+  warnings[6]:
+    - "Integrated I/O is 4 fast DI + 4 fast DO only; all other I/O requires TM3 expansion modules"
+    - "Fast inputs support 200kHz HSC and encoder A/B/Z; outputs support PTO/PWM up to 100kHz"
+    - "Ethernet 1 (100Mbps) is dedicated to Sercos/EIP scanner; Ethernet 2 is dual-port 1Gbps switch"
+    - "TM262L variants do not include Sercos motion bus; use TM262M for synchronous motion control"
+    - "SD card slot onboard; required for firmware update and recipe storage"
+    - "USB programming port uses Schneider VID 0x0496; EcoStruxure Machine Expert required for programming"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "EcoStruxure Machine Expert (ESME) v1.2+"
+  runtime: "M262 FW2.3"
+  firmware: "2.3"
+  languages: "LD;FBD;ST;SFC;IL;CFC"
+  order_ref: "TM262L20MESE8T"
+
+## 9. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: schneider-modicon-m262-tm262l20mese8t
+  defaultLanguageSkills[3]:
+    - st-iec61131
+    - ld-esme-m262
+    - fbd-esme-m262

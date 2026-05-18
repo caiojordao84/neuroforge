@@ -1,0 +1,83 @@
+# METADATA:
+project_name: virtual-plc-generic-16io-profile
+version: 1
+editor: dendriForge
+author: USER20260507AX_W1008_PT
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: virtual-plc-generic-16io
+name: "Virtual PLC Generic 16 I/O"
+manufacturer: NeuroForge
+cpu: virtual-softplc
+category: plc
+form_factor: softplc
+standard: "IEC 61131-3"
+image: virtual-plc-generic.svg
+url: null
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 10
+  memory_work: 256KB
+  memory_load: 1024KB
+  memory_retain: 64KB
+  supply_voltage: 24V
+  virtual: true
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerPins[3|]{name|direction|voltage|type}:
+  L+|input|24V|null
+  M|input|null|ground
+  PE|null|null|ground
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[4|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|6|"%IX0.0"|"%IX0.5"|null
+  1|0|DO|6|"%QX0.0"|"%QX0.5"|null
+  2|0|AI|2|"%IW0"|"%IW1"|null
+  3|0|AO|2|"%QW0"|"%QW1"|null
+
+## 5. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[3|]{peripheral|param|value}:
+  serial|"baud:9600"|"proto:RS485;Modbus-RTU"
+  ethernet|"port:502"|"proto:Modbus-TCP"
+  canopen|"address:1"|"baud:125000"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  supply_voltage: 24V
+  operating_temp_min: -20
+  operating_temp_max: 55
+  warnings[4]:
+    - "Virtual device — no real hardware constraints apply"
+    - "AI/AO signal mode (V or mA) must be configured per channel in software"
+    - "DI1/DI2 support high-speed counter input up to 100kHz"
+    - "DO1/DO2 support PWM output — frequency configurable in runtime"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: neuroforge-sim
+  runtime: neuroforge-virtual
+  languages: "LD;FBD;ST;SFC;IL"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: virtual-plc-generic-16io
+  defaultLanguageSkills[2]:
+    - st-iec61131
+    - ld-iec61131
+  plcIdeSupport: true
+  simulationOnly: true
+
+## 8. MEMORY MAP (IEC 61131-3):
+# Format: area | notation | description | size
+memory_map[5]:
+  - digital_inputs|"%IX0.0-%IX0.5"|"Input bit area DI1-DI6"|6bit
+  - analog_inputs|"%IW0-%IW1"|"Input word area AI1-AI2"|2x16bit
+  - digital_outputs|"%QX0.0-%QX0.5"|"Output bit area DO1-DO6"|6bit
+  - analog_outputs|"%QW0-%QW1"|"Output word area AO1-AO2"|2x16bit
+  - memory_bits|"%MX0.0"|"Internal relay / flag area"|configurable

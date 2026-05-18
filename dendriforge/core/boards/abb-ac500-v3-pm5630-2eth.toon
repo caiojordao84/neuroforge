@@ -1,0 +1,122 @@
+# METADATA:
+project_name: abb-ac500-v3-pm5630-2eth-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: abb-ac500-v3-pm5630-2eth
+name: "ABB AC500 V3 Modular PLC CPU (PM5630-2ETH / 1SAP131000R0278)"
+manufacturer: ABB
+cpu: "AC500 V3 PM5630 — TI ARM Cortex-A9 32-bit, 300MHz, 0.02µs/instruction"
+category: plc
+form_factor: modular
+standard: "IEC 61131-3"
+image: abb-ac500-v3-pm5630-2eth.svg
+url: "https://new.abb.com/products/1SAP131000R0278/pm5630-2eth"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  memory_work: 2048KB
+  memory_load: 9216KB
+  memory_retain: 128KB
+  supply_voltage: 24V
+  power_consumption: 3W
+  di_integrated: 0
+  do_integrated: 0
+  ai_integrated: 0
+dims:
+  w: 67.5
+  h: 76.0
+  t: 62.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerSupply[4|]{name|direction|voltage|type}:
+  L+|input|24V|supply
+  M|input|null|ground
+  PE|input|null|protective-earth
+  SENSOR_SUPPLY|output|24V|sensor-power
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[3|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|0|null|null|null
+  1|0|DO|0|null|null|null
+  2|0|mixed|0|null|null|null
+
+## 5. DIGITAL CHANNEL DESCRIPTORS:
+# Format: addr | direction | label | roles
+digitalChannels[2|]{addr|direction|label|roles}:
+  "%IX0.0"|input|"DI placeholder (S500 module required)"|di
+  "%QX0.0"|output|"DO placeholder (S500 module required)"|do
+
+## 6. ANALOG CHANNEL DESCRIPTORS:
+# Format: addr | direction | resolution | range | label
+analogChannels[2|]{addr|direction|resolution|range|label}:
+  "%IW0"|input|16|"0-10V"|"AI placeholder (S500 module required)"
+  "%QW0"|output|16|"0-10V"|"AO placeholder (S500 module required)"
+
+## 7. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[7|]{peripheral|param|value}:
+  ethernet|"port:502"|"protocol:Modbus-TCP;role:client-server;speed:100Mbps;connections:30+15"
+  ethernetip|"port:44818"|"protocol:EtherNet/IP;role:adapter;speed:100Mbps"
+  opc-ua|"port:4840"|"security:tls1.2;max_connections:10;tags:3000"
+  opc-da|"port:135"|"max_connections:8"
+  serial|"baud:115200"|"proto:Modbus-RTU/ASCII;bus:RS232-RS485;configurable:true"
+  canopen|"baud:1000"|"role:master;profile:DS301;proto:CAN2A/2B-J1939"
+  iec104|"port:2404"|"tags:1000;ctrl_connections:5;sub_connections:5"
+usb:
+  type: null
+  chip: null
+  vid: null
+  pid: null
+
+## 8. RACKS & EXPANSION:
+# Format: rack | slots | backplane_current | voltage
+racks[2|]{rack|slots|backplane_current|voltage}:
+  0|10|4000mA|5V
+  1|2|1000mA|5V
+expansion:
+  max_signal_modules: 10
+  max_communication_modules: 2
+  max_signal_boards: 0
+
+## 9. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  supply_voltage: 24V
+  supply_current_max: 400mA
+  io_output_current_max: 500mA
+  sensor_supply_current: 400mA
+  operating_temp: "0-55°C"
+  storage_temp: "-40-70°C"
+  protection_class: IP20
+  warnings[9]:
+    - "PM5630 has NO integrated I/O; all DI/DO/AI/AO requires S500/S500-eCo expansion modules on I/O bus"
+    - "Terminal base TB56xx-2ETH is REQUIRED; CPU mounts onto it — ordered separately from CPU"
+    - "NO USB programming port; programming exclusively via Ethernet (ETH1 or ETH2) using Automation Builder"
+    - "TB5600-2ETH has 0 option slots; use TB5610-2ETH (1 slot) or TB5620-2ETH (2 slots) for CM modules"
+    - "COM1 is configurable RS-232 OR RS-485 — not simultaneously; set in hardware config in Automation Builder"
+    - "CAN onboard supports CANopen master, J1939 and CAN sync; no CAN slave functionality"
+    - "OPC-UA limited to 3000 tags and 10 connections on PM5630; upgrade to PM5650+ for more"
+    - "AC500 V3 CPU firmware is NOT backward-compatible with AC500 V2 projects without migration"
+    - "Battery buffers SRAM retain and RTC for ~3 years; replace proactively (battery indicator via program)"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "ABB Automation Builder v2.4+"
+  runtime: "AC500 V3 FW"
+  firmware: "3.x"
+  languages: "LD;FBD;ST;SFC;IL;CFC"
+  order_ref: "1SAP131000R0278"
+
+## 10. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: abb-ac500-v3-pm5630-2eth
+  defaultLanguageSkills[3]:
+    - st-iec61131
+    - ld-automation-builder-ac500
+    - fbd-automation-builder-ac500

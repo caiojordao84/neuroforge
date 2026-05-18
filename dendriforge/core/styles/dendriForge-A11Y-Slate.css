@@ -1,0 +1,463 @@
+/* =========================================================================
+   dendriForge-A11Y-Slate.css  —  v0.6.0
+   Unified color base for the DendriForge Transpiler and Simulation Engine.
+   All pin and syntax tokens are WCAG AAA compliant.
+   LED on/off state controlled externally (Python via WebSocket/IPC).
+   TX/RX blink triggered by Python on data events only.
+   ========================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;1,600&family=Roboto+Condensed:ital,wght@1,800&family=Roboto+Mono:ital,wght@0,400;1,300&display=swap');
+
+/* =========================================
+   CSS Custom Properties (Design Tokens)
+   ========================================= */
+
+:root {
+  /* --- Layout Backgrounds --- */
+  --df-bg-main:     #0f172a; /* slate-900 */
+  --df-bg-panel:    #020617; /* slate-950 */
+  --df-bg-sidebar:  #1b1e2b;
+  --df-bg-editor:   #2b2b2b;
+  --df-bg-hover:    #1e293b; /* slate-800 */
+  --df-bg-terminal: var(--df-bg-main);
+
+  /* --- Borders & Dividers --- */
+  --df-border-main:   var(--df-bg-hover); /* slate-800 */
+  --df-border-light:  #334155;            /* slate-700 */
+  --df-border-subtle: #475569;            /* slate-600 */
+
+  /* --- Interface Text --- */
+  --df-text-main:    #e2e8f0; /* slate-200 */
+  --df-text-heading: #f8fafc; /* slate-50  */
+  --df-text-muted:   #94a3b8; /* slate-400 */
+
+  /* --- Single source of truth: slate-500 --- */
+  --df-color-slate-muted:   #64748b; /* slate-500 */
+  --df-text-faded:          var(--df-color-slate-muted);
+  --df-status-disconnected: var(--df-color-slate-muted);
+  --df-sim-pin-low:         var(--df-color-slate-muted);
+
+  /* --- Accents --- */
+  --df-accent-sky:          #38bdf8; /* sky-400    */
+  --df-accent-sky-light:    #00b4d8;
+  --df-accent-amber:        #f59e0b; /* amber-500  */
+  --df-accent-amber-light:  #fbbf24; /* yellow-400 */
+  --df-accent-orange:       #ff8c00;
+  --df-accent-orange-dim:   #7c3f00;
+  --df-accent-rose:         #f43f5e; /* rose-500   */
+  --df-accent-emerald:      #34d399; /* emerald-400 */
+  --df-accent-cyan:         #22d3ee; /* cyan-400   */
+  --df-accent-magenta:      #d946ef; /* fuchsia-500 */
+  --df-accent-purple:       #a78bfa; /* violet-400 */
+  --df-accent-purple-light: #e9d5ff; /* purple-200 */
+
+  /* --- Runtime Status --- */
+  --df-status-running: var(--df-accent-emerald);
+  --df-status-paused:  var(--df-accent-amber);
+  --df-status-fault:   var(--df-accent-rose);
+  --df-status-manual:  var(--df-accent-purple);
+  --df-status-live:    var(--df-accent-sky);
+  --df-status-virtual: var(--df-accent-cyan);
+
+  /* --- Simulation & Canvas --- */
+  --df-sim-comp-bg:      var(--df-bg-hover);
+  --df-sim-comp-mcu:     var(--df-bg-main);
+  --df-sim-comp-stroke:  var(--df-border-subtle);
+  --df-sim-wire-default: var(--df-accent-sky);
+  --df-sim-wire-vcc:     #ef4444; /* red-500 */
+  --df-sim-wire-gnd:     var(--df-pin-gnd); /* forward-ref resolved below */
+  --df-sim-pin-high:     var(--df-accent-emerald);
+  --df-sim-multimeter:   #eab308; /* yellow-500 */
+
+  /* --- LED Colors --- */
+  --df-led-off-base:        #1a1a1a;
+  --df-led-off-idle:        #2a2a2a;
+  --df-led-color-orange:    var(--df-accent-orange);
+  --df-led-color-yellow:    var(--prism-number); /* forward-ref resolved below */
+  --df-led-color-green:     var(--df-accent-emerald);
+  --df-led-color-red:       var(--df-accent-rose);
+  --df-led-glow-orange:     #ff8c00aa;
+  --df-led-glow-yellow:     #ffd700aa;
+  --df-led-glow-green:      #34d399aa;
+  --df-led-glow-red:        #f43f5eaa;
+  --df-led-glow-green-dim:  #34d39944;
+  --df-led-glow-yellow-off: #ffd70000;
+
+  /* =========================================
+     Prism A11Y Dark
+     DEFINED FIRST — required by --df-pin-* below.
+     All tokens WCAG AAA over --prism-bg (#2b2b2b).
+     ========================================= */
+  --prism-bg:       #2b2b2b;
+  --prism-fg:       #f8f8f2; /* 13.28:1 */
+  --prism-comment:  #d4d0ab; /*  9.04:1 */
+  --prism-keyword:  #ffa07a; /*  7.12:1 */
+  --prism-string:   #abe338; /*  9.29:1 */
+  --prism-number:   #ffd700; /* 10.09:1 — also --df-led-color-yellow */
+  --prism-function: #60caff; /*  8.00:1 — also --df-pin-spi */
+  --prism-operator: #00e0ff; /* 11.14:1 — also --df-pin-digital */
+  --prism-type:     #dcc6e0; /*  8.90:1 — also --df-pin-i2c */
+  --prism-macro:    #c4b5fd; /*  7.50:1 — also --df-pin-uart */
+
+  /* =========================================
+     MCU Pin Color Layer
+     DEFINED AFTER --prism-* — avoids forward reference.
+     All values WCAG AAA over --df-bg-main (#0f172a).
+     ========================================= */
+  --df-pin-digital: var(--prism-operator);  /* 11.14:1 */
+  --df-pin-pwm:     #ffb347;                /* 10.02:1 */
+  --df-pin-analog:  var(--prism-string);    /* 11.71:1 */
+  --df-pin-power:   #fc8181;               /*  7.31:1 */
+  --df-pin-gnd:     #a0aec0;               /*  7.91:1 — also --df-pin-aref, --df-sim-wire-gnd */
+  --df-pin-i2c:     var(--prism-type);      /* 11.22:1 */
+  --df-pin-spi:     var(--prism-function);  /*  9.68:1 */
+  --df-pin-uart:    var(--prism-macro);     /*  9.67:1 */
+  --df-pin-nc:      #ff8080;               /*  7.35:1 */
+  --df-pin-icsp:    #94d2bd;               /*  8.12:1 */
+  --df-pin-reset:   #fb923c;               /*  7.98:1 */
+  --df-pin-aref:    var(--df-pin-gnd);      /*  7.91:1 */
+}
+
+/* =========================================
+   Base Layout
+   ========================================= */
+
+body {
+  background-color: var(--df-bg-main);
+  color: var(--df-text-main);
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Roboto Condensed', sans-serif;
+  font-weight: 800;
+  font-style: italic;
+  color: var(--df-text-heading);
+  margin: 0 0 0.5em;
+}
+
+.df-subtitle,
+.df-label,
+legend,
+th {
+  font-family: 'Roboto', sans-serif;
+  font-weight: 600;
+  font-style: italic;
+  color: var(--df-text-heading);
+}
+
+:focus-visible {
+  outline: 2px solid var(--df-accent-sky);
+  outline-offset: 2px;
+}
+
+/* =========================================
+   Scrollbar
+   ========================================= */
+
+::-webkit-scrollbar       { width: 0.5em; height: 0.5em; }
+::-webkit-scrollbar-track { background: var(--df-border-main); }
+::-webkit-scrollbar-thumb { background: var(--df-border-subtle); border-radius: 0.25em; }
+::-webkit-scrollbar-thumb:hover { background: var(--df-text-faded); }
+
+/* =========================================
+   UI Components
+   ========================================= */
+
+.btn-primary-action {
+  background-color: var(--df-accent-orange);
+  color: var(--df-bg-panel);
+  font-weight: 700;
+  border: none;
+  border-radius: 0.25em;
+  padding: 0.5em 1em;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.btn-primary-action:hover {
+  background-color: var(--df-accent-orange-dim);
+}
+
+/* =========================================
+   Status Badges
+   Usage: <span class="df-status df-status--running">Running</span>
+   ========================================= */
+
+.df-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375em;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 0.125em 0.5em;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  text-transform: uppercase;
+}
+
+.df-status::before {
+  content: '';
+  display: inline-block;
+  width: 0.4375em;
+  height: 0.4375em;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.df-status--running      { color: var(--df-status-running);      border-color: var(--df-status-running);      background-color: color-mix(in srgb, var(--df-status-running)      12%, transparent); }
+.df-status--paused       { color: var(--df-status-paused);       border-color: var(--df-status-paused);       background-color: color-mix(in srgb, var(--df-status-paused)       12%, transparent); }
+.df-status--fault        { color: var(--df-status-fault);        border-color: var(--df-status-fault);        background-color: color-mix(in srgb, var(--df-status-fault)        12%, transparent); }
+.df-status--disconnected { color: var(--df-status-disconnected); border-color: var(--df-status-disconnected); background-color: color-mix(in srgb, var(--df-status-disconnected) 12%, transparent); }
+.df-status--manual       { color: var(--df-status-manual);       border-color: var(--df-status-manual);       background-color: color-mix(in srgb, var(--df-status-manual)       12%, transparent); }
+.df-status--live         { color: var(--df-status-live);         border-color: var(--df-status-live);         background-color: color-mix(in srgb, var(--df-status-live)         12%, transparent); }
+.df-status--virtual      { color: var(--df-status-virtual);      border-color: var(--df-status-virtual);      background-color: color-mix(in srgb, var(--df-status-virtual)      12%, transparent); }
+
+@keyframes df-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+.df-status--running::before,
+.df-status--live::before {
+  animation: df-pulse 1.6s ease-in-out infinite;
+}
+
+/* =========================================
+   SVG Board — Pin Coloring
+   !important overrides inline style="fill:..."
+   from third-party SVGs (normalization layer).
+   ========================================= */
+
+svg .pin,
+svg .digital,
+svg .analog,
+svg .power,
+svg .ground,
+svg .icsp,
+svg .led {
+  fill: var(--df-pin-digital) !important;
+  transition: fill 0.2s ease, filter 0.2s ease;
+}
+
+svg .digital                        { fill: var(--df-pin-digital) !important; }
+svg .digital[data-pwm="true"]       { fill: var(--df-pin-pwm)     !important; }
+svg .digital[data-uart="TX"],
+svg .digital[data-uart="RX"]        { fill: var(--df-pin-uart)    !important; }
+svg .digital[data-i2c="SDA"],
+svg .digital[data-i2c="SCL"]        { fill: var(--df-pin-i2c)     !important; }
+svg .digital[data-spi]              { fill: var(--df-pin-spi)     !important; }
+
+svg .analog                         { fill: var(--df-pin-analog)  !important; }
+svg .analog[data-i2c="SDA"],
+svg .analog[data-i2c="SCL"]         { fill: var(--df-pin-i2c)     !important; }
+
+svg .power                          { fill: var(--df-pin-power)   !important; }
+svg .power[data-pin="NC"]           { fill: var(--df-pin-nc)      !important; }
+svg .power[data-pin="AREF"]         { fill: var(--df-pin-aref)    !important; }
+svg .power[data-pin="RESET"]        { fill: var(--df-pin-reset)   !important; }
+
+svg .ground                         { fill: var(--df-pin-gnd)     !important; }
+svg .icsp                           { fill: var(--df-pin-icsp)    !important; }
+
+svg .digital[data-interrupt="true"] {
+  stroke:       var(--df-pin-pwm) !important;
+  stroke-width: 0.8;
+}
+
+svg .pin:hover,
+svg .digital:hover,
+svg .analog:hover {
+  filter: brightness(1.35) drop-shadow(0 0 3px currentColor);
+  cursor: pointer;
+}
+
+/* =========================================
+   SVG Board — LEDs
+   data-state="on|off" set exclusively by Python controller.
+   No CSS animation drives on/off transitions —
+   Python controls timing, blink rate and RX/TX event triggers.
+   TX/RX blink only when data is received/transmitted.
+   ========================================= */
+
+svg .led {
+  fill: var(--df-led-off-base) !important;
+}
+
+svg .led[data-state="off"] {
+  fill: var(--df-led-off-idle) !important;
+  filter: none;
+}
+
+svg .led-orange[data-state="on"] {
+  fill: var(--df-led-color-orange) !important;
+  filter: drop-shadow(0 0 0.125em var(--df-led-glow-orange));
+}
+svg .led-yellow[data-state="on"] {
+  fill: var(--df-led-color-yellow) !important;
+  filter: drop-shadow(0 0 0.125em var(--df-led-glow-yellow));
+}
+svg .led-green[data-state="on"] {
+  fill: var(--df-led-color-green) !important;
+  filter: drop-shadow(0 0 0.125em var(--df-led-glow-green));
+}
+svg .led-red[data-state="on"] {
+  fill: var(--df-led-color-red) !important;
+  filter: drop-shadow(0 0 0.125em var(--df-led-glow-red));
+}
+
+/* Power LED — glow animation driven by Python pulse loop */
+svg #led-power[data-state="on"] {
+  fill: var(--df-led-color-green) !important;
+  animation: df-led-pulse 1.0s ease-in-out infinite;
+}
+
+@keyframes df-led-pulse {
+  0%, 100% { filter: drop-shadow(0 0 0.125em var(--df-led-glow-green))      brightness(1);    }
+  50%       { filter: drop-shadow(0 0 0.0625em var(--df-led-glow-green-dim)) brightness(0.35); }
+}
+
+/* TX/RX — active glow applied by Python on data event.
+   Python sets data-state="on" for one frame, then "off".
+   Blink cadence is 100% Python-controlled. */
+svg #led-tx[data-state="on"],
+svg #led-rx[data-state="on"] {
+  fill: var(--df-led-color-yellow) !important;
+  filter: drop-shadow(0 0 0.125em var(--df-led-glow-yellow)) brightness(1);
+}
+
+svg #led-tx[data-state="off"],
+svg #led-rx[data-state="off"] {
+  fill: var(--df-led-off-idle) !important;
+  filter: drop-shadow(0 0 0em var(--df-led-glow-yellow-off)) brightness(0.2);
+}
+
+/* =========================================
+   SVG Board — Reset Button
+   ========================================= */
+
+svg #reset-button { cursor: pointer; }
+
+svg #reset-button-button {
+  transition: fill 0.15s ease, filter 0.15s ease;
+}
+
+svg #reset-button:hover #reset-button-button {
+  fill: var(--df-accent-orange) !important;
+}
+
+svg #reset-button:active #reset-button-button,
+svg #reset-button.pressed #reset-button-button {
+  fill: var(--df-accent-orange-dim) !important;
+}
+
+/* =========================================
+   PrismJS A11Y Dark
+   ========================================= */
+
+code[class*="language-"],
+pre[class*="language-"] {
+  color: var(--prism-fg);
+  background: none;
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-weight: 400;
+  font-size: 0.875rem;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  word-wrap: normal;
+  line-height: 1.5;
+  -moz-tab-size: 2;
+  -o-tab-size: 2;
+  tab-size: 2;
+  -webkit-hyphens: none;
+  -moz-hyphens: none;
+  -ms-hyphens: none;
+  hyphens: none;
+}
+
+pre[class*="language-"] {
+  padding: 1em;
+  margin: 0.5em 0;
+  overflow: auto;
+  border-radius: 0.3em;
+  background: var(--prism-bg) !important;
+}
+
+:not(pre) > code[class*="language-"],
+pre[class*="language-"] {
+  background: var(--prism-bg);
+}
+
+:not(pre) > code[class*="language-"] {
+  padding: 0.1em;
+  border-radius: 0.3em;
+  white-space: normal;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: var(--prism-comment);
+  font-family: 'Roboto Mono', monospace;
+  font-style: italic;
+  font-weight: 300;
+}
+
+.token.punctuation { color: var(--prism-fg); }
+.token.namespace   { opacity: 0.7; }
+
+.token.tag { color: var(--prism-keyword); }
+
+.token.property,
+.token.constant,
+.token.symbol,
+.token.deleted { color: var(--prism-operator); }
+
+.token.boolean,
+.token.number { color: var(--prism-number); }
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted { color: var(--prism-string); }
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string,
+.token.variable { color: var(--prism-operator); }
+
+.token.atrule,
+.token.attr-value,
+.token.function { color: var(--prism-function); }
+
+.token.class-name { color: var(--prism-type); }
+
+.token.keyword {
+  color: var(--prism-keyword);
+  font-weight: bold;
+}
+
+.token.regex,
+.token.important,
+.token.directive,
+.language-rust .token.annotation,
+.language-rust .token.attr-name,
+.language-rust .token.macro-rules,
+.language-cpp .token.directive,
+.language-c .token.directive { color: var(--prism-macro); }
+
+.token.important,
+.token.bold   { font-weight: bold; }
+.token.italic { font-style: italic; }
+.token.entity { cursor: help; }

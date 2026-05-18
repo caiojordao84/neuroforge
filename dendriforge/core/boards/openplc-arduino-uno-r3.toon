@@ -1,0 +1,107 @@
+# METADATA:
+project_name: openplc-arduino-uno-r3-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: openplc-arduino-uno-r3
+name: "OpenPLC Slave — Arduino Uno R3 (ATmega328P, 16MHz, USB Modbus RTU)"
+manufacturer: Arduino
+mcu: "ATmega328P (AVR 8-bit, 16MHz, OpenPLC firmware)"
+category: maker
+image: openplc-arduino-uno-r3.svg
+url: "https://openplcproject.com/runtime/arduino/"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 32768
+  flash_available: 26624
+  sram: 2048
+  eeprom: 1024
+  clock: 16000000
+  voltage: "5V"
+dims:
+  w: 53.0
+  h: 68.0
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[5|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# OpenPLC v3 IEC addresses (slave offset=100):
+# DI: D2=%IX100.0, D3=%IX100.1, D4=%IX100.2, D5=%IX100.3, D6=%IX100.4
+# DO: D7=%QX100.0, D8=%QX100.1, D12=%QX100.2, D13=%QX100.3
+# AI: A0=%IW0, A1=%IW1, A2=%IW2, A3=%IW3, A4=%IW4, A5=%IW5
+# AO: D9=%QW0 (PWM), D10=%QW1 (PWM), D11=%QW2 (PWM)
+gpio[18|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|false|"D0 / RX (reserved serial)"|uart-rx
+  1|digital|false|false|"D1 / TX (reserved serial)"|uart-tx
+  2|digital|false|true|"D2 / %IX100.0 (DI)"|di
+  3|digital|true|true|"D3 / %IX100.1 (DI)"|di
+  4|digital|false|false|"D4 / %IX100.2 (DI)"|di
+  5|digital|true|false|"D5 / %IX100.3 (DI)"|di
+  6|digital|true|false|"D6 / %IX100.4 (DI)"|di
+  7|digital|false|false|"D7 / %QX100.0 (DO)"|do
+  8|digital|false|false|"D8 / %QX100.1 (DO)"|do
+  9|digital|true|false|"D9 / %QW0 (AO/PWM)"|"adc:f;dac"
+  10|digital|true|false|"D10 / %QW1 (AO/PWM)"|"spi-ss;dac"
+  11|digital|true|false|"D11 / %QW2 (AO/PWM) / MOSI"|spi-mosi
+  12|digital|false|false|"D12 / %QX100.2 (DO) / MISO"|spi-miso
+  13|digital|false|false|"D13 / %QX100.3 (DO) / SCK / LED"|"spi-sck;status-led"
+  14|analog|false|false|"A0 / %IW0 (AI, 10-bit)"|"adc:t"
+  15|analog|false|false|"A1 / %IW1 (AI, 10-bit)"|"adc:t"
+  16|analog|false|false|"A2 / %IW2 (AI, 10-bit)"|"adc:t"
+  17|analog|false|false|"A3 / %IW3 (AI, 10-bit)"|"adc:t"
+  18|analog|false|false|"A4 / %IW4 (AI, 10-bit) / SDA"|"adc:t;i2c-sda"
+  19|analog|false|false|"A5 / %IW5 (AI, 10-bit) / SCL"|"adc:t;i2c-scl"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[3|]{peripheral|param|value}:
+  serial|"baud:115200"|"proto:Modbus-RTU;role:slave;addr:1;pins:0,1"
+  adc|"resolution:10bit"|"pins:14;15;16;17;18;19"
+  pwm|"resolution:8bit"|"openplc-scale:0-65535;pins:9;10;11"
+usb:
+  type: Micro-USB
+  chip: ATmega16U2
+  vid: "0x2341"
+  pid: "0x0043"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "40mA"
+  total_current_limit: "200mA"
+  warnings[8]:
+    - "Arduino Uno in OpenPLC v3 works ONLY as a SLAVE device (Modbus RTU); main PLC runtime must run on a host (Linux/Win/RPi)"
+    - "OpenPLC firmware occupies ~6KB flash leaving ~26KB; D0/D1 are reserved for Modbus RTU serial bridge — do NOT use in program"
+    - "Analog outputs %QW0-%QW2 are 8-bit PWM scaled to 0-65535 in OpenPLC; actual resolution is 256 steps only"
+    - "Slave offset on v3 starts at 100: DI=%IX100.x, DO=%QX100.x; %IW and %QW addresses start at 0 for first slave"
+    - "If multiple Arduino slaves are added, each slave gets an incremented offset block — check Slave Devices page in Runtime UI"
+    - "Auto-reset on USB connect causes first Modbus timeout on startup — this is normal; Runtime recovers automatically"
+    - "SPI pins D11/D12/D13 and I2C pins A4/A5 are available for OpenPLC I/O but sharing with peripherals may cause conflicts"
+    - "OpenPLC firmware source is at github.com/openplcproject/OpenPLC_Runtime; custom pin maps require editing matiec hardware layer"
+compatibility:
+  arduinoCore: "1.8.14"
+  pio: atmelavr
+  frameworks: "openplc-v3"
+  languages: "LD;ST;FBD;SFC;IL"
+  bootloader: "optiboot-atmega328p"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: avr-family
+  boardProfileId: openplc-arduino-uno-r3
+  defaultLanguageSkills[3]:
+    - ld-openplc-editor
+    - st-iec61131-openplc
+    - fbd-openplc-editor

@@ -1,0 +1,144 @@
+# METADATA:
+project_name: schneider-zelio-logic-sr3b261bd-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: schneider-zelio-logic-sr3b261bd
+name: "Schneider Electric Zelio Logic Modular Smart Relay (SR3B261BD)"
+manufacturer: "Schneider Electric"
+cpu: "Zelio Logic SR3 Smart Relay Controller"
+category: plc
+form_factor: compact
+standard: "IEC 61131-2"
+image: schneider-zelio-logic-sr3b261bd.svg
+url: "https://www.se.com/en/product/SR3B261BD"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 10
+  memory_work: 4KB
+  memory_load: 8KB
+  memory_retain: 8KB
+  supply_voltage: 24V
+  power_consumption: 6W
+  di_integrated: 16
+  do_integrated: 10
+  ai_integrated: 6
+dims:
+  w: 90.0
+  h: 125.0
+  t: 59.5
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerSupply[4|]{name|direction|voltage|type}:
+  L+|input|24V|supply
+  M|input|null|ground
+  PE|input|null|protective-earth
+  SENSOR_SUPPLY|output|24V|sensor-power
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[3|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|16|"%I1"|"%I16"|null
+  1|0|DO|10|"%Q1"|"%QA"|null
+  2|0|AI|6|"%IW1"|"%IW6"|null
+
+## 5. DIGITAL CHANNEL DESCRIPTORS:
+# Format: addr | direction | label | roles
+digitalChannels[26|]{addr|direction|label|roles}:
+  "%I1"|input|"DI I1 (24V PNP)"|di
+  "%I2"|input|"DI I2 (24V PNP)"|di
+  "%I3"|input|"DI I3 (24V PNP)"|di
+  "%I4"|input|"DI I4 (24V PNP)"|di
+  "%I5"|input|"DI I5 (24V PNP / 1kHz HSC)"|"di;hsc"
+  "%I6"|input|"DI I6 (24V PNP / 1kHz HSC)"|"di;hsc"
+  "%I7"|input|"DI I7 (24V PNP)"|di
+  "%I8"|input|"DI I8 (24V PNP)"|di
+  "%I9"|input|"DI I9 (24V PNP)"|di
+  "%I10"|input|"DI I10 (24V PNP)"|di
+  "%I11"|input|"DI/AI IB (24V / 0-10V 8bit)"|"di;ai"
+  "%I12"|input|"DI/AI IC (24V / 0-10V 8bit)"|"di;ai"
+  "%I13"|input|"DI/AI ID (24V / 0-10V 8bit)"|"di;ai"
+  "%I14"|input|"DI/AI IE (24V / 0-10V 8bit)"|"di;ai"
+  "%I15"|input|"DI/AI IF (24V / 0-10V 8bit)"|"di;ai"
+  "%I16"|input|"DI/AI IG (24V / 0-10V 8bit)"|"di;ai"
+  "%Q1"|output|"DO Q1 Relay NO 5A/250VAC"|do
+  "%Q2"|output|"DO Q2 Relay NO 5A/250VAC"|do
+  "%Q3"|output|"DO Q3 Relay NO 5A/250VAC"|do
+  "%Q4"|output|"DO Q4 Relay NO 5A/250VAC"|do
+  "%Q5"|output|"DO Q5 Relay NO 5A/250VAC"|do
+  "%Q6"|output|"DO Q6 Relay NO 5A/250VAC"|do
+  "%Q7"|output|"DO Q7 Relay NO 5A/250VAC"|do
+  "%Q8"|output|"DO Q8 Relay NO 5A/250VAC"|do
+  "%Q9"|output|"DO Q9 Relay NO 5A/250VAC"|do
+  "%QA"|output|"DO QA Relay NO 5A/250VAC"|do
+
+## 6. ANALOG CHANNEL DESCRIPTORS:
+# Format: addr | direction | resolution | range | label
+analogChannels[6|]{addr|direction|resolution|range|label}:
+  "%IW1"|input|8|"0-10V"|"AI IB (shared with I11)"
+  "%IW2"|input|8|"0-10V"|"AI IC (shared with I12)"
+  "%IW3"|input|8|"0-10V"|"AI ID (shared with I13)"
+  "%IW4"|input|8|"0-10V"|"AI IE (shared with I14)"
+  "%IW5"|input|8|"0-10V"|"AI IF (shared with I15)"
+  "%IW6"|input|8|"0-10V"|"AI IG (shared with I16)"
+
+## 7. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[3|]{peripheral|param|value}:
+  serial|"baud:19200"|"proto:Modbus-RTU;role:slave;module:SR3MBU01BD"
+  lcd|"lines:4"|"chars_per_line:18;backlit:true"
+  clock|"backup:10yr"|"type:RTC;battery:lithium"
+usb:
+  type: "USB-A"
+  function: "programming"
+  vid: "0x16DE"
+  pid: "0x0084"
+
+## 8. RACKS & EXPANSION:
+# Format: rack | slots | backplane_current | voltage
+racks[1|]{rack|slots|backplane_current|voltage}:
+  0|3|200mA|24V
+expansion:
+  max_signal_modules: 3
+  max_communication_modules: 1
+  max_signal_boards: 0
+
+## 9. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  supply_voltage: 24V
+  supply_current_max: 100mA
+  io_output_current_max: 8000mA
+  sensor_supply_current: 200mA
+  operating_temp: "-20-55°C"
+  storage_temp: "-40-70°C"
+  protection_class: IP40
+  warnings[8]:
+    - "NOT a full IEC 61131-3 PLC; only LD and FBD languages supported; SFC/ST/IL not available"
+    - "Inputs I11-I16 are dual-function; configure as either DI (24V) or AI (0-10V) per channel in Zelio Soft"
+    - "Max program: 120 rungs (LD) or 255 function blocks (FBD); not suitable for complex logic"
+    - "Relay outputs are dry contact NO; output switching: 5A per relay, 8A total across all outputs"
+    - "Analog input resolution is 8-bit only (0-10V, 256 steps, ~39mV/LSB)"
+    - "Modbus RTU requires SR3MBU01BD clip-on module; Zelio is slave only, no master capability"
+    - "USB programming uses SR2USB01 cable (VID 0x16DE/PID 0x0084); direct USB on relay is mini-DIN"
+    - "Memory cartridge SR2MEM02 allows program backup/transfer without PC; max 1 cartridge"
+compatibility:
+  standard: "IEC 61131-2"
+  ide: "Zelio Soft 2 v5.x"
+  runtime: "Zelio FW2.x"
+  firmware: "2.x"
+  languages: "LD;FBD"
+  order_ref: "SR3B261BD"
+
+## 10. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: schneider-zelio-logic-sr3b261bd
+  defaultLanguageSkills[3]:
+    - ld-zelio-soft2
+    - fbd-zelio-soft2
+    - modbus-rtu-zelio

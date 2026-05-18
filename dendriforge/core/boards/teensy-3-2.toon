@@ -1,38 +1,125 @@
+# METADATA:
+project_name: teensy-3-2-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: teensy-3-2
-name: "Teensy 3.2"
-manufacturer: "Generic"
-mcu: "MK20DX256"
-category: "maker"
-image: "/boards/teensy-3-2.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 262144
-sram: 65536
-clock_hz: 72000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "avr-family"
-  boardProfileId: "teensy-3-2"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+name: "PJRC Teensy 3.2 — MK20DX256VLH7 ARM Cortex-M4 72MHz, 256KB Flash, 64KB RAM, 34 GPIO, USB HID/MIDI/Audio, CAN, I2S, 2xADC"
+manufacturer: "PJRC.COM LLC"
+mcu: "NXP/Freescale MK20DX256VLH7 — ARM Cortex-M4 72MHz (OC 96MHz); 16-DMA; DSP extensions; no hardware FPU"
+category: maker
+image: teensy-3-2.svg
+url: "https://www.pjrc.com/store/teensy32.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 262144
+  flash_available: 262144
+  sram: 65536
+  eeprom: 2048
+  clock: 72000000
+  voltage: "3.3V"
+dims:
+  w: 35.6
+  h: 17.8
+  t: 3.2
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# Input: 3.6..6.0V via VIN or VUSB; on-board LP38691 LDO → 3.3V 250mA out
+# VUSB and VIN are bridged by default — cut back-pad solder jumper for battery operation
+powerPins[5|]{name|direction|voltage|type}:
+  VIN|input|"5V"|null
+  VUSB|input|"5V"|null
+  V3V3|output|"3.3V"|null
+  AGND|null|null|ground
+  GND|null|null|ground
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# ALL digital input pins (0-23) are 5V tolerant EXCEPT A10-A13 (pins 24-27) and AREF/DAC = 3.3V ONLY
+# Max output current per pin: 10mA recommended
+gpio[34|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|true|"RX1 / D0 — Serial1 RX (2x FIFO); digital I/O; 5V-tolerant input; interrupt all modes"|"uart-rx;di;do"
+  1|digital|false|true|"TX1 / D1 — Serial1 TX (2x FIFO); digital I/O; 5V-tolerant; interrupt"|"uart-tx;di;do"
+  2|digital|false|true|"D2 — digital I/O; 5V-tolerant; interrupt"|"di;do"
+  3|digital|true|true|"D3 / CAN-TX — FlexCAN transmit; PWM FTM1; 5V-tolerant; interrupt"|"do;pwm;can"
+  4|digital|false|true|"D4 / CAN-RX — FlexCAN receive; 5V-tolerant; interrupt"|"di;can"
+  5|digital|true|true|"D5 / PWM / IR-OUT — FTM0 PWM ch5; IR modulator output (CMT); 5V-tolerant; interrupt"|"di;do;pwm"
+  6|digital|true|true|"D6 / PWM — FTM0 PWM ch0; 5V-tolerant; interrupt"|"di;do;pwm"
+  7|digital|false|true|"D7 / RX3 / SPI-alt-MOSI / I2S-DOUT — Serial3 RX; alt SPI0 MOSI; I2S DOUT; 5V-tolerant; interrupt"|"uart-rx;di;do;spi"
+  8|digital|false|true|"D8 / TX3 / SPI-alt-MISO — Serial3 TX; alt SPI0 MISO; 5V-tolerant; interrupt"|"uart-tx;di;do;spi"
+  9|digital|true|true|"D9 / RX2 / PWM — Serial2 RX (FIFO); FTM0 PWM ch6; 5V-tolerant; interrupt"|"uart-rx;di;do;pwm"
+  10|digital|true|true|"D10 / TX2 / CS / PWM — Serial2 TX (FIFO); SPI0 CS; FTM0 PWM ch7; 5V-tolerant; interrupt"|"uart-tx;do;pwm;spi"
+  11|digital|false|true|"D11 / MOSI / SPI0 — SPI0 MOSI (default); 5V-tolerant; interrupt"|"di;do;spi"
+  12|digital|false|true|"D12 / MISO / SPI0 — SPI0 MISO (default); 5V-tolerant; interrupt"|"di;spi"
+  13|digital|true|true|"D13 / SCK / LED — SPI0 SCK (default); on-board LED (red/orange); FTM0 PWM ch0; 5V-tolerant; interrupt — do NOT overdrive LED >5mA without resistor"|"di;do;pwm;spi"
+  14|analog|false|true|"A0 / D14 / SCK-alt — analog ADC0; alt SPI0 SCK; 5V-tolerant digital; interrupt"|"di;do;adc:t"
+  15|analog|false|true|"A1 / D15 / CS-alt — analog ADC0; alt SPI0 CS; 5V-tolerant; interrupt"|"di;do;adc:t"
+  16|analog|false|true|"A2 / D16 / SCL0-alt — analog ADC0; alt I2C0 SCL; 5V-tolerant; interrupt"|"di;do;adc:t;i2c"
+  17|analog|false|true|"A3 / D17 / SDA0-alt — analog ADC0; alt I2C0 SDA; 5V-tolerant; interrupt"|"di;do;adc:t;i2c"
+  18|analog|false|true|"A4 / D18 / SDA0 — analog ADC0; I2C0 SDA (primary); 5V-tolerant; interrupt"|"di;do;adc:t;i2c"
+  19|analog|false|true|"A5 / D19 / SCL0 — analog ADC0; I2C0 SCL (primary); 5V-tolerant; interrupt"|"di;do;adc:t;i2c"
+  20|analog|true|true|"A6 / D20 / PWM / Touch — ADC0; FTM0 PWM; capacitive touch (TSI); 5V-tolerant; interrupt"|"di;do;pwm;adc:t"
+  21|analog|true|true|"A7 / D21 / PWM / Touch — ADC0; FTM0 PWM; capacitive touch (TSI); 5V-tolerant; interrupt"|"di;do;pwm;adc:t"
+  22|analog|true|true|"A8 / D22 / PWM / Touch / I2S-MCLK — ADC1; FTM0 PWM; touch; I2S master clock; 5V-tolerant; interrupt"|"di;do;pwm;adc:t"
+  23|analog|true|true|"A9 / D23 / PWM / Touch / I2S-LRCLK — ADC1; FTM0 PWM; touch; I2S word clock; 5V-tolerant; interrupt"|"di;do;pwm;adc:t"
+  24|analog|false|true|"A10 / D24 — ADC0 only; 3.3V ONLY input (NOT 5V tolerant); interrupt; bottom pad"|"adc:t"
+  25|analog|false|true|"A11 / D25 — ADC1 only; 3.3V ONLY; interrupt; bottom pad"|"adc:t"
+  26|analog|false|true|"A12 / A14 / D26 / DAC — ADC0; 12-bit DAC output (analogWrite on A14); 3.3V ONLY; bottom pad"|"adc:t;dac"
+  27|analog|false|true|"A13 / D27 — ADC1 only; 3.3V ONLY; interrupt; bottom pad"|"adc:t"
+  28|digital|false|true|"D28 / RX2-alt — Serial2 alt RX; 3.3V; bottom pad"|"uart-rx;di"
+  29|digital|false|true|"D29 / SCL1 — I2C1 SCL (Wire1); 3.3V; bottom pad"|"di;i2c"
+  30|digital|false|true|"D30 / SDA1 — I2C1 SDA (Wire1); 3.3V; bottom pad"|"di;i2c"
+  31|digital|false|true|"D31 — digital; 3.3V; bottom pad; program signal (alternate function)"|"di;do"
+  32|digital|false|false|"VBAT pad — connect 3V coin cell for RTC backup; solder pad bottom; also requires 32.768kHz crystal on back pads"|null
+  33|digital|false|false|"AREF / 3.3V — analog reference; 3.3V ONLY; do NOT apply more than 3.3V; connected to 3.3V regulator output"|null
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[8|]{peripheral|param|value}:
+  usb_fullspeed|"speed:12Mbit"|"proto:USB1.1-FullSpeed;modes:Serial-MIDI-HID-RawHID-MTP-Keyboard-Mouse-Joystick-Audio;DMA:dedicated;connector:Micro-B;bootloader:HalfKay"
+  uart_serial1|"baud:1000000"|"tx:pin1;rx:pin0;fifo:2x;high-res-baud:yes;proto:UART;hardware-fifo"
+  uart_serial2|"baud:1000000"|"tx:pin10;rx:pin9;alt-rx:pin28;fifo:2x;high-res-baud:yes"
+  uart_serial3|"baud:1000000"|"tx:pin8;rx:pin7;no-fifo"
+  spi0|"speed:30Mbit"|"sck:pin13;mosi:pin11;miso:pin12;cs:pin10;alt-sck:pin14;alt-mosi:pin7;alt-miso:pin8;fifo:yes;proto:SPI"
+  i2c_wire0|"speed:400kHz"|"sda:pin18;scl:pin19;alt-sda:pin17;alt-scl:pin16;proto:I2C-Wire"
+  i2c_wire1|"speed:400kHz"|"sda:pin30;scl:pin29;proto:I2C-Wire1;bottom-pads-only"
+  can_flexcan|"speed:1Mbit"|"tx:pin3;rx:pin4;proto:FlexCAN-CAN2.0B;lib:FlexCAN-Teensyduino;requires-external-TJA1050-transceiver"
+usb:
+  type: Micro-B
+  chip: native
+  vid: "0x16C0"
+  pid: "0x0483"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "10mA"
+  total_current_limit: "250mA"
+  warnings[9]:
+    - "Pins A10-A13 (D24-D27), AREF, DAC/A14 (D26), and the Program pad are 3.3V ONLY — they are NOT 5V tolerant; connecting 5V signals to these pins WILL damage the MK20DX256; all other digital pins (D0-D23) are 5V tolerant on input"
+    - "CAN bus requires an EXTERNAL transceiver (e.g. TJA1050 or MCP2551) — the FlexCAN peripheral provides logic-level CAN signals; without a transceiver, the CAN bus connection will NOT work and may be damaged by bus voltages"
+    - "The on-board LED shares pin 13 with SPI0 SCK — when using SPI, pin 13 will flash the LED; when using pin 13 as SPI SCK, do NOT drive the LED with more than 5mA; consider disabling the LED line in SPI code"
+    - "RTC requires BOTH a 32.768 kHz crystal soldered to the back pads AND a 3V coin cell connected to the VBAT pad — without the crystal, RTC will not keep accurate time; battery keeps time when Teensy is unpowered"
+    - "VUSB and VIN are bridged by default via a back-pad solder jumper — cut this jumper when using a battery charger or an external power supply simultaneously with USB to prevent backflow current; failure to cut may damage the charger or regulator"
+    - "USB Host mode (connecting USB devices TO Teensy) requires a 150µF capacitor connected between the 5V USB host pad and GND — without this capacitor, USB host mode will fail to enumerate devices or will reset during power spikes"
+    - "I2S audio pins (pin9=LRCLK or pin23, pin11=BCLK or pin13, pin22=MCLK, pin13 or pin22=DOUT, pin7=DIN) share with SPI0, Serial2, and Serial3 — the Teensy Audio Library reconfigures these; do NOT simultaneously use affected interfaces"
+    - "The ARM Cortex-M4 in Teensy 3.2 has NO hardware floating point unit (FPU) — floating point operations are handled by software; use integer math or fixed-point arithmetic in time-critical ISRs for better performance; Teensy 3.5/3.6 have the Cortex-M4F with hardware FPU"
+    - "Overclocking to 96 MHz is supported via Teensyduino clock settings but is NOT guaranteed by NXP/Freescale spec — increased power dissipation and reduced temperature margin apply; the LP38691 regulator may limit available current to peripherals at overclock"
+compatibility:
+  sw: "Arduino IDE + Teensyduino add-on; PlatformIO (teensy31 target); Visual Studio Code + PlatformIO"
+  languages: "C++;C;Arduino (C++ subset);ARM assembly"
+  frameworks: "Teensyduino;PJRC Audio Library;PJRC USB MIDI;FlexCAN lib;Wire;SPI;SD;EEPROM"
+  certifications: "FCC-Part15-ClassB;CE;RoHS"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: pjrc-teensy-3x-family
+  boardProfileId: teensy-3-2
+  defaultLanguageSkills[3]:
+    - cpp-arduino-teensyduino
+    - cpp-pjrc-audio-library
+    - c-arm-cortex-m4-bare-metal

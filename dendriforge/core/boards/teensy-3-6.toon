@@ -1,38 +1,119 @@
+# METADATA:
+project_name: teensy-3-6-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: teensy-3-6
-name: "Teensy 3.6"
-manufacturer: "Generic"
-mcu: "MK66FX1M0"
-category: "maker"
-image: "/boards/teensy-3-6.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 1048576
-sram: 262144
-clock_hz: 180000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "avr-family"
-  boardProfileId: "teensy-3-6"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+name: "PJRC Teensy 3.6 — MK66FX1M0VMD18 ARM Cortex-M4F 180MHz HW-FPU, 1MB Flash, 256KB RAM, 64 GPIO, USB-HS Host, 2xCAN, 4xI2C, SDIO"
+manufacturer: "PJRC.COM LLC"
+mcu: "NXP/Freescale MK66FX1M0VMD18 — ARM Cortex-M4F 180MHz (OC 240MHz); 32-bit HW-FPU; 32-DMA; 8KB cache; Crypto/RNG/CRC; ETH MAC"
+category: maker
+image: teensy-3-6.svg
+url: "https://www.pjrc.com/store/teensy36.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 1048576
+  flash_available: 1048576
+  sram: 262144
+  eeprom: 4096
+  clock: 180000000
+  voltage: "3.3V"
+dims:
+  w: 62.3
+  h: 18.0
+  t: 4.2
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# Input 3.6..6.0V via VIN or VUSB; LP38691-type LDO → 3.3V 250mA max out
+# VUSB and VIN bridged by default — cut bottom solder pad for independent use
+powerPins[5|]{name|direction|voltage|type}:
+  VIN|input|"5V"|null
+  VUSB|input|"5V"|null
+  V3V3|output|"3.3V"|null
+  AGND|null|null|ground
+  GND|null|null|ground
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# *** CRITICAL: ALL pins are 3.3V ONLY — NO pin is 5V tolerant (unlike Teensy 3.5) ***
+# Output: 3.3V, 10mA recommended max; all digital pins support interrupt
+# Breadboard-accessible: pins 0-23 front + pins 24-33 front edge (smaller row)
+# Back pads: 34-57; SD card pads: 58-63 (usable as GPIO when no card present)
+gpio[45|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|true|"RX1 / D0 — Serial1 RX (FIFO+HiResBaud); SPI1 MISO (alt); Touch-capable; 3.3V ONLY; interrupt"|"uart-rx;di;do;spi"
+  1|digital|false|true|"TX1 / D1 — Serial1 TX (FIFO+HiResBaud); SPI1 MOSI (alt); Touch-capable; 3.3V ONLY; interrupt"|"uart-tx;di;do;spi"
+  2|digital|true|true|"D2 / A14 / FTM3-ch0 — PWM FTM3; analog A14; 3.3V ONLY; interrupt"|"di;do;pwm;adc:t"
+  3|digital|true|true|"D3 / CAN0-TX / I2C2-SCL / FTM1-ch0 — CAN0 transmit; I2C Wire2 SCL; FTM1 PWM; 3.3V ONLY; interrupt — requires ext TJA1050 transceiver for CAN"|"do;pwm;i2c;can"
+  4|digital|false|true|"D4 / CAN0-RX / I2C2-SDA — CAN0 receive; I2C Wire2 SDA; 3.3V ONLY; interrupt"|"di;i2c;can"
+  5|digital|true|true|"D5 / PWM FTM0-ch7 — 3.3V ONLY; interrupt"|"di;do;pwm"
+  6|digital|true|true|"D6 / PWM FTM0-ch6 — 3.3V ONLY; interrupt"|"di;do;pwm"
+  7|digital|false|true|"D7 / RX3 / FTM3-ch3 — Serial3 RX; PWM FTM3; 3.3V ONLY; interrupt"|"uart-rx;di;do;pwm"
+  8|digital|false|true|"D8 / TX3 / FTM3-ch2 — Serial3 TX; PWM FTM3; 3.3V ONLY; interrupt"|"uart-tx;di;do;pwm"
+  9|digital|true|true|"D9 / RX2 / PWM FTM0-ch5 — Serial2 RX (FIFO+HiResBaud); FTM0 PWM; 3.3V ONLY; interrupt"|"uart-rx;di;do;pwm"
+  10|digital|true|true|"D10 / TX2 / CS0 / PWM FTM0-ch4 — Serial2 TX (FIFO+HiResBaud); SPI0 CS; FTM0 PWM; 3.3V ONLY; interrupt"|"uart-tx;do;pwm;spi"
+  11|digital|false|true|"D11 / MOSI0 / SPI0 — SPI0 MOSI (primary, FIFO); 3.3V ONLY; interrupt"|"di;do;spi"
+  12|digital|false|true|"D12 / MISO0 / SPI0 — SPI0 MISO (primary, FIFO); 3.3V ONLY; interrupt"|"di;spi"
+  13|digital|true|true|"D13 / SCK0 / LED / SPI0 — SPI0 SCK (primary, FIFO); on-board LED (orange); 3.3V ONLY; interrupt — LED shares SPI SCK; do NOT apply >5mA to LED without resistor"|"di;do;pwm;spi"
+  14|analog|false|true|"A0 / D14 / FTM3-ch1 — ADC0; FTM3 PWM; 3.3V ONLY; interrupt"|"di;do;pwm;adc:t"
+  15|analog|false|true|"A1 / D15 — ADC0; Touch; 3.3V ONLY; interrupt"|"di;do;adc:t"
+  16|analog|true|true|"A2 / D16 / SCL1-alt / TPM1 — ADC0; I2C Wire1 SCL (alt); TPM1 PWM; Touch; 3.3V ONLY; interrupt"|"di;do;pwm;adc:t;i2c"
+  17|analog|true|true|"A3 / D17 / SDA1-alt / TPM1 — ADC0; I2C Wire1 SDA (alt); TPM1 PWM; Touch; 3.3V ONLY; interrupt"|"di;do;pwm;adc:t;i2c"
+  18|analog|false|true|"A4 / D18 / SDA0 — ADC0; I2C Wire0 SDA (primary); Touch; 3.3V ONLY; interrupt"|"di;do;adc:t;i2c"
+  19|analog|false|true|"A5 / D19 / SCL0 — ADC0; I2C Wire0 SCL (primary); Touch; 3.3V ONLY; interrupt"|"di;do;adc:t;i2c"
+  20|analog|true|true|"A6 / D20 / PWM FTM0-ch0 — ADC0; FTM0 PWM; 3.3V ONLY; interrupt"|"di;do;pwm;adc:t"
+  21|analog|true|true|"A7 / D21 / PWM FTM0-ch1 — ADC1; FTM0 PWM; Touch; 3.3V ONLY; interrupt"|"di;do;pwm;adc:t"
+  22|analog|true|true|"A8 / D22 / PWM FTM0-ch2 / I2S-DOUT — ADC1; FTM0 PWM; I2S audio out; Touch; 3.3V ONLY; interrupt"|"di;do;pwm;adc:t"
+  23|analog|true|true|"A9 / D23 / PWM FTM0-ch3 / I2S-LRCLK — ADC1; FTM0 PWM; I2S word clock; Touch; 3.3V ONLY; interrupt"|"di;do;pwm;adc:t"
+  24|digital|false|true|"D24 — digital; 3.3V ONLY; interrupt"|"di;do"
+  25|digital|false|true|"D25 — digital; 3.3V ONLY; interrupt"|"di;do"
+  26|analog|false|true|"A15 / D26 — ADC1; 3.3V ONLY; interrupt; back pad area"|"di;do;adc:t"
+  27|analog|false|true|"A16 / D27 — ADC1; 3.3V ONLY; interrupt; back pad area"|"di;do;adc:t"
+  28|analog|false|true|"A17 / D28 / I2S-MCLK — ADC0; I2S master clock; 3.3V ONLY; interrupt; back pad"|"di;do;adc:t"
+  29|analog|true|true|"A18 / D29 / FTM2-ch0 — ADC0; FTM2 PWM; Touch; 3.3V ONLY; interrupt"|"di;do;pwm;adc:t"
+  30|analog|true|true|"A19 / D30 / FTM2-ch1 — ADC0; FTM2 PWM; Touch; 3.3V ONLY; interrupt"|"di;do;pwm;adc:t"
+  31|digital|false|true|"D31 / RX4 / SPI1-CS — Serial4 RX; SPI1 CS; CAN1-alt; 3.3V ONLY; interrupt; back pad"|"uart-rx;di;spi;can"
+  32|digital|false|true|"D32 / TX4 / SPI1-SCK / CAN1-TX — Serial4 TX; SPI1 SCK; CAN1 TX; 3.3V ONLY; interrupt; back pad"|"uart-tx;di;do;spi;can"
+  33|digital|false|true|"D33 / RX5 / CAN1-RX — Serial5 RX; CAN1 RX; 3.3V ONLY; interrupt; back pad"|"uart-rx;di;can"
+  34|digital|false|true|"D34 / TX5 — Serial5 TX; 3.3V ONLY; interrupt; back pad"|"uart-tx;do"
+  35|digital|true|true|"D35 / A12 / FTM3-ch4 — ADC1; FTM3 PWM; 3.3V ONLY; interrupt; back pad"|"di;do;pwm;adc:t"
+  36|digital|true|true|"D36 / A13 / FTM3-ch5 — ADC1; FTM3 PWM; 3.3V ONLY; interrupt; back pad"|"di;do;pwm;adc:t"
+  37|digital|true|true|"D37 / SCL1 / FTM3-ch6 — I2C Wire1 SCL (primary); FTM3 PWM; 3.3V ONLY; interrupt; back pad"|"di;do;pwm;i2c"
+  38|digital|true|true|"D38 / SDA1 / FTM3-ch7 — I2C Wire1 SDA (primary); FTM3 PWM; 3.3V ONLY; interrupt; back pad"|"di;do;pwm;i2c"
+  39|analog|false|true|"A20 / D39 — ADC1; 3.3V ONLY; interrupt; back pad"|"di;do;adc:t"
+  40|analog|false|true|"A10 / D40 — ADC0 differential only; 3.3V ONLY; interrupt; back pad"|"adc:t"
+  41|analog|false|true|"A11 / D41 — ADC1 differential only; 3.3V ONLY; interrupt; back pad"|"adc:t"
+  42|digital|false|true|"D42 / SCK2 / RX6 — SPI2 SCK (alt); Serial6 RX alt; 3.3V ONLY; back pad"|"di;do;spi;uart-rx"
+  43|digital|false|true|"D43 / CS2 — SPI2 CS; 3.3V ONLY; back pad"|"di;do;spi"
+  44|digital|false|true|"D44 / MOSI2 / SDA3 — SPI2 MOSI; I2C Wire3 SDA; 3.3V ONLY; back pad"|"di;do;spi;i2c"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[11|]{peripheral|param|value}:
+  usb_device|"speed:12Mbit"|"proto:USB1.1-FullSpeed-device;modes:Serial-MIDI-HID-RawHID-MTP-Keyboard-Mouse-Joystick-Audio-FlightSim-Touchscreen;connector:Micro-B;bootloader:HalfKay-separate-chip"
+  usb_host|"speed:480Mbit"|"proto:USB2.0-HighSpeed-OTG-host;independent-of-device-port;pads:D+D-5VGND-bottom;lib:USBHost_t36;hubs-supported;requires-150uF-bypass-cap"
+  uart_serial12|"baud:1000000"|"serial1:TX=pin1,RX=pin0,FIFO+HiResBaud;serial2:TX=pin10,RX=pin9,FIFO+HiResBaud"
+  uart_serial3456|"baud:1000000"|"serial3:TX=8,RX=7;serial4:TX=32,RX=31(back);serial5:TX=34,RX=33(back);serial6:TX=48,RX=47(back-A23-A24)"
+  spi0|"speed:30Mbit"|"sck:pin13;mosi:pin11;miso:pin12;cs:pin10;FIFO:yes;proto:SPI"
+  spi12|"speed:30Mbit"|"spi1:SCK=32,MOSI=0,MISO=1,CS=31(back),no-FIFO;spi2:SCK=46,MOSI=44,MISO=45,CS=43(back),no-FIFO"
+  i2c_wire0123|"speed:1000kHz"|"wire0:SDA=18,SCL=19;wire1:SDA=38,SCL=37(alt:SDA=17,SCL=16);wire2:SDA=4,SCL=3;wire3:SDA=44,SCL=45(back);all:100-400-1000kHz"
+  can_dual|"speed:1Mbit"|"can0:TX=pin3,RX=pin4;can1:TX=pin32,RX=pin33(back);proto:FlexCAN-CAN2.0B;lib:FlexCAN-Teensyduino;requires-external-TJA1050-transceiver-per-bus"
+  i2s_audio|"channels:4"|"I2S-TDM:4ch-in+4ch-out;LRCLK:pin23;BCLK:pin9;MCLK:pin28;DOUT:pin22;DIN:pin13;TDM:up-to-16ch;SPDIF-TX:supported;lib:PJRC-Audio-Library"
+  sdio_sd|"bits:4"|"proto:native-SDIO-4bit;socket:on-board-built-in;SD.begin(BUILTIN_SDCARD);speed:up-to-20MB-per-s;pads:pins58-63-usable-as-GPIO-without-card"
+  ethernet_mac|"speed:100Mbit"|"MAC:built-in-hardware;requires-external-PHY-shield;shields:WIZ820io-W5500-LAN8720;lib:QNEthernet;IEEE1588-timers-4;same-as-3.5"
+usb:
+  type: Micro-B
+  chip: native
+  vid: "0x16C0"
+  pid: "0x0483"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "10mA"
+  total_current_limit: "250mA"
+  warnings[9]:
+    - "ALL pins on Teensy 3.6 are 3.3V ONLY — NONE are 5V tolerant, including digital I/O pins D0-D23; this is a CRITICAL difference from Teensy 3.5 where D0-D23 are 

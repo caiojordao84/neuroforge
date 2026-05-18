@@ -1,0 +1,120 @@
+# METADATA:
+project_name: allen-bradley-micro870-2080-lc70-24qwb-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: allen-bradley-micro870-2080-lc70-24qwb
+name: "Allen-Bradley Micro870 24-Point (2080-LC70-24QWB)"
+manufacturer: "Allen-Bradley / Rockwell Automation"
+cpu: "Micro870 24V DC 14DI/10DO Relay EtherNet/IP"
+category: plc
+form_factor: compact
+standard: "IEC 61131-3"
+image: allen-bradley-micro870-2080-lc70-24qwb.svg
+url: "https://www.rockwellautomation.com/en-us/products/hardware/allen-bradley/programmable-controllers/micro-programmable-controllers/micro870.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  memory_work: 128KB
+  memory_load: 280KB
+  memory_retain: 32KB
+  supply_voltage: 24V
+  power_consumption: 25W
+  di_integrated: 14
+  do_integrated: 10
+  ai_integrated: 0
+dims:
+  w: 145.0
+  h: 90.0
+  t: 80.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerSupply[4|]{name|direction|voltage|type}:
+  L+|input|24V|supply
+  M|input|null|ground
+  PE|input|null|protective-earth
+  SENSOR_SUPPLY|output|24V|sensor-power
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[2|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|14|"%IX0.0"|"%IX1.5"|null
+  1|0|DO|10|"%QX0.0"|"%QX1.1"|null
+
+## 5. DIGITAL CHANNEL DESCRIPTORS:
+# Format: addr | direction | label | roles
+digitalChannels[24|]{addr|direction|label|roles}:
+  "%IX0.0"|input|"DI 0.0 (HS)"|"di;hsc"
+  "%IX0.1"|input|"DI 0.1 (HS)"|"di;hsc"
+  "%IX0.2"|input|"DI 0.2 (HS)"|"di;hsc"
+  "%IX0.3"|input|"DI 0.3 (HS)"|"di;hsc"
+  "%IX0.4"|input|"DI 0.4 (HS)"|"di;hsc"
+  "%IX0.5"|input|"DI 0.5 (HS)"|"di;hsc"
+  "%IX0.6"|input|"DI 0.6 (ST)"|di
+  "%IX0.7"|input|"DI 0.7 (ST)"|di
+  "%IX1.0"|input|"DI 1.0 (ST)"|di
+  "%IX1.1"|input|"DI 1.1 (ST)"|di
+  "%IX1.2"|input|"DI 1.2 (ST)"|di
+  "%IX1.3"|input|"DI 1.3 (ST)"|di
+  "%IX1.4"|input|"DI 1.4 (ST)"|di
+  "%IX1.5"|input|"DI 1.5 (ST)"|di
+  "%QX0.0"|output|"DO 0.0 (Relay NO)"|do
+  "%QX0.1"|output|"DO 0.1 (Relay NO)"|do
+  "%QX0.2"|output|"DO 0.2 (Relay NO)"|do
+  "%QX0.3"|output|"DO 0.3 (Relay NO)"|do
+  "%QX0.4"|output|"DO 0.4 (Relay NO)"|do
+  "%QX0.5"|output|"DO 0.5 (Relay NO)"|do
+  "%QX0.6"|output|"DO 0.6 (Relay NO)"|do
+  "%QX0.7"|output|"DO 0.7 (Relay NO)"|do
+  "%QX1.0"|output|"DO 1.0 (Relay NO)"|do
+  "%QX1.1"|output|"DO 1.1 (Relay NO)"|do
+
+## 6. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[5|]{peripheral|param|value}:
+  ethernetip|"port:44818"|"protocol:EtherNet/IP;speed:10-100Mbps"
+  modbus-tcp|"port:502"|"role:server"
+  modbus-rtu|"baud:19200"|"proto:RS485;role:master-slave"
+  serial|"baud:19200"|"proto:RS232;port:1"
+  serial|"baud:19200"|"proto:RS485;port:2"
+usb:
+  type: "USB-B"
+  function: "programming"
+
+## 7. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  supply_voltage: 24V
+  supply_current_max: 1000mA
+  io_output_current_max: 2000mA
+  sensor_supply_current: 400mA
+  operating_temp: "-20-65°C"
+  storage_temp: "-40-85°C"
+  protection_class: IP20
+  warnings[7]:
+    - "Supply voltage 24V DC (18-26.4V); 120V AC input version is 2080-LC70-24AWB"
+    - "Micro870 is 24-point only; no 48-point variant exists (use Micro850 for 48-point)"
+    - "6 HS inputs (IX0.0-IX0.5) share channels with up to 6 HSC counters at 100kHz"
+    - "Relay outputs (QWB) do not support PTO/PWM; use sourcing DO variant (QBB) for motion"
+    - "Analog I/O requires plug-in modules (2080-IF2, 2080-OF2, 2080-IF4); none onboard"
+    - "Maximum 8 local expansion I/O modules; maximum total 304 I/O points"
+    - "RS232 and RS485 share one non-isolated serial port; cannot be used simultaneously"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "Connected Components Workbench (CCW) v21+"
+  runtime: "Micro870 FW11"
+  languages: "LD;FBD;ST;SFC;IL"
+  order_ref: "2080-LC70-24QWB"
+
+## 8. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: allen-bradley-micro870-2080-lc70-24qwb
+  defaultLanguageSkills[3]:
+    - ld-ccw-micro800
+    - fbd-ccw-micro800
+    - st-iec61131

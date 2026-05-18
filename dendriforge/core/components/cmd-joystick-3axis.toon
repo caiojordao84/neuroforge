@@ -1,0 +1,173 @@
+# METADATA:
+project_name: cmd-joystick-3axis-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: cmd-joystick-3axis
+name: "3-Axis Analog Joystick with Twist Z-Axis and Button"
+family: command-elements
+subfamily: special-interfaces
+category: command
+standard: null
+url: null
+image: cmd-joystick-3axis.svg
+symbol: cmd-joystick-3axis-symbol.svg
+symbol_standard: custom
+
+## 2. PARAMETERS:
+params:
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 5
+    options: [3.3, 5]
+    type: enum
+    editable: true
+  axis_x_rest:
+    label: "X-Axis Rest Value (ADC counts)"
+    unit: null
+    default: 512
+    min: 0
+    max: 1023
+    type: int
+    editable: false
+  axis_y_rest:
+    label: "Y-Axis Rest Value (ADC counts)"
+    unit: null
+    default: 512
+    min: 0
+    max: 1023
+    type: int
+    editable: false
+  axis_z_rest:
+    label: "Z-Axis Twist Rest Value (ADC counts)"
+    unit: null
+    default: 512
+    min: 0
+    max: 1023
+    type: int
+    editable: false
+  potentiometer_resistance:
+    label: "Potentiometer Resistance (all axes)"
+    unit: Ω
+    default: 10000
+    min: 10000
+    max: 10000
+    type: float
+    editable: false
+  z_axis_type:
+    label: "Z-Axis Mechanism"
+    default: "twist-knob"
+    options: ["twist-knob", "rocker"]
+    type: enum
+    editable: true
+  travel_angle_xy:
+    label: "X/Y Travel Angle per direction (degrees)"
+    unit: null
+    default: 50
+    min: 40
+    max: 50
+    type: float
+    editable: false
+  travel_angle_z:
+    label: "Z Twist Travel Angle per direction (degrees)"
+    unit: null
+    default: 45
+    min: 40
+    max: 45
+    type: float
+    editable: false
+  self_centering:
+    label: "Self-Centering Spring all axes"
+    default: true
+    type: bool
+    editable: false
+  sw_logic:
+    label: "Button Active Logic"
+    default: "active-low"
+    options: ["active-low"]
+    type: enum
+    editable: false
+  sw_pullup_required:
+    label: "SW Pull-up Required"
+    default: true
+    type: bool
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+ports[6|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"5V"|"15mA"|"supply voltage 3.3V or 5V; all analog outputs track VCC"
+  GND|input|ground|null|null|"common ground reference for all three potentiometers and button"
+  VRX|output|analog|"5V"|"1mA"|"X-axis analog output 0V to VCC; centre VCC/2; 10k pot wiper; left-right tilt"
+  VRY|output|analog|"5V"|"1mA"|"Y-axis analog output 0V to VCC; centre VCC/2; 10k pot wiper; forward-back tilt"
+  VRZ|output|analog|"5V"|"1mA"|"Z-axis analog output 0V to VCC; centre VCC/2; 10k pot wiper; twist-knob rotation spring return"
+  SW|output|digital|"5V"|"1mA"|"push-button on knob top; normally open to GND when pressed; requires pull-up to VCC"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: analog-transfer
+  equation: "VRX = supply_voltage*(x+0.5); VRY = supply_voltage*(y+0.5); VRZ = supply_voltage*(z+0.5); SW=0 pressed else 1"
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: true
+  states[3]:
+    - idle
+    - actuated
+    - pressed
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "5V"
+  max_current: "15mA"
+  max_power: null
+  max_temp: 70
+  min_temp: -20
+warnings[6]:
+  - "VRX VRY and VRZ output range is 0V to VCC — when powering at 5V do NOT connect outputs directly to a 3.3V-only ADC; power module at 3.3V or use a voltage divider on each axis output"
+  - "SW pin is normally-open to GND when the top button is pressed — always enable MCU internal pull-up INPUT_PULLUP or add external 10k resistor between SW and VCC; without pull-up the pin floats and gives erratic readings"
+  - "All three axes return to approximately VCC/2 at rest — mechanical tolerances cause true centre to vary plus or minus 50 ADC counts per axis; always implement a per-axis dead-zone in firmware around count 512"
+  - "Before wiring ALWAYS verify which wire is the wiper on each potentiometer with an ohmmeter — connecting VCC and GND to wrong legs will permanently damage the potentiometer; Z-axis wiper is typically the centre or marked wire on the harness"
+  - "Three 10k potentiometers draw approximately 0.5mA each at 5V giving 1.5mA total quiescent current; use a stable regulated supply and decouple VCC to GND with a 100nF ceramic capacitor close to the module to minimise ADC noise"
+  - "Z-axis twist travel is limited to approximately plus or minus 45 degrees from centre — do not force beyond mechanical stops; exceeding travel limits damages the Z-axis potentiometer; spring return only operates within rated travel range"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["robot-arm-control", "crane-xyz", "pan-tilt-zoom-camera", "drone-manual-control", "3d-navigation", "simulation-cockpit"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 70
+  height: 80
+  ports_layout: custom
+  port_VCC: {x: 0, y: 10}
+  port_GND: {x: 0, y: 25}
+  port_VRX: {x: 70, y: 10}
+  port_VRY: {x: 70, y: 27}
+  port_VRZ: {x: 70, y: 47}
+  port_SW: {x: 70, y: 65}
+  label_position: top
+  value_display: "{supply_voltage}V / X:{axis_x_rest} Y:{axis_y_rest} Z:{axis_z_rest}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: command-elements-family
+  componentProfileId: cmd-joystick-3axis
+  simulationEngine: digital-io
+  paletteGroup: "Command Elements > Special Interfaces"
+  tags[8]:
+    - joystick
+    - analog
+    - three-axis
+    - xyz
+    - potentiometer
+    - command
+    - twist-z
+    - self-centering

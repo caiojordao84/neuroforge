@@ -1,0 +1,123 @@
+# METADATA:
+project_name: ind-rtd-module-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: ind-rtd-module
+name: "RTD Signal Conditioner Module (Módulo RTD)"
+family: industrial
+subfamily: process-modules
+category: signal
+standard: "IEC 60751"
+url: null
+image: ind-rtd-module.svg
+symbol: ind-rtd-module-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  sensor_type:
+    label: "Sensor Type"
+    default: "PT100"
+    options: ["PT100", "PT1000"]
+    type: enum
+    editable: true
+  wire_config:
+    label: "Wire Configuration"
+    default: "3-wire"
+    options: ["2-wire", "3-wire", "4-wire"]
+    type: enum
+    editable: true
+  output_type:
+    label: "Output Signal"
+    default: "4-20mA"
+    options: ["0-10V", "4-20mA"]
+    type: enum
+    editable: true
+  range_min:
+    label: "Range Min"
+    unit: "°C"
+    default: 0
+    min: -200
+    max: 0
+    type: float
+    editable: true
+  range_max:
+    label: "Range Max"
+    unit: "°C"
+    default: 100
+    min: 50
+    max: 850
+    type: float
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[6|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"24V"|"50mA"|"module power supply +"
+  GND|input|ground|null|null|"module power supply -"
+  RTD_IN1|input|analog|"5V"|"5mA"|"RTD terminal 1"
+  RTD_IN2|input|analog|"5V"|"5mA"|"RTD terminal 2"
+  RTD_IN3|input|analog|"5V"|"5mA"|"RTD terminal 3 (sense)"
+  OUT_SIG|output|analog|"24V"|"20mA"|"analog output signal"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: function-block-engine
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - active
+    - fault-open-circuit
+    - fault-short-circuit
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "24V"
+  max_current: "50mA"
+  max_power: null
+  max_temp: 60
+  min_temp: -20
+  ip_rating: null
+  safety_category: null
+warnings[2]:
+  - "Use shielded cables for RTD connections to minimize EMI"
+  - "Ensure wire resistance is balanced for 3-wire configurations to avoid offsets"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["sensor-rtd-*", "plc-*", "ind-ai-bank", "dc-source"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["temperature-measurement", "signal-conditioning", "plc-cabinet"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 40
+  height: 80
+  ports_layout: custom
+  port_VCC: {x: 0, y: 10}
+  port_GND: {x: 0, y: 70}
+  port_RTD_IN1: {x: 40, y: 20}
+  port_RTD_IN2: {x: 40, y: 35}
+  port_RTD_IN3: {x: 40, y: 50}
+  port_OUT_SIG: {x: 0, y: 40}
+  label_position: top
+  value_display: "{sensor_type} -> {output_type}"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: industrial-family
+  componentProfileId: ind-rtd-module
+  simulationEngine: function-block-engine
+  paletteGroup: "Industrial > Process Modules"
+  tags[4]:
+    - rtd
+    - signal-conditioner
+    - temperature
+    - pt100

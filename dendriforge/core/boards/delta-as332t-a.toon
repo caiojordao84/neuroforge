@@ -1,0 +1,146 @@
+# METADATA:
+project_name: delta-as332t-a-as300-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: delta-as332t-a
+name: "Delta AS332T-A — AS300 Series Compact Modular PLC (16DI + 16DO-T NPN, 24VDC)"
+manufacturer: "Delta Electronics"
+cpu: "Delta SoC 32-bit, 400MHz, 25ns/LD, 40k steps/ms"
+category: plc
+form_factor: modular
+standard: "IEC 61131-3"
+image: delta-as332t-a.svg
+url: "https://www.delta-emea.com/en-gb/products/PLC-Programmable-Logic-Controllers/AS300"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  memory_work: 128KB
+  memory_load: 512KB
+  memory_retain: 64KB
+  supply_voltage: 24V
+  power_consumption: 4W
+  di_integrated: 16
+  do_integrated: 16
+  ai_integrated: 0
+dims:
+  w: 115.0
+  h: 88.0
+  t: 78.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerSupply[4|]{name|direction|voltage|type}:
+  L+|input|24V|supply
+  M|input|null|ground
+  PE|input|null|protective-earth
+  SENSOR_SUPPLY|output|24V|sensor-power
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[3|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|16|"%IX0.0"|"%IX0.15"|null
+  1|0|DO|16|"%QX0.0"|"%QX0.15"|null
+  2|0|mixed|0|null|null|null
+
+## 5. DIGITAL CHANNEL DESCRIPTORS:
+# Format: addr | direction | label | roles
+# AS300 uses X/Y decimal dotted: X0.0-X0.15 / Y0.0-Y0.15 (16 per word boundary)
+digitalChannels[32|]{addr|direction|label|roles}:
+  "%IX0.0"|input|"X0.0 (5-24VDC, 200kHz HSC ch0)"|"di;hsc"
+  "%IX0.1"|input|"X0.1 (5-24VDC, 200kHz HSC ch1)"|"di;hsc"
+  "%IX0.2"|input|"X0.2 (5-24VDC, 200kHz HSC ch2)"|"di;hsc"
+  "%IX0.3"|input|"X0.3 (5-24VDC, 200kHz HSC ch3)"|"di;hsc"
+  "%IX0.4"|input|"X0.4 (5-24VDC, 200kHz HSC ch4)"|"di;hsc"
+  "%IX0.5"|input|"X0.5 (5-24VDC, 200kHz HSC ch5)"|"di;hsc"
+  "%IX0.6"|input|"X0.6 (5-24VDC, 1ms filter)"|di
+  "%IX0.7"|input|"X0.7 (5-24VDC, 1ms filter)"|di
+  "%IX0.8"|input|"X0.8 (5-24VDC, 1ms filter)"|di
+  "%IX0.9"|input|"X0.9 (5-24VDC, 1ms filter)"|di
+  "%IX0.10"|input|"X0.10 (5-24VDC, 1ms filter)"|di
+  "%IX0.11"|input|"X0.11 (5-24VDC, 1ms filter)"|di
+  "%IX0.12"|input|"X0.12 (5-24VDC, 1ms filter)"|di
+  "%IX0.13"|input|"X0.13 (5-24VDC, 1ms filter)"|di
+  "%IX0.14"|input|"X0.14 (5-24VDC, 1ms filter)"|di
+  "%IX0.15"|input|"X0.15 (5-24VDC, 1ms filter)"|di
+  "%QX0.0"|output|"Y0.0 (NPN transistor 30VDC/0.5A, 200kHz PTO ax0)"|"do;fast-counter"
+  "%QX0.1"|output|"Y0.1 (NPN transistor 30VDC/0.5A, 200kHz PTO ax1)"|"do;fast-counter"
+  "%QX0.2"|output|"Y0.2 (NPN transistor 30VDC/0.5A, 200kHz PTO ax2)"|"do;fast-counter"
+  "%QX0.3"|output|"Y0.3 (NPN transistor 30VDC/0.5A, 200kHz PTO ax3)"|"do;fast-counter"
+  "%QX0.4"|output|"Y0.4 (NPN transistor 30VDC/0.5A, 200kHz PTO ax4)"|"do;fast-counter"
+  "%QX0.5"|output|"Y0.5 (NPN transistor 30VDC/0.5A, 200kHz PTO ax5)"|"do;fast-counter"
+  "%QX0.6"|output|"Y0.6 (NPN transistor 30VDC/0.5A, 1ms)"|do
+  "%QX0.7"|output|"Y0.7 (NPN transistor 30VDC/0.5A, 1ms)"|do
+  "%QX0.8"|output|"Y0.8 (NPN transistor 30VDC/0.5A, 1ms)"|do
+  "%QX0.9"|output|"Y0.9 (NPN transistor 30VDC/0.5A, 1ms)"|do
+  "%QX0.10"|output|"Y0.10 (NPN transistor 30VDC/0.5A, 1ms)"|do
+  "%QX0.11"|output|"Y0.11 (NPN transistor 30VDC/0.5A, 1ms)"|do
+  "%QX0.12"|output|"Y0.12 (NPN transistor 30VDC/0.5A, 1ms)"|do
+  "%QX0.13"|output|"Y0.13 (NPN transistor 30VDC/0.5A, 1ms)"|do
+  "%QX0.14"|output|"Y0.14 (NPN transistor 30VDC/0.5A, 1ms)"|do
+  "%QX0.15"|output|"Y0.15 (NPN transistor 30VDC/0.5A, 1ms)"|do
+
+## 6. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[6|]{peripheral|param|value}:
+  ethernet|"port:502"|"protocol:Modbus-TCP;connections:32+32;speed:100Mbps"
+  ethernetip|"port:44818"|"protocol:EtherNet/IP;role:scanner-adapter;cip:32;rpi:5-1000ms"
+  serial2|"baud:921600"|"proto:Modbus-ASCII/RTU;bus:RS485;port:COM2;role:master-slave"
+  serial3|"baud:921600"|"proto:Modbus-ASCII/RTU;bus:RS485;port:COM3;role:master-slave"
+  canopen|"baud:1000"|"role:master;profile:DS301;slaves:64;pdo:2000bytes;card:AS-FCOPM"
+  clock|"resolution:1s"|"type:RTC;battery:CR1620;fields:YY-MM-DD-WD-HH-MM-SS"
+usb:
+  type: Mini-USB
+  chip: native
+  vid: "0x0346"
+  pid: "0x0100"
+
+## 7. RACKS & EXPANSION:
+# Format: rack | slots | backplane_current | voltage
+racks[2|]{rack|slots|backplane_current|voltage}:
+  0|32|2000mA|24V
+  1|8|1000mA|24V
+expansion:
+  max_signal_modules: 32
+  max_communication_modules: 4
+  max_signal_boards: 2
+
+## 8. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  supply_voltage: 24V
+  supply_current_max: 2000mA
+  io_output_current_max: 500mA
+  sensor_supply_current: 500mA
+  operating_temp: "-20-60°C"
+  storage_temp: "-40-80°C"
+  protection_class: IP20
+  warnings[9]:
+    - "AS332T-A requires 24VDC supply via AS-PS02 or AS-PS02A power module (100-240VAC input); not directly mains-powered"
+    - "CANopen DS301 motion (up to 8 axes via AS-FCOPM) requires the AS-FCOPM function card in slot 2; not built-in on AS300"
+    - "AS300 supports 2 function card slots; AS-FCOPM occupies slot 2; slot 1 can host AS-F232/F485/F2AD/F2DA/FEN02"
+    - "Data backup is battery-free: Flash ROM (program, 100k writes) and MRAM (latched area, unlimited) — no backup battery needed"
+    - "RTC requires CR1620 lithium button battery for timekeeping only — separate from data backup"
+    - "Expansion I/O uses parallel AS industrial bus (not serial) — I/O update stays ~0.1ms per module regardless of chain length"
+    - "Max 32 expansion modules: up to 16 analog modules and 4 communication modules within that total"
+    - "Max 15 remote I/O racks via AS00SCM-A in RTU mode + AS-FEN02; total system I/O up to 1024 digital points"
+    - "ISPSoft is free; EIP Builder, CANopen Builder and SCMSoft are all free tools available from Delta Download Center"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "ISPSoft v3.x (free)"
+  runtime: "AS300 FW"
+  firmware: "3.x"
+  languages: "LD;ST;CFC;SFC;C"
+  order_ref: "AS332T-A"
+
+## 9. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: delta-as332t-a
+  defaultLanguageSkills[3]:
+    - ld-ispsoft-as300
+    - st-iec61131-as300
+    - modbus-tcp-delta-as

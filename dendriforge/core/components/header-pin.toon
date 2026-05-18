@@ -1,0 +1,96 @@
+# METADATA:
+project_name: header-pin-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: header-pin
+name: "Pin Header (Macho/Fêmea)"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60603-13"
+url: null
+image: header-pin.svg
+symbol: header-pin-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  gender:
+    label: "Gender"
+    default: "male"
+    options: ["male", "female"]
+    type: enum
+    editable: true
+  pitch:
+    label: "Pitch"
+    unit: mm
+    default: 2.54
+    options: [1.27, 2.0, 2.54, 5.08]
+    type: enum
+    editable: true
+  rated_current:
+    label: "Rated Current"
+    unit: A
+    default: 3
+    min: 1
+    max: 5
+    type: float
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+ports[2|]{id|direction|type|voltage_max|current_max|notes}:
+  IN|passive|analog|"250V"|"3A"|"pin side A"
+  OUT|passive|analog|"250V"|"3A"|"pin side B"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  bidirectional: true
+  dynamic: false
+  thermal_model: false
+  noise_model: false
+  states[1]:
+    - nominal
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "250V"
+  max_current: "3A"
+  max_power: null
+  max_temp: 105
+  min_temp: -40
+warnings[1]:
+  - "Ensure correct pitch alignment before insertion"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["pcb-connection", "wire-to-board", "jumper"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 20
+  height: 40
+  ports_layout: vertical
+  port_IN: {x: 10, y: 0}
+  port_OUT: {x: 10, y: 40}
+  label_position: right
+  value_display: "{pitch}mm {gender}"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: header-pin
+  simulationEngine: basic-analog
+  paletteGroup: "Electricals > Passives"
+  tags[3]:
+    - header
+    - pin
+    - connector

@@ -1,0 +1,142 @@
+# METADATA:
+project_name: hyd-cylinder-telescopic-da-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: hyd-cylinder-telescopic-da
+name: "Double-Acting Telescopic Hydraulic Cylinder (Cilindro telescópico DA)"
+family: hydraulics
+subfamily: hydraulic-actuators
+category: actuator
+standard: "custom"
+url: null
+image: hyd-cylinder-telescopic-da.svg
+symbol: hyd-cylinder-telescopic-da-symbol.svg
+symbol_standard: ISO
+
+## 2. PARAMETERS:
+params:
+  bore:
+    label: "Max Bore Diameter"
+    unit: mm
+    default: 100
+    options: [63, 80, 100, 125, 160]
+    type: enum
+    editable: true
+  stages:
+    label: "Number of Stages"
+    default: 3
+    options: [2, 3, 4, 5]
+    type: enum
+    editable: true
+  stroke:
+    label: "Total Stroke"
+    unit: mm
+    default: 1500
+    min: 200
+    max: 6000
+    type: float
+    editable: true
+  operating_pressure:
+    label: "Operating Pressure"
+    unit: bar
+    default: 200
+    min: 10
+    max: 350
+    type: float
+    editable: true
+  port_size:
+    label: "Port Size"
+    default: "G1/2"
+    options: ["G3/8", "G1/2", "G3/4", "G1"]
+    type: enum
+    editable: true
+  initial_position:
+    label: "Initial Position"
+    default: "retracted"
+    options: ["retracted", "extended"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[0|]{}:
+
+## 4b. FLUID PORTS (HYDRAULIC):
+hydraulic_ports[2|]{id|direction|type|pressure_max|flow_max|notes}:
+  A|bidirectional|hydraulic|"{operating_pressure}bar"|null|"port A — extend"
+  B|bidirectional|hydraulic|"{operating_pressure}bar"|null|"port B — retract"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: hydraulic-linear-actuator
+  motion: linear
+  bidirectional: true
+  dynamic: true
+  position_feedback: true
+  velocity_model: simplified
+  thermal_model: false
+  leakage_model: true
+  noise_model: false
+  states[4]:
+    - retracted
+    - extending
+    - extended
+    - retracting
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_pressure: "{operating_pressure}"
+  min_pressure: 10
+  max_voltage: null
+  max_current: null
+  max_power: null
+  max_temp: 80
+  min_temp: -20
+  max_force:
+    extend: "calc:pi*(bore/2)^2 * operating_pressure * 0.1"
+    retract: "calc:pi*((bore/2)^2-(bore*0.8/2)^2) * operating_pressure * 0.1"
+  ip_rating: null
+warnings[3]:
+  - "Extend force and speed change non-linearly as consecutive stages deploy"
+  - "Retract area is significantly smaller; pull force is inherently restricted"
+  - "Ensure the hydraulic system tank can handle the differential oil volume during retraction"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["hyd-valve-4-2-*", "hyd-valve-4-3-*", "hyd-flow-control-*", "hyd-manifold-block"]
+  forbidden_with: ["pneu-*", "act-motor-*"]
+  requires: ["hyd-power-unit"]
+  typical_context: ["dump-trucks", "heavy-lifting", "compact-installation"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 120
+  height: 40
+  ports_layout: custom
+  port_A: {x: 20, y: 0}
+  port_B: {x: 100, y: 0}
+  label_position: bottom
+  value_display: "DA-Tele Ø{bore}mm × {stroke}mm"
+  animated: true
+
+## 7b. SENSOR SLOTS:
+sensor_slots[2|]{id|position|compatible_sensors}:
+  S1|retracted-end|["hyd-pressure-switch-no", "sensor-limit-switch"]
+  S2|extended-end|["hyd-pressure-switch-no", "sensor-limit-switch"]
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: hydraulics-family
+  componentProfileId: hyd-cylinder-telescopic-da
+  simulationEngine: hydraulic-motion
+  paletteGroup: "Hydraulics > Hydraulic Actuators"
+  tags[6]:
+    - cylinder
+    - telescopic
+    - hydraulic
+    - double-acting
+    - actuator
+    - linear

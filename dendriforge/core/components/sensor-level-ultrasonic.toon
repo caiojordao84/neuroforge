@@ -1,0 +1,116 @@
+# METADATA:
+project_name: sensor-level-ultrasonic-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: sensor-level-ultrasonic
+name: "Ultrasonic Level Sensor (Sensor de Nível Ultrassónico)"
+family: sensors
+subfamily: process
+category: sensor
+standard: "IEC 60947-5-7"
+url: null
+image: sensor-level-ultrasonic.svg
+symbol: sensor-level-ultrasonic-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  output_type:
+    label: "Output Type"
+    default: "analog-4-20mA"
+    options: ["analog-4-20mA", "analog-0-10V", "digital-IO-Link"]
+    type: enum
+    editable: true
+  measuring_range:
+    label: "Measuring Range"
+    unit: m
+    default: 5.0
+    min: 0.5
+    max: 15.0
+    type: float
+    editable: true
+  blanking_zone:
+    label: "Blanking Zone (Dead Band)"
+    unit: m
+    default: 0.2
+    type: float
+    editable: false
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 24
+    options: [12, 24]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"24V"|"100mA"|"supply +"
+  GND|input|ground|null|null|"supply -"
+  OUT|output|analog|"24V"|"30mA"|"analog level output or IO-Link"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: analog-transfer
+  trigger: distance
+  trigger_source: external
+  output_logic: "{output_type}"
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: true
+  states[4]:
+    - measuring
+    - loss-of-echo
+    - out-of-range
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "{supply_voltage}"
+  max_current: "100mA"
+  max_power: null
+  max_temp: 70
+  min_temp: -20
+  ip_rating: "IP67"
+  safety_category: null
+warnings[3]:
+  - "Objects or medium level inside the blanking zone will not be measured correctly"
+  - "Heavy foam, steam, or turbulent surfaces may cause loss of echo"
+  - "Ensure perpendicular alignment to the target surface for accurate reflection"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["ind-ai-bank", "plc-*", "comm-iolink-master-stub"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["tank-level", "water-treatment", "silo-monitoring", "process-control"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 50
+  height: 60
+  ports_layout: vertical
+  port_VCC: {x: 25, y: 0}
+  port_GND: {x: 25, y: 60}
+  port_OUT: {x: 50, y: 30}
+  label_position: left
+  value_display: "{measuring_range}m Level"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: sensors-family
+  componentProfileId: sensor-level-ultrasonic
+  simulationEngine: digital-io
+  paletteGroup: "Sensors > Process"
+  tags[5]:
+    - sensor
+    - ultrasonic
+    - level
+    - process
+    - analog

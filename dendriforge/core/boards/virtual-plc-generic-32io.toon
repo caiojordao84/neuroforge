@@ -1,0 +1,100 @@
+# METADATA:
+project_name: virtual-plc-generic-32io-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: virtual-plc-generic-32io
+name: "Virtual Generic PLC 32 I/O"
+manufacturer: NeuroForge
+cpu: VIRTUAL
+category: plc
+form_factor: softplc
+standard: "IEC 61131-3"
+image: virtual-plc-generic.svg
+url: null
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  memory_work: null
+  memory_load: null
+  cycle_time: 1
+  supply_voltage: null
+  virtual: true
+program_memory:
+  steps_max: 65536
+  words_max: 32768
+  data_registers: 4096
+  timer_count: 512
+  counter_count: 512
+watchdog_ms: 200
+dims:
+  w: null
+  h: null
+  t: null
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+# Notes: Virtual device — no real power pins. Defined for simulation completeness.
+powerPins[3|]{name|direction|voltage|type}:
+  PWR+|input|null|null
+  PWR-|input|null|ground
+  PE|null|null|ground
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+# Notes: Virtual 32 I/O model — 12 DI, 4 AI, 12 DO, 4 AO
+ioModules[4|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|12|"%IX0.0"|"%IX1.3"|null
+  1|0|DO|12|"%QX0.0"|"%QX1.3"|null
+  2|0|AI|4|"%IW0"|"%IW3"|null
+  3|0|AO|4|"%QW0"|"%QW3"|null
+
+## 5. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[5|]{peripheral|param|value}:
+  ethernet|"port:502"|"protocol:Modbus-TCP;EtherNet-IP;virtual"
+  modbus-tcp|"port:502"|"role:server;virtual"
+  serial|"baud:9600"|"proto:RS485;Modbus-RTU;virtual"
+  canopen|"address:1"|"version:2.0B;virtual"
+  opc-ua|"port:4840"|"security:none;virtual"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  virtual: true
+  hardware_required: false
+  simulation_only: true
+  warnings[4]:
+    - "This is a virtual device — no real hardware exists"
+    - "All electrical specs are nominal/typical for simulation purposes"
+    - "Cycle time behaviour is software-simulated — not real-time guaranteed"
+    - "I/O addressing follows IEC 61131-3 standard for portability"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "arduino-plc-ide;openplc;codesys-virtual;neuroforge-sim"
+  runtime: neuroforge-sim
+  languages: "LD;FBD;ST;SFC;IL"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: virtual-plc-generic-32io
+  defaultLanguageSkills[3]:
+    - structured-text-iec61131
+    - ladder-iec61131
+    - fbd-iec61131
+  plcIdeSupport: true
+  simulationOnly: true
+
+## 8. MEMORY MAP (IEC 61131-3):
+memory_map:
+  digital_inputs: "%IX0.0-%IX1.3"
+  analog_inputs: "%IW0-%IW3"
+  digital_outputs: "%QX0.0-%QX1.3"
+  analog_outputs: "%QW0-%QW3"
+  data_registers: "%MW0-%MW4095"
+  timers: "%T0-%T511"
+  counters: "%C0-%C511"
+  flags: "%MX0.0-%MX255.7"

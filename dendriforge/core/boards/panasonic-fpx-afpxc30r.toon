@@ -1,0 +1,127 @@
+# METADATA:
+project_name: panasonic-fpx-afpxc30r-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: panasonic-fpx-afpxc30r
+name: "Panasonic FP-X AFPX-C30R — 32K steps, 0.32us/instr, 16DI/14DO-Relay, 100-240VAC, USB+Tool port, cassette-expandable PLC"
+manufacturer: "Panasonic Electric Works (now Panasonic Industry Co., Ltd.)"
+mcu: "Proprietary FP-X processor — 0.32µs/instruction; 32K-step Flash ROM program; 32765-word DT"
+category: plc
+image: panasonic-fpx-afpxc30r.svg
+url: "https://industry.panasonic.com/global/en/products/fasys/plc/plc/number/afpx-c30r"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 131072
+  flash_available: 131072
+  sram: 65536
+  eeprom: 0
+  clock: 0
+  voltage: "24V"
+dims:
+  w: 100.0
+  h: 90.0
+  t: 101.2
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# AC power supply 100-240VAC via screw terminal; internal 24VDC service output for I/O sensors
+powerPins[5|]{name|direction|voltage|type}:
+  AC_L|input|"240V"|null
+  AC_N|null|null|ground
+  PE_EARTH|null|null|ground
+  SVC_24V|output|"24V"|null
+  SVC_COM|null|null|ground
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# DI: X0..XF pins 101-116; optocoupler, 24VDC, + & - common switchable
+# DO: Y0..YD pins 201-214; relay NO, 2A/250VAC
+# Tool port (mini-DIN 5-pin): pins 11-15
+# USB B-type (C30/C60 only — C14 has NO USB): pins 21-24
+# Comm cassette slot: pin 31 (front cassette bay, max 1 comm cassette)
+# Application cassette slots 1+2: pins 32,33
+# Expansion connector (right side): pin 40
+gpio[32|]{pin|type|pwm|int|label|roles}:
+  11|digital|false|false|"Tool port mini-DIN5 pin1 / SG — signal ground"|null
+  12|digital|false|false|"Tool port mini-DIN5 pin2 / SD(TXD) — RS-232C output; MEWTOCOL-COM Computer Link; FPWIN Pro/GR programming; default 9600bps 8E1; max 115200bps"|uart-tx
+  13|digital|false|false|"Tool port mini-DIN5 pin3 / RD(RXD) — RS-232C input; use AFC8503/AFC8503S cable (DB9 to mini-DIN5, 3m)"|uart-rx
+  15|digital|false|false|"Tool port mini-DIN5 pin5 / +5V output — 100mA max; powers external programming adapter or display panel; do NOT short-circuit"|null
+  21|digital|false|false|"USB B-type pin1 / VBUS — +5V from PC; C30/C60 ONLY (C14 has NO USB); USB 2.0 type A-B cable max 5m; fixed 115.2kbps; FPWIN Pro/GR programming only"|null
+  22|digital|false|false|"USB B-type pin2 / D- — USB 2.0 full-speed differential minus; no real-time comms; programming use only"|null
+  23|digital|false|false|"USB B-type pin3 / D+ — USB 2.0 full-speed differential plus"|null
+  24|digital|false|false|"USB B-type pin4 / GND"|null
+  31|digital|false|false|"Comm cassette slot (part 1) — ONLY 1 comm cassette allowed; options: AFPX-COM1(RS232C-5w);AFPX-COM2(RS232C-3w-x2);AFPX-COM3(RS485/RS422-ins);AFPX-COM4(RS485+RS232C);AFPX-COM5(Ethernet+RS232C);AFPX-COM6(RS485-2ch-ins)"|"uart;eth;if-slot"
+  32|digital|false|false|"Application cassette slot 1 — AFPX-AD2;AFPX-DA2;AFPX-A21;AFPX-TC2;AFPX-RTD2;AFPX-IN8;AFPX-TR8;AFPX-TR6P;AFPX-PLS(Ry-only);AFPX-MRTC"|"adc:t;if-slot"
+  33|digital|false|false|"Application cassette slot 2 (C30/C60 only) — same options as slot 1 EXCEPT comm cassette cannot go here; AFPX-MRTC: only 1 total allowed; AFPX-PLS: Ry type only"|"adc:t;if-slot"
+  40|digital|false|false|"Expansion connector (right side) — up to 8x AFPX-E30R/T/P expansion I/O units; expansion cable max total 160cm; or AFPX-EFP0 adapter (last position only) + 3 FP0 units"|null
+  101|digital|false|true|"X0 — DI 24VDC optocoupler; + or - common switchable; 4.7mA; interrupt-capable; also HSC single-phase ch0 (max 10kHz Ry) or 2-phase ch0/1 input"|di
+  102|digital|false|true|"X1 — DI 24VDC optocoupler; interrupt-capable; HSC ch1"|di
+  103|digital|false|true|"X2 — DI 24VDC optocoupler; interrupt-capable; HSC ch2"|di
+  104|digital|false|true|"X3 — DI 24VDC optocoupler; interrupt-capable; HSC ch3"|di
+  105|digital|false|true|"X4 — DI 24VDC optocoupler; interrupt-capable; HSC ch4"|di
+  106|digital|false|true|"X5 — DI 24VDC optocoupler; interrupt-capable; HSC ch5"|di
+  107|digital|false|true|"X6 — DI 24VDC optocoupler; interrupt-capable; HSC ch6"|di
+  108|digital|false|true|"X7 — DI 24VDC optocoupler; interrupt-capable; HSC ch7 (last high-speed counter channel)"|di
+  109|digital|false|false|"X8 — DI 24VDC optocoupler; 4.3mA; standard input only"|di
+  110|digital|false|false|"X9 — DI 24VDC optocoupler"|di
+  111|digital|false|false|"XA — DI 24VDC optocoupler"|di
+  112|digital|false|false|"XB — DI 24VDC optocoupler"|di
+  113|digital|false|false|"XC — DI 24VDC optocoupler"|di
+  114|digital|false|false|"XD — DI 24VDC optocoupler"|di
+  115|digital|false|false|"XE — DI 24VDC optocoupler"|di
+  116|digital|false|false|"XF — DI 24VDC optocoupler"|di
+  201|digital|false|false|"Y0 — Relay output NO 2A/250VAC or 2A/30VDC; requires freewheeling diode on inductive loads; max switching frequency 20 ops/min for full mechanical life"|do
+  202|digital|false|false|"Y1 — Relay output NO 2A/250VAC"|do
+  203|digital|false|false|"Y2 — Relay output NO 2A/250VAC"|do
+  204|digital|false|false|"Y3 — Relay output NO 2A/250VAC"|do
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[6|]{peripheral|param|value}:
+  tool_port|"baud:115200"|"proto:MEWTOCOL-COM-Computer-Link;FPWIN-Pro-GR;Modbus-RTU-slave;General-serial;isolation:no;connector:mini-DIN5;pin5-plus5V-100mA;cable:AFC8503"
+  usb_port|"baud:115200"|"proto:FPWIN-Pro-GR-programming-only;fixed-115200bps;C30-C60-ONLY-not-C14;cable:USB-A-B-max-5m;VID:04DA-PID:2E14"
+  hsc|"channels:8"|"single-phase:8ch-10kHz-max;two-phase:4ch-5kHz-max;Ry-type-only-internal-inputs;Tr-type-200kHz-direct"
+  comm_cassette|"slot:1"|"options:AFPX-COM1-COM2-COM3-COM4-COM5-COM6;max:1-cassette;baud-max:115200;COM5-Ethernet-100BaseT+RS232C;COM3-RS485-RS422-insulated"
+  appl_cassette|"slots:2"|"options:AD2-DA2-A21-TC2-RTD2-IN8-TR8-TR6P-PLS-MRTC;C14:slot1-only;MRTC-RTC-needs-AFPX-BATT;PLS-Ry-type-only;DA2-A21-incompatible-with-COM5-current-mode"
+  expansion|"max-units:8"|"units:AFPX-E30R-T-P-E16R-T-P-E16X-E14YR;fp0-via-AFPX-EFP0-max-3-units;cable-max-total:160cm;C30-max-IO:270pts;C60-max-IO:300pts"
+usb:
+  type: USB-B
+  chip: native
+  vid: "0x04DA"
+  pid: "0x2E14"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "400mA"
+  total_current_limit: "400mA"
+  warnings[9]:
+    - "AFPX-C14R (and C14T/P/D variants) has NO USB port — for C14, programming is via Tool port (RS232C mini-DIN5) ONLY using AFC8503 cable; do NOT attempt USB connection on C14 models"
+    - "Only ONE communication cassette (AFPX-COM1/2/3/4/5/6) can be installed per control unit, always in cassette slot 1 — if an application cassette is also in slot 1, the comm cassette mounts on TOP of it"
+    - "AFPX-COM5 (Ethernet cassette) is INCOMPATIBLE with AFPX-DA2 and AFPX-A21 when used in current output mode (4-20mA) — voltage output mode (0-10V at <1mA load) works; plan your cassette combination at design time"
+    - "AFPX-MRTC (master memory + RTC) can ONLY be installed ONCE per unit — installing 2 causes E26 (user ROM error); RTC function requires AFPX-BATT backup battery to be separately installed"
+    - "Do NOT install the backup battery (AFPX-BATT) if it will not be used — a discharged battery left in the unit may leak and cause corrosion; install battery only when RTC or data register backup is required"
+    - "AFPX-PLS (pulse I/O cassette) is compatible with Ry (relay) type control units ONLY — it cannot be used with Tr (transistor) type; for motion control with Tr type use the CPU I/O direct pulse output (built-in)"
+    - "Expansion cable total length must NOT exceed 160cm — exceeding this causes communication errors between control unit and expansion units; plan physical layout before installing expansion units"
+    - "FP0 expansion adapter (AFPX-EFP0) must be installed at the LAST (rightmost) position of the FP-X expansion bus — it cannot be followed by any FP-X expansion unit; max 3 FP0 units; FP0 CC-Link slave must be rightmost FP0 unit"
+    - "Internal 24VDC service supply output (screw terminal) is 0.4A max — this is shared between ALL connected input sensors; exceeding 0.4A will cause over-current protection to activate; use external 24VDC supply for large sensor loads"
+compatibility:
+  sw: "FPWIN Pro v5.1+ (IEC 61131-3); FPWIN Pro v6.0+ (recommended); FPWIN GR v2.5+ (relay ladder only)"
+  languages: "LD;IL;ST;FBD;SFC (IEC 61131-3 full via FPWIN Pro v6)"
+  protocols: "MEWTOCOL-COM;Modbus-RTU-Master-Slave-F145-F146;MEWTOCOL-Master;PC-PLC-Link-MEWNET-W0;General-serial;Ethernet-via-AFPX-COM5"
+  comm_cassettes: "AFPX-COM1(RS232C-5w);AFPX-COM2(RS232C-3w-x2);AFPX-COM3(RS485-RS422-ins);AFPX-COM4(RS485+RS232C);AFPX-COM5(ETH+RS232C);AFPX-COM6(RS485-2ch)"
+  appl_cassettes: "AFPX-AD2;AFPX-DA2;AFPX-A21;AFPX-TC2;AFPX-RTD2;AFPX-IN8;AFPX-TR8;AFPX-TR6P;AFPX-PLS;AFPX-MRTC"
+  certifications: "UL;cUL;CE-RoHS"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: panasonic-fpx-plc-family
+  boardProfileId: panasonic-fpx-afpxc30r
+  defaultLanguageSkills[3]:
+    - ld-panasonic-fpx-fpwin-pro
+    - il-panasonic-fpx-fpwin-gr
+    - st-panasonic-fpx-fpwin-pro

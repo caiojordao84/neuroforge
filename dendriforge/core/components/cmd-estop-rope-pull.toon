@@ -1,0 +1,138 @@
+# METADATA:
+project_name: cmd-estop-rope-pull-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: cmd-estop-rope-pull
+name: "E-Stop Rope Pull"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60947-5-5"
+url: null
+image: cmd-estop-rope-pull.svg
+symbol: cmd-estop-rope-pull-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  contact_layout:
+    label: "Contact Layout"
+    default: "2NC"
+    options: ["1NC", "2NC", "2NC+1NO"]
+    type: enum
+    editable: true
+  rope_length_m:
+    label: "Rope Length"
+    unit: m
+    default: 10
+    options: [5, 10, 20, 30, 50]
+    type: enum
+    editable: true
+  pull_force:
+    label: "Pull Force"
+    unit: N
+    default: 200
+    options: [100, 150, 200, 250]
+    type: enum
+    editable: true
+  reset_type:
+    label: "Reset Type"
+    default: "manual-reset"
+    options: ["manual-reset", "key-reset"]
+    type: enum
+    editable: true
+  ip_rating:
+    label: "Ingress Protection"
+    default: "IP66"
+    options: ["IP65", "IP66", "IP67"]
+    type: enum
+    editable: true
+  safety_rating:
+    label: "Safety Category"
+    default: "SIL2"
+    options: ["PL d", "PL e", "SIL2", "SIL3"]
+    type: enum
+    editable: true
+  mechanical_life:
+    label: "Mechanical Life"
+    unit: cycles
+    default: 100000
+    min: 10000
+    max: 1000000
+    type: float
+    editable: false
+  package:
+    label: "Package"
+    default: "rope station"
+    options: ["rope station", "end station", "industrial enclosure"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  COM|input|ground|null|null|"common terminal"
+  NC|output|digital|"250V"|"10A"|"normally-closed safety contact"
+  NO|output|digital|"250V"|"10A"|"normally-open auxiliary contact"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - armed
+    - tripped
+    - reset
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "250V"
+  max_current: "10A"
+  max_power: null
+  max_temp: 70
+  min_temp: -25
+warnings[4]:
+  - "This safety rope must be tensioned and routed according to the installation manual"
+  - "NC safety contact should open on actuation to remove hazard energy"
+  - "Do not bypass or defeat the emergency stop chain"
+  - "Periodically test rope tension, end stations and reset function"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["safety-relay", "plc-safety-input", "dc-source"]
+  forbidden_with: ["ac-source"]
+  requires: ["safety-relay"]
+  typical_context: ["conveyor-safety", "perimeter-safety", "safety-chain"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 80
+  height: 40
+  ports_layout: custom
+  port_COM: {x: 0, y: 20}
+  port_NC: {x: 80, y: 15}
+  port_NO: {x: 80, y: 25}
+  label_position: top
+  value_display: "E-Stop rope / {reset_type} / {rope_length_m}m"
+  animated: false
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: cmd-estop-rope-pull
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Switches"
+  tags[7]:
+    - e-stop
+    - rope-pull
+    - safety
+    - switch
+    - operator
+    - control
+    - iec-60947-5-5

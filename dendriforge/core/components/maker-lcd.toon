@@ -1,0 +1,118 @@
+# METADATA:
+project_name: maker-lcd-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: maker-lcd
+name: "LCD Alphanumeric Display"
+family: electricals
+subfamily: semiconductors
+category: signal
+standard: "IEC 61747-1"
+url: null
+image: maker-lcd.svg
+symbol: maker-lcd-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  format:
+    label: "Display Format"
+    default: "16x2"
+    options: ["8x1", "16x1", "16x2", "20x2", "20x4", "40x2"]
+    type: enum
+    editable: true
+  interface:
+    label: "Interface"
+    default: "I2C"
+    options: ["I2C", "parallel-4bit", "parallel-8bit", "SPI"]
+    type: enum
+    editable: true
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 5
+    options: [3, 5]
+    type: enum
+    editable: true
+  backlight:
+    label: "Backlight"
+    default: "LED-blue"
+    options: ["none", "LED-blue", "LED-green", "LED-white", "LED-yellow"]
+    type: enum
+    editable: true
+  i2c_address:
+    label: "I2C Address"
+    default: "0x27"
+    options: ["0x20", "0x27", "0x3F"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"5V"|"100mA"|"DC supply positive"
+  GND|input|ground|null|null|"DC supply negative"
+  SCL|input|i2c|"5V"|"5mA"|"I2C clock (or D4-D7 in parallel mode)"
+  SDA|bidirectional|i2c|"5V"|"5mA"|"I2C data (or RS/EN/RW in parallel mode)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: script
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - off
+    - displaying
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "5V"
+  max_current: "100mA"
+  max_power: null
+  max_temp: 70
+  min_temp: -20
+  ip_rating: null
+  safety_category: null
+warnings[3]:
+  - "3.3V-only MCUs require level shifter when using 5V LCD in I2C mode"
+  - "Contrast adjustment via potentiometer on I2C backpack (V0 pin)"
+  - "Backlight current must be limited — check backpack resistor value"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["mcu-*", "comm-i2c-bus"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["status-display", "menu-ui", "debug-output"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 80
+  height: 40
+  ports_layout: custom
+  port_VCC: {x: 0, y: 5}
+  port_GND: {x: 0, y: 15}
+  port_SCL: {x: 0, y: 27}
+  port_SDA: {x: 0, y: 37}
+  label_position: top
+  value_display: "{format} / {interface} / {backlight}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: maker-lcd
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Semiconductors"
+  tags[6]:
+    - lcd
+    - display
+    - semiconductors
+    - alphanumeric
+    - i2c
+    - backlight

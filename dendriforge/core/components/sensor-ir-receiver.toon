@@ -1,0 +1,106 @@
+# METADATA:
+project_name: sensor-ir-receiver-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: sensor-ir-receiver
+name: "IR Receiver (Receptor IR)"
+family: sensors
+subfamily: electrical
+category: sensor
+standard: "IEC 60947-5-2"
+url: null
+image: sensor-ir-receiver.svg
+symbol: sensor-ir-receiver-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  output_logic:
+    label: "Output Logic"
+    default: "active-low"
+    options: ["active-low", "active-high"]
+    type: enum
+    editable: true
+  carrier_frequency:
+    label: "Carrier Frequency"
+    unit: kHz
+    default: 38
+    options: [36, 38, 40, 56]
+    type: enum
+    editable: true
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 5
+    options: [3.3, 5]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"5V"|"5mA"|"supply +"
+  GND|input|ground|null|null|"supply -"
+  OUT|output|digital|"5V"|"5mA"|"demodulated signal output"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: threshold
+  trigger: optical
+  trigger_source: external
+  output_logic: "{output_logic}"
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: true
+  states[3]:
+    - idle
+    - receiving
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "{supply_voltage}"
+  max_current: "5mA"
+  max_power: null
+  max_temp: 85
+  min_temp: -25
+  ip_rating: "IP54"
+  safety_category: null
+warnings[2]:
+  - "Standard IR receivers typically use active-low output logic"
+  - "Ensure transmitter and receiver carrier frequencies match (e.g. 38kHz)"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["mcu-*", "plc-*", "maker-ir-remote"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["remote-control", "optical-communication", "presence-detection"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 30
+  height: 40
+  ports_layout: vertical
+  port_VCC: {x: 0, y: 40}
+  port_GND: {x: 15, y: 40}
+  port_OUT: {x: 30, y: 40}
+  label_position: top
+  value_display: "{carrier_frequency}kHz IR"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: sensors-family
+  componentProfileId: sensor-ir-receiver
+  simulationEngine: digital-io
+  paletteGroup: "Sensors > Electrical"
+  tags[4]:
+    - sensor
+    - infrared
+    - receiver
+    - optical

@@ -1,0 +1,110 @@
+# METADATA:
+project_name: ind-noise-monitor-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: ind-noise-monitor
+name: "Industrial Noise Monitor (Monitor de Ruído)"
+family: industrial
+subfamily: process-modules
+category: monitor
+standard: "IEC 61672-1"
+url: null
+image: ind-noise-monitor.svg
+symbol: ind-noise-monitor-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  alarm_threshold:
+    label: "Alarm Threshold"
+    unit: "dB"
+    default: 85
+    min: 40
+    max: 130
+    type: float
+    editable: true
+  averaging_time:
+    label: "Averaging Time"
+    unit: "s"
+    default: 1
+    min: 0.1
+    max: 60
+    type: float
+    editable: true
+  output_mode:
+    label: "Output Signal"
+    default: "4-20mA"
+    options: ["0-10V", "4-20mA"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[5|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"24V"|"500mA"|"module power supply +"
+  GND|input|ground|null|null|"module power supply -"
+  MIC_IN|input|analog|"10V"|"10mA"|"microphone / sound sensor input"
+  LEVEL_OUT|output|analog|"24V"|"20mA"|"analog noise level output"
+  ALARM_OUT|output|digital|"24V"|"2A"|"alarm digital output (relay or solid state)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: function-block-engine
+  equation: "LEVEL_OUT = MIC_IN; ALARM_OUT = (LEVEL_OUT > alarm_threshold)"
+  bidirectional: false
+  dynamic: true
+  real_time: true
+  scan_cycle_aware: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - active
+    - alarm
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "24V"
+  max_current: "500mA"
+  max_power: null
+  max_temp: 60
+  min_temp: -10
+warnings[2]:
+  - "Ensure microphone input is properly shielded against EMI"
+  - "Calibration required periodically according to local acoustic regulations"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["sensor-sound*", "plc-*", "ind-ai-bank", "ind-do-bank"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["occupational-safety", "factory-floor", "environmental-monitoring"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 80
+  ports_layout: custom
+  port_VCC: {x: 0, y: 10}
+  port_GND: {x: 0, y: 70}
+  port_MIC_IN: {x: 0, y: 40}
+  port_LEVEL_OUT: {x: 60, y: 25}
+  port_ALARM_OUT: {x: 60, y: 55}
+  label_position: top
+  value_display: "{alarm_threshold}dB Limit"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: industrial-family
+  componentProfileId: ind-noise-monitor
+  simulationEngine: function-block-engine
+  paletteGroup: "Industrial > Process Modules"
+  tags[4]:
+    - monitor
+    - noise
+    - industrial
+    - acoustic

@@ -1,0 +1,127 @@
+# METADATA:
+project_name: omron-sysmac-nx1p2-9024dt1-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: omron-sysmac-nx1p2-9024dt1
+name: "Omron Sysmac NX1P2-9024DT1 — Machine Automation Controller; 3.3ns LD; 1.5MB program; 2MB vars; 14DI PNP/NPN 24V; 10DO PNP transistor 0.5A; 4 PTP axes EtherCAT; EtherNet/IP + EtherCAT master; 8 NX expansion units; 16 EtherCAT slaves; 1 option board; 24VDC"
+manufacturer: "Omron Corporation"
+mcu: "Omron Sysmac NX1P2 CPU engine-9 — 3.3ns LD; 1.5MB program; 450 POUs; 2MB non-retain vars; 4 PTP axes EtherCAT (no synchronized motion); EtherNet/IP + EtherCAT master; IEC 61131-3 full; Sysmac Studio; battery-free program retention"
+category: plc
+image: omron-sysmac-nx1p2-9024dt1.svg
+url: "https://industrial.omron.eu/en/products/NX1P2-9024DT1"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 17179869184
+  flash_available: 1572864
+  sram: 2129920
+  eeprom: 0
+  clock: 0
+  voltage: "24V"
+dims:
+  w: 124.0
+  h: 100.0
+  t: 71.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# NX1P2-9024DT1: 24VDC (20.4-28.8VDC); 6.40W power consumption; inrush 10A/0.1ms + 2.5A/150ms cold start
+# NX bus power capacity: 10W max (for NX units on CPU rack right side); efficiency 80%
+# I/O power supply: NOT provided by CPU — NX-PF0630 or NX-PF0730 Additional I/O Power Supply Unit required
+#   for most NX DI/DO/AI/AO units (see NX power supply table in official datasheet)
+# Isolation: NO isolation between 24VDC supply terminal and internal CPU circuit
+# Grounding: Class D (<100Ω) required; connect to panel earth via FG terminal
+# Terminal current capacity: 4A max continuous per power terminal (through-wiring)
+powerPins[4|]{name|direction|voltage|type}:
+  PWR_24V|input|"24V"|null
+  PWR_0V|null|null|ground
+  FG|null|null|ground
+  NX_BUS_PWR|output|"24V"|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# DI: 14 points 24VDC PNP/NPN sink/source; screwless clamping terminal block (removable)
+#   ON: ≥15VDC; OFF: ≤5VDC; response: 20µs ON / 400µs OFF standard; 4mA@24VDC
+#   No dedicated HSC on built-in I/O — use NX-EC (encoder) or NX-PG (pulse) NX units for high-speed counting
+# DO: 10 points PNP transistor (sourcing) 0.5A/point 24VDC; load short-circuit protection; removable terminal block
+#   ON: 0.5ms; OFF: 1.0ms; max inrush: 1A peak 10ms; leakage: 0.1mA max; residual voltage: ≤1.5VDC
+# IMPORTANT: Output type DT1 = PNP sourcing; sinks on common COM; DO share common COM on terminal block
+# NOTE: NX1P2-9024DT1 has 1 option board slot (vs 2 for -1140DT1 variant)
+gpio[27|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|false|"I00 — Digital Input 0; 24VDC PNP/NPN sink/source; ON ≥15VDC; OFF ≤5VDC; 4mA@24VDC; ON response 20µs; OFF response 400µs; digital filter 0/0.1/0.5/1.0/2.0/4.0ms configurable; screwless clamping terminal block removable; no HSC on built-in inputs — use NX-EC/NX-PG NX units for encoder/pulse input"|"di"
+  1|digital|false|false|"I01 — Digital Input 1; same as I00; 24VDC PNP/NPN"|"di"
+  2|digital|false|false|"I02 — Digital Input 2; 24VDC PNP/NPN; 20µs/400µs"|"di"
+  3|digital|false|false|"I03 — Digital Input 3; 24VDC PNP/NPN"|"di"
+  4|digital|false|false|"I04 — Digital Input 4; 24VDC PNP/NPN"|"di"
+  5|digital|false|false|"I05 — Digital Input 5; 24VDC PNP/NPN"|"di"
+  6|digital|false|false|"I06 — Digital Input 6; 24VDC PNP/NPN"|"di"
+  7|digital|false|false|"I07 — Digital Input 7; 24VDC PNP/NPN"|"di"
+  8|digital|false|false|"I08 — Digital Input 8; 24VDC PNP/NPN"|"di"
+  9|digital|false|false|"I09 — Digital Input 9; 24VDC PNP/NPN"|"di"
+  10|digital|false|false|"I10 — Digital Input 10; 24VDC PNP/NPN"|"di"
+  11|digital|false|false|"I11 — Digital Input 11; 24VDC PNP/NPN"|"di"
+  12|digital|false|false|"I12 — Digital Input 12; 24VDC PNP/NPN"|"di"
+  13|digital|false|false|"I13 — Digital Input 13; 24VDC PNP/NPN; last built-in DI"|"di"
+  14|digital|false|false|"Q00 — Transistor Output 0 PNP (sourcing); 0.5A/point; 24VDC; ON response 0.5ms; OFF response 1.0ms; load short-circuit protection; max inrush 1A 10ms; leakage 0.1mA; residual voltage ≤1.5VDC; screwless clamping terminal block removable; PNP = common COM is 0V reference; NO PWM or pulse output on built-in DO — use NX-PG0112/PG0122 NX unit for 500kpps pulse output"|"do"
+  15|digital|false|false|"Q01 — Transistor Output 1 PNP; 0.5A; same specs as Q00"|"do"
+  16|digital|false|false|"Q02 — Transistor Output 2 PNP; 0.5A"|"do"
+  17|digital|false|false|"Q03 — Transistor Output 3 PNP; 0.5A"|"do"
+  18|digital|false|false|"Q04 — Transistor Output 4 PNP; 0.5A"|"do"
+  19|digital|false|false|"Q05 — Transistor Output 5 PNP; 0.5A"|"do"
+  20|digital|false|false|"Q06 — Transistor Output 6 PNP; 0.5A"|"do"
+  21|digital|false|false|"Q07 — Transistor Output 7 PNP; 0.5A"|"do"
+  22|digital|false|false|"Q08 — Transistor Output 8 PNP; 0.5A"|"do"
+  23|digital|false|false|"Q09 — Transistor Output 9 PNP; 0.5A; last built-in DO"|"do"
+  24|digital|false|false|"EtherNet/IP — RJ45; 10BASE-T/100BASE-TX; 100 Mbps; STP Cat5e+; max 100m per segment; star topology; protocols: EtherNet/IP CIP tag data link I/O + explicit (256 CIP connections max), Modbus TCP, FINS/TCP, FINS/UDP, HTTP embedded web server, FTP, NTP, SNMP, DHCP, Socket Service; programming via Sysmac Studio over EtherNet/IP; 1514 bytes max frame"|"do;di"
+  25|digital|false|false|"EtherCAT Master — RJ45; 100BASE-TX ONLY; 100 Mbps; STP double-shielded Cat5e+; max 100m per segment; line topology (daisy-chain); max 16 EtherCAT slaves; DC (Distributed Clocks) sync 2ms; devices: Omron 1S/G5 servo drives, NX-ECC EtherCAT couplers, NX-ECT slave units, GX-series remote I/O, safety slaves via FSoE (NX-SL/SI/SO); Sysmac Studio topology view; automatic address assignment"|"do;di"
+  26|digital|false|false|"OPTION BOARD slot — internal connector; 1 slot (NX1P2-9024DT1 has 1 slot, NX1P2-1140DT1 has 2); accepts: NX1W-CIF01 RS-232C 15m, NX1W-CIF11 RS-422/485 50m non-isolated, NX1W-CIF12 RS-422/485 500m isolated, NX1W-ADB21 2AI 0-10V/0-20mA 12-bit, NX1W-DAB21V 2AO 0-10V 12-bit, NX1W-MAB221 2AI+2AO combo; install with power off only"|"do;di"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[8|]{peripheral|param|value}:
+  ethercat_master|"slaves:16"|"EtherCAT-master-built-in;16-slaves-max;line-topology-daisy-chain;DC-sync-2ms;Omron-1S-G5-servo-drives;NX-ECC201-202-203-EtherCAT-couplers;GX-IL-remote-IO;FSoE-Safety-over-EtherCAT;NX-SL3300-NX-SL3500-safety-CPU;NX-SIH400-NX-SID800-SI;NX-SOH200-NX-SOD400-SO;EtherCAT-topology-view-in-Sysmac-Studio"
+  ethernet_ip|"speed:100Mbit"|"EtherNet/IP-1x-RJ45-100Mbps;CIP-tag-data-link-IO+explicit-256-connections;Modbus-TCP;FINS-TCP-UDP;HTTP-web-server;FTP;NTP;SNMP;DHCP;Socket-Service;programming-via-Sysmac-Studio;remote-maintenance;Cat5e-STP;100m-max"
+  nx_expansion_bus|"units:8"|"up-to-8-NX-series-units-on-right-of-CPU;types:NX-ID-DI,NX-OD-DO,NX-OC-relay,NX-AD-AI,NX-DA-AO,NX-TC-temp-ctrl,NX-TS-temp-input,NX-HB-heater-burnout,NX-RS-load-cell,NX-EC-encoder,NX-ECS-SSI,NX-PG-pulse-output,NX-CIF-serial,NX-V680-RFID,NX-ILM-IO-Link,NX-HAD-high-speed-AI,NX-HTC-advanced-temp,NX-PD-bus-power,NX-PF-IO-power,NX-PC-IO-power-connection,NX-ECT-EtherCAT-slave;NX-END02-end-cover-MANDATORY"
+  motion_ptp|"axes:4"|"4-single-axis-PTP-axes-max;NO-synchronized-motion-no-electronic-cam-gear-no-interpolation;uses-EtherCAT-servo-drives;PLCopen-MC-single-axis-FBs:MC_MoveAbsolute-MC_MoveRelative-MC_MoveVelocity-MC_Home-MC_Stop-MC_Reset;position-units:pulse-mm-um-nm-degree-inch;override:0-500%;motion-period=primary-task-2ms"
+  sd_card|"size:16GB"|"SD-card-slot;2GB-HMC-SD292,4GB-HMC-SD492,16GB-HMC-SD1A2-fw-V1.21+;stores:program-backup,variable-backup,data-logging,event-logs,trace-data,firmware;program-retained-without-SD-in-internal-flash;SD-recommended-for-production"
+  battery_rtc|"model:CJ1W-BAT01"|"RTC:hardware-real-time-clock;battery:CJ1W-BAT01-sold-separately-NOT-included;5-year-life-power-OFF-rate-0%;WITHOUT-battery:RTC-NOT-retained-on-power-off;WITH-battery:clock-and-Retain-variables-preserved;replace-battery-with-power-ON-for-continuous-RTC;battery-low-detected-by-special-I/O-flag"
+  option_board_serial|"slots:1"|"1x-option-board-slot;NX1W-CIF01-RS232C-15m-host-link-ModbusRTU-no-protocol;NX1W-CIF11-RS422-485-50m-non-isolated;NX1W-CIF12-RS422-485-500m-ISOLATED;NX1W-ADB21-2AI-0-10V-0-20mA-12bit;NX1W-DAB21V-2AO-0-10V-12bit;NX1W-MAB221-2AI-2AO;power-off-before-installing;not-hot-swappable"
+  safety_subsystem|"level:PLd-SIL2"|"Safety-over-EtherCAT-FSoE;safety-CPU-NX-SL3300-256pts-or-NX-SL3500-1024pts;safety-I-O:NX-SIH400-NX-SID800-NX-SOH200-NX-SOD400;connected-via-NX-ECC-EtherCAT-coupler;PLd-SIL2-capability;safety-program-in-Sysmac-Studio-safety-extension;IEC-61508-IEC-62061-ISO-13849"
+usb:
+  type: null
+  chip: null
+  vid: "0x0000"
+  pid: "0x0000"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "500mA"
+  total_current_limit: "500mA"
+  warnings[9]:
+    - "NX1P2-9024DT1 uses control engine '9' which provides ONLY single-axis PTP (Point-to-Point) motion — it does NOT support synchronized motion control (electronic gearing, electronic cam, linear interpolation, circular interpolation, or multi-axis coordinated control); those features require the NX1P2-1040DT1 (2 sync axes) or NX1P2-1140DT1 (4 sync axes); substituting control engine 9 in an application requiring synchronized motion will cause MC_GearIn, MC_CamIn, and MC_MoveLinear instructions to fail with unsupported instruction errors"
+    - "The 10 built-in transistor outputs (Q00-Q09) are PNP sourcing (DT1 suffix) and CANNOT generate high-speed pulse output — the built-in transistor response time is 0.5ms ON / 1.0ms OFF which limits output frequency to approximately 500Hz; for stepper or servo pulse train output (up to 500 kpps or 4 Mpps) install a NX-PG0112 (NPN, 500kpps) or NX-PG0232-5 (line driver, 4Mpps) NX unit on the NX bus expansion; attempting to use built-in DO for PTO will produce incorrect pulse counts at any industrial stepping frequency"
+    - "The NX1P2-9024DT1 has NO built-in High-Speed Counter (HSC) on the integrated I/O — the built-in 14 digital inputs have a maximum response speed of 20µs and cannot capture encoder signals; for quadrature encoder feedback (A/B), install NX-EC0112 (NPN) or NX-EC0122 (PNP) incremental encoder input units on the NX bus or connect encoder drives directly as EtherCAT slaves; using built-in inputs for encoder pulse counting will cause missed counts at any motor speed above approximately 25Hz"
+    - "The NX bus power supply capacity is a MAXIMUM of 10W at 80% efficiency — the CPU provides this power to NX units on the right-side CPU rack; most NX digital I/O units ALSO require a separate I/O power supply; many NX-ID (DI), NX-OD (DO), NX-AD (AI), NX-DA (AO) screwless terminal units require an NX-PF0630 or NX-PF0730 Additional I/O Power Supply Unit; failure to install required NX-PF units causes I/O power faults and all affected NX units will not operate; always consult the NX-PF requirement table in the official datasheet before configuring the NX unit lineup"
+    - "The NX1P2-9024DT1 has NO isolation between the 24VDC supply terminal and the internal CPU circuit — the CPU power supply, NX bus power, and built-in I/O power all share the same 24VDC reference; this means ground faults from the external 24VDC supply will propagate directly into the CPU and I/O circuits; always use a SELV-rated industrial 24VDC power supply with proper earth bonding; do NOT share the 24VDC supply rail with power circuits driving motors or solenoids without appropriate filtering"
+    - "The RTC (Real-Time Clock) requires the CJ1W-BAT01 battery which is sold separately and NOT included with the controller — without the battery installed, the RTC resets to its default time on every power cycle; any program logic using clock data (scheduling, time-stamped logs, event timestamps) will produce incorrect timestamps; additionally Retain-attribute variables are NOT guaranteed to be preserved across power cycles without battery; replace the battery while power is ON to avoid RTC reset during replacement"
+    - "The EtherCAT master port on the NX1P2-9024DT1 supports a maximum of 16 EtherCAT slave nodes — each servo drive, EtherCAT coupler (NX-ECC), GX remote I/O station, and safety FSoE device counts as one EtherCAT slave; a single NX-ECC coupler with 8 NX units behind it counts as 1 slave node (not 9); if more than 16 EtherCAT slaves are required, upgrade to the NJ5 series which supports 64 or more EtherCAT slaves; exceeding 16 nodes causes EtherCAT initialization to fail and all affected drives will go to SAFE-OP state"
+    - "The option board slot on the NX1P2-9024DT1 accepts only ONE option board (the NX1P2-1140DT1 with 40 built-in I/O has 2 slots) — if both serial communication AND analog I/O expansion are needed simultaneously, only one can be installed on the board slot; the second function must be provided via NX bus units (NX-CIF101/105 for serial, NX-AD/NX-DA for analog); plan the option board slot assignment carefully during system design; installing an option board requires power off"
+    - "The EtherCAT network REQUIRES double-shielded STP cables (Cat5e or higher with braiding AND aluminum foil) — standard Cat5e UTP cables that are acceptable for EtherNet/IP will cause EtherCAT synchronization errors, DC jitter, and intermittent slave disconnections in electrically noisy environments; Omron specifies AWG26 4-pair LSZH double-shielded cables (e.g. XS6W-6LSZH8SS series) or AWG22 2-pair (XS5W-T421 series); cable shields must be connected at both ends to panel earth; maximum segment length is 100m per hop"
+compatibility:
+  sw: "Sysmac Studio V1.00+ (primary; all NX1P2 features); Sysmac Studio Safety extension (FSoE/safety CPU); CX-One (legacy, read-only for variable mapping only); GX Works3 NOT applicable (Omron, not Mitsubishi)"
+  languages: "Ladder Diagram (LD);Structured Text (ST);Function Block Diagram (FBD);Sequential Function Chart (SFC);Instruction List (IL)"
+  frameworks: "IEC61131-3;PLCopen-Motion-Control-single-axis;EtherCAT-FSoE;EtherNet-IP-CIP;FINS;Modbus-TCP;IO-Link-via-NX-ILM;CC-Link-via-GX-adapter;Sysmac;IEC61508;ISO13849-PLd"
+  certifications: "CE-EN61131-2;cULus-UL61010-2-201-ANSI-ISA12.12.01;RCM;KC;EAC;NK-LR-shipbuilding;RoHS"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: omron-sysmac-nx1p2-family
+  boardProfileId: omron-sysmac-nx1p2-9024dt1
+  defaultLanguageSkills[3]:
+    - ladder-sysmac-studio-nx1p2
+    - st-sysmac-studio-nx1p2
+    - fbd-sysmac-studio-nx1p2

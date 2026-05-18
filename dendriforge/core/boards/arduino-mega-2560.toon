@@ -1,38 +1,151 @@
+# METADATA:
+project_name: arduino-mega-2560-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: arduino-mega-2560
-name: "Arduino Mega 2560"
-manufacturer: "Generic"
-mcu: "ATmega2560"
-category: "maker"
-image: "/boards/arduino-mega-2560.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 262144
-sram: 8192
-clock_hz: 16000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "avr-family"
-  boardProfileId: "arduino-mega-2560"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+name: "Arduino Mega 2560 Rev3"
+manufacturer: Arduino
+mcu: ATmega2560
+category: maker
+image: arduino-mega-2560.svg
+url: "https://store.arduino.cc/products/arduino-mega-2560-rev3"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 262144
+  flash_available: 253952
+  sram: 8192
+  eeprom: 4096
+  clock: 16000000
+  voltage: "5V"
+dims:
+  w: 101.52
+  h: 53.3
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[8|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  5V|output|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+  IOREF|output|"5V"|null
+  AREF|input|null|null
+  GND2|null|null|ground
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[70|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|false|"D0 / RX0"|uart-rx
+  1|digital|false|false|"D1 / TX0"|uart-tx
+  2|digital|true|true|"D2 PWM"|int0
+  3|digital|true|true|"D3 PWM"|int1
+  4|digital|false|false|D4|null
+  5|digital|true|false|"D5 PWM"|null
+  6|digital|true|false|"D6 PWM"|null
+  7|digital|true|false|"D7 PWM"|null
+  8|digital|true|false|"D8 PWM"|null
+  9|digital|true|false|"D9 PWM"|null
+  10|digital|true|false|"D10 PWM"|null
+  11|digital|true|false|"D11 PWM"|null
+  12|digital|true|false|"D12 PWM"|null
+  13|digital|true|false|"D13 PWM / LED"|status-led
+  14|digital|false|false|"D14 / TX3"|uart-tx
+  15|digital|false|false|"D15 / RX3"|uart-rx
+  16|digital|false|false|"D16 / TX2"|uart-tx
+  17|digital|false|false|"D17 / RX2"|uart-rx
+  18|digital|false|true|"D18 / TX1"|"uart-tx;int5"
+  19|digital|false|true|"D19 / RX1"|"uart-rx;int4"
+  20|digital|false|true|"D20 / SDA"|"i2c-sda;int3"
+  21|digital|false|true|"D21 / SCL"|"i2c-scl;int2"
+  22|digital|false|false|D22|null
+  23|digital|false|false|D23|null
+  24|digital|false|false|D24|null
+  25|digital|false|false|D25|null
+  26|digital|false|false|D26|null
+  27|digital|false|false|D27|null
+  28|digital|false|false|D28|null
+  29|digital|false|false|D29|null
+  30|digital|false|false|D30|null
+  31|digital|false|false|D31|null
+  32|digital|false|false|D32|null
+  33|digital|false|false|D33|null
+  34|digital|false|false|D34|null
+  35|digital|false|false|D35|null
+  36|digital|false|false|D36|null
+  37|digital|false|false|D37|null
+  38|digital|false|false|D38|null
+  39|digital|false|false|D39|null
+  40|digital|false|false|D40|null
+  41|digital|false|false|D41|null
+  42|digital|false|false|D42|null
+  43|digital|false|false|D43|null
+  44|digital|true|false|"D44 PWM"|null
+  45|digital|true|false|"D45 PWM"|null
+  46|digital|true|false|"D46 PWM"|null
+  47|digital|false|false|D47|null
+  48|digital|false|false|D48|null
+  49|digital|false|false|D49|null
+  50|digital|false|false|"D50 / MISO"|spi-miso
+  51|digital|false|false|"D51 / MOSI"|spi-mosi
+  52|digital|false|false|"D52 / SCK"|spi-sck
+  53|digital|false|false|"D53 / SS"|spi-ss
+  54|analog|false|false|A0|"adc:t"
+  55|analog|false|false|A1|"adc:t"
+  56|analog|false|false|A2|"adc:t"
+  57|analog|false|false|A3|"adc:t"
+  58|analog|false|false|A4|"adc:t"
+  59|analog|false|false|A5|"adc:t"
+  60|analog|false|false|A6|"adc:t"
+  61|analog|false|false|A7|"adc:t"
+  62|analog|false|false|A8|"adc:t"
+  63|analog|false|false|A9|"adc:t"
+  64|analog|false|false|A10|"adc:t"
+  65|analog|false|false|A11|"adc:t"
+  66|analog|false|false|A12|"adc:t"
+  67|analog|false|false|A13|"adc:t"
+  68|analog|false|false|A14|"adc:t"
+  69|analog|false|false|A15|"adc:t"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uarts:4"|"pins:0,1"
+  i2c|"channels:1"|"sda:20;scl:21"
+  spi|"channels:1"|"miso:50;mosi:51;sck:52;ss:53"
+  pwm|"channels:15"|"pins:2,3,4,5,6,7,8,9,10,11,12,13,44,45,46"
+usb:
+  type: USB-B
+  chip: ATmega16U2
+  vid: "0x2341"
+  pid: "0x0042"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "40mA"
+  total_current_limit: "200mA"
+  warnings[4]:
+    - "Pins 0/1 shared with UART0 / USB Serial"
+    - "Pin 13 has onboard LED interference"
+    - "Pins 14-19 shared with UART1/2/3"
+    - "Polyfuse protects USB over 500mA"
+compatibility:
+  arduinoCore: "1.8.19"
+  pio: atmelavr
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: stk500v2
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: avr-family
+  boardProfileId: arduino-mega-2560
+  defaultLanguageSkills[2]:
+    - arduino-cpp-avr
+    - rust-embassy-avr

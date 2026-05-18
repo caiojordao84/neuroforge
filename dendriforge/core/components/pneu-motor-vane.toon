@@ -1,0 +1,117 @@
+# METADATA:
+project_name: pneu-motor-vane-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: pneu-motor-vane
+name: "Pneumatic Vane Motor (Motor pneumático de palhetas)"
+family: pneumatics
+subfamily: pneumatic-actuators
+category: actuator
+standard: "ISO 1219-1"
+url: null
+image: pneu-motor-vane.svg
+symbol: pneu-motor-vane-symbol.svg
+symbol_standard: ISO
+
+## 2. PARAMETERS:
+params:
+  displacement:
+    label: "Displacement"
+    unit: "cm³/rev"
+    default: 50
+    min: 10
+    max: 500
+    type: float
+    editable: true
+  supply_pressure:
+    label: "Supply Pressure"
+    unit: bar
+    default: 6
+    min: 2
+    max: 8
+    type: float
+    editable: true
+  flow_rate:
+    label: "Nominal Air Consumption"
+    unit: "l/min"
+    default: 400
+    type: float
+    editable: false
+  speed_rated:
+    label: "Rated Speed (No Load)"
+    unit: RPM
+    default: 3000
+    min: 500
+    max: 10000
+    type: float
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[0|]{}:
+
+## 4b. FLUID PORTS (PNEUMATIC):
+pneumatic_ports[2|]{id|direction|type|pressure_max|flow_nominal|notes}:
+  A|bidirectional|pneumatic|"8bar"|"{flow_rate}"|"port A — rotate CW"
+  B|bidirectional|pneumatic|"8bar"|"{flow_rate}"|"port B — rotate CCW"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: pneumatic-rotary-actuator
+  motion: rotary
+  bidirectional: true
+  dynamic: true
+  thermal_model: false
+  noise_model: true
+  states[4]:
+    - stopped
+    - rotating-cw
+    - rotating-ccw
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_pressure: 8
+  min_pressure: 2
+  max_voltage: null
+  max_current: null
+  max_power: null
+  max_temp: 80
+  min_temp: -10
+warnings[2]:
+  - "Requires properly lubricated air for prolonged vane life"
+  - "Do not exceed maximum RPM to avoid catastrophic mechanical failure"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["pneu-valve-5-2-*", "pneu-valve-5-3-*", "pneu-flow-control-*"]
+  forbidden_with: ["hyd-*", "act-motor-*"]
+  requires: ["pneu-frl-unit"]
+  typical_context: ["high-speed-drilling", "agitation", "spindle-drive"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 60
+  ports_layout: custom
+  port_A: {x: 10, y: 0}
+  port_B: {x: 50, y: 0}
+  label_position: bottom
+  value_display: "{displacement}cc / {speed_rated}RPM"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: pneumatics-family
+  componentProfileId: pneu-motor-vane
+  simulationEngine: pneumatic-motion
+  paletteGroup: "Pneumatics > Pneumatic Actuators"
+  tags[5]:
+    - motor
+    - pneumatic
+    - rotary
+    - vane
+    - actuator

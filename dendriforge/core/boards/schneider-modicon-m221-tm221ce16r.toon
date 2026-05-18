@@ -1,0 +1,120 @@
+# METADATA:
+project_name: schneider-modicon-m221-tm221ce16r-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: schneider-modicon-m221-tm221ce16r
+name: "Schneider Electric Modicon M221 TM221CE16R — Compact PLC; 0.2µs Boolean; 256KB RAM; 9 DI 24VDC; 7 DO relay 2A 250VAC; 2 AI 10-bit 0-10V; 4x100kHz HSC; Ethernet Modbus TCP; RS232/485; USB; SD; 100-240VAC"
+manufacturer: "Schneider Electric"
+mcu: "Schneider Electric Modicon M221 CPU — 0.2µs Boolean; 0.3ms/1KI; 256KB user RAM; 256KB NV flash; IEC61131-3 IL-ST-LD-FBD-SFC; 14 PID loops; Ethernet Modbus TCP + EtherNet/IP; RS485 Modbus RTU; USB; BR2032 RTC 1yr"
+category: plc
+image: schneider-modicon-m221-tm221ce16r.svg
+url: "https://www.se.com/en/product/TM221CE16R/"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 2097152
+  flash_available: 262144
+  sram: 262144
+  eeprom: 0
+  clock: 0
+  voltage: "230V"
+dims:
+  w: 95.0
+  h: 90.0
+  t: 70.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# TM221CE16R: 100-240VAC 50/60Hz; range 85-264VAC; max 49VA (with 4 expansion modules); max 33VA alone
+# Inrush current ≤40A cold start; isolation 2300VAC supply to internal logic; 1500VAC supply to ground
+# Sensor power supply output: 24VDC at 250mA from controller (for external input sensors)
+# Expansion bus: 5V/325mA + 24V/120mA for TM3 expansion modules
+# PE: Functional Earth via DIN rail; connect rail to protective earth; required for CE/EMC compliance
+powerPins[6|]{name|direction|voltage|type}:
+  L_AC|input|"230V"|null
+  N_AC|null|null|ground
+  PE|null|null|ground
+  SENS_24V|output|"24V"|null
+  SENS_GND|null|null|ground
+  EXP_5V|output|"5V"|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# DI I0-I8: 24VDC IEC 61131-2 Type 1; sink or source; removable screw terminal
+# I0,I1,I6,I7 = 4x FAST inputs: 100kHz HSC 32-bit; 5µs ON/OFF; 5mA; 4.9kΩ; max 10m shielded cable
+# I2-I5, I8 = 5x standard: 35µs ON / 100µs OFF; 7mA; 3.4kΩ; filter 0/3/12ms; max 30m unshielded
+# Input ON: ≥15VDC; OFF: ≤5VDC; overload: ±30VDC 5min / ±13VDC permanent
+# DO Y0-Y6: relay SPST-NO; 2A; 5-125VDC / 5-250VAC (max 277VAC CE); min 1mA@5VDC
+# COM groups: COM0=Y0-Y3 (7A total); COM1=Y4-Y6 (6A total); COM0 and COM1 NOT internally connected
+# Relay NO protection against short-circuit; always fuse outputs externally
+# AI AN0-AN1: 0-10VDC; 10-bit; 10mV LSB; ±1%; NO isolation from logic; max 1m unshielded cable
+gpio[19|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|true|"I0 — Fast Digital Input 0; 24VDC sink/source; 100kHz HSC ch0 A-phase; ON delay 5µs; OFF delay 5µs; 5mA@24VDC; 4.9kΩ; A/B quadrature or single-phase or pulse/direction; interrupt; cable max 10m shielded; isolation 500VAC to internal logic"|"di"
+  1|digital|false|true|"I1 — Fast Digital Input 1; 24VDC; 100kHz HSC ch0 B-phase or ch1 A-phase; 5µs ON/OFF; 5mA; interrupt; 10m shielded"|"di"
+  2|digital|false|true|"I2 — Standard Digital Input 2; 24VDC sink/source; 35µs turn-on; 100µs turn-off; 7mA@24VDC; 3.4kΩ; filter 0/3/12ms configurable; interrupt; cable max 30m unshielded; 500VAC isolation"|"di"
+  3|digital|false|true|"I3 — Standard Digital Input 3; 24VDC; 35µs ON/100µs OFF; 7mA; 3.4kΩ; interrupt; 30m unshielded"|"di"
+  4|digital|false|true|"I4 — Standard Digital Input 4; 24VDC; 35µs/100µs; 7mA; interrupt"|"di"
+  5|digital|false|true|"I5 — Standard Digital Input 5; 24VDC; 35µs/100µs; 7mA; interrupt"|"di"
+  6|digital|false|true|"I6 — Fast Digital Input 6; 24VDC; 100kHz HSC ch1 or ch2 A-phase; 5µs ON/OFF; 5mA; 4.9kΩ; interrupt; 10m shielded"|"di"
+  7|digital|false|true|"I7 — Fast Digital Input 7; 24VDC; 100kHz HSC ch2 B-phase; 5µs ON/OFF; 5mA; 4.9kΩ; interrupt; 10m shielded; I0-I1-I6-I7 = 4 fast inputs supporting up to 4ch 100kHz HSC 32-bit"|"di"
+  8|digital|false|true|"I8 — Standard Digital Input 8; 24VDC; 35µs/100µs; 7mA; last built-in DI; interrupt; 30m unshielded"|"di"
+  9|digital|false|false|"Y0 — Relay Output 0; SPST-NO Form A; 5-125VDC or 5-250VAC (CE: 277VAC max); 2A resistive; min 1mA@5VDC; COM0 group (Y0-Y3; 7A max total); 10ms ON/OFF; 20 ops/min max load; NO short-circuit protection — fuse externally; 2300VAC isolation output to logic; mech durability ≥20M cycles"|"do"
+  10|digital|false|false|"Y1 — Relay Output 1; same as Y0; COM0 group; 2A; 5-250VAC/125VDC"|"do"
+  11|digital|false|false|"Y2 — Relay Output 2; same as Y0; COM0 group; 2A"|"do"
+  12|digital|false|false|"Y3 — Relay Output 3; last relay in COM0 group; 2A; COM0 total 7A; protect load with freewheeling diode (DC) or RC snubber (AC) for inductive loads"|"do"
+  13|digital|false|false|"Y4 — Relay Output 4; SPST-NO; 2A; 5-250VAC/125VDC; COM1 group (Y4-Y6; 6A max total); COM1 NOT internally connected to COM0 — can switch different voltage level; 2300VAC isolation; 10ms; NO short-circuit protection"|"do"
+  14|digital|false|false|"Y5 — Relay Output 5; COM1 group; 2A; same specs as Y4"|"do"
+  15|digital|false|false|"Y6 — Relay Output 6; COM1 group; last relay output; 2A; total COM1 6A"|"do"
+  16|analog|false|false|"AN0 — Analog Input 0; 0-10VDC unipolar; 10-bit (0-1023 raw); 10mV LSB; ±1% accuracy full scale @25°C; conversion 1ms per channel + 1 controller cycle; overload ±30VDC 5min / ±13VDC permanent; 100kΩ; NO isolation from internal logic; cable max 1m unshielded; both AI 0V terminals are internally connected"|"adc:t"
+  17|analog|false|false|"AN1 — Analog Input 1; 0-10VDC; 10-bit; same specs as AN0; 1m unshielded; no isolation; analog ground and digital ground share common reference inside CPU"|"adc:t"
+  18|digital|false|false|"USB / Mini-B — USB 2.0 Hi-Speed 480 Mbps; programming and commissioning only via SoMachine/EcoStruxure Machine Expert; NOT for permanent connection; standard type Mini-B connector; cable max 3m; 500VAC isolation USB to internal logic"|"do;di"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[8|]{peripheral|param|value}:
+  ethernet|"speed:100Mbit"|"1x-RJ45-10BASE-T-100BASE-TX;max-cable-100m;DHCP-client;protocols:Modbus-TCP-slave-client-server,EtherNet-IP-adapter,IGMP;isolation-500VAC-to-logic;supports-max-8-simultaneous-TCP-connections;Modbus-TCP-max-16-client-connections;programming-via-SoMachine-over-Ethernet"
+  serial_sl1|"speed:115200bps"|"1x-RJ45-SL1-port;RS232-or-RS485-selectable-via-internal-jumper;RS232:3m-max-not-isolated;RS485:15m-max-2-wire-half-duplex-not-isolated;1.2-to-115200bps;protocols:Modbus-RTU-ASCII-master-slave,SoMachine-Network;pin-7-provides-5VDC-200mA-supply-for-RS485-devices"
+  hsc_counters|"count:4"|"4-channels-100kHz-32-bit;inputs:I0-I1-I6-I7;modes:A-B-quadrature,single-phase,pulse-direction;software-configurable;compare-output-not-on-relay-variant;used-for-encoder-feedback-and-speed-measurement"
+  sd_card|"size:2GB"|"optional-2GB-SD-card-slot;stores:application-data-logs-recipes;SD-LED-indicator-on-CPU-front;hot-plug-not-recommended-during-RUN;power-off-before-inserting-or-removing"
+  battery_rtc|"type:BR2032"|"hardware-RTC;BR2032-non-rechargeable-lithium-battery;4-year-life;backup:1-year-at-25C-after-power-loss;battery-low-indication-via-BAT-LED;replace-with-power-ON-for-uninterrupted-RTC"
+  expansion_tm3|"modules:7"|"up-to-4-TM3-relay-or-transistor-output-modules;up-to-7-TM3-mixed-modules-incl-analog;types:TM3DI16-TM3DQ16R-TM3DQ16TK-TM3AI8-TM3AQ4-TM3TI4;expansion-bus:5V-325mA-and-24V-120mA;hotfix-not-supported-power-off-before-change"
+  cartridge_slot|"slots:1"|"1x-cartridge-slot-top-of-CPU;types:TMC2AI2-2AI-0-10V,TMC2AQ2V-2AO-0-10V,TMC2AQ2C-2AO-4-20mA,TMC2SL1-RS485-serial,TMC2HOIS01-basic-counter;power-off-before-inserting;not-hot-swappable"
+  pid_motion|"loops:14"|"14-PID-loops-simultaneous;adjustable-PID-regulator;no-pulse-output-on-relay-variant;PTO-available-on-TM221CE16T-transistor-variant-only;HSC-feedback-usable-with-PID-via-custom-ladder"
+usb:
+  type: Mini-B
+  chip: native
+  vid: "0x0067"
+  pid: "0xC1FE"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "250mA"
+  total_current_limit: "250mA"
+  warnings[9]:
+    - "TM221CE16R uses RELAY outputs (Y0-Y6) which CANNOT generate Pulse Train Output (PTO) or PWM signals — the relay switching time of ~10ms makes high-frequency pulse generation physically impossible; for applications requiring stepper or servo drive pulse outputs use the TM221CE16T (transistor output) variant; the relay model has NO PTO instructions in SoMachine/EcoStruxure Machine Expert, and attempting to configure PTO on a relay CPU will result in a configuration error at download"
+    - "Relay output groups COM0 (Y0-Y3) and COM1 (Y4-Y6) are NOT internally connected — this allows different voltage levels to be switched by each group (e.g. 24VDC on COM0, 230VAC on COM1); however, within each group all outputs share the common terminal (COM0 or COM1); mixing AC and DC voltages within the SAME group is NOT safe and will create a hazardous cross-connection through the common terminal; plan load distribution across groups before wiring"
+    - "Relay outputs have NO built-in short-circuit protection — always install external fuses rated to the load on each relay output; Schneider Electric recommends Type T (slow-blow) fuses; for inductive DC loads connect a freewheeling diode in parallel with each load; for inductive AC loads connect an RC snubber in parallel; failure to suppress inductive spikes will permanently damage relay contacts ahead of the rated electrical durability"
+    - "The 2 built-in analog inputs (AN0, AN1) accept 0-10VDC ONLY and have NO isolation from the internal CPU logic — always use cables no longer than 1m and avoid routing analog cables near power conductors or motor cables; for 4-20mA current measurement install the TMC2AQ2C cartridge (AO) or a TM3AI8 expansion module which supports true 4-20mA inputs; connecting a current signal directly to AN0/AN1 without a shunt resistor will damage the analog input permanently"
+    - "The serial port SL1 (RJ45) is NOT isolated from the internal CPU logic — it operates on the same reference as the CPU; never connect SL1 RS-485 to a RS-485 bus that has a different ground potential; if field devices are in remote panels with separate earth, use an external RS-485 isolator module; exceeding the ±15V common-mode voltage on the RS-485 lines will destroy the SL1 transceiver"
+    - "The expansion bus power budget MUST be calculated before selecting TM3 modules — the TM221CE16R provides only 5V/325mA and 24V/120mA on the expansion bus; each TM3 module consumes approximately 35-100mA at 5V and 50-150mA at 24V; if the total consumption exceeds the budget you must add an external TM3XTRA1 power supply module; exceeding bus power limits causes random I/O module faults and potential CPU reset"
+    - "The SD card slot in the TM221CE16R is OPTIONAL — the controller will operate without an SD card using only internal flash backup; however without an SD card there is no data logging or recipe storage capability; if an SD card is installed always power off the controller before inserting or removing it; hot-plugging an SD card during RUN can corrupt the file system and cause the application to lose all logged data"
+    - "The BR2032 battery backs up the RTC only for approximately 1 year after power loss — it does NOT back up the user program or variable data (those are stored in the 256KB internal flash); when the BAT LED turns red, replace the battery while the controller is powered ON to maintain uninterrupted RTC operation; if replaced with power OFF the RTC will reset to default date/time and any battery-backed clock-dependent logic will malfunction"
+    - "The TM221CE16R power supply accepts 100-240VAC (range 85-264VAC) at 50/60Hz — do NOT connect a DC power source to the AC input terminals; the /R suffix in TM221CE16R denotes Relay outputs, NOT the power supply type; the CE suffix denotes Compact Ethernet; the TM221C16R variant (without E) has no Ethernet; always verify the exact part number suffix before wiring as incorrect supply voltage will permanently damage the switching power supply inside the controller"
+compatibility:
+  sw: "EcoStruxure Machine Expert (SoMachine V4.3+, alias ESME V1.0+) primary; SoMachine V4.1-V4.3 (legacy); Vijeo Designer for HMI; EcoStruxure Operator Terminal Expert"
+  languages: "Instruction List (IL);Structured Text (ST);Ladder Diagram (LD);Function Block Diagram (FBD);Sequential Function Chart (SFC)"
+  frameworks: "IEC61131-3;Modbus-TCP;Modbus-RTU-ASCII;EtherNet-IP-adapter;SoMachine-Network;TM3-expansion-bus;EcoStruxure"
+  certifications: "CE;cULus;CSA;RCM;DNV-GL;ABS;LR;IACS-E10;EAC"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: schneider-modicon-m221-family
+  boardProfileId: schneider-modicon-m221-tm221ce16r
+  defaultLanguageSkills[3]:
+    - ladder-esme-modicon-m221
+    - st-esme-modicon-m221
+    - fbd-esme-modicon-m221

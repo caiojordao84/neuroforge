@@ -1,0 +1,106 @@
+# METADATA:
+project_name: sensor-sound-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: sensor-sound
+name: "Sound Sensor (Sensor de Som)"
+family: sensors
+subfamily: environment
+category: sensor
+standard: "IEC 60947-5-2"
+url: null
+image: sensor-sound.svg
+symbol: sensor-sound-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  output_type:
+    label: "Output Type"
+    default: "analog-0-10V"
+    options: ["analog-0-10V", "analog-4-20mA", "digital-PNP"]
+    type: enum
+    editable: true
+  sensitivity:
+    label: "Sensitivity"
+    unit: "dB"
+    default: 50
+    min: 30
+    max: 130
+    type: float
+    editable: true
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 24
+    options: [5, 12, 24]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"24V"|"100mA"|"supply +"
+  GND|input|ground|null|null|"supply -"
+  OUT|output|analog|"10V"|"20mA"|"signal output (analog or digital)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: threshold
+  trigger: sound
+  trigger_source: external
+  output_logic: "{output_type}"
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: true
+  states[3]:
+    - idle
+    - measuring
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "{supply_voltage}"
+  max_current: "100mA"
+  max_power: null
+  max_temp: 60
+  min_temp: -10
+  ip_rating: "IP54"
+  safety_category: null
+warnings[2]:
+  - "Do not expose to direct liquid spray or heavy dust"
+  - "Analog ground must share a common reference with the acquisition module"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["ind-ai-bank", "ind-di-bank", "plc-*"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["noise-monitoring", "hvac", "security-systems"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 40
+  height: 40
+  ports_layout: vertical
+  port_VCC: {x: 20, y: 0}
+  port_GND: {x: 20, y: 40}
+  port_OUT: {x: 40, y: 20}
+  label_position: right
+  value_display: "Sound Sensor"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: sensors-family
+  componentProfileId: sensor-sound
+  simulationEngine: digital-io
+  paletteGroup: "Sensors > Environment"
+  tags[3]:
+    - sensor
+    - sound
+    - environment

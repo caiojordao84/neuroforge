@@ -1,0 +1,111 @@
+# METADATA:
+project_name: maker-rtc-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: maker-rtc
+name: "RTC Module (Módulo RTC Maker)"
+family: communication
+subfamily: serial-bus
+category: node
+standard: "custom"
+url: null
+image: maker-rtc.svg
+symbol: maker-rtc-symbol.svg
+symbol_standard: custom
+
+## 2. PARAMETERS:
+params:
+  protocol:
+    label: "Protocol"
+    default: "I2C"
+    options: ["I2C", "SPI"]
+    type: enum
+    editable: false
+  device_address:
+    label: "I2C Address"
+    default: 104
+    min: 1
+    max: 127
+    type: int
+    editable: true
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 5
+    options: [3.3, 5]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"{supply_voltage}"|"50mA"|"supply +"
+  GND|input|ground|null|null|"supply -"
+  SDA|bidirectional|i2c|"5V"|"20mA"|"I2C data line"
+  SCL|input|i2c|"5V"|"20mA"|"I2C clock line"
+
+## 4c. PROTOCOL PORTS:
+protocol_ports[1|]{id|direction|protocol|notes}:
+  NET|bidirectional|"{protocol}"|"I2C bus connection"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: digital-io
+  protocol_emulation: true
+  bidirectional: true
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - idle
+    - communicating
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "5.5V"
+  max_current: "50mA"
+  max_power: null
+  max_temp: 85
+  min_temp: -40
+  ip_rating: null
+  safety_category: null
+warnings[2]:
+  - "Requires a coin cell battery for timekeeping when VCC is disconnected"
+  - "I2C lines require external pull-up resistors if not provided on the module"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["mcu-*", "plc-*"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["data-logging", "timekeeping", "scheduling"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 40
+  height: 50
+  ports_layout: custom
+  port_VCC: {x: 10, y: 0}
+  port_GND: {x: 30, y: 0}
+  port_SDA: {x: 10, y: 50}
+  port_SCL: {x: 30, y: 50}
+  label_position: top
+  value_display: "{protocol} @ 0x68"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: communication-family
+  componentProfileId: maker-rtc
+  simulationEngine: protocol-stub-engine
+  paletteGroup: "Communication > Serial Bus"
+  tags[5]:
+    - rtc
+    - i2c
+    - time
+    - clock
+    - maker

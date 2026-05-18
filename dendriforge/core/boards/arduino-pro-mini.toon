@@ -1,38 +1,91 @@
+# METADATA:
+project_name: arduino-pro-mini-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: arduino-pro-mini
 name: "Arduino Pro Mini"
-manufacturer: "Generic"
-mcu: "ATmega328P"
-category: "maker"
-image: "/boards/arduino-pro-mini.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 32768
-sram: 2048
-clock_hz: 8000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "avr-family"
-  boardProfileId: "arduino-pro-mini"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+manufacturer: Arduino
+mcu: ATmega328P
+category: maker
+image: arduino-pro-mini.svg
+url: "https://docs.arduino.cc/hardware/pro-mini"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 32768
+  flash_available: 32256
+  sram: 2048
+  eeprom: 1024
+  clock: 16000000
+  voltage: "5V"
+dims:
+  w: 33.0
+  h: 18.0
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[5|]{name|direction|voltage|type}:
+  RAW|input|null|null
+  VCC|output|"5V"|null
+  GND|null|null|ground
+  RST|input|null|null
+  AREF|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[20|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|false|"D0 / RX"|uart-rx
+  1|digital|false|false|"D1 / TX"|uart-tx
+  2|digital|false|true|D2|int0
+  3|digital|true|true|"D3 PWM"|int1
+  4|digital|false|false|D4|null
+  5|digital|true|false|"D5 PWM"|null
+  6|digital|true|false|"D6 PWM"|null
+  7|digital|false|false|D7|null
+  8|digital|false|false|D8|null
+  9|digital|true|false|"D9 PWM"|null
+  10|digital|true|false|"D10 PWM / SS"|spi-ss
+  11|digital|true|false|"D11 PWM / MOSI"|spi-mosi
+  12|digital|false|false|"D12 / MISO"|spi-miso
+  13|digital|false|false|"D13 / LED / SCK"|"spi-sck;status-led"
+  14|analog|false|false|A0|"adc:t"
+  15|analog|false|false|A1|"adc:t"
+  16|analog|false|false|A2|"adc:t"
+  17|analog|false|false|A3|"adc:t"
+  18|analog|false|false|"A4 / SDA"|"adc:t;i2c-sda"
+  19|analog|false|false|"A5 / SCL"|"adc:t;i2c-scl"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[3|]{peripheral|param|value}:
+  serial|"uarts:1"|"pins:0,1"
+  i2c|"channels:1"|"sda:18;scl:19"
+  spi|"channels:1"|"miso:12;mosi:11;sck:13;ss:10"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "40mA"
+  total_current_limit: "150mA"
+  warnings[3]:
+    - "No onboard USB — requires external FTDI USB-TTL adapter for programming"
+    - "RAW pin accepts 7-12V unregulated input"
+    - "VCC output voltage depends on board variant (5V or 3.3V version)"
+compatibility:
+  arduinoCore: "1.8.19"
+  pio: atmelavr
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: optiboot
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: avr-family
+  boardProfileId: arduino-pro-mini
+  defaultLanguageSkills[2]:
+    - arduino-cpp-avr
+    - rust-embassy-avr

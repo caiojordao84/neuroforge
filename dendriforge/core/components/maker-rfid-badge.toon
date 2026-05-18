@@ -1,0 +1,100 @@
+# METADATA:
+project_name: maker-rfid-badge-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: maker-rfid-badge
+name: "RFID Badge 13.56MHz (Badge RFID)"
+family: communication
+subfamily: wireless
+category: node
+standard: "ISO/IEC 14443-A"
+url: null
+image: maker-rfid-badge.svg
+symbol: maker-rfid-badge-symbol.svg
+symbol_standard: custom
+
+## 2. PARAMETERS:
+params:
+  protocol:
+    label: "Protocol"
+    default: "MIFARE-Classic-1K"
+    options: ["MIFARE-Classic-1K", "NTAG213", "NTAG215"]
+    type: enum
+    editable: true
+  uid:
+    label: "Badge UID (Hex)"
+    default: "DE:AD:BE:EF"
+    type: string
+    editable: true
+  memory_size:
+    label: "Memory Size"
+    unit: "bytes"
+    default: 1024
+    options: [144, 504, 1024, 4096]
+    type: enum
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+ports[0|]{}:
+
+## 4c. PROTOCOL PORTS:
+protocol_ports[1|]{id|direction|protocol|notes}:
+  RF|bidirectional|"ISO-14443-A"|"13.56MHz wireless RF interface"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: digital-io
+  protocol_emulation: true
+  bidirectional: true
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - idle
+    - transmitting
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: null
+  max_current: null
+  max_power: null
+  max_temp: 50
+  min_temp: -10
+  ip_rating: "IP54"
+  safety_category: null
+warnings[2]:
+  - "Passive component — powered entirely by the reader's RF field"
+  - "Operating distance is highly dependent on the reader's antenna size and power"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["comm-rfid-reader", "maker-rfid-*", "comm-*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["access-control", "attendance-system", "maker-projects"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 40
+  height: 60
+  ports_layout: custom
+  port_RF: {x: 20, y: 30}
+  label_position: bottom
+  value_display: "{uid}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: communication-family
+  componentProfileId: maker-rfid-badge
+  simulationEngine: protocol-stub-engine
+  paletteGroup: "Communication > Wireless"
+  tags[4]:
+    - rfid
+    - badge
+    - wireless
+    - tag

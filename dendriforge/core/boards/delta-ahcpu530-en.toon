@@ -1,0 +1,117 @@
+# METADATA:
+project_name: delta-ahcpu530-en-ah500-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: delta-ahcpu530-en
+name: "Delta AHCPU530-EN — AH500 Series Rack PLC CPU (256K steps, 4352 I/O, Ethernet)"
+manufacturer: "Delta Electronics"
+cpu: "Delta 32-bit high-speed processor, 0.02µs/LD, 0.3ms/1kstep"
+category: plc
+form_factor: rack
+standard: "IEC 61131-3"
+image: delta-ahcpu530-en.svg
+url: "https://www.delta-emea.com/en-gb/products/PLC-Programmable-Logic-Controllers/4023"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  memory_work: 128KB
+  memory_load: 1024KB
+  memory_retain: 16KB
+  supply_voltage: 100V
+  power_consumption: 5W
+  di_integrated: 0
+  do_integrated: 0
+  ai_integrated: 0
+dims:
+  w: 45.0
+  h: 130.0
+  t: 111.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerSupply[4|]{name|direction|voltage|type}:
+  L|input|100V|supply
+  N|input|null|neutral
+  PE|input|null|protective-earth
+  SENSOR_SUPPLY|output|24V|sensor-power
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[3|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|0|null|null|null
+  1|0|DO|0|null|null|null
+  2|0|mixed|0|null|null|null
+
+## 5. DIGITAL CHANNEL DESCRIPTORS:
+# Format: addr | direction | label | roles
+digitalChannels[2|]{addr|direction|label|roles}:
+  "%IX0.0"|input|"DI placeholder (AH-series DIO module required)"|di
+  "%QX0.0"|output|"DO placeholder (AH-series DIO module required)"|do
+
+## 6. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[7|]{peripheral|param|value}:
+  ethernet|"port:502"|"protocol:Modbus-TCP;speed:100Mbps;connections:32"
+  ethernetip|"port:44818"|"protocol:EtherNet/IP;role:adapter;module:AHCPU531-EN-scanner"
+  serial|"baud:1000000"|"proto:Modbus-ASCII/RTU;bus:RS232-RS422-RS485;port:COM;role:master-slave"
+  devicenet|"baud:1000"|"role:master-slave;module:AH10DNET-5A;slaves:64;max:1Mbps"
+  canopen|"baud:1000"|"role:master;profile:DS301;module:AH10COPM-5A;slaves:127"
+  profibus|"baud:12000"|"role:master-slave;module:AH10PFBM-5A;profile:DP-V0"
+  dmcnet|"baud:10000"|"role:master;module:AH20MC-5A;axes:12;proto:DMCNET"
+usb:
+  type: Mini-USB
+  chip: native
+  vid: "0x0346"
+  pid: "0x0200"
+
+## 7. RACKS & EXPANSION:
+# Format: rack | slots | backplane_current | voltage
+racks[3|]{rack|slots|backplane_current|voltage}:
+  0|12|5000mA|5V
+  1|8|5000mA|5V
+  2|6|5000mA|5V
+expansion:
+  max_signal_modules: 64
+  max_communication_modules: 8
+  max_signal_boards: 0
+
+## 8. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  supply_voltage: 100V
+  supply_current_max: 5000mA
+  io_output_current_max: 500mA
+  sensor_supply_current: 500mA
+  operating_temp: "0-55°C"
+  storage_temp: "-25-70°C"
+  protection_class: IP20
+  warnings[9]:
+    - "AHCPU530-EN has NO integrated I/O; all digital and analog I/O requires separate AH-series rack modules installed on backplane"
+    - "Power supply module (AHPS05-5A for 100-240VAC or AHPS15-5A for 24VDC) is REQUIRED and installs leftmost on backplane"
+    - "CPU must be installed in slot 2 (second from left) on main backplane — only one CPU per control network"
+    - "Maximum 8 backplanes (1 main + 7 extension) per CPU; max 4352 local DIO or 512 analog channels on AHCPU530-EN"
+    - "EtherNet/IP Scanner role (for active I/O scanning) only available on AHCPU521-EN and AHCPU531-EN; AHCPU530-EN is adapter only"
+    - "AHCPU530-EN has 1 COM port (RS-232/422/485 configurable via DB9); AHCPU530-RS2 has 2 COM ports instead of Ethernet"
+    - "All AH500 I/O modules support hot swap while system is running — module replacement does not require PLC stop"
+    - "SD card (full-size, SDHC) supports program backup, data logging, recipe storage and firmware update"
+    - "Remote I/O via AHRTU-DNET-5A (DeviceNet) supports up to 128000 digital / 4000 analog remote points across 8 RTU racks"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "ISPSoft v3.x / PMSoft v2.x (motion)"
+  runtime: "AH500 FW"
+  firmware: "3.x"
+  languages: "LD;IL;ST;SFC;FBD"
+  order_ref: "AHCPU530-EN"
+
+## 9. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: delta-ahcpu530-en
+  defaultLanguageSkills[3]:
+    - ld-ispsoft-ah500
+    - st-iec61131-ah500
+    - fbd-ispsoft-ah500

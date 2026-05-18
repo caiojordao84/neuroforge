@@ -1,38 +1,136 @@
+# METADATA:
+project_name: teensy-3-5-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: teensy-3-5
-name: "Teensy 3.5"
-manufacturer: "Generic"
-mcu: "MK64FX512"
-category: "maker"
-image: "/boards/teensy-3-5.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 524288
-sram: 196608
-clock_hz: 120000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "avr-family"
-  boardProfileId: "teensy-3-5"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+name: "PJRC Teensy 3.5 — MK64FX512VMD12 ARM Cortex-M4F 120MHz HW-FPU, 512KB Flash, 256KB RAM, 64 GPIO, SDIO SD, ETH MAC, 2xDAC"
+manufacturer: "PJRC.COM LLC"
+mcu: "NXP/Freescale MK64FX512VMD12 — ARM Cortex-M4F 120MHz; 32-bit hardware FPU; 16-DMA; Crypto/RNG/CRC; Ethernet MAC"
+category: maker
+image: teensy-3-5.svg
+url: "https://www.pjrc.com/store/teensy35.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 524288
+  flash_available: 524288
+  sram: 262144
+  eeprom: 4096
+  clock: 120000000
+  voltage: "3.3V"
+dims:
+  w: 62.3
+  h: 18.0
+  t: 4.2
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+# Input 3.6..6.0V via VIN or VUSB; LP38691-type LDO → 3.3V 250mA max out
+# VUSB/VIN bridged by default; cut back-pad solder jumper for independent operation
+powerPins[5|]{name|direction|voltage|type}:
+  VIN|input|"5V"|null
+  VUSB|input|"5V"|null
+  V3V3|output|"3.3V"|null
+  AGND|null|null|ground
+  GND|null|null|ground
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+# ALL 58 digital I/O pins are 5V tolerant — EXCEPT analog-only pins A10,A11,A21,A22,A25,A26 = 3.3V max!
+# Output: 3.3V, 10mA max per pin; all digital pins support pin-change interrupt
+# Breadboard pins: 0-33 (front edges); back pads: 34-63 (bottom side)
+gpio[42|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|true|"RX1 / D0 — Serial1 RX (FIFO); SPI1 MISO (alt); 5V-tolerant; interrupt"|"uart-rx;di;do;spi"
+  1|digital|false|true|"TX1 / D1 — Serial1 TX (FIFO); SPI1 MOSI (alt); 5V-tolerant; interrupt"|"uart-tx;di;do;spi"
+  2|digital|true|true|"D2 / A14 / FTM3-ch0 — digital I/O; analog A14; PWM FTM3; 5V-tolerant; interrupt"|"di;do;pwm;adc:t"
+  3|digital|true|true|"D3 / CAN-TX / I2C2-SCL / FTM1 — FlexCAN TX; I2C Wire2 SCL; PWM FTM1 ch0; 5V-tolerant; interrupt; requires ext TJA1050 transceiver for CAN"|"do;pwm;i2c;can"
+  4|digital|false|true|"D4 / CAN-RX / I2C2-SDA — FlexCAN RX; I2C Wire2 SDA; 5V-tolerant; interrupt"|"di;i2c;can"
+  5|digital|true|true|"D5 / PWM FTM0-ch7 — 5V-tolerant; interrupt"|"di;do;pwm"
+  6|digital|true|true|"D6 / PWM FTM0-ch6 — 5V-tolerant; interrupt"|"di;do;pwm"
+  7|digital|false|true|"D7 / RX3 — Serial3 RX; 5V-tolerant; interrupt"|"uart-rx;di;do"
+  8|digital|false|true|"D8 / TX3 — Serial3 TX; 5V-tolerant; interrupt"|"uart-tx;di;do"
+  9|digital|true|true|"D9 / RX2 / PWM FTM0-ch5 — Serial2 RX (FIFO+HiResBaud); PWM; 5V-tolerant; interrupt"|"uart-rx;di;do;pwm"
+  10|digital|true|true|"D10 / TX2 / CS0 / PWM FTM0-ch4 — Serial2 TX (FIFO+HiResBaud); SPI0 CS; PWM; 5V-tolerant; interrupt"|"uart-tx;do;pwm;spi"
+  11|digital|false|true|"D11 / MOSI / SPI0 — SPI0 MOSI (default, with FIFO); 5V-tolerant; interrupt"|"di;do;spi"
+  12|digital|false|true|"D12 / MISO / SPI0 — SPI0 MISO (default); 5V-tolerant; interrupt"|"di;spi"
+  13|digital|true|true|"D13 / SCK / LED — SPI0 SCK (default, FIFO); on-board LED (orange); I2S DIN; 5V-tolerant; interrupt — LED shares pin; do NOT apply >5mA to LED without resistor"|"di;do;pwm;spi"
+  14|analog|false|true|"A0 / D14 — ADC0 analog; digital I/O; 5V-tolerant; interrupt"|"di;do;adc:t"
+  15|analog|false|true|"A1 / D15 — ADC0 analog; digital I/O; 5V-tolerant; interrupt"|"di;do;adc:t"
+  16|analog|false|true|"A2 / D16 / SCL1-alt — ADC0; I2C Wire1 SCL (alt); 5V-tolerant; interrupt"|"di;do;adc:t;i2c"
+  17|analog|false|true|"A3 / D17 / SDA1-alt — ADC0; I2C Wire1 SDA (alt); 5V-tolerant; interrupt"|"di;do;adc:t;i2c"
+  18|analog|false|true|"A4 / D18 / SDA0 — ADC0; I2C Wire0 SDA (primary); 5V-tolerant; interrupt"|"di;do;adc:t;i2c"
+  19|analog|false|true|"A5 / D19 / SCL0 — ADC0; I2C Wire0 SCL (primary); 5V-tolerant; interrupt"|"di;do;adc:t;i2c"
+  20|analog|true|true|"A6 / D20 / PWM FTM0-ch0 — ADC0; PWM; 5V-tolerant; interrupt"|"di;do;pwm;adc:t"
+  21|analog|true|true|"A7 / D21 / PWM FTM0-ch1 — ADC1; PWM; 5V-tolerant; interrupt"|"di;do;pwm;adc:t"
+  22|analog|true|true|"A8 / D22 / PWM FTM0-ch2 / I2S-DOUT — ADC1; PWM; I2S audio data out; 5V-tolerant; interrupt"|"di;do;pwm;adc:t"
+  23|analog|true|true|"A9 / D23 / PWM FTM0-ch3 / I2S-LRCLK — ADC1; PWM; I2S word clock; 5V-tolerant; interrupt"|"di;do;pwm;adc:t"
+  24|digital|false|true|"D24 — digital; 5V-tolerant; interrupt; bottom back accessible via solder pad row"|"di;do"
+  25|digital|false|true|"D25 / I2S-LRCLK-alt — I2S word clock alt; 5V-tolerant; interrupt"|"di;do"
+  26|analog|false|true|"A15 / D26 / I2S-BCLK-alt — ADC1; I2S bit clock alt; 5V-tolerant; interrupt; back pad"|"di;do;adc:t"
+  27|analog|false|true|"A16 / D27 — ADC1; 5V-tolerant; interrupt; back pad"|"di;do;adc:t"
+  28|analog|false|true|"A17 / D28 / I2S-MCLK — ADC0; I2S master clock; 5V-tolerant; interrupt; back pad"|"di;do;adc:t"
+  29|analog|true|true|"A18 / D29 / PWM FTM2-ch0 — ADC0; FTM2 PWM; 5V-tolerant; interrupt; back pad"|"di;do;pwm;adc:t"
+  30|analog|true|true|"A19 / D30 / PWM FTM2-ch1 — ADC0; FTM2 PWM; 5V-tolerant; interrupt; back pad"|"di;do;pwm;adc:t"
+  31|digital|false|true|"D31 / RX4 / SPI1-CS — Serial4 RX; SPI1 CS; 5V-tolerant; interrupt; back pad"|"uart-rx;di;spi"
+  32|digital|false|true|"D32 / TX4 / SPI1-SCK — Serial4 TX; SPI1 SCK; 5V-tolerant; interrupt; back pad"|"uart-tx;di;do;spi"
+  33|digital|false|true|"D33 / RX5 — Serial5 RX; 5V-tolerant; interrupt; back pad"|"uart-rx;di"
+  34|digital|false|true|"D34 / TX5 — Serial5 TX; 5V-tolerant; interrupt; back pad"|"uart-tx;do"
+  35|digital|true|true|"D35 / A12 / FTM3-ch4 — ADC1; FTM3 PWM; 5V-tolerant; interrupt; back pad"|"di;do;pwm;adc:t"
+  36|digital|true|true|"D36 / A13 / FTM3-ch5 — ADC1; FTM3 PWM; 5V-tolerant; interrupt; back pad"|"di;do;pwm;adc:t"
+  37|digital|true|true|"D37 / SCL1 / FTM3-ch6 — I2C Wire1 SCL (primary); FTM3 PWM; 5V-tolerant; interrupt; back pad"|"di;do;pwm;i2c"
+  38|digital|true|true|"D38 / SDA1 / FTM3-ch7 — I2C Wire1 SDA (primary); FTM3 PWM; 5V-tolerant; interrupt; back pad"|"di;do;pwm;i2c"
+  39|analog|false|true|"A20 / D39 — ADC1; 5V-tolerant; interrupt; back pad"|"di;do;adc:t"
+  40|analog|false|true|"A10 / D40 — ADC0 ONLY; 3.3V ONLY input (NOT 5V tolerant); differential pair with A11; back pad"|"adc:t"
+  41|analog|false|true|"A11 / D41 — ADC1 ONLY; 3.3V ONLY; differential pair with A10; back pad"|"adc:t"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[10|]{peripheral|param|value}:
+  usb_fullspeed|"speed:12Mbit"|"proto:USB1.1-FullSpeed;modes:Serial-MIDI-HID-RawHID-MTP-Keyboard-Mouse-Joystick-Audio-FlightSim-Touchscreen;DMA:dedicated;connector:Micro-B;bootloader:HalfKay-separate-chip"
+  uart_serial12|"baud:1000000"|"serial1:TX=pin1,RX=pin0,FIFO+HiResBaud;serial2:TX=pin10,RX=pin9,FIFO+HiResBaud"
+  uart_serial3456|"baud:1000000"|"serial3:TX=8,RX=7;serial4:TX=32,RX=31(back);serial5:TX=34,RX=33(back);serial6:TX=48,RX=47(back)"
+  spi0|"speed:30Mbit"|"sck:pin13;mosi:pin11;miso:pin12;cs:pin10;FIFO:yes;proto:SPI"
+  spi12|"speed:30Mbit"|"spi1:CS=31,SCK=32,MOSI=0,MISO=1(back);spi2:CS=43,SCK=46,MOSI=44,MISO=45(back);no-FIFO"
+  i2c_wire012|"speed:1000kHz"|"wire0:SDA=18,SCL=19;wire1:SDA=38,SCL=37(alt:SDA=17,SCL=16);wire2:SDA=4,SCL=3;all-support-100-400-1000kHz"
+  can_flexcan|"speed:1Mbit"|"tx:pin3;rx:pin4;proto:FlexCAN-CAN2.0B;lib:FlexCAN-Teensyduino;requires-external-TJA1050-transceiver"
+  i2s_audio|"channels:4"|"I2S-TDM:4ch-in+4ch-out;LRCLK:pin23-or-25;BCLK:pin9-or-26;MCLK:pin28;DOUT:pin22;DIN:pin13;TDM:up-to-16ch;lib:PJRC-Audio-Library"
+  sdio_sd|"bits:4"|"proto:native-SDIO-4bit;socket:on-board-built-in;SD.begin(BUILTIN_SDCARD);speed:up-to-20MB-per-s;SPI-also-supported-via-SD.begin(cspin)"
+  ethernet_mac|"speed:100Mbit"|"MAC:built-in-hardware;requires-external-PHY-shield;shields:WIZ820io-W5500-LAN8720;lib:QNEthernet-or-Ethernet;IEEE1588-timers-4"
+usb:
+  type: Micro-B
+  chip: native
+  vid: "0x16C0"
+  pid: "0x0483"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "10mA"
+  total_current_limit: "250mA"
+  warnings[9]:
+    - "Analog-only pins A10 (D40), A11 (D41), A21 (DAC0), A22 (DAC1), A25, A26 are 3.3V ONLY and NOT 5V tolerant — all other digital/analog pins are 5V tolerant; applying 5V to analog-only pins will permanently damage the MK64FX512"
+    - "CAN bus requires an EXTERNAL transceiver (TJA1050 or MCP2551) between pin3/pin4 and the CAN bus — without it the FlexCAN port provides only logic-level signals; do not connect directly to automotive or industrial CAN bus wiring"
+    - "Ethernet MAC is built-in but requires an external PHY shield (WIZ820io, W5500, or LAN8720) — without the PHY chip, no Ethernet communication is possible; the Ethernet MAC supports 10/100Mbps with dedicated DMA"
+    - "Teensy 3.5 is DISCONTINUED (last batch Aug 2023, out of stock as of Mar 2025) — PJRC recommends migrating to Teensy 4.1 for new designs; the MK64FX512 chip supply will continue to dwindle due to 90nm process limitations"
+    - "VUSB and VIN are bridged by default — cut the bottom-side solder pads before using an external battery charger or power supply simultaneously with USB; failure to cut may back-drive the USB host or damage the regulator"
+    - "SPI ports 1 and 2 (SPI1, SPI2) use back-pad pins (32, 31, 0, 1 for SPI1; 43, 46, 44, 45 for SPI2) — these are only accessible by soldering wires directly to the bottom pads; they are NOT breadboard accessible"
+    - "The built-in SD card socket uses 4-bit SDIO (SD.begin(BUILTIN_SDCARD)) — this is fast (up to 20 MB/s) but SDIO pins are shared with I2S audio and Serial4/5; do NOT use SD and I2S audio simultaneously without careful pin conflict checking"
+    - "I2S/TDM audio pins overlap with SPI0 (pin13=SCK), Serial2 (pin9/10), and Serial3 (pin7/8) — the PJRC Audio Library reconfigures affected pins when audio objects are instantiated; do NOT simultaneously use conflicting hardware"
+    - "RTC 32.768 kHz crystal is pre-soldered on Teensy 3.5 PCB (unlike Teensy 3.2 which requires hand-soldering) — however VBAT coin cell (CR2032) is still user-provided; without VBAT the RTC loses time when power is removed"
+compatibility:
+  sw: "Arduino IDE + Teensy boards add-on (Boards Manager install); PlatformIO (teensy35 target); Visual Micro; Makefile"
+  languages: "C++;C;Arduino (C++ subset);ARM assembly"
+  frameworks: "Teensyduino;PJRC Audio Library;FlexCAN lib;Wire;SPI;SD;EEPROM;QNEthernet;OctoWS2811;SmartMatrix;IntervalTimer"
+  certifications: "FCC-Part15-ClassB;CE;RoHS"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: pjrc-teensy-3x-family
+  boardProfileId: teensy-3-5
+  defaultLanguageSkills[3]:
+    - cpp-arduino-teensyduino
+    - cpp-pjrc-audio-library
+    - c-arm-cortex-m4f-bare-metal

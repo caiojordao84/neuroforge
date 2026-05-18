@@ -1,0 +1,112 @@
+# METADATA:
+project_name: sensor-rain-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: sensor-rain
+name: "Rain Sensor (Sensor de Chuva)"
+family: sensors
+subfamily: environment
+category: sensor
+standard: "IEC 60947-5-2"
+url: null
+image: sensor-rain.svg
+symbol: sensor-rain-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  output_type:
+    label: "Output Type"
+    default: "digital-PNP"
+    options: ["digital-PNP", "digital-NPN", "analog-0-10V"]
+    type: enum
+    editable: true
+  sensitivity_threshold:
+    label: "Sensitivity Threshold"
+    unit: "%"
+    default: 50
+    min: 0
+    max: 100
+    type: float
+    editable: true
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 24
+    options: [5, 12, 24]
+    type: enum
+    editable: true
+  heater_enabled:
+    label: "Internal Heater"
+    default: false
+    type: bool
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"24V"|"200mA"|"supply +"
+  GND|input|ground|null|null|"supply -"
+  OUT|output|digital|"24V"|"100mA"|"signal output (rain detected or intensity)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: threshold
+  trigger: environment
+  trigger_source: external
+  output_logic: "{output_type}"
+  bidirectional: false
+  dynamic: true
+  thermal_model: true
+  noise_model: false
+  states[3]:
+    - dry
+    - raining
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "{supply_voltage}"
+  max_current: "200mA"
+  max_power: null
+  max_temp: 70
+  min_temp: -20
+  ip_rating: "IP67"
+  safety_category: null
+warnings[2]:
+  - "Ensure sensor surface is installed at a slight angle to allow water runoff"
+  - "Internal heater consumes additional current; ensure power supply is adequately sized"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["ind-di-bank", "ind-ai-bank", "plc-*", "relay-*"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["weather-station", "hvac", "building-automation", "irrigation"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 40
+  height: 40
+  ports_layout: vertical
+  port_VCC: {x: 20, y: 0}
+  port_GND: {x: 20, y: 40}
+  port_OUT: {x: 40, y: 20}
+  label_position: right
+  value_display: "Rain / {output_type}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: sensors-family
+  componentProfileId: sensor-rain
+  simulationEngine: digital-io
+  paletteGroup: "Sensors > Environment"
+  tags[4]:
+    - sensor
+    - rain
+    - environment
+    - weather

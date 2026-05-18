@@ -1,0 +1,154 @@
+# METADATA:
+project_name: signal-stack-light-5-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: signal-stack-light-5
+name: "Stack Light 5 Cores"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60947-5-1"
+url: null
+image: signal-stack-light-5.svg
+symbol: signal-stack-light-5-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  cores:
+    label: "Number of Cores"
+    default: 5
+    options: [5]
+    type: enum
+    editable: false
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 24
+    options: [12, 24, 48, 110, 230]
+    type: enum
+    editable: true
+  color_1:
+    label: "Core 1 Color"
+    default: "red"
+    options: ["red", "amber", "green", "blue", "white"]
+    type: enum
+    editable: true
+  color_2:
+    label: "Core 2 Color"
+    default: "amber"
+    options: ["red", "amber", "green", "blue", "white"]
+    type: enum
+    editable: true
+  color_3:
+    label: "Core 3 Color"
+    default: "green"
+    options: ["red", "amber", "green", "blue", "white"]
+    type: enum
+    editable: true
+  color_4:
+    label: "Core 4 Color"
+    default: "blue"
+    options: ["red", "amber", "green", "blue", "white"]
+    type: enum
+    editable: true
+  color_5:
+    label: "Core 5 Color"
+    default: "white"
+    options: ["red", "amber", "green", "blue", "white"]
+    type: enum
+    editable: true
+  light_mode:
+    label: "Light Mode"
+    default: "steady"
+    options: ["steady", "blinking", "rotating", "pulsed"]
+    type: enum
+    editable: true
+  ip_rating:
+    label: "Ingress Protection"
+    default: "IP65"
+    options: ["IP54", "IP65", "IP67"]
+    type: enum
+    editable: true
+  mounting:
+    label: "Mounting Type"
+    default: "tower"
+    options: ["tower", "panel", "wall"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[6|]{id|direction|type|voltage_max|current_max|notes}:
+  A1|input|power|"230V"|"200mA"|"core 1 positive"
+  A2|input|power|"230V"|"200mA"|"core 2 positive"
+  A3|input|power|"230V"|"200mA"|"core 3 positive"
+  A4|input|power|"230V"|"200mA"|"core 4 positive"
+  A5|input|power|"230V"|"200mA"|"core 5 positive"
+  N|input|ground|null|null|"neutral / return"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: basic-analog
+  equation: "light_on = V_supply >= supply_voltage; pattern = f(light_mode)"
+  bidirectional: false
+  dynamic: false
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - off
+    - active
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "230V"
+  max_current: "200mA"
+  max_power: null
+  max_temp: 70
+  min_temp: -20
+warnings[4]:
+  - "Each core should be current-limited according to the manufacturer specification"
+  - "Do not exceed the rated supply voltage or the lamp modules may fail"
+  - "Stack height and mounting affect visibility and ingress protection"
+  - "Use the correct color sequence for the intended alarm or status convention"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["mcu-gpio", "relay-coil", "dc-source", "ac-source"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["machine-status", "alarm-tower", "industrial-indication", "signal-column"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 110
+  ports_layout: custom
+  port_A1: {x: 30, y: 10}
+  port_A2: {x: 30, y: 30}
+  port_A3: {x: 30, y: 50}
+  port_A4: {x: 30, y: 70}
+  port_A5: {x: 30, y: 90}
+  port_N: {x: 30, y: 110}
+  label_position: top
+  value_display: "Stack light / {cores} cores / {light_mode}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: signal-stack-light-5
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Audible Signals"
+  tags[7]:
+    - stack-light
+    - signal
+    - passive
+    - indicator
+    - industrial
+    - tower-light
+    - iec-60947-5-1

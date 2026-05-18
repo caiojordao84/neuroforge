@@ -1,0 +1,108 @@
+# METADATA:
+project_name: cmd-handwheel-mpg-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: cmd-handwheel-mpg
+name: "Handwheel / MPG (Gerador de Pulsos Manual)"
+family: command-elements
+subfamily: special-interfaces
+category: command
+standard: "IEC 60947-5-1"
+url: null
+image: cmd-handwheel-mpg.svg
+symbol: cmd-handwheel-mpg-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  pulses_per_rev:
+    label: "Pulses Per Revolution (PPR)"
+    default: 100
+    options: [25, 100]
+    type: enum
+    editable: true
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 5
+    options: [5, 12, 24]
+    type: enum
+    editable: true
+  output_type:
+    label: "Output Circuit"
+    default: "Line-Driver"
+    options: ["Line-Driver", "Open-Collector", "Push-Pull"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[6|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"{supply_voltage}"|"100mA"|"encoder supply voltage"
+  GND|input|ground|null|null|"encoder ground"
+  OUT_A|output|digital|"{supply_voltage}"|"20mA"|"quadrature channel A"
+  OUT_B|output|digital|"{supply_voltage}"|"20mA"|"quadrature channel B"
+  OUT_A_N|output|digital|"{supply_voltage}"|"20mA"|"quadrature channel A (inverted)"
+  OUT_B_N|output|digital|"{supply_voltage}"|"20mA"|"quadrature channel B (inverted)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: digital-io
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - idle
+    - rotating
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "{supply_voltage}"
+  max_current: "100mA"
+  max_power: null
+  max_temp: 60
+  min_temp: -10
+  ip_rating: "IP65"
+  safety_category: null
+warnings[2]:
+  - "Line driver outputs require matched differential receivers for high noise immunity"
+  - "Verify voltage compatibility with CNC or motion controller inputs"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["plc-*", "mcu-*", "ind-di-bank"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["cnc-control", "manual-positioning", "hmi-pendant"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 80
+  height: 80
+  ports_layout: custom
+  port_VCC: {x: 20, y: 0}
+  port_GND: {x: 60, y: 0}
+  port_OUT_A: {x: 0, y: 30}
+  port_OUT_B: {x: 0, y: 50}
+  port_OUT_A_N: {x: 80, y: 30}
+  port_OUT_B_N: {x: 80, y: 50}
+  label_position: bottom
+  value_display: "{pulses_per_rev} PPR MPG"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: command-elements-family
+  componentProfileId: cmd-handwheel-mpg
+  simulationEngine: digital-io
+  paletteGroup: "Command Elements > Special Interfaces"
+  tags[5]:
+    - mpg
+    - handwheel
+    - encoder
+    - cnc
+    - command

@@ -1,0 +1,141 @@
+# METADATA:
+project_name: act-vfd-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: act-vfd
+name: "Variable Frequency Drive (VFD)"
+family: actuators
+subfamily: motor-drives
+category: actuator
+standard: "IEC 61800-2"
+url: null
+image: act-vfd.svg
+symbol: act-vfd-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  power_rating:
+    label: "Rated Power"
+    unit: W
+    default: 1500
+    min: 100
+    max: 630000
+    type: float
+    editable: true
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 400
+    options: [110, 230, 400, 480, 690]
+    type: enum
+    editable: true
+  output_frequency:
+    label: "Max Output Frequency"
+    unit: V
+    default: 50
+    min: 10
+    max: 500
+    type: float
+    editable: true
+  control_mode:
+    label: "Control Mode"
+    default: "V/f"
+    options: ["V/f", "vector", "sensorless-vector", "flux-vector"]
+    type: enum
+    editable: true
+  command_interface:
+    label: "Command Interface"
+    default: "analog-10V"
+    options: ["analog-10V", "analog-4-20mA", "Modbus-RTU", "Profibus", "EtherNet-IP", "CANopen"]
+    type: enum
+    editable: true
+  braking:
+    label: "Braking Method"
+    default: "DC-injection"
+    options: ["DC-injection", "dynamic-braking", "regenerative"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[8|]{id|direction|type|voltage_max|current_max|notes}:
+  L1|input|power|"690V"|"1000A"|"AC supply phase L1"
+  L2|input|power|"690V"|"1000A"|"AC supply phase L2"
+  L3|input|power|"690V"|"1000A"|"AC supply phase L3"
+  PE|input|ground|null|null|"Protective earth"
+  U|output|power|"690V"|"1000A"|"Motor phase U output"
+  V|output|power|"690V"|"1000A"|"Motor phase V output"
+  W|output|power|"690V"|"1000A"|"Motor phase W output"
+  BR|output|power|"690V"|"1000A"|"Dynamic braking resistor terminal"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: basic-analog
+  motion: rotary
+  bidirectional: true
+  dynamic: true
+  thermal_model: true
+  noise_model: false
+  states[4]:
+    - off
+    - ready
+    - running
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "690V"
+  max_current: "1000A"
+  max_power: null
+  max_temp: 50
+  min_temp: -10
+  ip_rating: "IP54"
+  safety_category: null
+warnings[4]:
+  - "Always connect protective earth before applying power"
+  - "Allow minimum 5 minutes discharge time before accessing drive terminals after power off"
+  - "Install line reactor or EMC filter on input for compliance with IEC 61800-3"
+  - "Never connect power factor correction capacitors on VFD output terminals"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["motor-ac-3ph", "ind-safety-relay-block", "plc-*", "ind-di-bank", "ind-do-bank"]
+  forbidden_with: []
+  requires: ["ac-source"]
+  typical_context: ["pump-speed-control", "fan-drive", "conveyor-speed", "hvac"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 80
+  height: 100
+  ports_layout: custom
+  port_L1: {x: 0, y: 10}
+  port_L2: {x: 0, y: 25}
+  port_L3: {x: 0, y: 40}
+  port_PE: {x: 0, y: 55}
+  port_U: {x: 80, y: 25}
+  port_V: {x: 80, y: 45}
+  port_W: {x: 80, y: 65}
+  port_BR: {x: 80, y: 85}
+  label_position: bottom
+  value_display: "{power_rating}W / {supply_voltage}V / {control_mode}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: actuators-family
+  componentProfileId: act-vfd
+  simulationEngine: digital-io
+  paletteGroup: "Actuators > Motor Drives"
+  tags[7]:
+    - vfd
+    - inverter
+    - actuator
+    - motor-drives
+    - variable-frequency
+    - industrial
+    - ac-drive

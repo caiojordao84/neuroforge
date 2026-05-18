@@ -1,0 +1,111 @@
+# METADATA:
+project_name: panel-potentiometer-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: panel-potentiometer
+name: "Panel Potentiometer (Potenciómetro de Painel)"
+family: electricals
+subfamily: passives
+category: passive
+standard: "IEC 60393-1"
+url: null
+image: panel-potentiometer.svg
+symbol: panel-potentiometer-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  resistance:
+    label: "Total Resistance"
+    unit: Ω
+    default: 10000
+    min: 100
+    max: 1000000
+    type: float
+    editable: true
+  tolerance:
+    label: "Tolerance"
+    default: 10
+    options: [5, 10, 20]
+    type: enum
+    editable: true
+  taper:
+    label: "Taper (Curve)"
+    default: "linear"
+    options: ["linear", "logarithmic", "anti-logarithmic"]
+    type: enum
+    editable: true
+  power_rating:
+    label: "Power Rating"
+    unit: W
+    default: 0.5
+    min: 0.1
+    max: 5.0
+    type: float
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  CCW|passive|analog|null|null|"counter-clockwise end terminal"
+  WIPER|passive|analog|null|null|"variable wiper terminal"
+  CW|passive|analog|null|null|"clockwise end terminal"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: basic-analog
+  bidirectional: true
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[1]:
+    - nominal
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "50V"
+  max_current: "100mA"
+  max_power:
+    value: 0.5
+    unit: W
+  max_temp: 85
+  min_temp: -10
+  ip_rating: "IP54"
+  safety_category: null
+warnings[2]:
+  - "Do not exceed maximum power dissipation across the resistive element"
+  - "Wiper current should be kept minimal to avoid damaging the conductive track"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["voltage-divider", "variable-resistor", "hmi-panel-control"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 50
+  height: 50
+  ports_layout: custom
+  port_CCW: {x: 0, y: 40}
+  port_WIPER: {x: 25, y: 10}
+  port_CW: {x: 50, y: 40}
+  label_position: bottom
+  value_display: "{resistance}Ω {taper}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: panel-potentiometer
+  simulationEngine: basic-analog
+  paletteGroup: "Electricals > Passives"
+  tags[4]:
+    - potentiometer
+    - resistor
+    - passive
+    - panel-mount

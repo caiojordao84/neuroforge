@@ -1,0 +1,120 @@
+# METADATA:
+project_name: ind-membrane-keypad-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: ind-membrane-keypad
+name: "Industrial Membrane Keypad"
+family: industrial
+subfamily: hmi-signaling
+category: instrument
+standard: "IEC 60947-5-1"
+url: null
+image: ind-membrane-keypad.svg
+symbol: ind-membrane-keypad-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  key_count:
+    label: "Number of Keys"
+    default: 12
+    options: [4, 8, 12, 16, 20, 24]
+    type: enum
+    editable: true
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 24
+    options: [5, 12, 24]
+    type: enum
+    editable: true
+  interface:
+    label: "Interface"
+    default: "discrete-io"
+    options: ["discrete-io", "matrix-scan", "RS485", "USB-HID"]
+    type: enum
+    editable: true
+  backlight:
+    label: "Key Backlight"
+    default: "LED-white"
+    options: ["none", "LED-white", "LED-blue", "EL-panel"]
+    type: enum
+    editable: true
+  ip_class:
+    label: "IP Protection"
+    default: "IP65"
+    options: ["IP54", "IP65", "IP67"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"24V"|"500mA"|"DC supply positive"
+  GND|input|ground|null|null|"DC supply negative"
+  DI_BUS|output|digital|"24V"|"200mA"|"Key signal outputs to PLC/HMI digital inputs"
+  BACKLIGHT|input|digital|"24V"|"200mA"|"Backlight enable — active high"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: function-block-engine
+  trigger: user-interaction
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - idle
+    - key-active
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "24V"
+  max_current: "500mA"
+  max_power: null
+  max_temp: 60
+  min_temp: -20
+  ip_rating: "IP65"
+  safety_category: null
+warnings[3]:
+  - "Membrane keypads have limited actuation life — verify cycle rating for application"
+  - "Avoid sharp objects near membrane surface — damage is not covered by warranty"
+  - "Backlight LED lifetime typically 50000 hours — plan for replacement in long installations"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["plc-*", "ind-di-bank", "cmd-operator-panel", "ind-hmi-numeric-indicator"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["machine-hmi", "panel-data-entry", "access-control-panel"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 70
+  height: 70
+  ports_layout: custom
+  port_VCC: {x: 0, y: 10}
+  port_GND: {x: 0, y: 25}
+  port_DI_BUS: {x: 70, y: 25}
+  port_BACKLIGHT: {x: 0, y: 50}
+  label_position: bottom
+  value_display: "{key_count}keys / {interface} / {ip_class}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: industrial-family
+  componentProfileId: ind-membrane-keypad
+  simulationEngine: function-block-engine
+  paletteGroup: "Industrial > HMI & Signaling"
+  tags[6]:
+    - membrane-keypad
+    - hmi-signaling
+    - industrial
+    - keypad
+    - ip65
+    - panel

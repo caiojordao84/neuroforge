@@ -1,38 +1,101 @@
+# METADATA:
+project_name: arduino-nano-rp2040-connect-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: arduino-nano-rp2040-connect
 name: "Arduino Nano RP2040 Connect"
-manufacturer: "Generic"
-mcu: "RP2040"
-category: "maker"
-image: "/boards/arduino-nano-rp2040-connect.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 2097152
-sram: 270336
-clock_hz: 133000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "avr-family"
-  boardProfileId: "arduino-nano-rp2040-connect"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+manufacturer: Arduino
+mcu: RP2040
+category: maker
+image: arduino-nano-rp2040-connect.svg
+url: "https://store.arduino.cc/products/arduino-nano-rp2040-connect"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 16777216
+  flash_available: 16777216
+  sram: 270336
+  eeprom: 0
+  clock: 133000000
+  voltage: "3.3V"
+dims:
+  w: 45.0
+  h: 18.0
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  VIN|input|null|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  RESET|input|null|null
+  VUSB|output|"5V"|null
+  IOREF|output|"3.3V"|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[22|]{pin|type|pwm|int|label|roles}:
+  0|digital|t|t|"D0 / TX"|uart-tx
+  1|digital|t|t|"D1 / RX"|uart-rx
+  2|digital|t|t|D2|null
+  3|digital|t|t|D3|null
+  4|digital|t|t|D4|null
+  5|digital|t|t|D5|null
+  6|digital|t|t|D6|null
+  7|digital|t|t|D7|null
+  8|digital|t|t|D8|null
+  9|digital|t|t|D9|null
+  10|digital|t|t|"D10 / SS"|spi-ss
+  11|digital|t|t|"D11 / MOSI"|spi-mosi
+  12|digital|t|t|"D12 / MISO"|spi-miso
+  13|digital|t|t|"D13 / LED / SCK"|"spi-sck;status-led"
+  14|analog|t|t|"A0 / D14"|"adc:t"
+  15|analog|t|t|"A1 / D15"|"adc:t"
+  16|analog|t|t|"A2 / D16"|"adc:t"
+  17|analog|t|t|"A3 / D17"|"adc:t"
+  18|digital|t|t|"A4 / SDA"|"i2c-sda"
+  19|digital|t|t|"A5 / SCL"|"i2c-scl"
+  20|analog|f|f|A6|"adc:t"
+  21|analog|f|f|A7|"adc:t"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uarts:2"|"pins:0,1"
+  i2c|"channels:2"|"sda:18;scl:19"
+  spi|"channels:2"|"miso:12;mosi:11;sck:13;ss:10"
+  adc|"channels:4"|"pins:14;15;16;17"
+usb:
+  type: Micro-USB
+  chip: RP2040
+  vid: "0x2341"
+  pid: "0x0058"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "4mA"
+  total_current_limit: "300mA"
+  warnings[4]:
+    - "GPIO operates at 3.3V only; not 5V tolerant"
+    - "Pin 13 has onboard LED interference"
+    - "A6 and A7 do not support PWM or interrupts"
+    - "Maximum total current draw from 3.3V pin is 800mA"
+compatibility:
+  arduinoCore: "4.0.0"
+  pio: rp2040
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: rp2040-bootrom
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: rp2040-family
+  boardProfileId: arduino-nano-rp2040-connect
+  defaultLanguageSkills[2]:
+    - arduino-cpp-rp2040
+    - micropython-rp2040

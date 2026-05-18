@@ -1,38 +1,117 @@
+# METADATA:
+project_name: esp32-devkit-v1-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: esp32-devkit-v1
 name: "ESP32 DevKit V1"
-manufacturer: "Generic"
-mcu: "ESP32"
-category: "maker"
-image: "/boards/esp32-devkit-v1.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 4194304
-sram: 532480
-clock_hz: 240000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "esp32-family"
-  boardProfileId: "esp32-devkit-v1"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+manufacturer: DOIT
+mcu: ESP32-WROOM-32
+category: maker
+image: esp32-devkit-v1.svg
+url: https://mischianti.org/doit-esp32-dev-kit-v1-high-resolution-pinout-and-specs/
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 4194304
+  flash_available: 4194304
+  sram: 532480
+  eeprom: 0
+  clock: 240000000
+  voltage: "3.3V"
+  cores: 2
+  wifi: "802.11b/g/n"
+  bluetooth: "v4.2 BR/EDR+BLE"
+dims:
+  w: 52.0
+  h: 28.0
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  VIN|input|"5V"|null
+  3V3|output|"3.3V"|null
+  GND|null|null|ground
+  EN|input|null|null
+  VP|input|null|null
+  VN|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[30|]{pin|type|pwm|int|label|roles}:
+  0|digital|t|t|"IO0"|"adc2-ch1;touch-ch1;boot"
+  1|digital|t|f|"IO1 / TX0"|uart-tx
+  2|digital|t|t|"IO2"|"adc2-ch2;touch-ch2;status-led"
+  3|digital|t|f|"IO3 / RX0"|uart-rx
+  4|digital|t|t|"IO4"|"adc2-ch0;touch-ch0"
+  5|digital|t|t|"IO5"|vspi-cs0
+  12|digital|t|t|"IO12"|"adc2-ch5;touch-ch5;hspi-miso"
+  13|digital|t|t|"IO13"|"adc2-ch4;touch-ch4;hspi-mosi"
+  14|digital|t|t|"IO14"|"adc2-ch6;touch-ch6;hspi-clk"
+  15|digital|t|t|"IO15"|"adc2-ch3;touch-ch3;hspi-ss"
+  16|digital|t|f|"IO16"|uart2-rx
+  17|digital|t|f|"IO17"|uart2-tx
+  18|digital|t|f|"IO18"|vspi-sck
+  19|digital|t|f|"IO19"|vspi-miso
+  21|digital|t|f|"IO21"|i2c-sda
+  22|digital|t|f|"IO22"|i2c-scl
+  23|digital|t|f|"IO23"|vspi-mosi
+  25|digital|t|f|"IO25"|"adc2-ch8;dac1"
+  26|digital|t|f|"IO26"|"adc2-ch9;dac2"
+  27|digital|t|t|"IO27"|"adc2-ch7;touch-ch7"
+  32|digital|t|t|"IO32"|"adc1-ch4;touch-ch9"
+  33|digital|t|t|"IO33"|"adc1-ch5;touch-ch8"
+  34|analog|f|f|"IO34"|"adc1-ch6;input-only"
+  35|analog|f|f|"IO35"|"adc1-ch7;input-only"
+  36|analog|f|f|"IO36 / VP"|"adc1-ch0;input-only"
+  39|analog|f|f|"IO39 / VN"|"adc1-ch3;input-only"
+  6|digital|f|f|"IO6 / CLK"|"spi-flash;reserved"
+  7|digital|f|f|"IO7 / SD0"|"spi-flash;reserved"
+  8|digital|f|f|"IO8 / SD1"|"spi-flash;reserved"
+  11|digital|f|f|"IO11 / CMD"|"spi-flash;reserved"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[7|]{peripheral|param|value}:
+  serial|"uart0:1"|"pins:1,3"
+  serial|"uart2:1"|"pins:17,16"
+  i2c|"channels:1"|"sda:21;scl:22"
+  spi|"vspi:1"|"miso:19;mosi:23;sck:18;ss:5"
+  spi|"hspi:1"|"miso:12;mosi:13;sck:14;ss:15"
+  dac|"channels:2"|"dac1:25;dac2:26"
+  adc|"touch:10"|"pins:0,2,4,12,13,14,15,27,32,33"
+usb:
+  type: Micro-USB
+  chip: CP2102
+  vid: "0x10C4"
+  pid: "0xEA60"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "40mA"
+  total_current_limit: "1200mA"
+  warnings[6]:
+    - "Pins IO6-IO11 reserved for internal SPI flash — do NOT use"
+    - "Pins IO34, IO35, IO36, IO39 are input-only (no pull-up/pull-down)"
+    - "IO0 must be HIGH at boot; pulling LOW enters download mode"
+    - "IO12 must be LOW at boot; HIGH triggers 1.8V flash voltage (brick risk)"
+    - "ADC2 pins unavailable during active Wi-Fi"
+    - "IO1/IO3 (TX0/RX0) shared with USB-Serial bridge"
+compatibility:
+  espressifIDF: "5.1"
+  pio: espressif32
+  frameworks: "arduino;espidf"
+  languages: arduino-cpp
+  bootloader: esp-idf
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: esp32-xtensa-family
+  boardProfileId: esp32-devkit-v1
+  defaultLanguageSkills[2]:
+    - arduino-cpp-esp32
+    - rust-embassy-esp32

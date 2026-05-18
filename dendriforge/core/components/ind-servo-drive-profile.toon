@@ -1,0 +1,132 @@
+# METADATA:
+project_name: ind-servo-drive-profile-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: ind-servo-drive-profile
+name: "Industrial Servo Drive Profile (PLCopen)"
+family: industrial
+subfamily: motor-drives
+category: function-block
+standard: "IEC 61800-7 / PLCopen MC"
+url: null
+image: ind-servo-drive-profile.svg
+symbol: ind-servo-drive-profile-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  axis_mode:
+    label: "Axis Mode"
+    default: "position"
+    options: ["position", "velocity", "torque", "homing"]
+    type: enum
+    editable: true
+  homing_method:
+    label: "Homing Method"
+    default: "limit-switch"
+    options: ["limit-switch", "index-pulse", "hardstop", "absolute"]
+    type: enum
+    editable: true
+  max_velocity:
+    label: "Max Velocity"
+    unit: V
+    default: 1000
+    min: 1
+    max: 100000
+    type: float
+    editable: true
+  max_acceleration:
+    label: "Max Acceleration"
+    unit: V
+    default: 5000
+    min: 10
+    max: 500000
+    type: float
+    editable: true
+  following_error_limit:
+    label: "Following Error Limit"
+    unit: V
+    default: 100
+    min: 1
+    max: 10000
+    type: float
+    editable: true
+  encoder_resolution:
+    label: "Encoder Resolution"
+    unit: V
+    default: 10000
+    min: 100
+    max: 10000000
+    type: float
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  ENABLE|input|digital|"24V"|"100mA"|"Drive enable signal — active high"
+  READY|output|digital|"24V"|"100mA"|"Drive ready feedback"
+  FAULT|output|digital|"24V"|"100mA"|"Drive fault output — active high on fault"
+  RESET|input|digital|"24V"|"100mA"|"Fault reset input — rising edge clears fault"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: function-block-engine
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[4]:
+    - disabled
+    - ready
+    - running
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "24V"
+  max_current: "100mA"
+  max_power: null
+  max_temp: 55
+  min_temp: -10
+  safety_category: null
+warnings[3]:
+  - "Following error fault triggers if axis position lags beyond following_error_limit"
+  - "Always home axis before executing absolute positioning moves"
+  - "Disable drive before changing axis configuration parameters"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["act-servo-drive", "plc-*", "ind-do-bank", "ind-di-bank"]
+  forbidden_with: []
+  requires: ["act-servo-drive"]
+  typical_context: ["motion-control", "cnc-profile", "axis-management"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 70
+  height: 60
+  ports_layout: custom
+  port_ENABLE: {x: 0, y: 15}
+  port_RESET: {x: 0, y: 45}
+  port_READY: {x: 70, y: 15}
+  port_FAULT: {x: 70, y: 45}
+  label_position: top
+  value_display: "{axis_mode} / {max_velocity}rpm / {encoder_resolution}ppr"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: industrial-family
+  componentProfileId: ind-servo-drive-profile
+  simulationEngine: function-block-engine
+  paletteGroup: "Industrial > Motor Drives"
+  tags[6]:
+    - servo-drive-profile
+    - industrial
+    - motor-drives
+    - plcopen
+    - motion-control
+    - function-block

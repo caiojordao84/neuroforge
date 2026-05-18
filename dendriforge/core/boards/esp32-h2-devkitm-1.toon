@@ -1,0 +1,98 @@
+# METADATA:
+project_name: esp32-h2-devkitm-1-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: esp32-h2-devkitm-1
+name: "ESP32-H2-DevKitM-1"
+manufacturer: Espressif
+mcu: "Espressif ESP32-H2 (RISC-V single-core 32-bit)"
+category: maker
+image: esp32-h2-devkitm-1.svg
+url: "https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32h2/esp32-h2-devkitm-1/user_guide.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 4194304
+  flash_available: 3932160
+  sram: 327680
+  eeprom: 0
+  clock: 96000000
+  voltage: "3.3V"
+dims:
+  w: 25.4
+  h: 51.9
+  t: 1.6
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[6|]{name|direction|voltage|type}:
+  5V|input|"5V"|null
+  3V3|output|"3.3V"|null
+  VBAT|input|null|null
+  GND|null|null|ground
+  RST|input|null|null
+  BOOT|input|null|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[15|]{pin|type|pwm|int|label|roles}:
+  0|digital|true|true|"GPIO0 / FSPIQ"|spi-miso
+  1|analog|true|true|"GPIO1 / A0"|"adc:t"
+  2|analog|true|true|"GPIO2 / A1"|"adc:t"
+  3|analog|true|true|"GPIO3 / A2"|"adc:t"
+  4|analog|true|true|"GPIO4 / A3 / FSPICLK"|"adc:t;spi-sck"
+  5|analog|true|true|"GPIO5 / A4 / FSPID"|"adc:t;spi-mosi"
+  8|digital|true|true|"GPIO8 / RGB LED"|status-led
+  9|digital|true|true|"GPIO9 / BOOT"|null
+  10|digital|true|true|"GPIO10 / ZCD0"|null
+  11|digital|true|true|"GPIO11 / ZCD1"|null
+  12|digital|true|true|"GPIO12 / SDA"|i2c-sda
+  22|digital|true|true|"GPIO22 / SCL"|i2c-scl
+  23|digital|true|true|"GPIO23 / RX"|uart-rx
+  24|digital|true|true|"GPIO24 / TX"|uart-tx
+  25|digital|true|true|"GPIO25 / FSPICS3"|spi-ss
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[4|]{peripheral|param|value}:
+  serial|"uarts:1"|"pins:24,23"
+  i2c|"channels:1"|"sda:12;scl:22"
+  spi|"channels:1"|"miso:0;mosi:5;sck:4;ss:25"
+  adc|"resolution:12bit"|"pins:1;2;3;4;5"
+usb:
+  type: USB-C
+  chip: native
+  vid: "0x303A"
+  pid: "0x1001"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "40mA"
+  total_current_limit: "200mA"
+  warnings[7]:
+    - "All I/O pins operate at 3.3V; not 5V tolerant"
+    - "GPIO13/GPIO14 reserved for 32.768kHz XTAL; do not use for general I/O"
+    - "GPIO26/GPIO27 shared with native USB D-/D+; avoid if USB is active"
+    - "GPIO9 is BOOT button; avoid pulling HIGH at power-on"
+    - "GPIO8 drives onboard RGB LED (addressable); single-wire protocol"
+    - "No Wi-Fi on ESP32-H2; wireless is BT5 LE, Thread, Matter, Zigbee only"
+    - "ADC2 not present on ESP32-H2; all ADC on ADC1 (GPIO1-GPIO5)"
+compatibility:
+  arduinoCore: "2.0.17"
+  pio: espressif32
+  frameworks: arduino
+  languages: arduino-cpp
+  bootloader: esp32h2-boot
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: esp32-family
+  boardProfileId: esp32-h2-devkitm-1
+  defaultLanguageSkills[3]:
+    - arduino-cpp-esp32
+    - micropython-esp32
+    - rust-embassy-esp32

@@ -1,0 +1,133 @@
+# METADATA:
+project_name: allen-bradley-micro820-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: allen-bradley-micro820
+name: "Allen-Bradley Micro820 2080-LC20-20QWB"
+manufacturer: "Allen-Bradley"
+cpu: "Micro820 20-Point Controller"
+category: plc
+form_factor: compact
+standard: "IEC 61131-3"
+image: allen-bradley-micro820.svg
+url: "https://literature.rockwellautomation.com/idc/groups/literature/documents/um/2080-um005_-en-e.pdf"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 10
+  memory_work: 10KB
+  memory_load: 20KB
+  supply_voltage: 24V
+  power_consumption: 4W
+  di_integrated: 12
+  do_integrated: 7
+  ai_integrated: 4
+  ao_integrated: 1
+dims:
+  w: 104.0
+  h: 90.0
+  t: 75.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerSupply[4|]{name|direction|voltage|type}:
+  L+|input|24V|supply
+  M|input|null|ground
+  PE|input|null|protective-earth
+  SENSOR_SUPPLY|output|24V|sensor-power
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[4|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  0|0|DI|12|"%IX0.0"|"%IX1.3"|null
+  1|0|DO|7|"%QX0.0"|"%QX0.6"|null
+  2|0|AI|4|"%IW0"|"%IW6"|null
+  3|0|AO|1|"%QW0"|"%QW0"|null
+
+## 5. DIGITAL CHANNEL DESCRIPTORS:
+# Format: addr | direction | label | roles
+digitalChannels[19|]{addr|direction|label|roles}:
+  "%IX0.0"|input|"DI 0"|di
+  "%IX0.1"|input|"DI 1"|di
+  "%IX0.2"|input|"DI 2"|di
+  "%IX0.3"|input|"DI 3"|di
+  "%IX0.4"|input|"DI 4"|di
+  "%IX0.5"|input|"DI 5"|di
+  "%IX0.6"|input|"DI 6"|di
+  "%IX0.7"|input|"DI 7"|di
+  "%IX1.0"|input|"DI 8"|"di;fast-counter"
+  "%IX1.1"|input|"DI 9"|"di;fast-counter"
+  "%IX1.2"|input|"DI 10"|"di;interrupt"
+  "%IX1.3"|input|"DI 11"|"di;interrupt"
+  "%QX0.0"|output|"DO 0"|do
+  "%QX0.1"|output|"DO 1"|do
+  "%QX0.2"|output|"DO 2"|do
+  "%QX0.3"|output|"DO 3"|do
+  "%QX0.4"|output|"DO 4"|do
+  "%QX0.5"|output|"DO 5"|do
+  "%QX0.6"|output|"DO 6"|do
+
+## 6. ANALOG CHANNEL DESCRIPTORS:
+# Format: addr | direction | resolution | range | label
+analogChannels[5|]{addr|direction|resolution|range|label}:
+  "%IW0"|input|12|"0-10V"|"AI 0"
+  "%IW2"|input|12|"0-10V"|"AI 1"
+  "%IW4"|input|12|"0-10V"|"AI 2"
+  "%IW6"|input|12|"0-10V"|"AI 3"
+  "%QW0"|output|12|"0-10V"|"AO 0"
+
+## 7. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[5|]{peripheral|param|value}:
+  ethernet|"port:44818"|"proto:EtherNet/IP;speed:10-100Mbps"
+  modbus-tcp|"port:502"|"role:server"
+  ethernetip|"port:44818"|"max_nodes:20"
+  serial|"baud:38400"|"proto:RS232;RS485"
+  opc-ua|"port:4840"|null
+service:
+  type: USB
+  connector: "USB-B"
+  protocol: "programming-only"
+
+## 8. RACKS & EXPANSION:
+# Format: rack | slots | backplane_current | voltage
+racks[1|]{rack|slots|backplane_current|voltage}:
+  0|2|800mA|24V
+expansion:
+  max_plugin_modules: 2
+  microsd_slot: true
+  remote_lcd: "2080-REMLCD"
+
+## 9. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  supply_voltage: 24V
+  operating_temp_min: "-20°C"
+  operating_temp_max: "65°C"
+  storage_temp_min: "-40°C"
+  storage_temp_max: "85°C"
+  humidity_max: "95%RH"
+  protection_class: IP20
+  warnings[3]:
+    - "Digital outputs are relay type (NO); rated 125V DC / 250V AC"
+    - "RS232 and RS485 share the same physical port; only one active at a time"
+    - "Analog inputs support 0-10V DC; use plug-in module for 4-20mA or thermocouple"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "Connected Components Workbench v21"
+  runtime: "Micro820 FW8.x"
+  firmware: "8.x"
+  languages: "LD;FBD;ST;SFC"
+  order_ref: "2080-LC20-20QWB"
+
+## 10. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: allen-bradley-micro820
+  defaultLanguageSkills[3]:
+    - st-iec61131
+    - ld-ccw
+    - fbd-ccw

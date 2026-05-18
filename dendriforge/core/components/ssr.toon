@@ -1,0 +1,102 @@
+# METADATA:
+project_name: ssr-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: ssr
+name: "Solid State Relay (SSR)"
+family: panel-infrastructure
+subfamily: aux-relays
+category: switching
+standard: "IEC 60947-4-3"
+url: null
+image: ssr.svg
+symbol: ssr-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  control_voltage:
+    label: "Control Voltage Range"
+    unit: V
+    default: 24
+    min: 3
+    max: 32
+    type: float
+    editable: true
+  load_voltage_max:
+    label: "Max Load Voltage"
+    unit: V
+    default: 480
+    type: float
+    editable: true
+  load_current_rated:
+    label: "Rated Load Current"
+    unit: A
+    default: 25
+    type: float
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+# Format: id | direction | type | voltage_max | current_max | notes
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  IN_POS|input|digital|"{control_voltage}V"|"20mA"|"Control input +"
+  IN_NEG|input|ground|null|null|"Control input -"
+  L1|passive|power|"{load_voltage_max}V"|"{load_current_rated}A"|"Load terminal 1 (Line)"
+  T1|passive|power|"{load_voltage_max}V"|"{load_current_rated}A"|"Load terminal 2 (Load)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  bidirectional: true
+  dynamic: true
+  thermal_model: true
+  noise_model: false
+  states[2]:
+    - isolated
+    - conducting
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "480V"
+  max_current: "25A"
+  max_power: null
+  max_temp: 80
+  min_temp: -30
+warnings[2]:
+  - "Heatsink required for currents above 5A"
+  - "Strictly for AC loads (Zero-cross switching)"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["mcu-gpio", "plc-do", "ac-motor", "heater-element"]
+  forbidden_with: ["dc-load"]
+  requires: []
+  typical_context: ["industrial-heating", "lighting-control"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 40
+  height: 60
+  ports_layout: custom
+  port_IN_POS: {x: 10, y: 60}
+  port_IN_NEG: {x: 30, y: 60}
+  port_L1: {x: 20, y: 0}
+  port_T1: {x: 20, y: 20}
+  label_position: right
+  value_display: "{load_current_rated}A SSR"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: panel-infrastructure-family
+  componentProfileId: ssr
+  simulationEngine: digital-io
+  paletteGroup: "Panel Infrastructure > aux-relays"
+  tags[3]:
+    - ssr
+    - opto-isolated
+    - ac-switch

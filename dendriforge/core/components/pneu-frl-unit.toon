@@ -1,0 +1,122 @@
+# METADATA:
+project_name: pneu-frl-unit-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: pneu-frl-unit
+name: "Filter Regulator Lubricator (Filtro-Regulador-Lubrificador FRL)"
+family: pneumatics
+subfamily: air-preparation
+category: accessory
+standard: "ISO 1219-1"
+url: null
+image: pneu-frl-unit.svg
+symbol: pneu-frl-unit-symbol.svg
+symbol_standard: ISO
+
+## 2. PARAMETERS:
+params:
+  max_input_pressure:
+    label: "Max Input Pressure"
+    unit: bar
+    default: 16
+    min: 10
+    max: 20
+    type: float
+    editable: false
+  output_pressure:
+    label: "Regulated Output Pressure"
+    unit: bar
+    default: 6
+    min: 0.5
+    max: 12
+    type: float
+    editable: true
+  filtration_grade:
+    label: "Filtration Grade"
+    unit: "µm"
+    default: 40
+    options: [5, 40]
+    type: enum
+    editable: true
+  drain_type:
+    label: "Condensate Drain"
+    default: "manual"
+    options: ["manual", "semi-auto", "fully-auto"]
+    type: enum
+    editable: true
+  flow_rate:
+    label: "Nominal Flow Rate"
+    unit: "l/min"
+    default: 1200
+    type: float
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[0|]{}:
+
+## 4b. FLUID PORTS (PNEUMATIC):
+pneumatic_ports[2|]{id|direction|type|pressure_max|flow_nominal|notes}:
+  IN|input|pneumatic|"16bar"|"{flow_rate}"|"supply pressure from compressor"
+  OUT|output|pneumatic|"{output_pressure}bar"|"{flow_rate}"|"regulated conditioned air"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: fluid-pressure-source
+  motion: none
+  bidirectional: false
+  dynamic: false
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - active
+    - empty
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_pressure: 16
+  min_pressure: 1.5
+  max_voltage: null
+  max_current: null
+  max_power: null
+  max_temp: 60
+  min_temp: 0
+  ip_rating: null
+warnings[3]:
+  - "Input pressure must be at least 1 bar higher than desired output pressure"
+  - "Check lubricator oil level regularly to prevent actuator damage"
+  - "Ensure manual drain is emptied periodically to avoid filter element saturation"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["pneu-valve-*", "pneu-cylinder-*"]
+  forbidden_with: ["hyd-*"]
+  requires: []
+  typical_context: ["machine-supply", "air-preparation", "pressure-regulation"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 60
+  ports_layout: custom
+  port_IN: {x: 0, y: 20}
+  port_OUT: {x: 60, y: 20}
+  label_position: bottom
+  value_display: "{output_pressure} bar Regulated"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: pneumatics-family
+  componentProfileId: pneu-frl-unit
+  simulationEngine: pneumatic-motion
+  paletteGroup: "Pneumatics > Air Preparation"
+  tags[5]:
+    - frl
+    - regulator
+    - filter
+    - lubricator
+    - supply

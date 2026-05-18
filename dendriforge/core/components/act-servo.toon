@@ -1,0 +1,131 @@
+# METADATA:
+project_name: act-servo-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: act-servo
+name: "Servo Motor (RC/Hobby)"
+family: actuators
+subfamily: maker-prototyping
+category: actuator
+standard: "IEC 60034-1"
+url: null
+image: act-servo.svg
+symbol: act-servo-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  servo_type:
+    label: "Servo Type"
+    default: "standard"
+    options: ["standard", "micro", "high-torque", "continuous-rotation"]
+    type: enum
+    editable: true
+  voltage:
+    label: "Operating Voltage"
+    unit: V
+    default: 5
+    options: [3, 5, 6, 7]
+    type: enum
+    editable: true
+  torque:
+    label: "Stall Torque"
+    unit: V
+    default: 1
+    min: 0.1
+    max: 50
+    type: float
+    editable: false
+  angle_range:
+    label: "Rotation Range"
+    unit: "%"
+    default: 180
+    options: [90, 180, 270, 360]
+    type: enum
+    editable: true
+  pulse_min:
+    label: "Min Pulse Width"
+    unit: V
+    default: 1
+    min: 0.5
+    max: 1.5
+    type: float
+    editable: false
+  pulse_max:
+    label: "Max Pulse Width"
+    unit: V
+    default: 2
+    min: 1.5
+    max: 2.5
+    type: float
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"7V"|"2A"|"DC supply positive (servo power)"
+  GND|input|ground|null|null|"DC supply negative"
+  SIG|input|pwm|"5V"|"10mA"|"PWM control signal — 50Hz / 1-2ms pulse"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: basic-analog
+  motion: rotary
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - idle
+    - positioning
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "7V"
+  max_current: "2A"
+  max_power: null
+  max_temp: 70
+  min_temp: -20
+  ip_rating: null
+  safety_category: null
+warnings[3]:
+  - "Never power servo from MCU 5V pin directly — use dedicated power supply"
+  - "Share GND between servo power supply and MCU signal reference"
+  - "Stall condition draws peak current — protect supply with current limiting"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["mcu-*", "act-servo-drive", "dc-source"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["robotics", "rc-vehicle", "pan-tilt-mechanism"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 60
+  height: 50
+  ports_layout: custom
+  port_VCC: {x: 0, y: 10}
+  port_GND: {x: 0, y: 25}
+  port_SIG: {x: 0, y: 40}
+  label_position: right
+  value_display: "{servo_type} / {angle_range}deg / {voltage}V"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: actuators-family
+  componentProfileId: act-servo
+  simulationEngine: digital-io
+  paletteGroup: "Actuators > Maker & Prototyping"
+  tags[6]:
+    - servo
+    - actuator
+    - maker-prototyping
+    - pwm
+    - rotary
+    - robotics

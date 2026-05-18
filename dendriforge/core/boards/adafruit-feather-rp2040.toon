@@ -1,38 +1,104 @@
+# METADATA:
+project_name: adafruit-feather-rp2040-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
 id: adafruit-feather-rp2040
 name: "Adafruit Feather RP2040"
-manufacturer: "Generic"
-mcu: "RP2040"
-category: "industrial"
-image: "/boards/adafruit-feather-rp2040.svg"
-bootloader: "serial"
-languages: [2]: "rust","arduino-cpp"
-flashMemory: 8388608
-sram: 270336
-clock_hz: 133000000
-voltage_mv: 3300
-neuroforge:
-  boardFamilySkillId: "avr-family"
-  boardProfileId: "adafruit-feather-rp2040"
-peripherals:
-  serial:
-    uarts: 1
-    pins: [2]: 0,1
-  i2c:
-    channels: 1
-    sda: 2
-    scl: 3
-  spi:
-    channels: 1
-    mosi: 11
-    miso: 12
-    sck: 13
-    ss: 10
-gpio: [8]{pin,label,type,pwm,adc,interrupt}:
-  0,D0,digital,true,false,true
-  1,D1,digital,true,false,true
-  2,D2,digital,false,false,true
-  3,D3,digital,false,false,true
-  4,D4,digital,false,false,false
-  5,D5,digital,true,false,false
-  6,D6,digital,true,false,false
-  14,A0,analog,false,true,false
+manufacturer: Adafruit
+mcu: RP2040
+category: maker
+image: adafruit-feather-rp2040.svg
+url: "https://www.adafruit.com/product/4884"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 8388608
+  flash_available: 8388608
+  sram: 270336
+  eeprom: 0
+  clock: 125000000
+  voltage: "3.3V"
+  cores: 2
+dims:
+  w: 51.0
+  h: 23.0
+  t: 7.5
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[5|]{name|direction|voltage|type}:
+  BAT|input|null|null
+  USB|input|"5V"|null
+  GND|null|null|ground
+  EN|input|null|null
+  3V3|output|"3.3V"|null
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[22|]{pin|type|pwm|int|label|roles}:
+  0|digital|t|t|"GP0 / TX"|uart-tx
+  1|digital|t|t|"GP1 / RX"|uart-rx
+  2|digital|t|t|"GP2 / SDA"|i2c-sda
+  3|digital|t|t|"GP3 / SCL"|i2c-scl
+  4|digital|t|t|"GP4 / BOOTSEL"|boot-button
+  6|digital|t|t|"GP6 / D4"|null
+  7|digital|t|t|"GP7 / D5"|null
+  8|digital|t|t|"GP8 / D6"|uart1-tx
+  9|digital|t|t|"GP9 / D9"|uart1-rx
+  10|digital|t|t|"GP10 / D10"|spi1-sck
+  11|digital|t|t|"GP11 / D11"|spi1-mosi
+  12|digital|t|t|"GP12 / D12"|spi1-miso
+  13|digital|t|t|"GP13 / D13"|"spi1-cs;status-led"
+  18|digital|t|t|"GP18 / SCK"|spi0-sck
+  19|digital|t|t|"GP19 / MOSI"|spi0-mosi
+  20|digital|t|t|"GP20 / MISO"|spi0-miso
+  24|digital|t|t|"GP24 / D24"|uart1-tx
+  25|digital|t|t|"GP25 / D25"|uart1-rx
+  26|analog|t|t|"GP26 / A0"|"adc:t"
+  27|analog|t|t|"GP27 / A1"|"adc:t"
+  28|analog|t|t|"GP28 / A2"|"adc:t"
+  29|analog|t|t|"GP29 / A3"|"adc:t"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[6|]{peripheral|param|value}:
+  serial|"uart0:1"|"pins:0,1"
+  serial|"uart1:1"|"pins:8,9"
+  i2c|"i2c1:1"|"sda:2;scl:3"
+  i2c|"i2c0:1"|"sda:24;scl:25"
+  spi|"spi0:1"|"miso:20;mosi:19;sck:18"
+  adc|"channels:4"|"pins:26,27,28,29"
+usb:
+  type: USB-C
+  chip: RP2040-native
+  vid: "0x239A"
+  pid: "0x80F4"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "12mA"
+  total_current_limit: "500mA"
+  warnings[5]:
+    - "GP4 (BOOTSEL) connected to boot button on Rev D+ — avoid if boot behavior is needed"
+    - "Pins GP26-GP29 (A0-A3) are the only analog-capable pins"
+    - "PWM pins sharing same slice and channel cannot be used simultaneously"
+    - "No dedicated USB-Serial bridge — uses RP2040 native USB (VID 0x239A)"
+    - "Internal NeoPixel on GPIO16 is not broken out as a user pin"
+compatibility:
+  arduinoCore: "4.0.1"
+  pio: raspberrypi
+  frameworks: "arduino;circuitpython"
+  languages: arduino-cpp
+  bootloader: uf2-rp2040
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: rp2040-cortexm0-family
+  boardProfileId: adafruit-feather-rp2040
+  defaultLanguageSkills[2]:
+    - arduino-cpp-rp2040
+    - circuitpython-rp2040

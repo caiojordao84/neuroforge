@@ -1,0 +1,93 @@
+# METADATA:
+project_name: siemens-s7-300-cpu-315-2dp-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: siemens-s7-300
+name: "Siemens SIMATIC S7-300 CPU 315-2 DP"
+manufacturer: Siemens
+cpu: "CPU 315-2 DP"
+category: plc
+form_factor: modular
+standard: "IEC 61131-3"
+image: siemens-s7-300.svg
+url: "https://mall.industry.siemens.com/mall/en/WW/Catalog/Product/6ES7315-2AH14-0AB0"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  cycle_time: 1
+  supply_voltage: 24V
+  memory_work: 128KB
+  memory_load: 8192KB
+  memory_retain: 64KB
+  power_consumption: 8W
+  di_max: 1024
+  do_max: 1024
+  ai_max: 256
+  ao_max: 256
+dims:
+  w: 80.0
+  h: 125.0
+  t: 120.0
+
+## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+# Format: name | direction | voltage | type
+powerPins[3|]{name|direction|voltage|type}:
+  L+|input|24V|null
+  M|null|null|ground
+  PE|null|null|ground
+
+## 4. I/O MODULE MAP:
+# Format: slot | rack | type | channels | addr_start | addr_end | current
+ioModules[4|]{slot|rack|type|channels|addr_start|addr_end|current}:
+  4|0|DI|32|"%IX0.0"|"%IX3.7"|null
+  5|0|DO|32|"%QX0.0"|"%QX3.7"|null
+  6|0|AI|8|"%IW256"|"%IW263"|null
+  7|0|AO|4|"%QW256"|"%QW259"|null
+
+## 5. RACK CONFIGURATION:
+# Format: rack | slots | backplane_current | voltage
+racks[4|]{rack|slots|backplane_current|voltage}:
+  0|11|1200mA|5V
+  1|11|800mA|5V
+  2|11|800mA|5V
+  3|11|800mA|5V
+
+## 6. PERIPHERALS & PROTOCOLS:
+# Format: peripheral | param | value
+peripherals[2|]{peripheral|param|value}:
+  profibus|"address:2"|"baud:12Mbps;role:master"
+  serial|"baud:187500"|"proto:RS485;standard:MPI"
+service:
+  type: "MPI/DP"
+  connector: "DB9"
+  protocol: "MPI"
+
+## 7. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "1200mA"
+  total_current_limit: "1200mA"
+  operating_temp: "0-60C"
+  protection_class: IP20
+  warnings[4]:
+    - "MPI and PROFIBUS DP share the same front connector on CPU"
+    - "Maximum 4 racks (1 central + 3 expansion) with IM 365 or IM 360/361"
+    - "No integrated Ethernet; requires CP 343-1 module for PROFINET or TCP/IP"
+    - "Load memory size depends on inserted Micro Memory Card (MMC) capacity"
+compatibility:
+  standard: "IEC 61131-3"
+  ide: "STEP 7 V5.5"
+  runtime: "S7-300 V3.3"
+  languages: "LD;FBD;ST;SFC"
+
+## 8. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: plc-family
+  boardProfileId: siemens-s7-300
+  defaultLanguageSkills[3]:
+    - st-iec61131
+    - ld-step7
+    - fbd-step7

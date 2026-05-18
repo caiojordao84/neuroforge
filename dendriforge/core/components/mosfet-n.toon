@@ -1,0 +1,104 @@
+# METADATA:
+project_name: mosfet-n-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: mosfet-n
+name: "N-Channel MOSFET"
+family: electricals
+subfamily: semiconductors
+category: semiconductor
+standard: "IEC 60617"
+url: null
+image: mosfet-n.svg
+symbol: mosfet-n-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  vgs_th:
+    label: "Gate-Source Threshold Voltage"
+    unit: V
+    default: 2.0
+    min: 0.5
+    max: 5.0
+    type: float
+    editable: true
+  rds_on:
+    label: "Static Drain-Source On-Resistance"
+    unit: Ω
+    default: 0.05
+    min: 0.001
+    max: 10.0
+    type: float
+    editable: true
+  vds_max:
+    label: "Max Drain-Source Voltage"
+    unit: V
+    default: 60
+    type: float
+    editable: false
+
+## 3. ELECTRICAL PORTS:
+# Format: id | direction | type | voltage_max | current_max | notes
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  G|input|analog|"20V"|null|"Gate terminal"
+  D|passive|analog|"{vds_max}"|null|"Drain terminal"
+  S|passive|analog|null|null|"Source terminal"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: ideal
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - off
+    - conducting
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "{vds_max}"
+  max_current: "30A"
+  max_power:
+    value: 150
+    unit: W
+  max_temp: 175
+  min_temp: -55
+warnings[2]:
+  - "Exceeding Vgs max (typically 20V) will puncture the gate oxide"
+  - "Ensure adequate heatsinking for high continuous currents"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["*"]
+  forbidden_with: []
+  requires: []
+  typical_context: ["switching", "pwm-control", "power-management"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 40
+  height: 40
+  ports_layout: custom
+  port_G: {x: 0, y: 20}
+  port_D: {x: 20, y: 0}
+  port_S: {x: 20, y: 40}
+  label_position: right
+  value_display: "{vgs_th}V Th"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: mosfet-n
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Semiconductors"
+  tags[3]:
+    - mosfet
+    - n-channel
+    - semiconductor

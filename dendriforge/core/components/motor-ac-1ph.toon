@@ -1,0 +1,199 @@
+# METADATA:
+project_name: motor-ac-1ph-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.2.0
+
+## 1. IDENTIFICATION:
+id: motor-ac-1ph
+name: "Single-Phase AC Induction Motor"
+family: actuators
+subfamily: industrial-electrical
+category: actuator
+standard: "IEC 60034-1 / IEC 60034-30-1"
+url: null
+image: motor-ac-1ph.svg
+symbol: motor-ac-1ph-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  power_rated:
+    label: "Rated Power"
+    unit: W
+    default: 750
+    min: 40
+    max: 7500
+    type: float
+    editable: true
+  voltage_rated:
+    label: "Rated Voltage"
+    unit: V
+    default: 230
+    options: [110, 115, 220, 230, 240]
+    type: enum
+    editable: true
+  frequency:
+    label: "Supply Frequency"
+    unit: V
+    default: 50
+    options: [50, 60]
+    type: enum
+    editable: true
+  poles:
+    label: "Number of Poles"
+    default: 4
+    options: [2, 4, 6, 8]
+    type: enum
+    editable: true
+  speed_rated:
+    label: "Rated Speed"
+    unit: V
+    default: 1400
+    min: 600
+    max: 3600
+    type: float
+    editable: false
+  current_rated:
+    label: "Rated Current"
+    unit: A
+    default: 4.5
+    min: 0.1
+    max: 50
+    type: float
+    editable: false
+  starting_type:
+    label: "Starting Method"
+    default: "capacitor-start-run"
+    options: ["capacitor-start", "capacitor-start-run", "permanent-split-capacitor", "split-phase", "shaded-pole"]
+    type: enum
+    editable: true
+  cap_start:
+    label: "Start Capacitor"
+    unit: V
+    default: 150
+    min: 50
+    max: 500
+    type: float
+    editable: true
+  cap_run:
+    label: "Run Capacitor"
+    unit: V
+    default: 20
+    min: 5
+    max: 100
+    type: float
+    editable: true
+  power_factor:
+    label: "Power Factor (cos φ)"
+    unit: "%"
+    default: 0.95
+    min: 0.6
+    max: 0.99
+    type: float
+    editable: false
+  efficiency:
+    label: "Rated Efficiency"
+    unit: "%"
+    default: 75
+    min: 55
+    max: 90
+    type: float
+    editable: false
+  insulation_class:
+    label: "Insulation Class"
+    default: "F"
+    options: ["B", "F", "H"]
+    type: enum
+    editable: true
+  protection_class:
+    label: "Protection Class (IP)"
+    default: "IP44"
+    options: ["IP20", "IP44", "IP54", "IP55", "IP65"]
+    type: enum
+    editable: true
+  duty_cycle:
+    label: "Duty Cycle"
+    default: "S1"
+    options: ["S1", "S2", "S3", "S4", "S5", "S6"]
+    type: enum
+    editable: true
+  mounting:
+    label: "Mounting Form"
+    default: "B3"
+    options: ["B3", "B5", "B14", "B34", "B35", "V1"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  L|input|power|"240V"|"50A"|"line / phase supply terminal"
+  N|input|ground|null|null|"neutral supply terminal"
+  PE|input|ground|null|null|"protective earth / frame ground"
+  AUX|input|analog|"240V"|"500mA"|"auxiliary winding / capacitor connection point"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: basic-analog
+  motion: rotary
+  equation: "T = (power_rated * efficiency/100) / (2 * pi * speed_rated / 60); I = power_rated / (voltage_rated * power_factor * efficiency/100)"
+  bidirectional: false
+  dynamic: true
+  thermal_model: true
+  noise_model: false
+  states[4]:
+    - off
+    - starting
+    - running
+    - fault
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "240V"
+  max_current: "50A"
+  max_power: null
+  max_temp: 40
+  min_temp: -15
+  ip_rating: "IP44"
+warnings[4]:
+  - "Start capacitor must be disconnected automatically after reaching operating speed — use centrifugal switch or relay"
+  - "Run capacitor must be rated for continuous AC operation (polypropylene type) — never use electrolytic as run capacitor"
+  - "Single-phase motors produce pulsating torque — avoid use in vibration-sensitive applications"
+  - "Provide thermal overload relay sized to rated current to protect against locked-rotor condition"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["ac-source", "contactor-*"]
+  forbidden_with: ["dc-source", "battery", "ac-source-3phase"]
+  requires: ["ac-source"]
+  typical_context: ["pump", "fan", "compressor", "washing-machine", "domestic-appliance"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 80
+  height: 70
+  ports_layout: custom
+  port_L: {x: 0, y: 15}
+  port_N: {x: 0, y: 35}
+  port_PE: {x: 0, y: 55}
+  port_AUX: {x: 80, y: 55}
+  label_position: right
+  value_display: "{power_rated}W / {voltage_rated}V / {speed_rated}rpm ({starting_type})"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: actuators-family
+  componentProfileId: motor-ac-1ph
+  simulationEngine: digital-io
+  paletteGroup: "Actuators > Industrial Electrical"
+  tags[8]:
+    - motor
+    - ac
+    - single-phase
+    - induction
+    - capacitor
+    - actuator
+    - domestic
+    - iec-60034
