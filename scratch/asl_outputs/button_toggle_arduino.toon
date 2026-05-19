@@ -1,0 +1,34 @@
+aslVersion: "0.1.0"
+metadata:
+  name: "button_toggle_arduino"
+  version: "1"
+  editor: "dendriForge"
+  author: "transpiler-tester"
+parts:
+  - id: "MCU_0"
+    type: "arduino-uno-r3"
+  - id: "LED_0"
+    type: "led-simple"
+  - id: "BUTTON_0"
+    type: "button-simple"
+connections:
+  - ["MCU_0:13", "LED_0:A", "red", "v0"]
+  - ["LED_0:C", "MCU_0:GND.1", "black", "v0"]
+  - ["MCU_0:2", "BUTTON_0:A", "red", "v0"]
+  - ["BUTTON_0:C", "MCU_0:GND.1", "black", "v0"]
+tasks:
+  - name: "setup"
+    body:
+      - {kind: "pinMode", pin: 13, mode: "OUTPUT"}
+      - {kind: "pinMode", pin: 2, mode: "INPUT"}
+  - name: "loop"
+    body:
+      - {kind: "digitalRead", pin: 2, target: "buttonState"}
+      - {kind: "if", condition: "buttonState != lastButtonState", body: [
+          {kind: "if", condition: "buttonState == HIGH", body: [
+              {kind: "assign", target: "ledState", value: "!ledState"}
+          ]},
+          {kind: "delay", ms: 50}
+        ]}
+      - {kind: "assign", target: "lastButtonState", value: "buttonState"}
+      - {kind: "digitalWrite", pin: 13, value: "ledState"}

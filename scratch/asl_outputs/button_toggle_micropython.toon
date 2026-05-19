@@ -1,0 +1,31 @@
+aslVersion: "0.1.0"
+metadata:
+  name: "button_toggle_micropython"
+  version: "1"
+  editor: "dendriForge"
+  author: "transpiler-tester"
+parts:
+  - id: "MCU_0"
+    type: "esp32"
+  - id: "LED_0"
+    type: "led-simple"
+  - id: "BUTTON_0"
+    type: "button-simple"
+connections:
+  - ["MCU_0:2", "LED_0:A", "red", "v0"]
+  - ["LED_0:C", "MCU_0:GND.1", "black", "v0"]
+  - ["MCU_0:14", "BUTTON_0:A", "red", "v0"]
+  - ["BUTTON_0:C", "MCU_0:GND.1", "black", "v0"]
+tasks:
+  - name: "loop"
+    body:
+      - {kind: "digitalRead", pin: 14, target: "current_button_state"}
+      - {kind: "if", condition: "current_button_state != last_button_state", body: [
+          {kind: "if", condition: "current_button_state == 1", body: [
+              {kind: "assign", target: "led_state", value: "!led_state"},
+              {kind: "digitalWrite", pin: 2, value: "led_state"}
+          ]},
+          {kind: "delay", ms: 50}
+        ]}
+      - {kind: "assign", target: "last_button_state", value: "current_button_state"}
+      - {kind: "delay", ms: 10}

@@ -1,0 +1,141 @@
+# METADATA:
+project_name: maker-tft-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: maker-tft
+name: "TFT Color Display"
+family: electricals
+subfamily: semiconductors
+category: signal
+standard: "IEC 61747-1"
+url: null
+image: maker-tft.svg
+symbol: maker-tft-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  resolution:
+    label: "Resolution"
+    default: "320x240"
+    options: ["128x128", "160x128", "240x240", "320x240", "480x320", "800x480"]
+    type: enum
+    editable: true
+  size:
+    label: "Screen Size"
+    default: "2.4in"
+    options: ["1.44in", "1.8in", "2.0in", "2.4in", "2.8in", "3.5in", "4.0in"]
+    type: enum
+    editable: true
+  interface:
+    label: "Interface"
+    default: "SPI"
+    options: ["SPI", "parallel-8bit", "parallel-16bit", "RGB"]
+    type: enum
+    editable: true
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 3
+    options: [3, 5]
+    type: enum
+    editable: true
+  driver_ic:
+    label: "Driver IC"
+    default: "ILI9341"
+    options: ["ILI9341", "ST7735", "ST7789", "ILI9488", "ILI9486", "HX8357"]
+    type: enum
+    editable: true
+  touch:
+    label: "Touch Panel"
+    default: "none"
+    options: ["none", "resistive", "capacitive"]
+    type: enum
+    editable: true
+  backlight:
+    label: "Backlight Control"
+    default: "pwm"
+    options: ["always-on", "pwm", "digital"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[8|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"5V"|"200mA"|"DC supply positive"
+  GND|input|ground|null|null|"DC supply negative"
+  CLK|input|spi|"5V"|"5mA"|"SPI clock"
+  MOSI|input|spi|"5V"|"5mA"|"SPI data in (MOSI)"
+  CS|input|digital|"5V"|"5mA"|"Chip select — active low"
+  DC|input|digital|"5V"|"5mA"|"Data/Command select"
+  RST|input|digital|"5V"|"5mA"|"Hardware reset — active low"
+  BL|input|pwm|"5V"|"100mA"|"Backlight control (PWM or digital)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: script
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[3]:
+    - off
+    - initializing
+    - displaying
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "5V"
+  max_current: "200mA"
+  max_power: null
+  max_temp: 70
+  min_temp: -20
+  ip_rating: null
+  safety_category: null
+warnings[4]:
+  - "3.3V logic MCUs must use level shifter when driving 5V TFT SPI lines"
+  - "Backlight is the main power consumer — dim or disable when not needed"
+  - "SPI clock frequency must not exceed driver IC maximum (typically 40-80MHz)"
+  - "Pull RST low for minimum 10ms on power-up before sending init commands"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["mcu-*", "comm-i2c-bus"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["color-ui", "sensor-dashboard", "image-display"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 80
+  height: 90
+  ports_layout: custom
+  port_VCC: {x: 0, y: 5}
+  port_GND: {x: 0, y: 15}
+  port_CLK: {x: 0, y: 28}
+  port_MOSI: {x: 0, y: 40}
+  port_CS: {x: 0, y: 52}
+  port_DC: {x: 0, y: 64}
+  port_RST: {x: 0, y: 76}
+  port_BL: {x: 0, y: 88}
+  label_position: right
+  value_display: "{resolution} / {size} / {driver_ic} / {touch}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: maker-tft
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Semiconductors"
+  tags[7]:
+    - tft
+    - display
+    - semiconductors
+    - color
+    - spi
+    - graphic
+    - maker

@@ -1,0 +1,143 @@
+# METADATA:
+project_name: pong-game-logic
+version: 19
+editor: dendriForge
+author: B3lly--BTN_2005
+ASLversion: 0.1.0
+
+## 1. HARDWARE INTERFACE:
+# Format: pin | type | io_mode | label | target_role
+hardware[5|]{pin|type|io_mode|label|target_role}:
+  2|digital|input|"Botao Cima"|btn-up
+  3|digital|input|"Botao Baixo"|btn-down
+  11|digital|output|"Buzzer Audio"|pwm-out
+  0|digital|bi|"I2C SDA"|i2c-sda
+  1|digital|bi|"I2C SCL"|i2c-scl
+
+## 2. SYSTEM DATA:
+data:
+  TIME_UNIT: ms
+  WHITE: 1
+  BLACK: 0
+  BALL_RATE: 30
+  PADDLE_RATE: 20
+  PADDLE_HEIGHT: 8
+  SCORE_LIMIT: 5
+  player_score: 0
+  mcu_score: 0
+  ball_x: 53
+  ball_y: 26
+  ball_dir_x: 1
+  ball_dir_y: 1
+  mcu_y: 16
+  player_y: 16
+  ball_update: 0
+  paddle_update: 0
+  game_over: false
+  win: false
+
+## 3. INITIALIZATION SYSTEM:
+setup[7]:
+  - initI2C(0, 0, 1, 400000)
+  - initLCD(0x3C, 128, 64)
+  - display.clearDisplay()
+  - drawCourt()
+  - display.display()
+  - ball_update = currentTime()
+  - paddle_update = ball_update
+
+## 4. BEHAVIORAL LOGIC (LOOP):
+loop[7]:
+  - current_time = currentTime()
+  - if current_time > ball_update: update_ball()
+  - if current_time > paddle_update: update_paddles()
+  - if game_over: reset_game()
+  - draw_score()
+  - display.display()
+  - delay(10)
+
+## 5. PROCEDURAL FUNCTIONS:
+functions:
+  drawCourt()[1]:
+    - display.drawRect(0, 0, 128, 54, WHITE)
+
+  update_ball()[27]:
+    - new_x = ball_x + ball_dir_x
+    - new_y = ball_y + ball_dir_y
+    - if new_x == 0 or new_x == 127:
+    - ball_dir_x = -ball_dir_x
+    - if new_x < 64:
+    - player_score = player_score + 1
+    - play_score_tone()
+    - else:
+    - mcu_score = mcu_score + 1
+    - play_score_tone()
+    - if player_score == SCORE_LIMIT or mcu_score == SCORE_LIMIT:
+    - win = player_score > mcu_score
+    - game_over = true
+    - if new_y == 0 or new_y == 53:
+    - ball_dir_y = -ball_dir_y
+    - play_wall_tone()
+    - if new_x == 12 and new_y >= mcu_y and new_y <= mcu_y + PADDLE_HEIGHT:
+    - ball_dir_x = -ball_dir_x
+    - play_mcu_tone()
+    - if new_x == 115 and new_y >= player_y and new_y <= player_y + PADDLE_HEIGHT:
+    - ball_dir_x = -ball_dir_x
+    - play_player_tone()
+    - display.drawPixel(ball_x, ball_y, BLACK)
+    - display.drawPixel(new_x, new_y, WHITE)
+    - ball_x = new_x
+    - ball_y = new_y
+    - ball_update = ball_update + BALL_RATE
+
+  update_paddles()[11]:
+    - display.drawFastVLine(12, mcu_y, PADDLE_HEIGHT, BLACK)
+    - display.drawFastVLine(115, player_y, PADDLE_HEIGHT, BLACK)
+    - if digitalRead(2) == LOW: player_y = player_y - 2
+    - if digitalRead(3) == LOW: player_y = player_y + 2
+    - if player_y < 1: player_y = 1
+    - if player_y + PADDLE_HEIGHT > 53: player_y = 53 - PADDLE_HEIGHT
+    - if mcu_y + 4 > ball_y: mcu_y = mcu_y - 1
+    - if mcu_y + 4 < ball_y: mcu_y = mcu_y + 1
+    - display.drawFastVLine(12, mcu_y, PADDLE_HEIGHT, WHITE)
+    - display.drawFastVLine(115, player_y, PADDLE_HEIGHT, WHITE)
+    - paddle_update = paddle_update + PADDLE_RATE
+
+  draw_score()[5]:
+    - display.setTextColor(WHITE, BLACK)
+    - display.setCursor(0, 56)
+    - display.print(mcu_score)
+    - display.setCursor(122, 56)
+    - display.print(player_score)
+
+  reset_game()[18]:
+    - display.clearDisplay()
+    - if win:
+    - display.setCursor(40, 28)
+    - display.print("YOU WIN!")
+    - else:
+    - display.setCursor(40, 28)
+    - display.print("YOU LOSE!")
+    - display.display()
+    - delay(3000)
+    - player_score = 0
+    - mcu_score = 0
+    - game_over = false
+    - ball_x = 53
+    - ball_y = 26
+    - ball_dir_x = 1
+    - ball_dir_y = 1
+    - display.clearDisplay()
+    - drawCourt()
+
+  play_player_tone()[1]:
+    - tone(11, 250, 25)
+    
+  play_mcu_tone()[1]:
+    - tone(11, 225, 25)
+
+  play_wall_tone()[1]:
+    - tone(11, 200, 25)
+    
+  play_score_tone()[1]:
+    - tone(11, 500, 100)

@@ -1,0 +1,87 @@
+# METADATA:
+project_name: plc-sequence-ap-bp-am-bm
+version: 104
+editor: dendriForge
+author: TJUICE
+ASLversion: 0.1.0
+
+## 1. HARDWARE INTERFACE:
+# Format: pin | type | io_mode | label | target_role
+hardware[9|]{pin|type|io_mode|label|target_role}:
+  0|digital|input|"Start Button"|btn-start
+  1|digital|input|"Sensor A0 (Retracted)"|sensor-a0
+  2|digital|input|"Sensor A1 (Extended)"|sensor-a1
+  3|digital|input|"Sensor B0 (Retracted)"|sensor-b0
+  4|digital|input|"Sensor B1 (Extended)"|sensor-b1
+  14|digital|output|"Valve A+ (Extend)"|valve-a-plus
+  15|digital|output|"Valve A- (Retract)"|valve-a-minus
+  16|digital|output|"Valve B+ (Extend)"|valve-b-plus
+  17|digital|output|"Valve B- (Retract)"|valve-b-minus
+
+## 2. SYSTEM DATA:
+data:
+  TIME_UNIT: ms
+  step: 0
+  start_btn: false
+  a0: false
+  a1: false
+  b0: false
+  b1: false
+  out_a: false
+  out_b: false
+
+## 3. INITIALIZATION SYSTEM:
+setup[9]:
+  - pinMode(0, INPUT)
+  - pinMode(1, INPUT)
+  - pinMode(2, INPUT)
+  - pinMode(3, INPUT)
+  - pinMode(4, INPUT)
+  - pinMode(14, OUTPUT)
+  - pinMode(15, OUTPUT)
+  - pinMode(16, OUTPUT)
+  - pinMode(17, OUTPUT)
+
+## 4. BEHAVIORAL LOGIC (LOOP):
+loop[4]:
+  - read_inputs()
+  - process_state_machine()
+  - write_outputs()
+  - delay(10)
+
+## 5. PROCEDURAL FUNCTIONS:
+functions:
+  read_inputs()[5]:
+    - start_btn = digitalRead(0)
+    - a0 = digitalRead(1)
+    - a1 = digitalRead(2)
+    - b0 = digitalRead(3)
+    - b1 = digitalRead(4)
+
+  process_state_machine()[10]:
+    - if step == 0 and start_btn and a0 and b0:
+    - step = 1
+    - if step == 1 and a1:
+    - step = 2
+    - if step == 2 and b1:
+    - step = 3
+    - if step == 3 and a0:
+    - step = 4
+    - if step == 4 and b0:
+    - step = 0
+
+  write_outputs()[14]:
+    - out_a = (step == 1) or (step == 2)
+    - out_b = (step == 2) or (step == 3)
+    - if out_a:
+    - digitalWrite(14, HIGH)
+    - digitalWrite(15, LOW)
+    - else:
+    - digitalWrite(14, LOW)
+    - digitalWrite(15, HIGH)
+    - if out_b:
+    - digitalWrite(16, HIGH)
+    - digitalWrite(17, LOW)
+    - else:
+    - digitalWrite(16, LOW)
+    - digitalWrite(17, HIGH)

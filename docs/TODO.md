@@ -20,7 +20,7 @@ Este documento é o guia operacional e tático de desenvolvimento, diretamente m
 ## 🧠 Fase B — ASL e Transpilação
 > **Foco:** O "Esperanto" do código. A árvore de sintaxe abstrata (AST) que unifica Ladder, ST, C++ e Python.
 
-- [ ] **B.1 Especificação ASL:** Redigir o `ASL_SPEC.md` definindo a estrutura formal do Intermediate Representation (IR).
+- [x] **B.1 Especificação ASL:** Redigir o `ASL_SPEC.md` definindo a estrutura formal do Intermediate Representation (IR).
 - [ ] **B.2 Refatorização de Parsers (Tier 1):** Validar ingestão nativa de C/C++ (Arduino), MicroPython e Rust via ASL.
 - [ ] **B.3 Parser Industrial (Tier 1):** Refinar parser de Structured Text (IEC 61131-3) e linguagens PLCopen XML.
 - [ ] **B.4 Otimizador ASL:** Implementar dead-code elimination e constant folding no Rust.

@@ -1,0 +1,37 @@
+# METADATA:
+project_name: basic-blink-logic
+version: 1
+editor: dendriForge
+author: USER_1129_20260519
+ASLversion: 0.1.0
+
+## 1. HARDWARE INTERFACE:
+# Format: pin | type | io_mode | label | target_role
+hardware[1|]{pin|type|io_mode|label|target_role}:
+  25|digital|output|"LED Integrado"|status-led
+
+## 2. SYSTEM DATA:
+data:
+  TIME_UNIT: ms
+  BLINK_INTERVAL: 500
+  led_state: false
+
+## 3. INITIALIZATION SYSTEM:
+setup[3]:
+  - pinMode(25, OUTPUT)
+  - digitalWrite(25, LOW)
+  - delay(1000)
+
+## 4. BEHAVIORAL LOGIC (LOOP):
+loop[2]:
+  - toggle_led()
+  - delay(BLINK_INTERVAL)
+
+## 5. PROCEDURAL FUNCTIONS:
+functions:
+  toggle_led[5]:
+  - led_state = not led_state
+  - if led_state:
+  - digitalWrite(25, HIGH)
+  - else:
+  - digitalWrite(25, LOW)

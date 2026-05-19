@@ -1,0 +1,21 @@
+aslVersion: "0.1.0"
+metadata:
+  name: "blink_micropython"
+  version: "1"
+  editor: "dendriForge"
+  author: "transpiler-tester"
+parts:
+  - id: "MCU_0"
+    type: "esp32"
+  - id: "LED_0"
+    type: "led-simple"
+connections:
+  - ["MCU_0:LED", "LED_0:A", "red", "v0"]
+  - ["LED_0:C", "MCU_0:GND.1", "black", "v0"]
+tasks:
+  - name: "loop"
+    body:
+      - {kind: "digitalWrite", pin: "LED", value: "HIGH"}
+      - {kind: "delay", ms: 1000}
+      - {kind: "digitalWrite", pin: "LED", value: "LOW"}
+      - {kind: "delay", ms: 1000}

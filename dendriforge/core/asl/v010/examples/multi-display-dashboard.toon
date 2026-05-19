@@ -1,0 +1,169 @@
+# METADATA:
+project_name: multi-display-dashboard
+version: 1
+editor: dendriForge
+author: GEMINI
+ASLversion: 0.2.0
+
+## 1. HARDWARE INTERFACE:
+hardware[11|]{pin|type|io_mode|label|target_role}:
+  21|digital|bi|"I2C SDA (LCD + OLED)"|i2c-sda
+  22|digital|bi|"I2C SCL (LCD + OLED)"|i2c-scl
+  23|digital|output|"TFT MOSI"|spi-mosi
+  18|digital|output|"TFT CLK"|spi-sck
+  5|digital|output|"TFT CS"|spi-cs
+  2|digital|output|"TFT DC"|digital-out
+  4|digital|output|"TFT RST"|digital-out
+  34|analog|input|"Temperature Sensor (NTC)"|"adc:t"
+  35|analog|input|"Light Sensor (LDR)"|"adc:t"
+  32|digital|input_pullup|"Page Button"|btn-no
+  33|digital|output|"Status LED"|status-led
+
+## 2. SYSTEM DATA:
+data:
+  NTC_NOMINAL: 10000.0
+  NTC_BCOEFF: 3950.0
+  NTC_SERIES_R: 10000.0
+  LDR_MAX: 65535.0
+  COLOR_BG: 0x0000
+  COLOR_FG: 0xFFFF
+  COLOR_ACCENT: 0x07FF
+  COLOR_WARN: 0xFBE0
+  COLOR_ALERT: 0xF800
+  TEMP_WARN_C: 40.0
+  TEMP_ALERT_C: 60.0
+  PAGE_COUNT: 3
+  DEBOUNCE_MS: 200
+  current_page: 0
+  last_btn_time: 0
+  temp_c: 0.0
+  ldr_raw: 0
+  ldr_pct: 0
+  light_label: "---"
+  last_page_drawn: 99
+  raw_adc: 0
+  r_ntc: 0.0
+  log_r: 0.0
+  inv_t: 0.0
+  calculated_temp: 0.0
+  bar_width: 0
+  tft_color: 0
+  current_time: 0
+
+## 3. INITIALIZATION SYSTEM:
+setup[14]:
+  - initI2C(0, 21, 22, 400000)
+  - initLCD(0x27, 16, 2)
+  - initOLED(0x3C, 128, 64)
+  - initSPI(1, 23, -1, 18, 5)
+  - initTFT(2, 4, 1)
+  - pinMode(32, INPUT_PULLUP)
+  - pinMode(33, OUTPUT)
+  - digitalWrite(33, LOW)
+  - attachInterrupt(32, isr_page_button, FALLING)
+  - tftFillScreen(COLOR_BG)
+  - display.clearDisplay()
+  - display.display()
+  - lcdPrint(0, 0, "DendriForge")
+  - lcdPrint(0, 1, "Dashboard v1")
+
+## 4. BEHAVIORAL LOGIC (LOOP):
+loop[8]:
+  - temp_c = read_ntc_celsius()
+  - ldr_raw = readADC(35)
+  - ldr_pct = int((ldr_raw / LDR_MAX) * 100)
+  - update_light_label()
+  - update_status_led()
+  - if current_page != last_page_drawn:
+  - draw_page()
+  - last_page_drawn = current_page
+
+## 5. PROCEDURAL FUNCTIONS:
+functions:
+  read_ntc_celsius()[6]:
+    - raw_adc = readADC(34)
+    - r_ntc = NTC_SERIES_R * (65535.0 / raw_adc - 1.0)
+    - log_r = log(r_ntc / NTC_NOMINAL)
+    - inv_t = (1.0 / 298.15) + (log_r / NTC_BCOEFF)
+    - calculated_temp = (1.0 / inv_t) - 273.15
+    - return(calculated_temp)
+
+  update_light_label()[6]:
+    - if ldr_pct >= 75:
+    - light_label = "Bright"
+    - if ldr_pct >= 40 and ldr_pct < 75:
+    - light_label = "Normal"
+    - if ldr_pct < 40:
+    - light_label = "Dark"
+
+  update_status_led()[4]:
+    - if temp_c >= TEMP_ALERT_C:
+    - digitalWrite(33, HIGH)
+    - else:
+    - digitalWrite(33, LOW)
+
+  draw_page()[6]:
+    - display.clearDisplay()
+    - lcdClear()
+    - if current_page == 0: draw_page_temperature()
+    - if current_page == 1: draw_page_light()
+    - if current_page == 2: draw_page_system()
+    - display.display()
+
+  draw_page_temperature()[21]:
+    - tft_color = COLOR_FG
+    - if temp_c >= TEMP_ALERT_C:
+    - tft_color = COLOR_ALERT
+    - if temp_c >= TEMP_WARN_C and temp_c < TEMP_ALERT_C:
+    - tft_color = COLOR_WARN
+    - tftFillScreen(COLOR_BG)
+    - tftSetTextColor(tft_color, COLOR_BG)
+    - tftSetTextSize(3)
+    - tftPrintText(10, 20, string(temp_c, 1))
+    - tftSetTextSize(1)
+    - tftPrintText(10, 70, "Celsius")
+    - tftDrawLine(0, 80, 160, 80, COLOR_ACCENT)
+    - tftPrintText(10, 90, "Threshold:")
+    - tftPrintText(80, 90, string(TEMP_WARN_C, 0))
+    - lcdPrint(0, 0, "Temp: " + string(temp_c, 1) + " C")
+    - lcdPrint(0, 1, "Page 1/3 [TEMP]")
+    - display.setTextColor(1, 0)
+    - display.setCursor(0, 0)
+    - display.print("TEMPERATURE")
+    - display.setCursor(0, 16)
+    - display.print(string(temp_c, 2) + " C")
+
+  draw_page_light()[16]:
+    - bar_width = int((ldr_pct / 100.0) * 100)
+    - display.setTextColor(1, 0)
+    - display.setCursor(0, 0)
+    - display.print("LIGHT LEVEL")
+    - display.setCursor(0, 12)
+    - display.print(string(ldr_pct) + "% " + light_label)
+    - display.drawRect(0, 28, 102, 10, 1)
+    - display.fillRect(1, 29, bar_width, 8, 1)
+    - display.setCursor(0, 44)
+    - display.print("LDR raw: " + string(ldr_raw))
+    - lcdPrint(0, 0, "Light: " + string(ldr_pct) + "% ")
+    - lcdPrint(0, 1, light_label)
+    - tftFillScreen(COLOR_BG)
+    - tftSetTextColor(COLOR_ACCENT, COLOR_BG)
+    - tftSetTextSize(2)
+    - tftPrintText(10, 20, string(ldr_pct) + "%")
+
+  draw_page_system()[9]:
+    - lcdPrint(0, 0, "DendriForge v1")
+    - lcdPrint(0, 1, "ASL 0.2.0 Ready")
+    - display.setTextColor(1, 0)
+    - display.setCursor(0, 0)
+    - display.print("SYSTEM")
+    - display.setCursor(0, 16)
+    - display.print("ASL 0.2.0")
+    - display.setCursor(0, 32)
+    - display.print("t=" + string(currentTime()) + "ms")
+
+  isr_page_button()[4]:
+    - current_time = currentTime()
+    - if (current_time - last_btn_time) > DEBOUNCE_MS:
+    - current_page = (current_page + 1) % PAGE_COUNT
+    - last_btn_time = current_time

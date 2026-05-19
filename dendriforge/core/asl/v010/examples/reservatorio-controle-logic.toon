@@ -1,0 +1,103 @@
+# METADATA:
+project_name: reservatorio-controle-logic
+version: 12
+editor: dendriForge
+author: Caio Jordão Barradas
+ASLversion: 0.1.0
+
+## 1. HARDWARE INTERFACE:
+# Format: pin | type | io_mode | label | target_role
+hardware[9|]{pin|type|io_mode|label|target_role}:
+  0|digital|bi|"I2C0 SDA"|i2c-sda
+  1|digital|bi|"I2C0 SCL"|i2c-scl
+  15|digital|output|"Servo Válvula"|pwm-out
+  16|digital|output|"HC-SR04 Trig"|digital-out
+  17|digital|input|"HC-SR04 Echo"|digital-int
+  18|digital|output|"Buzzer Alarme"|pwm-out
+  19|digital|input|"Botão Manual"|int-rising
+  20|digital|output|"LED Indicador"|digital-out
+  26|analog|input|"Potenciômetro"|"adc:t"
+
+## 2. SYSTEM DATA:
+data:
+  TIME_UNIT: ms
+  H: 300
+  M: 20
+  L: 5
+  CRIT_LOW: 10
+  CRIT_HIGH: 10
+  DEBOUNCE_TIME_MS: 300
+  MIN_DUTY: 1966
+  MAX_DUTY: 7864
+  o: boolean
+  set_valvula: boolean
+  alarming: boolean
+  last_toggle_time: 0
+  t: 0
+  n: 0
+
+## 3. INITIALIZATION SYSTEM:
+setup[12]:
+  - initI2C(0, 0, 1, 400000)
+  - initLCD(0x27, 16, 2)
+  - pinMode(16, OUTPUT)
+  - pinMode(17, INPUT)
+  - pinMode(19, INPUT_PULLDOWN)
+  - pinMode(20, OUTPUT)
+  - pwmFreq(15, 50)
+  - pwmFreq(18, 1000)
+  - set_valvula(false)
+  - lcdPrint(0, 0, "Iniciando...")
+  - alarming (false)
+  - o (false)
+
+## 4. BEHAVIORAL LOGIC (LOOP):
+loop[18]:
+  - t = int((readADC(26) / 65535) * H)
+  - if t <= M: t = M + 1
+  - sum_dist = 0
+  - repeat(5): sum_dist = sum_dist + readDistanceCM(16, 17)
+  - u = sum_dist / 5
+  - n = int(H - u)
+  - if n < 0: n = 0
+  - if n > H: n = H
+  - if not o and n <= M: set_valvula(true)
+  - if o and n >= (t - L): set_valvula(false)
+  - if n < CRIT_LOW or n > (t + CRIT_HIGH):
+  - if not alarming: pwmWrite(18, 32768)
+  - alarming = true
+  - else:
+  - if alarming: pwmWrite(18, 0)
+  - alarming = false
+  - update_display()
+  - delay(500)
+
+## 5. PROCEDURAL FUNCTIONS:
+functions:
+  set_servo_angle[3]:
+    - angle = max(0, min(180, angle))
+    - duty = int(MIN_DUTY + (MAX_DUTY - MIN_DUTY) * (angle / 180.0))
+    - pwmWrite(15, duty)
+    
+  set_valvula[7]:
+    - o = aberta
+    - if o:
+    - set_servo_angle(180)
+    - digitalWrite(20, HIGH)
+    - else:
+    - set_servo_angle(0)
+    - digitalWrite(20, LOW)
+    
+  toggle_valvula[1]:
+    - set_valvula(not o)
+    
+  update_display[3]:
+    - lcdClear()
+    - lcdPrint(0, 0, "Pret: " + string(t) + "cm")
+    - lcdPrint(0, 1, "Atual: " + string(n) + "cm")
+
+  button_interrupt_handler[4]:
+    - current_time = currentTime()
+    - if (current_time - last_toggle_time) > DEBOUNCE_TIME_MS:
+    - toggle_valvula()
+    - last_toggle_time = current_time

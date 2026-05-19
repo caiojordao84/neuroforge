@@ -1,0 +1,135 @@
+# METADATA:
+project_name: advanced-robotic-scara-pid
+version: 8
+editor: dendriForge
+author: ASLAgent#032
+ASLversion: 0.1.0
+
+## 1. HARDWARE INTERFACE:
+# Format: pin | type | io_mode | label | target_role
+hardware[8|]{pin|type|io_mode|label|target_role}:
+  2|digital|input|"E-STOP Emergency"|int-falling
+  3|digital|input|"Axis-1 Index Encoder"|int-rising
+  14|digital|output|"Axis-1 Step Pin"|pwm-out
+  15|digital|output|"Axis-1 Dir Pin"|digital-out
+  16|digital|output|"Tool Heater element"|pwm-out
+  26|analog|input|"Tool Thermistor"|"adc:t"
+  0|digital|bi|"I2C0 SDA"|i2c-sda
+  1|digital|bi|"I2C0 SCL"|i2c-scl
+
+## 2. SYSTEM DATA:
+data:
+  TIME_UNIT: ms
+  KP: 25.5
+  KI: 1.2
+  KD: 5.0
+  setpoint_temp: 210.0
+  current_temp: 0.0
+  pid_error: 0.0
+  last_error: 0.0
+  integral: 0.0
+  derivative: 0.0
+  pid_output: 0
+  current_x: 120.5
+  current_y: 85.0
+  target_x: 0.0
+  target_y: 0.0
+  steps_per_mm: 80
+  sys_safety_halt: false
+  last_interrupt_time: 0
+  delta_x: 0.0
+  delta_y: 0.0
+  distance: 0.0
+  total_steps: 0
+  count: 0
+  raw_adc: 0
+  resistance: 0.0
+  calculated_temp: 0.0
+  time_now: 0
+
+## 3. INITIALIZATION SYSTEM:
+setup[10]:
+  - pinMode(2, INPUT_PULLUP)
+  - pinMode(3, INPUT_PULLUP)
+  - pinMode(15, OUTPUT)
+  - pinMode(16, OUTPUT)
+  - attachInterrupt(2, isr_emergency_halt, FALLING)
+  - attachInterrupt(3, isr_encoder_pulse, RISING)
+  - pwmFreq(14, 2000)
+  - pwmFreq(16, 5000)
+  - initI2C(0, 0, 1, 400000)
+  - initLCD(0x27, 16, 2)
+
+## 4. BEHAVIORAL LOGIC (LOOP):
+loop[10]:
+  - if sys_safety_halt:
+  - delay(100)
+  - current_temp = read_temperature_celsius()
+  - compute_thermal_pid()
+  - if not sys_safety_halt:
+  - move_to_vpos(200.0, 150.0)
+  - delay(50)
+  - if not sys_safety_halt:
+  - move_to_vpos(120.5, 85.0)
+  - delay(2000)
+
+## 5. PROCEDURAL FUNCTIONS:
+functions:
+  move_to_vpos(val_x, val_y)[14]:
+    - target_x = val_x
+    - target_y = val_y
+    - delta_x = target_x - current_x
+    - delta_y = target_y - current_y
+    - distance = sqrt((delta_x * delta_x) + (delta_y * delta_y))
+    - if distance > 0.1:
+    - if delta_x >= 0:
+    - digitalWrite(15, HIGH)
+    - else:
+    - digitalWrite(15, LOW)
+    - total_steps = int(distance * steps_per_mm)
+    - execute_trajectory_pulses(total_steps)
+    - current_x = target_x
+    - current_y = target_y
+
+  execute_trajectory_pulses(pulses)[7]:
+    - count = 0
+    - repeat(pulses):
+    - if not sys_safety_halt:
+    - pwmWrite(14, 32768)
+    - delay(2)
+    - pwmWrite(14, 0)
+    - delay(2)
+
+  compute_thermal_pid()[11]:
+    - pid_error = setpoint_temp - current_temp
+    - integral = integral + pid_error
+    - if integral > 1000:
+    - integral = 1000
+    - if integral < -1000:
+    - integral = -1000
+    - derivative = pid_error - last_error
+    - pid_output = int((KP * pid_error) + (KI * integral) + (KD * derivative))
+    - pid_output = max(0, min(65535, pid_output))
+    - pwmWrite(16, pid_output)
+    - last_error = pid_error
+
+  read_temperature_celsius()[5]:
+    - raw_adc = readADC(26)
+    - resistance = (65535 / raw_adc) - 1
+    - calculated_temp = 1 / (0.001129148 + (0.000234125 * log(resistance)))
+    - calculated_temp = calculated_temp - 273.15
+    - return(calculated_temp)
+
+  isr_emergency_halt()[7]:
+    - sys_safety_halt = true
+    - pwmWrite(14, 0)
+    - pwmWrite(16, 0)
+    - digitalWrite(15, LOW)
+    - lcdClear()
+    - lcdPrint(0, 0, "## E-STOP ##")
+    - lcdPrint(0, 1, "SYSTEM HALTED")
+
+  isr_encoder_pulse()[3]:
+    - time_now = currentTime()
+    - if (time_now - last_interrupt_time) > 5:
+    - last_interrupt_time = time_now

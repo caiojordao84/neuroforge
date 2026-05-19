@@ -1,0 +1,52 @@
+# METADATA:
+project_name: dual-button-led-control
+version: 3
+editor: dendriForge
+author: SOGEKING
+ASLversion: 0.1.0
+
+## 1. HARDWARE INTERFACE:
+# Format: pin | type | io_mode | label | target_role
+hardware[4|]{pin|type|io_mode|label|target_role}:
+  2|digital|input|"Botao 1"|digital-in
+  3|digital|input|"Botao 2"|digital-in
+  4|digital|output|"LED 1"|digital-out
+  5|digital|output|"LED 2"|digital-out
+
+## 2. SYSTEM DATA:
+data:
+  TIME_UNIT: ms
+  DEBOUNCE_TIME: 250
+  led1_state: false
+  led2_state: false
+
+## 3. INITIALIZATION SYSTEM:
+setup[6]:
+  - pinMode(2, INPUT_PULLDOWN)
+  - pinMode(3, INPUT_PULLDOWN)
+  - pinMode(4, OUTPUT)
+  - pinMode(5, OUTPUT)
+  - digitalWrite(4, LOW)
+  - digitalWrite(5, LOW)
+
+## 4. BEHAVIORAL LOGIC (LOOP):
+loop[3]:
+  - if digitalRead(2): toggle_led1()
+  - if digitalRead(3): toggle_led2()
+  - delay(DEBOUNCE_TIME)
+
+## 5. PROCEDURAL FUNCTIONS:
+functions:
+  toggle_led1[5]:
+    - led1_state = not led1_state
+    - if led1_state:
+    - digitalWrite(4, HIGH)
+    - else:
+    - digitalWrite(4, LOW)
+
+  toggle_led2[5]:
+    - led2_state = not led2_state
+    - if led2_state:
+    - digitalWrite(5, HIGH)
+    - else:
+    - digitalWrite(5, LOW)

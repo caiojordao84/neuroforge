@@ -1,0 +1,39 @@
+# METADATA:
+project_name: rain-alarm-analog-logic
+version: 6
+editor: dendriForge
+author: Mugwara323
+ASLversion: 0.1.0
+
+## 1. HARDWARE INTERFACE:
+# Format: pin | type | io_mode | label | target_role
+hardware[2|]{pin|type|io_mode|label|target_role}:
+  26|analog|input|"Rain Sensor AOUT"|"adc:t"
+  15|digital|output|"Buzzer VP"|pwm-out
+
+## 2. SYSTEM DATA:
+data:
+  TIME_UNIT: ms
+  RAIN_THRESHOLD: 30000
+  BUZZER_DUTY: 32768
+  rain_intensity: 0
+
+## 3. INITIALIZATION SYSTEM:
+setup[3]:
+  - pinMode(15, OUTPUT)
+  - pwmFreq(15, 1000)
+  - pwmWrite(15, 0)
+
+## 4. BEHAVIORAL LOGIC (LOOP):
+loop[3]:
+  - rain_intensity = readADC(26)
+  - set_buzzer_state(rain_intensity)
+  - delay(100)
+
+## 5. PROCEDURAL FUNCTIONS:
+functions:
+  set_buzzer_state(value)[4]:
+    - if value > RAIN_THRESHOLD:
+    - pwmWrite(15, BUZZER_DUTY)
+    - else:
+    - pwmWrite(15, 0)

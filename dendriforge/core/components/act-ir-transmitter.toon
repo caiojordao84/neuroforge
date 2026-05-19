@@ -1,0 +1,117 @@
+# METADATA:
+project_name: act-ir-transmitter-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: act-ir-transmitter
+name: "Infrared Transmitter (Transmissor de infravermelho)"
+family: actuators
+subfamily: optical
+category: emitter
+standard: "custom"
+url: null
+image: act-ir-transmitter.svg
+symbol: act-ir-transmitter-symbol.svg
+symbol_standard: custom
+
+## 2. PARAMETERS:
+params:
+  carrier_frequency:
+    label: "Carrier Frequency"
+    unit: "kHz"
+    default: 38
+    options: [38, 40, 56]
+    type: enum
+    editable: true
+  intensity:
+    label: "Emission Intensity"
+    unit: "mW/sr"
+    default: 10
+    min: 1
+    max: 100
+    type: float
+    editable: true
+  angle:
+    label: "Emission Angle"
+    unit: "°"
+    default: 15
+    min: 5
+    max: 60
+    type: float
+    editable: true
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 5
+    options: [3.3, 5]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[3|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"{supply_voltage}"|"50mA"|"supply +"
+  GND|input|ground|null|null|"supply -"
+  DATA|input|signal|"{supply_voltage}"|"20mA"|"transmission data input"
+
+## 4c. PROTOCOL PORTS:
+protocol_ports[1|]{id|direction|protocol|notes}:
+  RF|output|"IR"|"wireless infrared interface"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: actuator-script
+  bidirectional: true
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - idle
+    - transmitting
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "{supply_voltage}"
+  max_current: "50mA"
+  max_power: null
+  max_temp: 85
+  min_temp: -10
+  ip_rating: "IP20"
+  safety_category: null
+warnings[2]:
+  - "The transmitter and receiver must have compatible carrier frequencies (e.g., both 38kHz)."
+  - "Direct current through the IR LED must be limited with a resistor if not integrated."
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["sensor-ir-receiver", "mcu-*", "plc-*"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["remote-control", "wireless-data-link", "object-detection"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 40
+  height: 40
+  ports_layout: custom
+  port_VCC: {x: 10, y: 0}
+  port_GND: {x: 30, y: 0}
+  port_DATA: {x: 20, y: 40}
+  label_position: top
+  value_display: "{carrier_frequency} kHz"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: actuators-family
+  componentProfileId: act-ir-transmitter
+  paletteGroup: "Actuators > Optical"
+  tags[6]:
+    - act
+    - optical
+    - ir
+    - transmitter
+    - communication
+    - maker

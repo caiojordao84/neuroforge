@@ -1,0 +1,199 @@
+# METADATA:
+project_name: plc-elevator-advanced
+version: 2222
+editor: dendriForge
+author: Elevator Operator
+ASLversion: 0.1.0
+
+## 1. HARDWARE INTERFACE:
+# Format: pin | type | io_mode | label | target_role
+hardware[26|]{pin|type|io_mode|label|target_role}:
+  0|digital|input|"Pos Sensor Floor 0"|sensor-pos
+  1|digital|input|"Pos Sensor Floor 1"|sensor-pos
+  2|digital|input|"Pos Sensor Floor 2"|sensor-pos
+  3|digital|input|"Pos Sensor Floor 3"|sensor-pos
+  4|digital|input|"Cabin Button 0"|btn-no
+  5|digital|input|"Cabin Button 1"|btn-no
+  6|digital|input|"Cabin Button 2"|btn-no
+  7|digital|input|"Cabin Button 3"|btn-no
+  8|digital|input|"Hall Button 0"|btn-no
+  9|digital|input|"Hall Button 1"|btn-no
+  10|digital|input|"Hall Button 2"|btn-no
+  11|digital|input|"Hall Button 3"|btn-no
+  12|digital|input|"IR Receiver (Curtain)"|ir-rx
+  13|digital|output|"Cabin LED 0"|led-out
+  14|digital|output|"Cabin LED 1"|led-out
+  15|digital|output|"Cabin LED 2"|led-out
+  16|digital|output|"Cabin LED 3"|led-out
+  17|digital|output|"Hall LED 0"|led-out
+  18|digital|output|"Hall LED 1"|led-out
+  19|digital|output|"Hall LED 2"|led-out
+  20|digital|output|"Hall LED 3"|led-out
+  21|digital|output|"Up Motor Relay"|relay-coil
+  22|digital|output|"Down Motor Relay"|relay-coil
+  23|digital|output|"Door Open Relay"|relay-coil
+  24|digital|output|"Door Close Relay"|relay-coil
+  25|digital|output|"IR Transmitter"|ir-tx
+
+## 2. SYSTEM DATA:
+data:
+  TIME_UNIT: ms
+  DOOR_DELAY_MS: 3000
+  state: 0
+  current_floor: 0
+  door_timer: 0
+  call_0: false
+  call_1: false
+  call_2: false
+  call_3: false
+  ir_blocked: false
+
+## 3. INITIALIZATION SYSTEM:
+setup[27]:
+  - pinMode(0, INPUT)
+  - pinMode(1, INPUT)
+  - pinMode(2, INPUT)
+  - pinMode(3, INPUT)
+  - pinMode(4, INPUT)
+  - pinMode(5, INPUT)
+  - pinMode(6, INPUT)
+  - pinMode(7, INPUT)
+  - pinMode(8, INPUT)
+  - pinMode(9, INPUT)
+  - pinMode(10, INPUT)
+  - pinMode(11, INPUT)
+  - pinMode(12, INPUT)
+  - pinMode(13, OUTPUT)
+  - pinMode(14, OUTPUT)
+  - pinMode(15, OUTPUT)
+  - pinMode(16, OUTPUT)
+  - pinMode(17, OUTPUT)
+  - pinMode(18, OUTPUT)
+  - pinMode(19, OUTPUT)
+  - pinMode(20, OUTPUT)
+  - pinMode(21, OUTPUT)
+  - pinMode(22, OUTPUT)
+  - pinMode(23, OUTPUT)
+  - pinMode(24, OUTPUT)
+  - pinMode(25, OUTPUT)
+  - digitalWrite(25, HIGH)
+
+## 4. BEHAVIORAL LOGIC (LOOP):
+loop[8]:
+  - read_sensors()
+  - register_calls()
+  - update_leds()
+  - check_arrival()
+  - decide_movement()
+  - handle_doors()
+  - write_outputs()
+  - delay(10)
+
+## 5. PROCEDURAL FUNCTIONS:
+functions:
+  read_sensors()[9]:
+    - if digitalRead(0):
+    - current_floor = 0
+    - if digitalRead(1):
+    - current_floor = 1
+    - if digitalRead(2):
+    - current_floor = 2
+    - if digitalRead(3):
+    - current_floor = 3
+    - ir_blocked = digitalRead(12)
+
+  register_calls()[8]:
+    - if digitalRead(4) or digitalRead(8):
+    - call_0 = true
+    - if digitalRead(5) or digitalRead(9):
+    - call_1 = true
+    - if digitalRead(6) or digitalRead(10):
+    - call_2 = true
+    - if digitalRead(7) or digitalRead(11):
+    - call_3 = true
+
+  update_leds()[24]:
+    - if call_0:
+    - digitalWrite(13, HIGH)
+    - digitalWrite(17, HIGH)
+    - else:
+    - digitalWrite(13, LOW)
+    - digitalWrite(17, LOW)
+    - if call_1:
+    - digitalWrite(14, HIGH)
+    - digitalWrite(18, HIGH)
+    - else:
+    - digitalWrite(14, LOW)
+    - digitalWrite(18, LOW)
+    - if call_2:
+    - digitalWrite(15, HIGH)
+    - digitalWrite(19, HIGH)
+    - else:
+    - digitalWrite(15, LOW)
+    - digitalWrite(19, LOW)
+    - if call_3:
+    - digitalWrite(16, HIGH)
+    - digitalWrite(20, HIGH)
+    - else:
+    - digitalWrite(16, LOW)
+    - digitalWrite(20, LOW)
+
+  check_arrival()[12]:
+    - if current_floor == 0 and call_0:
+    - call_0 = false
+    - open_doors()
+    - if current_floor == 1 and call_1:
+    - call_1 = false
+    - open_doors()
+    - if current_floor == 2 and call_2:
+    - call_2 = false
+    - open_doors()
+    - if current_floor == 3 and call_3:
+    - call_3 = false
+    - open_doors()
+
+  open_doors()[2]:
+    - state = 3
+    - door_timer = currentTime()
+
+  decide_movement()[13]:
+    - if state == 0:
+    - if current_floor == 0 and (call_1 or call_2 or call_3):
+    - state = 1
+    - if current_floor == 1 and (call_2 or call_3):
+    - state = 1
+    - if current_floor == 1 and call_0:
+    - state = 2
+    - if current_floor == 2 and call_3:
+    - state = 1
+    - if current_floor == 2 and (call_0 or call_1):
+    - state = 2
+    - if current_floor == 3 and (call_0 or call_1 or call_2):
+    - state = 2
+
+  handle_doors()[5]:
+    - if state == 3:
+    - if ir_blocked:
+    - door_timer = currentTime()
+    - if (currentTime() - door_timer) > DOOR_DELAY_MS:
+    - state = 0
+
+  write_outputs()[18]:
+    - if state == 1:
+    - digitalWrite(21, HIGH)
+    - digitalWrite(22, LOW)
+    - if state == 2:
+    - digitalWrite(21, LOW)
+    - digitalWrite(22, HIGH)
+    - if state == 0 or state == 3:
+    - digitalWrite(21, LOW)
+    - digitalWrite(22, LOW)
+    - if state == 3:
+    - digitalWrite(23, HIGH)
+    - digitalWrite(24, LOW)
+    - if state == 0:
+    - digitalWrite(23, LOW)
+    - digitalWrite(24, HIGH)
+    - if state == 1 or state == 2:
+    - digitalWrite(23, LOW)
+    - digitalWrite(24, LOW)
