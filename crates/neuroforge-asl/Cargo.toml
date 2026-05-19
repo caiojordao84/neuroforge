@@ -36,8 +36,8 @@ tree-sitter-language = "0.1.7"
 iec61131            = "0.7.0"
 
 # ── PLC Multi-Language (IL / LD / FBD / SFC) ────────────────────────────────
-pest        = "2"
-pest_derive = "2"
+pest        = "2.7"
+pest_derive = "2.7"
 quick-xml   = { version = "0.39.2", features = ["serialize", "overlapped-lists"] }
 plcopen     = "0.3.1"
 

@@ -8,6 +8,8 @@ pub mod language_registry;
 
 pub mod tree_sitter_loader;
 
+pub mod asl_parser;
+
 pub mod neuro_parser;
 
 pub use language_registry::{LanguageCategory, LanguageMeta, LanguageRegistry};
