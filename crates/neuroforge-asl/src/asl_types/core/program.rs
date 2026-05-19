@@ -1414,3 +1414,32 @@ pub struct AslSmTransition {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub priority: Option<u32>,
 }
+
+// ============================================================================
+// Phase B.2 Time-Decorated Routines
+// ============================================================================
+
+/// Represents a Time-Decorated Routine in ASL.
+/// Example: routine_name(args)[50]:
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AslRoutine {
+    pub name: String,
+    pub arguments: Vec<crate::asl_types::core::types::AslVariable>,
+    pub return_type: AslType,
+    
+    /// The cycle time in milliseconds extracted from the `[ms]` decorator.
+    /// If 0, the routine is synchronous and blocking.
+    /// If > 0, it is asynchronous/cyclic.
+    pub cycle_time_ms: u32,
+    
+    /// The AST nodes representing the body of the function
+    pub body: Vec<AslStatement>, 
+}
+
+impl AslRoutine {
+    /// Helper to check if this routine requires RTOS scheduling
+    pub fn is_cyclic(&self) -> bool {
+        self.cycle_time_ms > 0
+    }
+}
+

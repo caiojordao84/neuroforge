@@ -443,3 +443,33 @@ impl Condition {
         self
     }
 }
+
+// ============================================================================
+// Phase B.2 Memory Models
+// ============================================================================
+
+/// Represents a variable defined in either the `data` (const) or `state` (mut) block.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AslVariable {
+    pub name: String,
+    pub inferred_type: AslType,
+    pub initial_value: String,
+    pub is_constant: bool, // true if it comes from `data:`, false if from `state:`
+}
+
+impl AslVariable {
+    /// Basic type inference based on literal strings during parsing
+    pub fn infer_from_literal(val: &str) -> AslType {
+        let val = val.trim();
+        if val == "True" || val == "False" {
+            AslType::Bool
+        } else if val.contains('.') && val.parse::<f32>().is_ok() {
+            AslType::Float
+        } else if val.parse::<i32>().is_ok() {
+            AslType::Int32
+        } else {
+            AslType::String
+        }
+    }
+}
+
