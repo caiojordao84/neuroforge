@@ -242,15 +242,26 @@ impl StGenerator {
 
             AslExpr::Unary(u) => format!("{}{}", u.op.to_symbol(), self.gen_expr(&u.expr)),
 
-            AslExpr::Call(c) => format!(
-                "{}({})",
-                c.callee,
-                c.args
-                    .iter()
-                    .map(|a| self.gen_expr(a))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
+            AslExpr::Call(c) => {
+                let callee = if c.callee == "currentTime" || c.callee == "millis" {
+                    "TIME()".to_string()
+                } else {
+                    c.callee.clone()
+                };
+                if callee == "TIME()" {
+                    callee
+                } else {
+                    format!(
+                        "{}({})",
+                        callee,
+                        c.args
+                            .iter()
+                            .map(|a| self.gen_expr(a))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    )
+                }
+            },
 
             _ => format!("{:?}", expr),
         }

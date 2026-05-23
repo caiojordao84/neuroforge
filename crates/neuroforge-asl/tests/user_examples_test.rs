@@ -1,4 +1,4 @@
-use neuroforge_asl::executor::{AslExecutor, TargetLanguage};
+use neuroforge_core::executor::{AslExecutor, TargetLanguage};
 
 #[test]
 fn test_user_blink_transpilation() {
@@ -15,10 +15,10 @@ void loop() {
   delay(500);
 }
 "#;
-    use neuroforge_asl::parser::neuro_parser::NeuroParser;
-    use neuroforge_asl::plugins::c::c_parser::CParser;
-    use neuroforge_asl::plugins::core::AslGenerator;
-    use neuroforge_asl::plugins::python::python_generator::PythonGenerator;
+    use neuroforge_core::parser::neuro_parser::NeuroParser;
+    use neuroforge_core::plugins::c::c_parser::CParser;
+    use neuroforge_core::plugins::core::AslGenerator;
+    use neuroforge_core::plugins::python::python_generator::PythonGenerator;
 
     let ir = CParser::parse(src).expect("C parse failed");
     let out = PythonGenerator::new().generate(&ir);
@@ -70,10 +70,10 @@ void loop() {
   }
 }
 "#;
-    use neuroforge_asl::parser::neuro_parser::NeuroParser;
-    use neuroforge_asl::plugins::c::c_parser::CParser;
-    use neuroforge_asl::plugins::core::AslGenerator;
-    use neuroforge_asl::plugins::python::python_generator::PythonGenerator;
+    use neuroforge_core::parser::neuro_parser::NeuroParser;
+    use neuroforge_core::plugins::c::c_parser::CParser;
+    use neuroforge_core::plugins::core::AslGenerator;
+    use neuroforge_core::plugins::python::python_generator::PythonGenerator;
 
     let ir = CParser::parse(src).expect("C parse failed");
     let out = PythonGenerator::new().generate(&ir);

@@ -9,6 +9,7 @@ pub mod language_registry;
 pub mod tree_sitter_loader;
 
 pub mod asl_parser;
+pub mod asl_builder;
 
 pub mod neuro_parser;
 

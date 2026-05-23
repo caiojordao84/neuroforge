@@ -1,4 +1,4 @@
-use neuroforge_asl::{
+use neuroforge_core::{
     parser::neuro_parser::NeuroParser,
     plugins::python::python_parser::PythonParser,
     types::asl_types::AslProgram,

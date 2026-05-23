@@ -8,6 +8,8 @@ pub mod dead_code;
 
 pub mod inline_const;
 
+pub mod visitor;
+
 pub use constant_fold::constant_fold;
 
 pub use dead_code::eliminate_dead_code;

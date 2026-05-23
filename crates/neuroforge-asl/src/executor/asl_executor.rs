@@ -187,12 +187,30 @@ impl AslExecutor {
             || trimmed_source.contains("END_PROGRAM")
             || trimmed_source.contains("END_FUNCTION_BLOCK");
 
-        let program =
+        let source_is_toon = trimmed_source.starts_with("# METADATA:")
+            || trimmed_source.contains("HARDWARE INTERFACE:")
+            || trimmed_source.contains("hardware[")
+            || trimmed_source.contains("setup[");
+
+        let mut program =
             if trimmed_source.starts_with('{') && trimmed_source.contains("\"aslVersion\"") {
-                // Se jÃ¡ recebemos a ASL Tree diretamente (SFC/Blockly Editor Frontend payload)
+                // Se já recebemos a ASL Tree diretamente (SFC/Blockly Editor Frontend payload)
 
                 serde_json::from_str::<AslProgram>(trimmed_source)
                     .map_err(|e| format!("Erro ao fazer parse do ASL JSON: {}", e))?
+            } else if source_is_toon {
+                use crate::parser::asl_parser::AslPestParser;
+                use crate::parser::asl_builder::AslBuilder;
+                use crate::parser::asl_parser::Rule;
+                use pest::Parser;
+
+                let parsed = AslPestParser::parse(Rule::asl_document, trimmed_source)
+                    .map_err(|e| format!("Pest parser failed: {}", e))?;
+                let pair = parsed.into_iter().next().ok_or_else(|| "No parse pairs found".to_string())?;
+                let toon_prog = AslBuilder::build_program(pair)
+                    .map_err(|e| format!("Builder failed: {}", e))?;
+                
+                AslProgram::from(toon_prog)
             } else {
                 // Determine which parser to use based on SOURCE language, not target
                 // Phase 1C: Universal AST from any supported source
@@ -231,6 +249,16 @@ impl AslExecutor {
                     }
                 }
             };
+
+        let is_stdlib = program.metadata.name.as_ref()
+            .map(|n| n == "st-standard-library" || n == "asl-standard-library")
+            .unwrap_or(false);
+
+        if !is_stdlib {
+            let stdlib = crate::stdlib::load_standard_library()
+                .map_err(|e| format!("StdLib load error: {}", e))?;
+            program.link(vec![stdlib])?;
+        }
 
         // Geração é feita baseada na IR Omni-direcional unicamente (AslProgram)
 
@@ -297,8 +325,19 @@ impl AslExecutor {
         // 3. Converter AslTarget para TargetLanguage
         let target = Self::convert_target(&ctx.target)?;
 
-        // 4. Executar transpila  o usando o m  todo existente
-        let transpile_output = Self::run_asl_program(&ctx.asl_program, &target)?;
+        // 4. Executar transpilação usando o método existente
+        let mut linked_program = ctx.asl_program.clone();
+        let is_stdlib = linked_program.metadata.name.as_ref()
+            .map(|n| n == "st-standard-library" || n == "asl-standard-library")
+            .unwrap_or(false);
+
+        if !is_stdlib {
+            let stdlib = crate::stdlib::load_standard_library()
+                .map_err(|e| format!("StdLib load error: {}", e))?;
+            linked_program.link(vec![stdlib])?;
+        }
+
+        let transpile_output = Self::run_asl_program(&linked_program, &target)?;
 
         // 5. Retornar resultado com confian  a e skill usada
         Ok(AwareTranspileOutput {

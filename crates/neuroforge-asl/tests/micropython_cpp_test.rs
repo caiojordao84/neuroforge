@@ -1,7 +1,7 @@
-use neuroforge_asl::parser::NeuroParser;
-use neuroforge_asl::plugins::c::CParser;
-use neuroforge_asl::plugins::core::AslGenerator;
-use neuroforge_asl::plugins::python::PythonGenerator;
+use neuroforge_core::parser::NeuroParser;
+use neuroforge_core::plugins::c::CParser;
+use neuroforge_core::plugins::core::AslGenerator;
+use neuroforge_core::plugins::python::PythonGenerator;
 
 #[test]
 fn test_micropython_transpilation() {

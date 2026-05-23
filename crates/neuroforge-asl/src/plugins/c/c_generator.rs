@@ -182,9 +182,14 @@ impl CGenerator {
             }
 
             AslExpr::Call(c) => {
+                let callee = if c.callee == "currentTime" || c.callee == "millis" {
+                    "millis".to_string()
+                } else {
+                    c.callee.clone()
+                };
                 let args: Vec<String> = c.args.iter().map(|a| self.gen_expr(a)).collect();
 
-                format!("{}({})", c.callee, args.join(", "))
+                format!("{}({})", callee, args.join(", "))
             }
 
             AslExpr::Member(m) => {

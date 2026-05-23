@@ -123,64 +123,97 @@ pub fn fold_expr(expr: &mut AslExpr) {
 
         if let Some(result) = try_fold_binary(b) {
             *expr = AslExpr::Literal(AslLiteral {
-                value: serde_json::json!(result),
+                value: result,
             });
         }
     }
 }
 
-fn try_fold_binary(b: &AslBinary) -> Option<f64> {
-    let l = literal_f64(&b.left)?;
+fn try_fold_binary(b: &AslBinary) -> Option<serde_json::Value> {
+    if b.op == BinaryOp::And || b.op == BinaryOp::Or {
+        let l = literal_bool(&b.left)?;
+        let r = literal_bool(&b.right)?;
+        return Some(match b.op {
+            BinaryOp::And => serde_json::Value::Bool(l && r),
+            BinaryOp::Or => serde_json::Value::Bool(l || r),
+            _ => unreachable!(),
+        });
+    }
 
+    let l = literal_f64(&b.left)?;
     let r = literal_f64(&b.right)?;
 
     Some(match b.op {
-        BinaryOp::Add => l + r,
+        BinaryOp::Add => serde_json::json!(l + r),
 
-        BinaryOp::Sub => l - r,
+        BinaryOp::Sub => serde_json::json!(l - r),
 
-        BinaryOp::Mul => l * r,
+        BinaryOp::Mul => serde_json::json!(l * r),
 
         BinaryOp::Div => {
             if r == 0.0 {
                 return None;
             }
-            l / r
+            serde_json::json!(l / r)
         }
 
         BinaryOp::Mod => {
             if r == 0.0 {
                 return None;
             }
-            l % r
+            serde_json::json!(l % r)
         }
 
         BinaryOp::IntDiv => {
             if r == 0.0 {
                 return None;
             }
-            (l as i64 / r as i64) as f64
+            serde_json::json!(l as i64 / r as i64)
         }
 
-        BinaryOp::Eq => (l == r) as i64 as f64,
+        BinaryOp::Eq => serde_json::json!(l == r),
 
-        BinaryOp::Neq => (l != r) as i64 as f64,
+        BinaryOp::Neq => serde_json::json!(l != r),
 
-        BinaryOp::Lt => (l < r) as i64 as f64,
+        BinaryOp::Lt => serde_json::json!(l < r),
 
-        BinaryOp::Lte => (l <= r) as i64 as f64,
+        BinaryOp::Lte => serde_json::json!(l <= r),
 
-        BinaryOp::Gt => (l > r) as i64 as f64,
+        BinaryOp::Gt => serde_json::json!(l > r),
 
-        BinaryOp::Gte => (l >= r) as i64 as f64,
+        BinaryOp::Gte => serde_json::json!(l >= r),
+
+        BinaryOp::BitAnd => serde_json::json!(l as i64 & r as i64),
+
+        BinaryOp::BitOr => serde_json::json!(l as i64 | r as i64),
+
+        BinaryOp::BitXor => serde_json::json!(l as i64 ^ r as i64),
 
         _ => return None,
     })
 }
 
+fn literal_bool(expr: &AslExpr) -> Option<bool> {
+    if let AslExpr::Literal(l) = expr {
+        if let Some(b) = l.value.as_bool() {
+            return Some(b);
+        }
+        if let Some(n) = l.value.as_f64() {
+            return Some(n != 0.0);
+        }
+    }
+    None
+}
+
 fn literal_f64(expr: &AslExpr) -> Option<f64> {
     if let AslExpr::Literal(l) = expr {
-        l.value.as_f64()
+        if let Some(n) = l.value.as_f64() {
+            Some(n)
+        } else if let Some(b) = l.value.as_bool() {
+            Some(if b { 1.0 } else { 0.0 })
+        } else {
+            None
+        }
     } else {
         None
     }
@@ -258,5 +291,18 @@ mod tests {
         fold_expr(&mut expr);
 
         assert!(matches!(expr, AslExpr::Binary(_)));
+    }
+
+    #[test]
+    fn folds_logical_operators() {
+        let mut expr = AslExpr::Binary(Box::new(AslBinary {
+            op: BinaryOp::And,
+            left: AslExpr::bool_val(true),
+            right: AslExpr::bool_val(false),
+        }));
+
+        fold_expr(&mut expr);
+
+        assert!(matches!(&expr, AslExpr::Literal(l) if l.value.as_bool() == Some(false)));
     }
 }

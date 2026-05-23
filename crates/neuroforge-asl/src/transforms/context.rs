@@ -76,7 +76,7 @@ pub struct TransformContext {
 
     /// Defini    es de structs conhecidas: nome     campos.
 
-    /// Populado pelo code_to_asl ao processar StructDeclaration.
+    /// Populado pelo ast_normalizer ao processar StructDeclaration.
     pub struct_defs: HashMap<String, crate::types::asl_types::AslStructDef>,
 
     /// Pinos RGB: nome da vari  vel     { r, g, b }.

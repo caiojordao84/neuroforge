@@ -144,7 +144,7 @@ impl AslType {
 /// Expressões ASL. O campo `kind` é o discriminante (R3).
 ///
 /// R5: operadores são sempre símbolos diretos em AslBinary/AslUnary.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum AslExpr {
     /// 14.1     literal
@@ -469,6 +469,114 @@ impl AslVariable {
             AslType::Int32
         } else {
             AslType::String
+        }
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+enum AslExprHelper {
+    #[serde(rename = "literal")]
+    Literal(AslLiteral),
+    #[serde(rename = "var")]
+    Var(AslVarRef),
+    #[serde(rename = "array")]
+    Array(Box<AslArray>),
+    #[serde(rename = "object")]
+    Object(Box<AslObject>),
+    #[serde(rename = "index")]
+    Index(Box<AslIndex>),
+    #[serde(rename = "index2D")]
+    Index2D(Box<AslIndex2D>),
+    #[serde(rename = "index3D")]
+    Index3D(Box<AslIndex3D>),
+    #[serde(rename = "member")]
+    Member(Box<AslMember>),
+    #[serde(rename = "unary")]
+    Unary(Box<AslUnary>),
+    #[serde(rename = "binary")]
+    Binary(Box<AslBinary>),
+    #[serde(rename = "call")]
+    Call(Box<AslCall>),
+    #[serde(rename = "conditional")]
+    Conditional(Box<AslConditional>),
+    #[serde(rename = "cast")]
+    Cast(Box<AslCast>),
+    #[serde(rename = "newStruct")]
+    NewStruct(Box<AslNewStruct>),
+    #[serde(rename = "arrayLength")]
+    ArrayLength(Box<AslArrayLength>),
+    #[serde(rename = "millis")]
+    Millis,
+    #[serde(rename = "micros")]
+    Micros,
+}
+
+impl From<AslExprHelper> for AslExpr {
+    fn from(helper: AslExprHelper) -> Self {
+        match helper {
+            AslExprHelper::Literal(x) => AslExpr::Literal(x),
+            AslExprHelper::Var(x) => AslExpr::Var(x),
+            AslExprHelper::Array(x) => AslExpr::Array(x),
+            AslExprHelper::Object(x) => AslExpr::Object(x),
+            AslExprHelper::Index(x) => AslExpr::Index(x),
+            AslExprHelper::Index2D(x) => AslExpr::Index2D(x),
+            AslExprHelper::Index3D(x) => AslExpr::Index3D(x),
+            AslExprHelper::Member(x) => AslExpr::Member(x),
+            AslExprHelper::Unary(x) => AslExpr::Unary(x),
+            AslExprHelper::Binary(x) => AslExpr::Binary(x),
+            AslExprHelper::Call(x) => AslExpr::Call(x),
+            AslExprHelper::Conditional(x) => AslExpr::Conditional(x),
+            AslExprHelper::Cast(x) => AslExpr::Cast(x),
+            AslExprHelper::NewStruct(x) => AslExpr::NewStruct(x),
+            AslExprHelper::ArrayLength(x) => AslExpr::ArrayLength(x),
+            AslExprHelper::Millis => AslExpr::Millis,
+            AslExprHelper::Micros => AslExpr::Micros,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for AslExpr {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::Error;
+        let val = serde_json::Value::deserialize(deserializer)?;
+        match val {
+            serde_json::Value::Object(map) => {
+                if map.contains_key("kind") {
+                    let helper = serde_json::Value::Object(map);
+                    let expr_helper = AslExprHelper::deserialize(helper).map_err(D::Error::custom)?;
+                    Ok(expr_helper.into())
+                } else {
+                    let properties = map.into_iter().map(|(k, v)| {
+                        let key_expr = AslExpr::Literal(AslLiteral { value: serde_json::Value::String(k) });
+                        let val_expr = serde_json::from_value(v).unwrap_or(AslExpr::Literal(AslLiteral::default()));
+                        AslObjectProp { key: key_expr, value: val_expr }
+                    }).collect();
+                    Ok(AslExpr::Object(Box::new(AslObject { properties })))
+                }
+            }
+            serde_json::Value::Array(arr) => {
+                let elements: Result<Vec<AslExpr>, _> = arr.into_iter().map(|v| serde_json::from_value(v).map_err(D::Error::custom)).collect();
+                Ok(AslExpr::Array(Box::new(AslArray { elements: elements? })))
+            }
+            serde_json::Value::String(s) => {
+                if s == "HIGH" || s == "LOW" || s == "INPUT" || s == "OUTPUT" {
+                    Ok(AslExpr::Literal(AslLiteral { value: serde_json::Value::String(s) }))
+                } else if (s.starts_with('"') && s.ends_with('"')) || (s.starts_with('\'') && s.ends_with('\'')) {
+                    let inner = s[1..s.len()-1].to_string();
+                    Ok(AslExpr::Literal(AslLiteral { value: serde_json::Value::String(inner) }))
+                } else if s.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                    Ok(AslExpr::Var(AslVarRef { name: s }))
+                } else {
+                    Ok(AslExpr::Literal(AslLiteral { value: serde_json::Value::String(s) }))
+                }
+            }
+            other => {
+                Ok(AslExpr::Literal(AslLiteral { value: other }))
+            }
         }
     }
 }

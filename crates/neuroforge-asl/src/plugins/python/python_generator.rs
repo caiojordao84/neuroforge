@@ -82,14 +82,25 @@ impl AslGenerator for PythonGenerator {
             || stringified.contains("\"spi")
             || stringified.contains("\"pwm");
 
-        let needs_time = stringified.contains("\"delay\"");
+        let needs_time = stringified.contains("\"delay\"")
+            || stringified.contains("\"currentTime\"")
+            || stringified.contains("\"millis\"");
 
         if needs_machine {
             out.push_str("from machine import Pin, PWM, ADC\n");
         }
 
         if needs_time {
-            out.push_str("from time import sleep_ms\n");
+            let mut time_imports = Vec::new();
+            if stringified.contains("\"delay\"") {
+                time_imports.push("sleep_ms");
+            }
+            if stringified.contains("\"currentTime\"") || stringified.contains("\"millis\"") {
+                time_imports.push("ticks_ms");
+            }
+            if !time_imports.is_empty() {
+                out.push_str(&format!("from time import {}\n", time_imports.join(", ")));
+            }
         }
 
         if needs_machine || needs_time {
@@ -280,6 +291,10 @@ impl PythonGenerator {
                 // println!("DEBUG gen_expr Call: callee='{}'", c.callee);
 
                 match c.callee.as_str() {
+                    "currentTime" | "millis" => {
+                        "ticks_ms()".to_string()
+                    }
+
                     "digitalRead" | "machine.digitalRead" => {
                         let pin = c
                             .args

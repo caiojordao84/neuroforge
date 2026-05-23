@@ -1,8 +1,8 @@
 //! Tests for TranspileContext and compute_ir_hash
 
-use neuroforge_asl::asl_types::agent::{compute_ir_hash, TranspileContext};
-use neuroforge_asl::asl_types::board::{AslTarget, BoardProfile};
-use neuroforge_asl::asl_types::core::program::{AslMetadata, AslProgram, AslTask};
+use neuroforge_core::asl_types::agent::{compute_ir_hash, TranspileContext};
+use neuroforge_core::asl_types::board::{AslProfile, AslTarget, BoardProfile};
+use neuroforge_core::asl_types::core::program::{AslMetadata, AslProgram, AslTask};
 
 #[test]
 fn test_compute_ir_hash_deterministic() {
@@ -130,31 +130,47 @@ fn test_transpile_context_new() {
     let board_profile = BoardProfile {
         id: "arduino-uno".to_string(),
         name: "Arduino Uno".to_string(),
-        manufacturer: Some("Arduino".to_string()),
-        mcu: Some("ATmega328P".to_string()),
-        architecture: Some("AVR".to_string()),
-        board_family: Some("avr-family".to_string()),
-        clock_hz: Some(16000000),
-        flash_bytes: Some(32768),
-        sram_bytes: Some(2048),
-        eeprom_bytes: Some(1024),
-        voltage_mv: Some(5000),
+        manufacturer: "Arduino".to_string(),
+        mcu: "ATmega328P".to_string(),
+        architecture: "AVR".to_string(),
+        board_family: "avr-family".to_string(),
+        clock_hz: 16000000,
+        flash_bytes: 32768,
+        sram_bytes: 2048,
+        eeprom_bytes: 1024,
+        voltage_mv: 5000,
         pin_map: Default::default(),
         pin_capabilities: Default::default(),
         boot_warnings: Default::default(),
         current_limits: Default::default(),
-        asl_target: AslTarget {
-            platform: "arduino".to_string(),
-            version: Some("1.8.0".to_string()),
-            includes: vec![],
-            defines: Default::default(),
-            pin_aliases: Default::default(),
-            agent_skill: Some("languages/arduino-cpp-avr.md".to_string()),
-            confidence_floor: Some(0.8),
-            extensions: Default::default(),
+        asl_profile: AslProfile {
+            targets: vec![AslTarget {
+                platform: "arduino".to_string(),
+                version: Some("1.8.0".to_string()),
+                includes: vec![],
+                defines: Default::default(),
+                pin_aliases: Default::default(),
+                agent_skill: "languages/arduino-cpp-avr.md".to_string(),
+                confidence_floor: Some(0.8),
+                extensions: Default::default(),
+                hal: None,
+            }],
         },
         svg_map: None,
         languages: vec!["arduino".to_string()],
+        category: Default::default(),
+        family: Default::default(),
+        image: Default::default(),
+        url: Default::default(),
+        specs: None,
+        dimensions: None,
+        io: None,
+        gpio: None,
+        peripherals: None,
+        plc_features: None,
+        plc_profile: None,
+        bootloader: Default::default(),
+        neuroforge: Default::default(),
     };
 
     let target = AslTarget {
@@ -163,9 +179,10 @@ fn test_transpile_context_new() {
         includes: vec![],
         defines: Default::default(),
         pin_aliases: Default::default(),
-        agent_skill: Some("languages/arduino-cpp-avr.md".to_string()),
+        agent_skill: "languages/arduino-cpp-avr.md".to_string(),
         confidence_floor: Some(0.8),
         extensions: Default::default(),
+        hal: None,
     };
 
     let context = TranspileContext::new(program.clone(), board_profile, target, vec![]);
@@ -197,31 +214,47 @@ fn test_transpile_context_to_toon() {
     let board_profile = BoardProfile {
         id: "arduino-uno".to_string(),
         name: "Arduino Uno".to_string(),
-        manufacturer: Some("Arduino".to_string()),
-        mcu: Some("ATmega328P".to_string()),
-        architecture: Some("AVR".to_string()),
-        board_family: Some("avr-family".to_string()),
-        clock_hz: Some(16000000),
-        flash_bytes: Some(32768),
-        sram_bytes: Some(2048),
-        eeprom_bytes: Some(1024),
-        voltage_mv: Some(5000),
+        manufacturer: "Arduino".to_string(),
+        mcu: "ATmega328P".to_string(),
+        architecture: "AVR".to_string(),
+        board_family: "avr-family".to_string(),
+        clock_hz: 16000000,
+        flash_bytes: 32768,
+        sram_bytes: 2048,
+        eeprom_bytes: 1024,
+        voltage_mv: 5000,
         pin_map: Default::default(),
         pin_capabilities: Default::default(),
         boot_warnings: Default::default(),
         current_limits: Default::default(),
-        asl_target: AslTarget {
-            platform: "arduino".to_string(),
-            version: Some("1.8.0".to_string()),
-            includes: vec![],
-            defines: Default::default(),
-            pin_aliases: Default::default(),
-            agent_skill: Some("languages/arduino-cpp-avr.md".to_string()),
-            confidence_floor: Some(0.8),
-            extensions: Default::default(),
+        asl_profile: AslProfile {
+            targets: vec![AslTarget {
+                platform: "arduino".to_string(),
+                version: Some("1.8.0".to_string()),
+                includes: vec![],
+                defines: Default::default(),
+                pin_aliases: Default::default(),
+                agent_skill: "languages/arduino-cpp-avr.md".to_string(),
+                confidence_floor: Some(0.8),
+                extensions: Default::default(),
+                hal: None,
+            }],
         },
         svg_map: None,
         languages: vec!["arduino".to_string()],
+        category: Default::default(),
+        family: Default::default(),
+        image: Default::default(),
+        url: Default::default(),
+        specs: None,
+        dimensions: None,
+        io: None,
+        gpio: None,
+        peripherals: None,
+        plc_features: None,
+        plc_profile: None,
+        bootloader: Default::default(),
+        neuroforge: Default::default(),
     };
 
     let target = AslTarget {
@@ -230,9 +263,10 @@ fn test_transpile_context_to_toon() {
         includes: vec![],
         defines: Default::default(),
         pin_aliases: Default::default(),
-        agent_skill: Some("languages/arduino-cpp-avr.md".to_string()),
+        agent_skill: "languages/arduino-cpp-avr.md".to_string(),
         confidence_floor: Some(0.8),
         extensions: Default::default(),
+        hal: None,
     };
 
     let context = TranspileContext::new(program, board_profile, target, vec![]);

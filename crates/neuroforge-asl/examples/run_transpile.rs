@@ -1,5 +1,5 @@
-use neuroforge_asl::parser::neuro_parser::NeuroParser;
-use neuroforge_asl::plugins::c::c_parser::CParser;
+use neuroforge_core::parser::neuro_parser::NeuroParser;
+use neuroforge_core::plugins::c::c_parser::CParser;
 use serde_toon;
 
 fn main() {

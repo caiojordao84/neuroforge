@@ -1,4 +1,4 @@
-use neuroforge_asl::transpile::{transpile, transpile_with_map};
+use neuroforge_core::transpile::{transpile, transpile_with_map};
 
 // The transpile() API parses `source` as the target `lang` language,
 // then regenerates code in that same language.

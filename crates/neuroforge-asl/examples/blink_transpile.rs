@@ -1,6 +1,6 @@
-use neuroforge_asl::executor::{AslExecutor, TargetLanguage};
-use neuroforge_asl::parser::neuro_parser::NeuroParser;
-use neuroforge_asl::plugins::c::c_parser::CParser;
+use neuroforge_core::executor::{AslExecutor, TargetLanguage};
+use neuroforge_core::parser::neuro_parser::NeuroParser;
+use neuroforge_core::plugins::c::c_parser::CParser;
 
 fn main() {
     // Input C/Arduino source code

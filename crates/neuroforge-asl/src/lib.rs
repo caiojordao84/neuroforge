@@ -11,6 +11,7 @@ pub mod flow;
 pub mod helpers;
 pub mod optimizer;
 pub mod parser;
+pub mod stdlib;
 pub mod plugins;
 pub mod transforms;
 pub mod transpile;

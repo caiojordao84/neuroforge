@@ -1,7 +1,7 @@
-use neuroforge_asl::plugins::c::c_parser::CParser;
-use neuroforge_asl::parser::neuro_parser::NeuroParser;
-use neuroforge_asl::plugins::python::python_generator::PythonGenerator;
-use neuroforge_asl::plugins::core::AslGenerator;
+use neuroforge_core::plugins::c::c_parser::CParser;
+use neuroforge_core::parser::neuro_parser::NeuroParser;
+use neuroforge_core::plugins::python::python_generator::PythonGenerator;
+use neuroforge_core::plugins::core::AslGenerator;
 
 fn main() {
     let src = r#"

@@ -1,5 +1,5 @@
 // Test script for transpiling MicroPython to C/Arduino
-use neuroforge_asl::transpile::transpile;
+use neuroforge_core::transpile::transpile;
 
 fn main() {
     let source = r#"

@@ -1,4 +1,4 @@
-use neuroforge_asl::asl_types::board::board_profile::BoardProfile;
+use neuroforge_core::asl_types::board::board_profile::BoardProfile;
 use std::fs;
 
 fn main() {

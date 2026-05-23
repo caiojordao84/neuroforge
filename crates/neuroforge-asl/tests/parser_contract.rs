@@ -1,5 +1,5 @@
-use neuroforge_asl::parser::neuro_parser::{NeuroParser, NeuroParserExt, ParseError, DiagnosticSeverity};
-use neuroforge_asl::types::asl_types::{AslProgram, AslTask};
+use neuroforge_core::parser::neuro_parser::{NeuroParser, NeuroParserExt, ParseError, DiagnosticSeverity};
+use neuroforge_core::types::asl_types::{AslProgram, AslTask};
 
 struct ContractTestParser;
 

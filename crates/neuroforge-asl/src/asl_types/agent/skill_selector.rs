@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::asl_types::board::{AslTarget, BoardProfile};
+use crate::asl_types::board::{AslProfile, AslTarget, BoardProfile};
 use crate::asl_types::component::ComponentProfile;
 
 /// Skill selector for determining transpilation approach.
@@ -227,29 +227,45 @@ mod tests {
         BoardProfile {
             id: "test-board".to_string(),
             name: "Test Board".to_string(),
-            manufacturer: None,
-            mcu: Some(mcu.to_string()),
-            architecture: None,
-            board_family: Some(family.to_string()),
-            clock_hz: None,
-            flash_bytes: None,
-            sram_bytes: None,
-            eeprom_bytes: None,
-            voltage_mv: None,
+            manufacturer: "".to_string(),
+            mcu: mcu.to_string(),
+            architecture: "".to_string(),
+            board_family: family.to_string(),
+            clock_hz: 0,
+            flash_bytes: 0,
+            sram_bytes: 0,
+            eeprom_bytes: 0,
+            voltage_mv: 0,
+            category: "".to_string(),
+            family: "".to_string(),
+            image: "".to_string(),
+            url: "".to_string(),
+            specs: None,
+            dimensions: None,
+            io: None,
+            gpio: None,
+            peripherals: None,
+            plc_features: None,
+            plc_profile: None,
             pin_map: Default::default(),
             pin_capabilities: Default::default(),
             boot_warnings: Default::default(),
             current_limits: Default::default(),
-            asl_target: AslTarget {
-                platform: "arduino".to_string(),
-                version: None,
-                includes: vec![],
-                defines: Default::default(),
-                pin_aliases: Default::default(),
-                agent_skill: None,
-                confidence_floor: None,
-                extensions: Default::default(),
+            asl_profile: AslProfile {
+                targets: vec![AslTarget {
+                    platform: "arduino".to_string(),
+                    version: None,
+                    includes: vec![],
+                    defines: Default::default(),
+                    pin_aliases: Default::default(),
+                    agent_skill: "".to_string(),
+                    confidence_floor: None,
+                    extensions: Default::default(),
+                    hal: None,
+                }]
             },
+            bootloader: "".to_string(),
+            neuroforge: Default::default(),
             svg_map: None,
             languages: vec![],
         }
@@ -287,8 +303,8 @@ mod tests {
     fn test_select_with_explicit_agent_skill() {
         let selector = SkillSelector::new("agent_skills".to_string());
         let board = create_test_board("avr-family", "ATmega328P");
-        let mut target = board.asl_target.clone();
-        target.agent_skill = Some("languages/custom-skill.md".to_string());
+        let mut target = board.asl_target().clone();
+        target.agent_skill = "languages/custom-skill.md".to_string();
 
         let result = selector.select(&board, &target);
         assert_eq!(result, "languages/custom-skill.md");
@@ -319,7 +335,7 @@ mod tests {
     fn test_select_falls_back_on_low_confidence() {
         let selector = SkillSelector::new("agent_skills".to_string());
         let board = create_test_board("avr-family", "ATmega328P");
-        let mut target = board.asl_target.clone();
+        let mut target = board.asl_target().clone();
         target.confidence_floor = Some(0.3); // Below default floor of 0.5
 
         let result = selector.select(&board, &target);
@@ -403,20 +419,45 @@ mod tests {
         let board = BoardProfile {
             id: "arduino-uno".to_string(),
             name: "Arduino Uno".to_string(),
-            manufacturer: None,
-            mcu: Some("ATmega328P".to_string()),
-            architecture: None,
-            board_family: None, // Not set, should derive from mcu
-            clock_hz: None,
-            flash_bytes: None,
-            sram_bytes: None,
-            eeprom_bytes: None,
-            voltage_mv: None,
+            manufacturer: "".to_string(),
+            mcu: "ATmega328P".to_string(),
+            architecture: "".to_string(),
+            board_family: "".to_string(), // Not set, should derive from mcu
+            clock_hz: 0,
+            flash_bytes: 0,
+            sram_bytes: 0,
+            eeprom_bytes: 0,
+            voltage_mv: 0,
+            category: "".to_string(),
+            family: "".to_string(),
+            image: "".to_string(),
+            url: "".to_string(),
+            specs: None,
+            dimensions: None,
+            io: None,
+            gpio: None,
+            peripherals: None,
+            plc_features: None,
+            plc_profile: None,
             pin_map: Default::default(),
             pin_capabilities: Default::default(),
             boot_warnings: Default::default(),
             current_limits: Default::default(),
-            asl_target: AslTarget::default(),
+            asl_profile: AslProfile {
+                targets: vec![AslTarget {
+                    platform: "arduino".to_string(),
+                    version: None,
+                    includes: vec![],
+                    defines: Default::default(),
+                    pin_aliases: Default::default(),
+                    agent_skill: "".to_string(),
+                    confidence_floor: None,
+                    extensions: Default::default(),
+                    hal: None,
+                }]
+            },
+            bootloader: "".to_string(),
+            neuroforge: Default::default(),
             svg_map: None,
             languages: vec![],
         };
@@ -429,20 +470,45 @@ mod tests {
         let board = BoardProfile {
             id: "custom-board".to_string(),
             name: "Custom Board".to_string(),
-            manufacturer: None,
-            mcu: Some("RP2040".to_string()),
-            architecture: None,
-            board_family: Some("custom-family".to_string()),
-            clock_hz: None,
-            flash_bytes: None,
-            sram_bytes: None,
-            eeprom_bytes: None,
-            voltage_mv: None,
+            manufacturer: "".to_string(),
+            mcu: "RP2040".to_string(),
+            architecture: "".to_string(),
+            board_family: "custom-family".to_string(),
+            clock_hz: 0,
+            flash_bytes: 0,
+            sram_bytes: 0,
+            eeprom_bytes: 0,
+            voltage_mv: 0,
+            category: "".to_string(),
+            family: "".to_string(),
+            image: "".to_string(),
+            url: "".to_string(),
+            specs: None,
+            dimensions: None,
+            io: None,
+            gpio: None,
+            peripherals: None,
+            plc_features: None,
+            plc_profile: None,
             pin_map: Default::default(),
             pin_capabilities: Default::default(),
             boot_warnings: Default::default(),
             current_limits: Default::default(),
-            asl_target: AslTarget::default(),
+            asl_profile: AslProfile {
+                targets: vec![AslTarget {
+                    platform: "arduino".to_string(),
+                    version: None,
+                    includes: vec![],
+                    defines: Default::default(),
+                    pin_aliases: Default::default(),
+                    agent_skill: "".to_string(),
+                    confidence_floor: None,
+                    extensions: Default::default(),
+                    hal: None,
+                }]
+            },
+            bootloader: "".to_string(),
+            neuroforge: Default::default(),
             svg_map: None,
             languages: vec![],
         };

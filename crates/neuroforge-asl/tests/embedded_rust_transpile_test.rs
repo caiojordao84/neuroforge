@@ -2,7 +2,7 @@
 //!
 //! Tests the complete pipeline for embedded Rust code with esp-hal and Embassy
 
-use neuroforge_asl::transpile::transpile;
+use neuroforge_core::transpile::transpile;
 
 /// Test 1: Simple blink - should parse and transpile to C++ and MicroPython
 #[test]

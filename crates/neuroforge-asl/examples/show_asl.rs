@@ -1,5 +1,5 @@
-use neuroforge_asl::parser::NeuroParser;
-use neuroforge_asl::plugins::rust_std::RustParser;
+use neuroforge_core::parser::NeuroParser;
+use neuroforge_core::plugins::rust_std::RustParser;
 
 fn main() {
     let src = r#"

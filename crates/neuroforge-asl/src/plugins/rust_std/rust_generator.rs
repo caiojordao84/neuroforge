@@ -269,7 +269,13 @@ impl RustGenerator {
 
     fn generate_expr(&self, expr: &AslExpr) -> String {
         match expr {
-            AslExpr::Literal(l) => l.value.to_string(),
+            AslExpr::Literal(l) => {
+                let s = l.value.to_string();
+                if let Some(s_val) = l.value.as_str() {
+                    return format!("\"{}\"", s_val);
+                }
+                s
+            }
             AslExpr::Var(v) => v.name.clone(),
             AslExpr::Binary(b) => {
                 format!(
@@ -278,6 +284,38 @@ impl RustGenerator {
                     self.generate_op(&b.op),
                     self.generate_expr(&b.right)
                 )
+            }
+            AslExpr::Unary(u) => {
+                format!("({}{})", u.op.to_symbol(), self.generate_expr(&u.expr))
+            }
+            AslExpr::Call(c) => {
+                let callee = if c.callee == "currentTime" || c.callee == "millis" {
+                    "embassy_time::Instant::now().as_millis()".to_string()
+                } else {
+                    c.callee.clone()
+                };
+                if callee == "embassy_time::Instant::now().as_millis()" {
+                    callee
+                } else {
+                    let args: Vec<String> = c.args.iter().map(|a| self.generate_expr(a)).collect();
+                    format!("{}({})", callee, args.join(", "))
+                }
+            }
+            AslExpr::Member(m) => {
+                format!("{}.{}", self.generate_expr(&m.target), m.property)
+            }
+            AslExpr::Index(i) => {
+                format!("{}[{}]", self.generate_expr(&i.target), self.generate_expr(&i.index))
+            }
+            AslExpr::Index2D(i) => {
+                format!("{}[{}][{}]", self.generate_expr(&i.array), self.generate_expr(&i.row_index), self.generate_expr(&i.col_index))
+            }
+            AslExpr::Index3D(i) => {
+                format!("{}[{}][{}][{}]", self.generate_expr(&i.array), self.generate_expr(&i.d1_index), self.generate_expr(&i.d2_index), self.generate_expr(&i.d3_index))
+            }
+            AslExpr::Array(a) => {
+                let elems: Vec<String> = a.elements.iter().map(|e| self.generate_expr(e)).collect();
+                format!("[{}]", elems.join(", "))
             }
             _ => "0".to_string(),
         }

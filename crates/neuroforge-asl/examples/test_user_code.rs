@@ -1,6 +1,6 @@
 // Test script for transpiling the user's Rust LED fade code to C++ and MicroPython
 
-use neuroforge_asl::transpile::transpile;
+use neuroforge_core::transpile::transpile;
 
 fn main() {
     // The user's Rust code (simplified for testing - the full embassy/esp-hal code won't parse as standard Rust)

@@ -1,0 +1,162 @@
+# METADATA:
+project_name: st-standard-library
+version: 1
+editor: dendriForge
+author: CoreSystem
+ASLversion: 0.2.0
+
+## 1. HARDWARE INTERFACE:
+hardware[0|]{}:
+
+## 2. SYSTEM DATA:
+data:
+  TIME_UNIT: ms
+  NULL_VAL: 0
+  error: 0.0
+  dt: 0
+  derivative: 0.0
+  output: 0.0
+  in_bounds: false
+  TON_blocks: 0
+  TOF_blocks: 0
+  TP_blocks: 0
+  TONR_blocks: 0
+  CTU_blocks: 0
+  CTD_blocks: 0
+  PID_blocks: 0
+  EDGE_blocks: 0
+  LATCH_blocks: 0
+
+## 3. INITIALIZATION SYSTEM:
+setup[1]:
+  - delay(0)
+
+## 4. BEHAVIORAL LOGIC (LOOP):
+loop[1]:
+  - delay(0)
+
+## 5. PROCEDURAL FUNCTIONS:
+functions:
+  TON(block_ref, IN, PT)[13]:
+    - if not IN:
+    - block_ref.Q = false
+    - block_ref.ET = 0
+    - block_ref.start_time = 0
+    - else:
+    - if block_ref.start_time == 0:
+    - block_ref.start_time = currentTime()
+    - block_ref.ET = currentTime() - block_ref.start_time
+    - if block_ref.ET >= PT:
+    - block_ref.ET = PT
+    - block_ref.Q = true
+    - else:
+    - block_ref.Q = false
+
+  TOF(block_ref, IN, PT)[13]:
+    - if IN:
+    - block_ref.Q = true
+    - block_ref.ET = 0
+    - block_ref.start_time = 0
+    - else:
+    - if block_ref.Q:
+    - if block_ref.start_time == 0:
+    - block_ref.start_time = currentTime()
+    - block_ref.ET = currentTime() - block_ref.start_time
+    - if block_ref.ET >= PT:
+    - block_ref.ET = PT
+    - block_ref.Q = false
+    - block_ref.start_time = 0
+
+  TP(block_ref, IN, PT)[13]:
+    - if IN and not block_ref.M and not block_ref.Q:
+    - block_ref.Q = true
+    - block_ref.start_time = currentTime()
+    - if block_ref.Q:
+    - block_ref.ET = currentTime() - block_ref.start_time
+    - if block_ref.ET >= PT:
+    - block_ref.Q = false
+    - block_ref.start_time = 0
+    - block_ref.ET = PT
+    - if not IN and not block_ref.Q:
+    - block_ref.ET = 0
+    - block_ref.start_time = 0
+    - block_ref.M = IN
+
+  TONR(block_ref, IN, PT, RESET)[12]:
+    - if block_ref.last_time == 0:
+    - block_ref.last_time = currentTime()
+    - dt = currentTime() - block_ref.last_time
+    - block_ref.last_time = currentTime()
+    - if RESET:
+    - block_ref.ET = 0
+    - block_ref.Q = false
+    - if IN and not block_ref.Q:
+    - block_ref.ET = block_ref.ET + dt
+    - if block_ref.ET >= PT:
+    - block_ref.Q = true
+    - block_ref.ET = PT
+
+  CTU(block_ref, CU, RESET, PV)[10]:
+    - if RESET:
+    - block_ref.CV = 0
+    - block_ref.Q = false
+    - if CU and not block_ref.M:
+    - block_ref.CV = block_ref.CV + 1
+    - block_ref.M = CU
+    - if block_ref.CV >= PV:
+    - block_ref.Q = true
+    - else:
+    - block_ref.Q = false
+
+  CTD(block_ref, CD, LOAD, PV)[10]:
+    - if LOAD:
+    - block_ref.CV = PV
+    - block_ref.Q = false
+    - if CD and not block_ref.M:
+    - block_ref.CV = block_ref.CV - 1
+    - block_ref.M = CD
+    - if block_ref.CV <= 0:
+    - block_ref.Q = true
+    - else:
+    - block_ref.Q = false
+
+  R_TRIG(block_ref, CLK)[5]:
+    - if CLK and not block_ref.M:
+    - block_ref.Q = true
+    - else:
+    - block_ref.Q = false
+    - block_ref.M = CLK
+
+  F_TRIG(block_ref, CLK)[5]:
+    - if not CLK and block_ref.M:
+    - block_ref.Q = true
+    - else:
+    - block_ref.Q = false
+    - block_ref.M = CLK
+
+  SET(block_ref, IN)[2]:
+    - if IN:
+    - block_ref.Q = true
+
+  RESET(block_ref, IN)[2]:
+    - if IN:
+    - block_ref.Q = false
+
+  IN_RANGE(val, min_val, max_val)[4]:
+    - in_bounds = false
+    - if val >= min_val and val <= max_val:
+    - in_bounds = true
+    - return(in_bounds)
+
+  compute_PID(block_ref, setpoint, process_variable, kp, ki, kd, out_min, out_max)[11]:
+    - error = setpoint - process_variable
+    - dt = currentTime() - block_ref.last_time
+    - if dt == 0:
+    - dt = 1
+    - block_ref.integral = block_ref.integral + (error * dt)
+    - derivative = (error - block_ref.last_error) / dt
+    - output = (kp * error) + (ki * block_ref.integral) + (kd * derivative)
+    - output = max(out_min, min(out_max, output))
+    - block_ref.last_error = error
+    - block_ref.last_time = currentTime()
+    - block_ref.OUT = output

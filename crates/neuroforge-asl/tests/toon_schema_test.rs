@@ -7,12 +7,12 @@ mod tests {
     use regex::Regex;
     use std::path::PathBuf;
 
-    /// Get the path to a test file in docs/boards/
+    /// Get the path to a test file in assets/boards/
     /// Uses the workspace root (two levels up from crate root)
     fn test_file_path(filename: &str) -> PathBuf {
         let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let workspace_root = crate_dir.parent().unwrap().parent().unwrap();
-        workspace_root.join("docs/boards").join(filename)
+        workspace_root.join("assets/boards").join(filename)
     }
 
     /// Test parsing board-schema.toon
@@ -187,7 +187,7 @@ mod tests {
         // Get the components directory path
         let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let workspace_root = crate_dir.parent().unwrap().parent().unwrap();
-        let components_dir = workspace_root.join("docs/components");
+        let components_dir = workspace_root.join("assets/components");
 
         if components_dir.exists() {
             // If there are component files, verify they have required structure

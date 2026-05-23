@@ -1,11 +1,11 @@
 // Final verification tests for transpilation pipeline
 // Tests: Simple Blink, PWM Fade, Embassy Example (parsing)
 
-use neuroforge_asl::transpile;
+use neuroforge_core::transpile;
 
 #[cfg(test)]
 mod final_verification_tests {
-    use neuroforge_asl::transpile;
+    use neuroforge_core::transpile;
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // TEST 1: Simple Blink - C++ (Arduino)

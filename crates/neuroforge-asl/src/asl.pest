@@ -1,41 +1,72 @@
 // --- ASL Formal Grammar Definition ---
 // Whitespace and comments are automatically ignored by Pest
 WHITESPACE = _{ " " | "\t" }
-COMMENT = _{ ("#" | "//") ~ (!NEWLINE ~ ANY)* }
+COMMENT = _{ 
+    !(
+        ("##") |
+        ("#" ~ (" " | "\t")* ~ "METADATA:") |
+        ("#" ~ (" " | "\t")* ~ "HARDWARE INTERFACE:") |
+        ("#" ~ (" " | "\t")* ~ "SYSTEM DATA:") |
+        ("#" ~ (" " | "\t")* ~ "INITIALIZATION SYSTEM:") |
+        ("#" ~ (" " | "\t")* ~ "BEHAVIORAL LOGIC") |
+        ("#" ~ (" " | "\t")* ~ "PROCEDURAL FUNCTIONS") |
+        "data:" |
+        "state:" |
+        "timers:" |
+        "functions:"
+    ) ~ 
+    ("#" | "//") ~ 
+    (!NEWLINE ~ ANY)* 
+}
 
 // The root of the document
-asl_document = { SOI ~ metadata_block? ~ hardware_block? ~ data_block? ~ state_block? ~ timers_block? ~ routines_block ~ EOI }
+asl_document = { SOI ~ NEWLINE* ~ metadata_block? ~ NEWLINE* ~ hardware_block? ~ NEWLINE* ~ data_block? ~ NEWLINE* ~ state_block? ~ NEWLINE* ~ timers_block? ~ NEWLINE* ~ routines_block ~ EOI }
 
 // --- 1. Metadata Block ---
-metadata_block = { "##" ~ ANY* ~ "METADATA:" ~ NEWLINE* ~ metadata_entry* }
+metadata_block = { ("##" | "#") ~ (!"METADATA:" ~ ANY)* ~ "METADATA:" ~ NEWLINE+ ~ (metadata_entry | NEWLINE)* }
 metadata_entry = { ident ~ ":" ~ (!NEWLINE ~ ANY)* ~ NEWLINE+ }
 
 // --- 2. Hardware Block ---
-hardware_block = { "##" ~ ANY* ~ "HARDWARE INTERFACE:" ~ NEWLINE* ~ "hardware[" ~ ASCII_DIGIT+ ~ "|" ~ ANY* ~ "]:" ~ NEWLINE* ~ hw_entry* }
-hw_entry = { ASCII_DIGIT+ ~ "|" ~ ident ~ "|" ~ ident ~ "|" ~ string_literal ~ "|" ~ string_literal ~ NEWLINE+ }
+hardware_block = { 
+    ("##" | "#") ~ (!"HARDWARE INTERFACE:" ~ ANY)* ~ "HARDWARE INTERFACE:" ~ NEWLINE+ ~
+    "hardware[" ~ ASCII_DIGIT+ ~ "|" ~ (!"]" ~ ANY)* ~ "]" ~ (!":" ~ ANY)* ~ ":" ~ NEWLINE+ ~
+    (hw_entry | NEWLINE)*
+}
+hw_pin = { ASCII_DIGIT+ }
+hw_value = { (!("|" | NEWLINE) ~ ANY)* }
+hw_entry = { hw_pin ~ "|" ~ hw_value ~ "|" ~ hw_value ~ "|" ~ hw_value ~ "|" ~ hw_value ~ NEWLINE+ }
 
 // --- 3. Memory Blocks (Data & State) ---
-data_block = { "##" ~ ANY* ~ "SYSTEM DATA:" ~ NEWLINE* ~ "data:" ~ NEWLINE+ ~ var_entry* }
-state_block = { "state:" ~ NEWLINE+ ~ var_entry* }
-var_entry = { ident ~ ":" ~ (!NEWLINE ~ ANY)+ ~ NEWLINE+ }
+data_block = { 
+    ("##" | "#") ~ (!"SYSTEM DATA:" ~ ANY)* ~ "SYSTEM DATA:" ~ NEWLINE+ ~
+    "data:" ~ NEWLINE+ ~
+    (var_entry | NEWLINE)* 
+}
+state_block = { "state:" ~ NEWLINE+ ~ (var_entry | NEWLINE)* }
+var_value = { (!NEWLINE ~ ANY)+ }
+var_entry = { ident ~ ":" ~ var_value ~ NEWLINE+ }
 
 // --- 4. Timers Block ---
-timers_block = { "timers:" ~ NEWLINE+ ~ timer_entry* }
-timer_entry = { ident ~ ":" ~ "{" ~ (!"}" ~ ANY)* ~ "}" ~ NEWLINE+ }
+timers_block = { "timers:" ~ NEWLINE+ ~ (timer_entry | NEWLINE)* }
+timer_body = { (!"}" ~ ANY)* }
+timer_entry = { ident ~ ":" ~ "{" ~ timer_body ~ "}" ~ NEWLINE+ }
 
 // --- 5. Routines (Logic) ---
-routines_block = { routine_def* }
-routine_def = { ident ~ "(" ~ routine_args? ~ ")" ~ routine_decorator? ~ ":" ~ NEWLINE+ ~ routine_body }
+routines_block = { (routine_def | functions_header | header_line | NEWLINE)* }
+header_line = _{ ("##" | "#") ~ (!NEWLINE ~ ANY)* ~ NEWLINE+ }
+functions_header = { "functions:" ~ NEWLINE+ }
+routine_def = { ident ~ ("(" ~ routine_args? ~ ")")? ~ routine_decorator? ~ ":" ~ NEWLINE+ ~ routine_body }
 
 // The execution time decorator e.g. [50]
-routine_decorator = { "[" ~ ASCII_DIGIT+ ~ "]" }
+cycle_time = { ASCII_DIGIT+ }
+routine_decorator = { "[" ~ cycle_time ~ "]" }
 
 // Commas separated arguments
 routine_args = { ident ~ ("," ~ ident)* }
 
 // The body expects statements prefixed by hyphens as per the TOON example
 routine_body = { statement+ }
-statement = { "-" ~ (!NEWLINE ~ ANY)+ ~ NEWLINE+ }
+statement = { "-" ~ (!NEWLINE ~ ANY)+ ~ (NEWLINE+ | EOI) }
 
 // --- Core Primitives ---
 ident = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }

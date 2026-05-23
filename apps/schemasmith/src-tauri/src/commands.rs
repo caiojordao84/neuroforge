@@ -1,10 +1,10 @@
 //! SchemaSmith Tauri commands for board validation and export
 //! Uses neuroforge-asl types for authoritative validation
 
-use neuroforge_asl::asl_types::board::{
+use neuroforge_core::asl_types::board::{
     board_profile::BoardProfile, validation::ValidationError as BoardValidationError,
 };
-use neuroforge_asl::asl_types::component::component_profile::ComponentProfile;
+use neuroforge_core::asl_types::component::component_profile::ComponentProfile;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -97,12 +97,12 @@ pub struct ComponentValidationErrorDto {
 #[tauri::command]
 pub fn validate_board(toon_content: String) -> Result<BoardValidationResult, SchemaSmithError> {
     // Try to parse as BoardProfile (neuroforge-asl format)
-    let board_result = BoardProfile::from_toon_str(&toon_content);
+    let board_result: Result<BoardProfile, _> = BoardProfile::from_toon_str(&toon_content);
 
     match board_result {
         Ok(board) => {
             // Run validation using neuroforge-asl
-            let errors = board.validate();
+            let errors: Vec<BoardValidationError> = board.validate();
 
             let error_dtos: Vec<BoardValidationErrorDto> = errors
                 .into_iter()
@@ -290,7 +290,7 @@ pub fn export_board_toon(board: BoardProfile, path: String) -> Result<(), Schema
     // Serialize to TOON
     let toon_content = board
         .to_toon()
-        .map_err(|e| SchemaSmithError::SerializeError(e.to_string()))?;
+        .map_err(|e: neuroforge_core::asl_types::board::BoardToonError| SchemaSmithError::SerializeError(e.to_string()))?;
 
     // Write to file
     std::fs::write(&path, toon_content).map_err(|e| SchemaSmithError::IoError(e.to_string()))?;
@@ -322,7 +322,7 @@ pub fn load_board_from_file(path: String) -> Result<String, SchemaSmithError> {
 
     // Validate it's valid TOON by parsing
     let _: BoardProfile = BoardProfile::from_toon_str(&content)
-        .map_err(|e| SchemaSmithError::ParseError(e.to_string()))?;
+        .map_err(|e: neuroforge_core::asl_types::board::BoardToonError| SchemaSmithError::ParseError(e.to_string()))?;
 
     Ok(content)
 }

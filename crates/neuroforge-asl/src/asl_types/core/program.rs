@@ -11,6 +11,7 @@ use crate::asl_types::core::types::{AslExpr, AslType};
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct AslMetadata {
+    #[serde(alias = "project_name", alias = "projectName")]
     pub name: Option<String>,
     pub description: Option<String>,
     pub version: Option<String>,
@@ -23,24 +24,29 @@ pub struct AslMetadata {
 #[serde(rename_all = "camelCase")]
 pub struct AslProgram {
     /// Versão do schema ASL (ex: "4.0.0")
+    #[serde(alias = "aslVersion", alias = "ASLversion", alias = "asl_version")]
     pub asl_version: String,
     pub metadata: AslMetadata,
     /// 2.2     Dependências explícitas de biblioteca (ex: "wire", "servo", "mqtt")
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub includes: Vec<String>,
     /// 12     Definições de struct
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub structs: Vec<AslStructDef>,
     /// 4     Definições de enum (novo em v1.2)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub enums: Vec<AslEnum>,
     /// Variáveis globais
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub globals: Vec<AslGlobalVar>,
     /// 11     Funções puras (stateless)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub functions: Vec<AslFunction>,
     /// 5     Function Blocks stateful (novo em v1.2)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub function_blocks: Vec<AslFunctionBlock>,
     /// 2.3     Tasks (setup + loop + async tasks)
+    #[serde(default, alias = "tasks", alias = "tasks[1]", alias = "tasks[2]", alias = "tasks[3]", alias = "tasks[4]", alias = "tasks[5]")]
     pub tasks: Vec<AslTask>,
 }
 
@@ -61,10 +67,7 @@ impl Default for AslProgram {
 }
 
 impl AslProgram {
-    /// Merges an array of library programs into this main program.
-    /// This acts as the ASL Linker, deduplicating symbols (functions, globals, etc.)
-    /// to simulate a full VFS/multi-file compilation context.
-    pub fn link(&mut self, libraries: Vec<AslProgram>) {
+    pub fn link(&mut self, libraries: Vec<AslProgram>) -> Result<(), String> {
         for lib in libraries {
             // Includes (simple dedup)
             for inc in lib.includes {
@@ -75,29 +78,47 @@ impl AslProgram {
 
             // Structs dedup by name
             for s in lib.structs {
-                if !self.structs.iter().any(|existing| existing.name == s.name) {
-                    self.structs.push(s);
+                if self.structs.iter().any(|existing| existing.name == s.name) {
+                    return Err(format!("Linker Error: Conflicting declaration of struct '{}'", s.name));
                 }
+                self.structs.push(s);
             }
 
             // Enums dedup by name
             for e in lib.enums {
-                if !self.enums.iter().any(|existing| existing.name == e.name) {
-                    self.enums.push(e);
+                if self.enums.iter().any(|existing| existing.name == e.name) {
+                    return Err(format!("Linker Error: Conflicting declaration of enum '{}'", e.name));
                 }
+                self.enums.push(e);
             }
 
             // Globals dedup by name
             for global in lib.globals {
-                if !self.globals.iter().any(|g| g.name == global.name) {
-                    self.globals.push(global);
+                if self.globals.iter().any(|g| g.name == global.name) {
+                    let is_system_var = matches!(
+                        global.name.as_str(),
+                        "TIME_UNIT" | "NULL_VAL" | "error" | "dt" | "derivative" | "output" | "in_bounds" |
+                        "TON_blocks" | "TOF_blocks" | "TP_blocks" | "TONR_blocks" | "CTU_blocks" | "CTD_blocks" |
+                        "PID_blocks" | "EDGE_blocks" | "LATCH_blocks"
+                    );
+                    if is_system_var {
+                        continue;
+                    }
+                    return Err(format!("Linker Error: Conflicting declaration of global variable '{}'", global.name));
                 }
+                self.globals.push(global);
             }
 
             // Functions dedup and body resolution (replace empty forward declarations)
             for func in lib.functions {
                 let existing_idx = self.functions.iter().position(|f| f.name == func.name);
                 if let Some(idx) = existing_idx {
+                    if !self.functions[idx].body.is_empty() && !func.body.is_empty() {
+                        return Err(format!(
+                            "Linker Error: Conflicting declaration with ASL Standard Library routine '{}'",
+                            func.name
+                        ));
+                    }
                     // If existing function is a forward declaration (empty body) and new one has code, replace it
                     if self.functions[idx].body.is_empty() && !func.body.is_empty() {
                         self.functions[idx] = func;
@@ -109,15 +130,22 @@ impl AslProgram {
 
             // Function Blocks dedup by name
             for fb in lib.function_blocks {
-                if !self.function_blocks.iter().any(|f| f.name == fb.name) {
-                    self.function_blocks.push(fb);
+                if self.function_blocks.iter().any(|f| f.name == fb.name) {
+                    return Err(format!("Linker Error: Conflicting declaration of function block '{}'", fb.name));
                 }
+                self.function_blocks.push(fb);
             }
 
             // Tasks dedup
             for task in lib.tasks {
+                if task.name == "setup" || task.name == "loop" {
+                    continue;
+                }
                 let existing_idx = self.tasks.iter().position(|t| t.name == task.name);
                 if let Some(idx) = existing_idx {
+                    if !self.tasks[idx].body.is_empty() && !task.body.is_empty() {
+                        return Err(format!("Linker Error: Conflicting declaration of task '{}'", task.name));
+                    }
                     if self.tasks[idx].body.is_empty() && !task.body.is_empty() {
                         self.tasks[idx] = task;
                     }
@@ -126,6 +154,7 @@ impl AslProgram {
                 }
             }
         }
+        Ok(())
     }
 }
 
@@ -206,6 +235,7 @@ pub struct AslFunctionBlock {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct AslTask {
+    #[serde(alias = "scope")]
     pub name: String,
     /// true para tarefas async (25)
     #[serde(default)]
@@ -214,10 +244,12 @@ pub struct AslTask {
     pub priority: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stack_size: Option<u32>,
+    #[serde(default)]
     pub params: Vec<AslParam>,
     /// "void" por defeito
     #[serde(default = "default_void")]
     pub return_type: String,
+    #[serde(alias = "body", alias = "body[1]", alias = "body[2]", alias = "body[3]", alias = "body[4]", alias = "body[5]", alias = "body[6]", alias = "body[7]", alias = "body[8]", alias = "body[9]", alias = "body[10]")]
     pub body: Vec<AslStatement>,
 }
 
@@ -291,13 +323,13 @@ pub enum AslStatement {
     //          6     Pinos
     #[serde(rename = "pinMode")]
     PinMode(AslPinMode),
-    #[serde(rename = "digitalOutput")]
+    #[serde(alias = "digitalWrite", rename = "digitalOutput")]
     DigitalOutput(AslDigitalOutput),
-    #[serde(rename = "analogOutput")]
+    #[serde(alias = "analogWrite", rename = "analogOutput")]
     AnalogOutput(AslAnalogOutput),
-    #[serde(rename = "digitalInput")]
+    #[serde(alias = "digitalRead", rename = "digitalInput")]
     DigitalInput(AslDigitalInput),
-    #[serde(rename = "analogInput")]
+    #[serde(alias = "analogRead", rename = "analogInput")]
     AnalogInput(AslAnalogInput),
     //          8     Controlo de Fluxo
     #[serde(rename = "if")]
@@ -556,6 +588,7 @@ pub struct AslAnalogOutput {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AslDigitalInput {
     pub pin: AslExpr,
+    #[serde(alias = "value")]
     pub target: String,
 }
 
@@ -563,6 +596,7 @@ pub struct AslDigitalInput {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AslAnalogInput {
     pub pin: AslExpr,
+    #[serde(alias = "value")]
     pub target: String,
 }
 
@@ -571,9 +605,30 @@ pub struct AslAnalogInput {
 // ============================================================================
 
 /// 7.2     delay com duração estruturada (nunca ms raw).
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct AslDelay {
     pub duration: AslDuration,
+}
+
+impl<'de> Deserialize<'de> for AslDelay {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct RawDelay {
+            duration: Option<AslDuration>,
+            ms: Option<u64>,
+        }
+        let raw = RawDelay::deserialize(deserializer)?;
+        if let Some(dur) = raw.duration {
+            Ok(AslDelay { duration: dur })
+        } else if let Some(ms) = raw.ms {
+            Ok(AslDelay { duration: AslDuration::from_ms(ms) })
+        } else {
+            Ok(AslDelay::default())
+        }
+    }
 }
 
 /// Duração estruturada conforme 7.1 do Dicionário.
@@ -650,10 +705,11 @@ impl AslDuration {
 #[serde(rename_all = "camelCase")]
 pub struct AslIf {
     pub condition: AslExpr,
+    #[serde(alias = "then")]
     pub then_body: Vec<AslStatement>,
     #[serde(default)]
     pub else_if: Vec<AslElseIf>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(alias = "else", skip_serializing_if = "Option::is_none")]
     pub else_body: Option<Vec<AslStatement>>,
 }
 
@@ -1442,4 +1498,39 @@ impl AslRoutine {
         self.cycle_time_ms > 0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_link_conflict() {
+        let mut main_prog = AslProgram::default();
+        main_prog.functions.push(AslFunction {
+            name: "TON".to_string(),
+            params: vec![],
+            body: vec![AslStatement::Comment(AslComment { text: "main body".to_string() })],
+            return_type: Some(AslType::Void),
+            doc: None,
+            attributes: vec![],
+            is_async: false,
+        });
+
+        let mut lib_prog = AslProgram::default();
+        lib_prog.functions.push(AslFunction {
+            name: "TON".to_string(),
+            params: vec![],
+            body: vec![AslStatement::Comment(AslComment { text: "lib body".to_string() })],
+            return_type: Some(AslType::Void),
+            doc: None,
+            attributes: vec![],
+            is_async: false,
+        });
+
+        let res = main_prog.link(vec![lib_prog]);
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("Conflicting declaration with ASL Standard Library routine 'TON'"));
+    }
+}
+
 
