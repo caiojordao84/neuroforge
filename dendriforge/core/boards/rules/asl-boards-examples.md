@@ -23,7 +23,7 @@ specs:
   flash_available: 1048576
   sram: 4294967296
   eeprom: 0
-  clock: 1750
+  clock: 0
   voltage: "24V"
 dims:
   w: 142.0

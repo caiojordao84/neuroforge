@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Digital Twin - S7-1200 LED Test</title>
+  <link rel="stylesheet" href="dendriForge-A11Y-Slate.css">
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px;
+      background-color: #0f172a;
+      font-family: 'Roboto', sans-serif;
+      gap: 32px;
+    }
+    svg, object {
+      width: 600px;
+      height: auto;
+      border-radius: 8px;
+    }
+    .control-panel {
+      background: rgba(30, 41, 59, 0.45);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+      width: 380px;
+    }
+    .control-panel h3 {
+      margin: 0;
+      color: #f8fafc;
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      width: 100%;
+    }
+    .btn {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.85rem;
+    }
+    .btn-on {
+      background-color: #10b981;
+      color: #0f172a;
+    }
+    .btn-on:hover {
+      background-color: #34d399;
+      transform: translateY(-2px);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+    }
+    .btn-on:active {
+      transform: translateY(1px);
+    }
+    .btn-off {
+      background-color: #f43f5e;
+      color: #f8fafc;
+    }
+    .btn-off:hover {
+      background-color: #fb7185;
+      transform: translateY(-2px);
+      box-shadow: 0 0 12px rgba(244, 63, 94, 0.5);
+    }
+    .btn-off:active {
+      transform: translateY(1px);
+    }
+    .btn-demo {
+      background-color: #3b82f6;
+      color: #f8fafc;
+    }
+    .btn-demo:hover {
+      background-color: #60a5fa;
+      transform: translateY(-2px);
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+    }
+    .btn-demo:active {
+      transform: translateY(1px);
+    }
+  </style>
+</head>
+<body>
+  <object id="board" data="siemens-s7-1200-cpu-1214c-corrigido.svg" type="image/svg+xml"></object>
+
+  <div class="control-panel">
+    <h3>Controle dos LEDs</h3>
+    <div class="btn-group">
+      <button id="btn-on" class="btn btn-on">ON</button>
+      <button id="btn-off" class="btn btn-off">OFF</button>
+      <button id="btn-demo" class="btn btn-demo">DEMO</button>
+    </div>
+  </div>
+</body>
+
+<script>
+let svgDoc = null;
+const BOARD_LEDS = {};
+let blinkInterval = null;
+let activeTimeouts = [];
+
+function setLedState(ledId, state) {
+  if (!svgDoc) return;
+  const el = svgDoc.getElementById(ledId);
+  if (!el) {
+    console.warn(`LED '${ledId}' não encontrado`);
+    return;
+  }
+  let s = state;
+  if (state === true) s = 'on';
+  if (state === false) s = 'off';
+  el.dataset.state = s;
+}
+
+function clearAllTimeouts() {
+  activeTimeouts.forEach(clearTimeout);
+  activeTimeouts = [];
+}
+
+function registerTimeout(callback, delay) {
+  const t = setTimeout(() => {
+    callback();
+    activeTimeouts = activeTimeouts.filter(x => x !== t);
+  }, delay);
+  activeTimeouts.push(t);
+  return t;
+}
+
+function pulseLed(ledId, durationMs = 500) {
+  setLedState(ledId, 'on');
+  registerTimeout(() => {
+    setLedState(ledId, 'off');
+  }, durationMs);
+}
+
+function startDemo() {
+  if (blinkInterval) return;
+
+  // Inicializa estados de teste da demonstração (S7-1200)
+  if (BOARD_LEDS.MAINT) setLedState(BOARD_LEDS.MAINT, 'on');
+  if (BOARD_LEDS.DI_A_0) setLedState(BOARD_LEDS.DI_A_0, 'on');
+  if (BOARD_LEDS.DQ_A_0) setLedState(BOARD_LEDS.DQ_A_0, 'on');
+  if (BOARD_LEDS.RUN_STOP) setLedState(BOARD_LEDS.RUN_STOP, 'stop-blink');
+
+  // Inicializa estados de teste da demonstração (Arduino)
+  if (BOARD_LEDS.POWER) {
+    const el = svgDoc.getElementById(BOARD_LEDS.POWER);
+    if (el) el.style.removeProperty('animation');
+    setLedState(BOARD_LEDS.POWER, 'on');
+  }
+
+  blinkInterval = setInterval(() => {
+    // Piscada S7-1200
+    if (BOARD_LEDS.RXTX) pulseLed(BOARD_LEDS.RXTX);
+    
+    // Piscada Arduino
+    if (BOARD_LEDS.TX) pulseLed(BOARD_LEDS.TX);
+    if (BOARD_LEDS.RX) {
+      registerTimeout(() => {
+        if (BOARD_LEDS.RX) pulseLed(BOARD_LEDS.RX);
+      }, 500);
+    }
+    if (BOARD_LEDS.PIN13) pulseLed(BOARD_LEDS.PIN13);
+  }, 1000);
+}
+
+function stopDemo() {
+  if (blinkInterval) {
+    clearInterval(blinkInterval);
+    blinkInterval = null;
+  }
+  clearAllTimeouts();
+}
+
+function turnAllLedsOn() {
+  stopDemo();
+  if (!svgDoc) return;
+  Object.values(BOARD_LEDS).forEach(ledId => {
+    const el = svgDoc.getElementById(ledId);
+    if (!el) return;
+
+    // Se for o led-power, remove a animação de pulso CSS para mantê-lo totalmente sólido/estático
+    if (ledId === 'led-power') {
+      el.style.setProperty('animation', 'none', 'important');
+    }
+
+    if (el.classList.contains('led-green-yellow')) {
+      setLedState(ledId, 'run'); // define o led run/stop como 'run' (verde)
+    } else {
+      setLedState(ledId, 'on');
+    }
+  });
+}
+
+function turnAllLedsOff() {
+  stopDemo();
+  if (!svgDoc) return;
+  Object.values(BOARD_LEDS).forEach(ledId => {
+    const el = svgDoc.getElementById(ledId);
+    if (el) {
+      el.style.removeProperty('animation');
+    }
+    setLedState(ledId, 'off');
+  });
+}
+
+function injectStyles(doc) {
+  // Verifica se o SVG já possui a folha de estilos
+  const hasStylesheet = Array.from(doc.querySelectorAll('style')).some(style => 
+    style.textContent.includes('dendriForge-A11Y-Slate.css')
+  ) || Array.from(doc.styleSheets).some(sheet => 
+    sheet.href && sheet.href.includes('dendriForge-A11Y-Slate.css')
+  );
+
+  if (hasStylesheet) {
+    console.log("SVG já possui a folha de estilos associada.");
+    return;
+  }
+
+  console.log("Injetando folha de estilos dendriForge-A11Y-Slate.css no SVG...");
+  const styleEl = doc.createElementNS("http://www.w3.org/2000/svg", "style");
+  styleEl.textContent = `@import url("dendriForge-A11Y-Slate.css");`;
+  doc.documentElement.appendChild(styleEl);
+}
+
+function initializeLeds(doc) {
+  svgDoc = doc;
+  if (!svgDoc) {
+    console.warn('initializeLeds chamada sem documento válido');
+    return;
+  }
+
+  // Injeta a folha de estilos necessária no documento interno do SVG
+  injectStyles(svgDoc);
+
+  // Busca todos os elementos cujos IDs comecem com "led-"
+  const elements = svgDoc.querySelectorAll('[id^="led-"]');
+  console.log(`Elementos com ID iniciado por "led-" encontrados: ${elements.length}`);
+
+  // Mapeia todos os LEDs do SVG dinamicamente
+  elements.forEach(el => {
+    const key = el.id.replace(/^led-/, '').replace(/-/g, '_').toUpperCase();
+    BOARD_LEDS[key] = el.id;
+  });
+
+  console.log('LEDs disponíveis:', BOARD_LEDS);
+
+  // Vincula eventos dos botões de controle
+  document.getElementById('btn-on').addEventListener('click', turnAllLedsOn);
+  document.getElementById('btn-off').addEventListener('click', turnAllLedsOff);
+  document.getElementById('btn-demo').addEventListener('click', () => {
+    turnAllLedsOff();
+    startDemo();
+  });
+
+  // Inicia a demonstração automaticamente
+  startDemo();
+}
+
+const boardObj = document.getElementById('board');
+
+// Função auxiliar para verificar se o documento SVG está realmente carregado e acessível
+function isSvgLoaded(board) {
+  try {
+    const doc = board.contentDocument;
+    return doc && doc.documentElement && doc.documentElement.tagName.toLowerCase() === 'svg';
+  } catch (e) {
+    return false;
+  }
+}
+
+if (boardObj) {
+  if (isSvgLoaded(boardObj)) {
+    initializeLeds(boardObj.contentDocument);
+  } else {
+    boardObj.addEventListener('load', function () {
+      initializeLeds(this.contentDocument);
+    });
+  }
+}
+</script>
+</html>

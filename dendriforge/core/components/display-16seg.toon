@@ -3,14 +3,14 @@ project_name: display-16seg-profile
 version: 1
 editor: dendriForge
 author: schemasmith
-ASLversion: 0.2.0
+ASLversion: 0.1.0
 
 ## 1. IDENTIFICATION:
 id: display-16seg
 name: "16-Segment Display"
 family: electricals
-subfamily: passives
-category: passive
+subfamily: displays
+category: signal
 standard: "IEC 60810"
 url: null
 image: display-16seg.svg
@@ -166,7 +166,7 @@ dendriForge:
   componentFamilySkillId: electricals-family
   componentProfileId: display-16seg
   simulationEngine: basic-analog
-  paletteGroup: "Fundamental Electricals > Passives"
+  paletteGroup: "Fundamental Electricals > Displays"
   tags[7]:
     - sixteen-segment
     - display

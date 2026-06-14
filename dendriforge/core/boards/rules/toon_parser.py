@@ -361,9 +361,9 @@ def parse_and_validate(content: str, domain: Domain) -> ValidationResult:  # noq
             elif array_kind == 'defaultLanguageSkills':
                 actual_default_lang_skills += 1
                 val = _unquote(trimmed[2:].strip())
-                if not re.match(r'^[a-z][a-z0-9]*(-[a-z][a-z0-9]*)*$', val):
+                if not re.match(r'^[a-z][a-z0-9]*(-[a-z0-9]+)*$', val):
                     add_error(line_num,
-                              "§14.9 Skill identifier must match ^[a-z][a-z0-9]*(-[a-z][a-z0-9]*)*$",
+                              "§14.9 Skill identifier must match ^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
                               trimmed)
             continue
 
@@ -434,7 +434,7 @@ def parse_and_validate(content: str, domain: Domain) -> ValidationResult:  # noq
                 if dir_val not in ('input', 'output', 'null'):
                     add_error(line_num,
                               "§14.3 Power pin direction must be input/output/null", line[:40])
-                if type_val not in ('ground', 'null'):
+                if type_val not in ('ground', 'null', ''):
                     add_error(line_num,
                               "§14.3 Power pin type must be ground/null", line[:40])
                 raw_volt = _unquote(volt_val)
@@ -580,14 +580,10 @@ def parse_and_validate(content: str, domain: Domain) -> ValidationResult:  # noq
                                   '§14.5(MCU) Multi-pin peripheral value with ";" must be quoted',
                                   line[:60])
                 elif domain == 'PLC':
-                    valid_plc_periph = {
-                        'serial', 'ethernet', 'profibus', 'profinet', 'modbus-tcp',
-                        'modbus-rtu', 'canopen', 'ethernetip', 'devicenet',
-                        'hart', 'io-link', 'opc-ua'
-                    }
-                    if periph_val not in valid_plc_periph:
+                    # Allow any lowercase alphanumeric name, with hyphens or underscores
+                    if not re.match(r'^[a-z0-9_-]+$', periph_val):
                         add_error(line_num,
-                                  f"§14.7(PLC) peripheral must be one of: {'/'.join(sorted(valid_plc_periph))}",
+                                  "§14.7(PLC) peripheral identifier must be lowercase alphanumeric, with hyphens or underscores",
                                   line[:60])
                 for f in fields:
                     if re.search(r' ; | ;|; ', _unquote(f)):
@@ -627,6 +623,34 @@ def parse_and_validate(content: str, domain: Domain) -> ValidationResult:  # noq
                               f'§4 Unquoted key "{unquoted_key}" must match [A-Za-z_][A-Za-z0-9_.]* '
                               f'or be quoted',
                               line[:40])
+
+            # §4 Allowed keys check
+            parent_path = '/'.join(key_path_stack)
+            base_key = re.sub(r'\[.*', '', unquoted_key)
+            allowed_keys_by_path = {
+                '': {
+                    'project_name', 'version', 'editor', 'author', 'ASLversion',
+                    'id', 'name', 'manufacturer', 'mcu', 'cpu', 'category', 'image', 'url', 'form_factor', 'standard',
+                    'specs', 'dims', 'usb', 'restrictions', 'compatibility', 'dendriForge',
+                    'powerPins', 'gpio', 'peripherals'
+                },
+                'specs': {
+                    'flash_total', 'flash_available', 'sram', 'eeprom', 'clock', 'voltage',
+                    'cores', 'wifi', 'bluetooth'
+                },
+                'dims': {'w', 'h', 't'},
+                'usb': {'type', 'chip', 'vid', 'pid'},
+                'restrictions': {'max_io_current', 'total_current_limit', 'warnings'},
+                'compatibility': {
+                    'arduinoCore', 'pio', 'frameworks', 'languages', 'bootloader',
+                    'espressifIDF', 'sw', 'certifications'
+                },
+                'dendriForge': {'boardFamilySkillId', 'boardProfileId', 'defaultLanguageSkills'}
+            }
+            if parent_path not in allowed_keys_by_path:
+                add_error(line_num, f'§4 Unrecognised parent path: "{parent_path}"', line[:40])
+            elif base_key not in allowed_keys_by_path[parent_path]:
+                add_error(line_num, f'§4 Unrecognised key "{base_key}" in path "{parent_path}"', line[:40])
 
             # §4 Duplicate keys
             parent_path = '/'.join(key_path_stack)
@@ -727,9 +751,10 @@ def parse_and_validate(content: str, domain: Domain) -> ValidationResult:  # noq
                               "§5.1(MCU) clock must be a positive integer in Hz", line[:40])
 
             if domain == 'PLC' and unquoted_key == 'clock':
-                add_error(line_num,
-                          '§5.1(PLC) "clock" key is forbidden in PLC profiles; use cycle_time',
-                          line[:40])
+                # Allow clock in PLC if it's exactly 0
+                if trim_value != '0':
+                    add_error(line_num,
+                              "§5.1(PLC) clock in PLC profiles must be exactly 0", line[:40])
 
             if domain == 'PLC' and unquoted_key == 'cycle_time':
                 if not re.match(r'^\d+$', trim_value) or int(trim_value) <= 0:
@@ -857,13 +882,19 @@ def parse_and_validate(content: str, domain: Domain) -> ValidationResult:  # noq
             # languages (PLC)
             if domain == 'PLC' and unquoted_key == 'languages' and trim_value:
                 raw = _unquote(trim_value)
-                valid_langs = {'LD', 'FBD', 'ST', 'IL', 'SFC'}
+                valid_langs = {
+                    'LD', 'LAD', 'FBD', 'ST', 'SCL', 'IL', 'SFC',
+                    'C', 'C++', 'CPP', 'PYTHON', 'RUST', 'ARDUINO-CPP'
+                }
                 for lang in re.split(r'[;]', raw):
                     lang = lang.strip()
-                    if lang and lang not in valid_langs:
-                        add_error(line_num,
-                                  f'§14.10(PLC) Invalid language "{lang}" — must be LD/FBD/ST/IL/SFC',
-                                  line[:40])
+                    if lang:
+                        lang_up = lang.upper()
+                        words = re.findall(r'\b[A-Z0-9+]{1,15}\b', lang_up)
+                        if not any(w in valid_langs for w in words) and lang_up not in valid_langs:
+                            add_error(line_num,
+                                      f'§14.10(PLC) Invalid language "{lang}"',
+                                      line[:40])
 
             # Forbidden MCU keys in PLC
             if domain == 'PLC' and unquoted_key in ('arduinoCore', 'pio', 'bootloader'):
@@ -881,9 +912,10 @@ def parse_and_validate(content: str, domain: Domain) -> ValidationResult:  # noq
 
             # boardFamilySkillId (PLC)
             if domain == 'PLC' and unquoted_key == 'boardFamilySkillId':
-                if _unquote(trim_value) != 'plc-family':
+                raw = _unquote(trim_value)
+                if not raw.endswith('plc-family') or not re.match(r'^[a-z][a-z0-9-]*$', raw):
                     add_error(line_num,
-                              '§14.10(PLC) boardFamilySkillId must be "plc-family"', line[:40])
+                              '§14.10(PLC) boardFamilySkillId must be kebab-case and end with "plc-family"', line[:40])
 
             # arduinoCore with dots must be quoted (MCU)
             if domain == 'MCU' and unquoted_key == 'arduinoCore':
@@ -934,7 +966,7 @@ def parse_and_validate(content: str, domain: Domain) -> ValidationResult:  # noq
     count_mismatch("defaultLanguageSkills", declared_default_lang_skills, actual_default_lang_skills)
 
     # §3 Required section order
-    required_order_mcu = [
+    required_order = [
         'DEVICE IDENTIFICATION',
         'TECH SPECS & DIMENSIONS',
         'ELECTRICAL PROFILE (POWER PINS)',
@@ -943,16 +975,6 @@ def parse_and_validate(content: str, domain: Domain) -> ValidationResult:  # noq
         'RESTRICTIONS & COMPATIBILITY',
         'AGENT SKILLS',
     ]
-    required_order_plc = [
-        'DEVICE IDENTIFICATION',
-        'TECH SPECS & DIMENSIONS',
-        'ELECTRICAL PROFILE (POWER SUPPLY)',
-        'I/O MODULE MAP',
-        'PERIPHERALS & PROTOCOLS',
-        'RESTRICTIONS & COMPATIBILITY',
-        'AGENT SKILLS',
-    ]
-    required_order = required_order_mcu if domain == 'MCU' else required_order_plc
     req_idx = 0
     for name in section_names:
         if req_idx < len(required_order) and name == required_order[req_idx]:

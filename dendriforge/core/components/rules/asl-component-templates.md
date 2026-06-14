@@ -83,7 +83,7 @@
 #   industrial | virtual-instruments | panel-infrastructure
 
 # §SUBFAMILY — valid values per family:
-#   electricals:          sources | passives | semiconductors |
+#   electricals:          sources | passives | semiconductors | displays |
 #                         protection | distribution
 #   sensors:              environment | motion-position | electrical |
 #                         process | industrial-presence-safety
@@ -367,6 +367,115 @@ dendriForge:
   paletteGroup: "Fundamental Electricals > Semiconductors"
   tags: [{tag1}, semiconductor, {type}]
 
+
+# ─────────────────────────────────────────────
+# TEMPLATE 2b — DISPLAYS
+# ─────────────────────────────────────────────
+
+# METADATA:
+project_name: {slug}-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. IDENTIFICATION:
+id: {slug}
+name: "{Display Name}"
+family: electricals
+subfamily: displays
+category: signal
+standard: "{ref}"
+url: null
+image: {slug}.svg
+symbol: {slug}-symbol.svg
+symbol_standard: IEC
+
+## 2. PARAMETERS:
+params:
+  format:
+    label: "Display Format"
+    default: "{default_format}"
+    options: ["{opt1}", "{opt2}", "{opt3}"]
+    type: enum
+    editable: true
+  interface:
+    label: "Interface"
+    default: "{interface}"
+    options: ["I2C", "SPI", "parallel", "RGB"]
+    type: enum
+    editable: true
+  supply_voltage:
+    label: "Supply Voltage"
+    unit: V
+    default: 5
+    options: [3, 5, 12, 24]
+    type: enum
+    editable: true
+  backlight:
+    label: "Backlight"
+    default: "none"
+    options: ["none", "LED-white", "LED-blue", "RGB"]
+    type: enum
+    editable: true
+
+## 3. ELECTRICAL PORTS:
+ports[4|]{id|direction|type|voltage_max|current_max|notes}:
+  VCC|input|power|"{supply_voltage}"|"200mA"|"DC supply positive"
+  GND|input|ground|null|null|"DC supply negative"
+  SCL|input|i2c|"{supply_voltage}"|"5mA"|"I2C clock (or parallel control)"
+  SDA|bidirectional|i2c|"{supply_voltage}"|"5mA"|"I2C data (or parallel data)"
+
+## 4. SIMULATION BEHAVIOR:
+simulation:
+  model: script
+  bidirectional: false
+  dynamic: true
+  thermal_model: false
+  noise_model: false
+  states[2]:
+    - off
+    - displaying
+
+## 5. LIMITS & WARNINGS:
+limits:
+  max_voltage: "{supply_voltage}"
+  max_current: "200mA"
+  max_power: null
+  max_temp: 70
+  min_temp: -20
+  ip_rating: null
+warnings[2]:
+  - "Level shifting may be required for 3.3V MCUs"
+  - "Check backlight current limits in datasheet"
+
+## 6. CONNECTIONS & COMPATIBILITY:
+connections:
+  allowed_with: ["mcu-*", "comm-*"]
+  forbidden_with: ["ac-source"]
+  requires: ["dc-source"]
+  typical_context: ["status-display", "menu-ui", "dashboard"]
+
+## 7. VISUAL & CANVAS:
+canvas:
+  width: 80
+  height: 40
+  ports_layout: custom
+  port_VCC: {x: 0,  y: 5}
+  port_GND: {x: 0,  y: 15}
+  port_SCL: {x: 0,  y: 27}
+  port_SDA: {x: 0,  y: 37}
+  label_position: top
+  value_display: "{format} / {interface}"
+  animated: true
+
+## 8. AGENT SKILLS:
+dendriForge:
+  componentFamilySkillId: electricals-family
+  componentProfileId: {slug}
+  simulationEngine: basic-analog
+  paletteGroup: "Fundamental Electricals > Displays"
+  tags: [{tag1}, display, i2c, interface]
 
 # ─────────────────────────────────────────────
 # TEMPLATE 3 — POWER SOURCES
@@ -1688,6 +1797,7 @@ dendriForge:
 
 # T01  Electrical Passives        → basic-analog
 # T02  Semiconductors             → basic-analog
+# T02b Displays                   → basic-analog
 # T03  Power Sources              → basic-analog
 # T04  Sensors                    → digital-io
 # T05  Command Elements           → digital-io

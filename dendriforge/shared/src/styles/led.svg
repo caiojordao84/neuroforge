@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?xml-stylesheet type="text/css" href="dendriForge-A11Y-Slate.css"?>
+<svg
+   width="10mm"
+   height="10mm"
+   viewBox="0 0 37.795276 37.795276"
+   version="1.1"
+   xml:space="preserve"
+   style="clip-rule:evenodd;fill-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2"
+   id="svg7"
+   sodipodi:docname="led.svg"
+   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.0"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:df="https://dendriforge.dev/ns/1.0"
+   df:profile="led"
+   df:version="0.2.0">
+
+  <defs id="defs1">
+    <style id="df-tokens">
+      :root {
+        --df-color:              red;
+        --df-vf:                 2.1;
+        --df-if-rated:           0.02;
+        --df-if-max:             0.03;
+        --df-luminous-intensity: 20;
+        --df-wavelength-peak:    660;
+        --df-vr-max:             5;
+        --df-power-rated:        0.065;
+
+        --df-led-fill:           var(--df-color-resolved, #c0392b);
+
+        --df-state:              off;
+        --df-state-opacity:      0.35;
+      }
+    </style>
+
+    <filter id="df-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#505050"
+     inkscape:zoom="9.5905071"
+     inkscape:cx="31.020258"
+     inkscape:cy="12.251698"
+     inkscape:window-width="1920"
+     inkscape:window-height="1009"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="case"
+     showguides="true"
+     inkscape:document-units="mm">
+    <sodipodi:guide
+       position="69.099999,8.0609988"
+       orientation="0,-1"
+       id="guide20"
+       inkscape:locked="false" />
+  </sodipodi:namedview>
+
+  <g id="leadframe">
+    <path
+       d="M 37.795275,9.3066595 V 28.204137 c 0,5.215007 -4.233892,9.448899
+          -9.448899,9.448899 H 9.4488986 C 4.2338923,37.653036 -2.8076e-7,
+          33.419144 -2.8076e-7,28.204137 V 9.3066595 C -2.8076e-7,4.0916532
+          4.2338923,-0.14223937 9.4488986,-0.14223937 H 28.346376 c
+          5.215007,0 9.448899,4.23389257 9.448899,9.44889887 z"
+       style="fill:#a0aaaf;stroke-width:0.319998"
+       id="path1" />
+    <path
+       d="M 37.228559,9.5898577 V 27.920299 c 0,5.058527 -4.106854,
+          9.165381 -9.165381,9.165381 H 9.7327368 c -5.0585273,0
+          -9.16538075,-4.106854 -9.16538075,-9.165381 V 9.5898577
+          c 0,-5.0585273 4.10685345,-9.16538074 9.16538075,-9.16538074
+          H 28.063178 c 5.058527,0 9.165381,4.10685344 9.165381,9.16538074 z"
+       style="fill:#ebebeb;stroke-width:0.319998"
+       id="path2" />
+  </g>
+
+  <g id="case" transform="matrix(0.31999793,0,0,0.31999793,3.1971717e-4,-0.14223937)">
+
+    <circle
+       cx="59.055" cy="59.055" r="29.528"
+       style="fill:#a0aaaf"
+       id="frame" />
+
+    <circle
+       cx="59.055" cy="59.055" r="27.756001"
+       id="die"
+       class="df-component-die"
+       style="fill:var(--df-led-fill);
+              opacity:var(--df-state-opacity);
+              transition:fill 0.3s ease, opacity 0.3s ease;"
+       data-component-id="led"
+       data-param-color="var(--df-color)"
+       data-param-vf="var(--df-vf)"
+       data-param-if-rated="var(--df-if-rated)"
+       data-param-if-max="var(--df-if-max)"
+       data-param-luminous-intensity="var(--df-luminous-intensity)"
+       data-param-wavelength-peak="var(--df-wavelength-peak)"
+       data-param-vr-max="var(--df-vr-max)"
+       data-param-power-rated="var(--df-power-rated)"
+       data-led-type="standard-thru-hole" />
+
+    <ellipse
+       cx="59.978001" cy="57.825001"
+       rx="25.983999" ry="25.393999"
+       style="opacity:1;
+              mix-blend-mode:screen;
+              fill:#e3e8eb;
+              fill-opacity:0.2;"
+       id="lens" />
+
+    <path
+       d="m 71.355,38.331 c 2.973,1.922 3.499,2.739 4.332,3.414 0.252,0.204
+          1.14,1.288 1.705,1.86 0.218,0.221 0.926,1.265 1.003,1.378 0.475,0.7
+          1.121,1.432 2.039,3.446 0.417,0.913 0.697,1.476 0.76,1.603 0.043,0.086
+          -0.001,0.102 0.432,1.122 0.187,0.44 -0.194,0.247 -1.157,0.639
+          -1.228,0.499 -1.258,0.386 -2.491,0.877 -0.852,0.339 -0.992,0.1
+          -1.034,0.029 -0.209,-0.355 -0.954,-2.898 -3.029,-5.524 -2.222,-2.813
+          -3.129,-3.146 -4.02,-3.919 -1.09,-0.946 -4.099,-2.314 -4.472,-2.483
+          -0.391,-0.178 -0.641,-0.208 -0.338,-0.766 0.084,-0.155 0.23,-0.74
+          0.333,-0.974 0.117,-0.266 0.157,-0.237 0.273,-0.506 0.024,-0.055
+          0.025,-0.258 0.089,-0.402 0.783,-1.774 0.635,-2.159 1.105,-1.964
+          0.453,0.188 0.471,0.124 0.917,0.34 1.214,0.586 1.265,0.474
+          3.552,1.832 z"
+       style="opacity:1;mix-blend-mode:screen;fill:#f2f6f8;fill-opacity:0.2;"
+       id="reflex" />
+  </g>
+
+  <g id="wire-bond">
+
+    <g id="anodes"
+       transform="matrix(0.31999793,0,0,0.31999793,3.1971717e-4,-28.488767)">
+      <circle
+         cx="59.054501" cy="191.57777" r="8.0609999"
+         id="A2"
+         class="df-pin power"
+         data-pin="A"
+         data-port-direction="input"
+         data-port-type="power"
+         style="clip-rule:evenodd;fill-rule:evenodd;
+                stroke-linejoin:round;stroke-miterlimit:2;" />
+      <circle
+         cx="59.054501" cy="104.58319" r="8.0609999"
+         id="A1"
+         class="df-pin power"
+         data-pin="A"
+         data-port-direction="input"
+         data-port-type="power"
+         style="clip-rule:evenodd;fill-rule:evenodd;
+                stroke-linejoin:round;stroke-miterlimit:2;" />
+    </g>
+
+    <g id="cathodes"
+       transform="matrix(0,-0.31999793,0.31999793,0,-30.815462,41.009495)">
+      <circle
+         cx="69.099998" cy="199.52197" r="8.0609999"
+         id="K2"
+         class="df-pin ground"
+         data-pin="K"
+         data-port-direction="input"
+         data-port-type="ground"
+         style="clip-rule:evenodd;fill-rule:evenodd;
+                stroke-linejoin:round;stroke-miterlimit:2;" />
+      <circle
+         cx="69.099998" cy="112.0844" r="8.0609999"
+         id="K1"
+         class="df-pin ground"
+         data-pin="K"
+         data-port-direction="input"
+         data-port-type="ground"
+         style="clip-rule:evenodd;fill-rule:evenodd;
+                stroke-linejoin:round;stroke-miterlimit:2;" />
+    </g>
+  </g>
+
+</svg>

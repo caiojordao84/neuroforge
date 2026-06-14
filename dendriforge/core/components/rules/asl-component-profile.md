@@ -122,7 +122,7 @@ Required fields: `id`, `name`, `family`, `subfamily`, `category`, `url`, `image`
 
 | `family`               | Allowed `subfamily` values                                                                                          |
 |------------------------|---------------------------------------------------------------------------------------------------------------------|
-| `electricals`          | `sources`, `passives`, `semiconductors`, `protection`, `distribution`                                              |
+| `electricals`          | `sources`, `passives`, `semiconductors`, `displays`, `protection`, `distribution`                                   |
 | `sensors`              | `environment`, `motion-position`, `electrical`, `process`, `industrial-presence-safety`                            |
 | `command-elements`     | `pushbuttons`, `selectors`, `emergency-safety`, `signaling`, `special-interfaces`                                  |
 | `actuators`            | `maker-prototyping`, `industrial-electrical`, `motor-drives`, `linear-valves`                                      |
@@ -388,7 +388,7 @@ project_name: resistor-profile
 version: 1
 editor: dendriForge
 author: schemasmith
-ASLversion: 0.2.0
+ASLversion: 0.1.0
 
 ## 1. IDENTIFICATION:
 id: resistor

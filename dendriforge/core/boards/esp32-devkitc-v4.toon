@@ -26,7 +26,7 @@ specs:
   wifi: "802.11b/g/n"
   bluetooth: "v4.2 BR/EDR+BLE"
 dims:
-  w: 54.0
+  w: 48.2
   h: 27.9
   t: 1.6
 

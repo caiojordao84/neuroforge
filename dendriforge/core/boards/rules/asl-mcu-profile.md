@@ -81,7 +81,7 @@ The permitted unit suffix set for MCU profiles (value-with-unit strings, §5 cor
 
 - Declared with: `powerPins[n|]{name|direction|voltage|type}:`
 - `direction` is restricted to: `input`, `output`, `null`
-- `type` is restricted to: `ground`, `null`
+- `type` is restricted to: `ground`, `null`, or blank (empty string)
 - `voltage` **MUST** use the `V` unit suffix when non-null. Example: `5V`, `3.3V`
 - Pin names **MUST** be unique within `powerPins`.
 - The declared count `[n]` **MUST** match exactly the number of power pin rows.
@@ -135,7 +135,7 @@ The permitted unit suffix set for MCU profiles (value-with-unit strings, §5 cor
 
 ### §14.9 — Language & Skill Identifiers
 
-- Language identifiers in `defaultLanguageSkills` **MUST** match: `^[a-z][a-z0-9]*(-[a-z][a-z0-9]*)*$`
+- Language identifiers in `defaultLanguageSkills` **MUST** match: `^[a-z][a-z0-9]*(-[a-z0-9]+)*$` (allowing digits immediately after a hyphen)
   - Example: `arduino-cpp-avr`, `rust-embassy-avr`
 - `boardProfileId` **MUST** match: `^[a-z][a-z0-9-]*$` (kebab-case: lowercase letters, digits, hyphens)
   - Example: `arduino-uno-r3`, `esp32-devkit-v1`
@@ -145,7 +145,7 @@ The permitted unit suffix set for MCU profiles (value-with-unit strings, §5 cor
 
 ## Standard Section Order (MCU Profiles)
 
-A conformant MCU profile document **MUST** contain the following sections in this order:
+A conformant MCU profile document **MUST** contain the following sections in this exact order:
 
 | Index | Section Name |
 |---|---|

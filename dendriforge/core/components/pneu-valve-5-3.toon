@@ -78,7 +78,7 @@ simulation:
   thermal_model: false
   noise_model: false
   states[3]:
-    - center-state     # Default rest state
+    - center-state
     - position-a-active
     - position-b-active
 
@@ -130,7 +130,7 @@ dendriForge:
   paletteGroup: "Pneumatics > Directional Valves"
   tags[6]:
     - valve
-    - 5/3
+    - size-5-3
     - directional
     - pneumatic
     - center-closed

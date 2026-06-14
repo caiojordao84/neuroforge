@@ -15,14 +15,11 @@
 
 Core scalar rules (integer, float, bool, null, hex, string, quoting triggers) are inherited from `toon-dialect-core.rules §5`. The following domain constraints **replace** the MCU equivalents from `asl-mcu-profile.rules`.
 
-### §5.1 — Cycle Time
+### §5.1 — Clock Frequency
 
-- Scan/cycle time **MUST** be expressed as a **bare integer in milliseconds**.
-  - Key name: `cycle_time`
-  - Example: `cycle_time: 10`
-- The value `0` is **forbidden** (a cycle time of zero is not physically meaningful).
-- There is **no `clock` field** in PLC profiles; PLCs are not characterised by a processor clock in the same sense as MCUs.
-- Parsers **MUST** reject non-integer and non-positive values in strict mode.
+- The `clock` field under the `specs` block **MUST** be set to exactly `0` for PLC profiles, representing a non-applicable virtual clock.
+  - Example: `clock: 0`
+- Scan/cycle time fields (e.g. `cycle_time`) are **not** supported at the schema level.
 
 ### §5.2 — Allowed Unit Suffixes
 
@@ -30,25 +27,20 @@ The permitted unit suffix set for PLC profiles (value-with-unit strings):
 
 | Suffix | Meaning | Example |
 |---|---|---|
-| `ms` | Milliseconds | `10ms`, `100ms` |
-| `A` | Amperes | `2A` |
 | `mA` | Milliamperes | `500mA` |
 | `V` | Volts | `24V`, `5V` |
-| `W` | Watts | `25W` |
-| `bar` | Pressure | `1bar`, `10bar` |
-| `kHz` | Kilohertz | `19.2kHz` |
 | `KB` | Kilobytes | `100KB`, `4096KB` |
+| `kHz` | Kilohertz | `100kHz` |
 
 - A number immediately followed by one of the above suffixes (no space) is a **unit string**.
 - Unit strings are scalar strings in TOON's type model, **not** numbers.
-- `MHz` **MUST NOT** be used as a unit suffix in PLC profiles.
-- `clock` as a field key is **forbidden** in PLC profiles; use `cycle_time` instead.
+- `MHz`, `ms`, `A`, `W`, `bar` are **not** supported as suffixes in standard PLC profiles.
 
 ### §5.3 — Boolean Shorthand
 
 - The `t` (true) / `f` (false) shorthand is allowed **only** inside:
-  - I/O module tabular rows (see §14.3)
-  - Digital channel descriptor rows (see §14.4)
+  - GPIO map tabular rows (see §14.4)
+  - Power pin tabular rows (see §14.3)
 - Outside these contexts, **MUST** use full literals `true` or `false`.
 - Parsers **MUST** map `t → true`, `f → false` at the dialect layer.
 
@@ -70,14 +62,11 @@ The permitted unit suffix set for PLC profiles (value-with-unit strings):
 
 - These values **MUST** always be quoted (they contain `%`, which triggers quoting per §12).
 - Parsers **MUST NOT** interpret these as numeric expressions.
-- The `M`-area addresses (`%MW`, `%MD`) are valid **only** for internal markers and flags, **not** for I/O module `addr_start` / `addr_end` fields.
 
-### §5.5 — Vendor and Product Identifiers
+### §5.5 — USB / Service Port Identifiers
 
-- `vendor_id` and `product_id` are **free-form** values: integer, quoted string, or unquoted identifier.
-  - No hex format constraint is imposed (unlike MCU `vid`/`pid`).
-  - Examples: `vendor_id: 18`, `vendor_id: "Siemens"`, `vendor_id: "0x0012"`
-  - If expressed as hex, **MUST** be quoted.
+- `vid` and `pid` under the `usb` block **MUST** be quoted and match `^0x[0-9A-Fa-f]{4}$`.
+  - Example: `vid: "0x0000"` | `pid: "0x0000"`
 
 ---
 
@@ -90,159 +79,96 @@ The permitted unit suffix set for PLC profiles (value-with-unit strings):
 - `category` **MUST** be exactly: `plc`
 - `cpu` identifies the CPU module model; it is a free-form quoted or unquoted string.
   - Example: `cpu: "CPU 1214C DC/DC/DC"`
-- `manufacturer` is a free-form string (no enum constraint).
+- `manufacturer` is a free-form string.
 - `form_factor` is restricted to: `modular`, `compact`, `rack`, `softplc`
-  - If omitted, it defaults to `modular` in strict mode.
 - `standard` is **recommended**; if present, **MUST** be `"IEC 61131-3"` or a valid extension.
-  - Example: `standard: "IEC 61131-3"`, `standard: "IEC 61131-3 + PLCopen"`
+  - Example: `standard: "IEC 61131-3"`
 
 ### §14.2 — Tech Specs
 
-- `cycle_time` **MUST** be present and a positive integer (milliseconds) — see §5.1.
-- `supply_voltage` **MUST** use the `V` unit suffix. Example: `24V`
-- `memory_work` **MUST** use the `KB` unit suffix. Example: `100KB`
-- `memory_load` **MUST** use the `KB` unit suffix. Example: `4096KB`
-- `memory_retain` is optional; if present, **MUST** use the `KB` unit suffix.
-- `power_consumption` is optional; if present, **MUST** use the `W` unit suffix.
+- `flash_total` and `flash_available` **MUST** be positive integers (bytes).
+- `sram` and `eeprom` **MUST** be non-negative integers (bytes).
+- `clock` **MUST** be exactly `0`.
+- `voltage` **MUST** use the `V` unit suffix. Example: `24V`.
 - `dims.w`, `dims.h`, `dims.t` **MUST** be positive floats (millimetres), if present.
 
-### §14.3 — I/O Module Map
+### §14.3 — Power Pins
 
-- Declared with: `ioModules[n|]{slot|rack|type|channels|addr_start|addr_end|current}:`
-- `slot` **MUST** be a non-negative integer.
-- `rack` **MUST** be a non-negative integer; **MUST** reference a rack declared in the `racks` collection (see §14.6) if that collection is present.
-- `type` is restricted to: `DI`, `DO`, `AI`, `AO`, `DIO`, `AIO`, `safety-DI`, `safety-DO`, `mixed`
-- `channels` **MUST** be a positive integer.
-- `addr_start` and `addr_end` **MUST** follow IEC 61131-3 address format (see §5.4) and **MUST** be quoted.
-- `current` is optional; if present, **MUST** use the `mA` unit suffix.
-- Slot numbers **MUST** be unique within the same rack.
-- `addr_start` and `addr_end` **MUST** be consistent with the channel count and module type:
-  - `DI` / `DO` modules: bit (`X`) addressing — `%IX` or `%QX`
-  - `AI` / `AO` modules: word (`W`) or dword (`D`) addressing — `%IW`, `%QW`, `%ID`, `%QD`
-- The declared count `[n]` **MUST** match the number of module rows.
+- Declared with: `powerPins[n|]{name|direction|voltage|type}:`
+- `direction` is restricted to: `input`, `output`, `null`
+- `type` is restricted to: `ground`, `null`, or blank (empty string)
+- `voltage` **MUST** use the `V` unit suffix when non-null. Example: `24V`, `5V`
+- Pin names **MUST** be unique within `powerPins`.
+- The declared count `[n]` **MUST** match exactly the number of power pin rows.
 
-### §14.4 — Digital Channel Descriptors (optional, per-channel detail)
+### §14.4 — GPIO Map
 
-- Declared with: `digitalChannels[n|]{addr|direction|label|roles}:`
-- `addr` **MUST** follow IEC 61131-3 bit address format and **MUST** be quoted. Example: `"%IX0.0"`
-- `direction` is restricted to: `input`, `output`, `bidirectional`
-- `label` **MUST** be quoted if it contains spaces or special characters; unquoted otherwise.
-- `roles` **MAY** contain multiple sub-values separated by `;` (no surrounding spaces).
-  - Permitted role values: `di`, `do`, `safety-di`, `safety-do`, `fast-counter`, `interrupt`, `hsc`
-  - When field contains `;`, **MUST** be quoted. Example: `"di;interrupt"`
-- Channel addresses **MUST** be unique across all `digitalChannels` entries.
-- The declared count `[n]` **MUST** match the number of channel rows.
+- Declared with: `gpio[n|]{pin|type|pwm|int|label|roles}:`
+- `pin` **MUST** be a non-negative integer; values **MUST** be unique across all GPIO rows.
+- `type` is restricted to: `digital`, `analog`
+- `pwm` and `int` **MUST** use boolean values: `t`, `f`, `true`, or `false`.
+- `label`:
+  - Composite labels (containing spaces, `/`, or other special characters) **MUST** be quoted.
+  - Simple single-word labels without special characters **MAY** be unquoted (e.g., `Ia.6`, `AIW0`).
+- `roles`:
+  - MAY contain multiple roles separated by `;` with **no surrounding spaces**.
+  - When the field contains `:` or `;`, it **MUST** be quoted. Example: `"di"`, `"do;pwm"`
+  - Single unambiguous roles **MAY** be unquoted. Example: `di`, `do`
+  - Use `null` when no role is assigned.
+- The declared count `[n]` **MUST** equal the total number of digital plus analog pin rows.
 
-### §14.5 — Analog Channel Descriptors (optional, per-channel detail)
-
-- Declared with: `analogChannels[n|]{addr|direction|resolution|range|label}:`
-- `addr` **MUST** follow IEC 61131-3 word address format and **MUST** be quoted. Example: `"%IW0"`
-- `direction` is restricted to: `input`, `output`
-- `resolution` **MUST** be expressed as a **bare integer in bits**. Example: `12`
-- `range` is a quoted string describing the signal range.
-  - Example: `"0-10V"`, `"4-20mA"`, `"-10V..10V"`, `"0-20mA"`
-- `label` **MUST** be quoted if it contains spaces or special characters.
-- Channel addresses **MUST** be unique across all `analogChannels` entries.
-- The declared count `[n]` **MUST** match the number of channel rows.
-
-### §14.6 — Rack Configuration (for modular/rack PLCs)
-
-- Declared with: `racks[n|]{rack|slots|backplane_current|voltage}:`
-- `rack` **MUST** be a non-negative integer; values **MUST** be unique across rows.
-- `slots` **MUST** be a positive integer.
-- `backplane_current` **MUST** use the `mA` unit suffix.
-- `voltage` **MUST** use the `V` unit suffix.
-- If present, all rack numbers referenced in `ioModules` **MUST** exist in this collection.
-- The declared count `[n]` **MUST** match the number of rack rows.
-
-### §14.7 — Peripherals & Protocols
+### §14.5 — Peripherals
 
 - Declared with: `peripherals[n|]{peripheral|param|value}:`
-- `peripheral` is restricted to:
-  `serial`, `ethernet`, `profibus`, `profinet`, `modbus-tcp`, `modbus-rtu`, `canopen`, `ethernetip`, `devicenet`, `hart`, `io-link`, `opc-ua`
-- Per-peripheral `param` constraints:
-
-  | Peripheral | Required param | Example |
-  |---|---|---|
-  | `serial` | baud rate + protocol | `"baud:9600"` \| `"proto:RS485"` |
-  | `ethernet` / `profinet` / `modbus-tcp` / `ethernetip` / `opc-ua` | port | `"port:502"` |
-  | `profibus` / `canopen` / `devicenet` | network address | `"address:1"` |
-  | `hart` / `io-link` | channel count | `"channels:8"` |
-
-- Multi-value `param` or `value` fields **MUST** use `;` as separator and **MUST** be quoted.
+- `peripheral` identifier **MUST** be lowercase alphanumeric, with hyphens or underscores (any peripheral identifier is accepted as long as it is organized and counted).
+- Multi-value `param` or `value` fields **MUST** use `;` as separator and **MUST** be quoted if they contain special characters.
 - The declared count `[n]` **MUST** match the number of peripheral rows.
 
-### §14.8 — Service / USB Port (optional)
+### §14.6 — USB Block
 
-- `usb` block is optional for PLCs; many PLCs use proprietary service connectors.
-- If present:
-  - `type` is a free-form string. Example: `"USB-B"`, `"Mini-USB"`, `"Micro-USB"`, `"proprietary"`
-  - `vid` and `pid`, if present, **MUST** each match `^0x[0-9A-Fa-f]{4}$` and **MUST** be quoted.
-- If the service interface is not USB, use a `service` block instead:
+- `type` is a free-form string or `null`. Example: `null`, `"USB-C"`
+- `chip` is a free-form string or `null`.
+- `vid` and `pid` **MUST** each match `^0x[0-9A-Fa-f]{4}$` and **MUST** be quoted.
 
-  ```toon
-  service:
-    type: MPI
-    connector: DB9
-    protocol: "MPI/DP"
-  ```
+### §14.7 — Restrictions & Compatibility
 
-### §14.9 — Restrictions & Compatibility
-
-- `restrictions` block follows the same structure as the MCU dialect.
-  - `max_io_current` **MUST** use `mA`; `supply_voltage` **MUST** use `V`; power **MUST** use `W`.
+- `restrictions` block:
+  - `max_io_current` **MUST** use `mA`.
+  - `total_current_limit` **MUST** use `mA`.
+  - `warnings[n]` is a list array of warnings. Declared count **MUST** match the list.
 - `compatibility` keys for PLC profiles:
-  - `standard` — **MUST** be `"IEC 61131-3"` or a valid extension (e.g., `"IEC 61131-3 + PLCopen"`)
-  - `ide` — free-form string. Example: `"TIA Portal v17"`, `"CODESYS 3.5"`, `"Unity Pro"`
-  - `runtime` — free-form string. Example: `"S7-1200 FW4.5"`, `"CODESYS SL"`
-  - `languages` — one or more values from the IEC 61131-3 restricted set (see §14.10)
+  - `sw` — free-form string. Example: `"STEP 7 Basic V11+"`
+  - `frameworks` — free-form string. Example: `"IEC61131-3;TIA Portal"`
+  - `languages` — one or more values from the allowed set (see §14.8)
+  - `certifications` — free-form string. Example: `"CE;cULus"`
 - The following keys are **forbidden** in PLC profiles: `arduinoCore`, `pio`, `bootloader`
 
-### §14.10 — Languages & Skill Identifiers
+### §14.8 — Languages & Skill Identifiers
 
-- `languages` field **MUST** contain only values from the IEC 61131-3 restricted set:
-
-  | Code | Language |
-  |---|---|
-  | `LD` | Ladder Diagram |
-  | `FBD` | Function Block Diagram |
-  | `ST` | Structured Text |
-  | `IL` | Instruction List *(deprecated in IEC 61131-3 ed.3, but valid)* |
-  | `SFC` | Sequential Function Chart |
-
-- Multiple languages **MUST** be expressed as a list array or inline semicolon-separated (quoted, no pipe).
-  - Inline example: `languages: "LD;FBD;ST"`
-  - List example:
-    ```toon
-    languages[3]:
-      - LD
-      - FBD
-      - ST
-    ```
-- Language skill identifiers in `defaultLanguageSkills` **MUST** match: `^[a-z][a-z0-9]*(-[a-z][a-z0-9]*)*$`
-- `boardFamilySkillId` **MUST** be: `plc-family`
+- `languages` field **MUST** contain or be one of the language codes from the allowed set: `LD`, `LAD`, `FBD`, `ST`, `SCL`, `IL`, `SFC`, `C`, `C++`, `CPP`, `Python`, `Rust`, `Arduino-CPP`.
+- Multiple languages **MUST** be expressed as a quoted semicolon-separated string (e.g. `"LD;FBD;ST;SCL;Python"`).
+- Language skill identifiers in `defaultLanguageSkills` **MUST** match: `^[a-z][a-z0-9]*(-[a-z0-9]+)*$` (allowing digits immediately after a hyphen, e.g. `ladder-tia-portal-s7-1200`).
+- `boardFamilySkillId` **MUST** end with `plc-family` and be kebab-case (e.g. `siemens-simatic-s7-1200-plc-family`).
 - `boardProfileId` **MUST** match: `^[a-z][a-z0-9-]*$` (kebab-case: lowercase letters, digits, hyphens)
   - Example: `siemens-s7-1200`, `schneider-m221`, `allen-bradley-micro820`
 - `defaultLanguageSkills[n]` declared count **MUST** match the number of skill entries.
-- All skill values **MUST** satisfy the §14.10 skill identifier pattern.
+- All skill values **MUST** satisfy the skill identifier pattern.
 
 ---
 
 ## Standard Section Order (PLC Profiles)
 
-A conformant PLC profile document **MUST** contain the following sections in this order:
+A conformant PLC profile document **MUST** contain the following sections in this exact order:
 
 | Index | Section Name |
 |---|---|
 | `## 1.` | `DEVICE IDENTIFICATION` |
 | `## 2.` | `TECH SPECS & DIMENSIONS` |
-| `## 3.` | `ELECTRICAL PROFILE (POWER SUPPLY)` |
-| `## 4.` | `I/O MODULE MAP` |
-| `## 5.` | `PERIPHERALS & PROTOCOLS` |
+| `## 3.` | `ELECTRICAL PROFILE (POWER PINS)` |
+| `## 4.` | `GPIO MAP` |
+| `## 5.` | `PERIPHERALS & USB` |
 | `## 6.` | `RESTRICTIONS & COMPATIBILITY` |
 | `## 7.` | `AGENT SKILLS` |
-
-Additional sections **MAY** be appended at `## 8.` and beyond (e.g., safety certification, function block library manifest, rack diagram metadata).
 
 ---
 
@@ -269,18 +195,18 @@ url: "https://mall.industry.siemens.com/mall/en/WW/Catalog/Product/6ES72141BG400
 
 ## 2. TECH SPECS & DIMENSIONS:
 specs:
-  cycle_time: 1
-  memory_work: 100KB
-  memory_load: 4096KB
-  memory_retain: 10KB
-  supply_voltage: 24V
-  power_consumption: 12W
+  flash_total: 4194304
+  flash_available: 102400
+  sram: 102400
+  eeprom: 0
+  clock: 0
+  voltage: "24V"
 dims:
   w: 110.0
   h: 100.0
   t: 75.0
 
-## 3. ELECTRICAL PROFILE (POWER SUPPLY):
+## 3. ELECTRICAL PROFILE (POWER PINS):
 # Format: name | direction | voltage | type
 powerPins[4|]{name|direction|voltage|type}:
   L+|input|24V|null
@@ -288,20 +214,21 @@ powerPins[4|]{name|direction|voltage|type}:
   PE|null|null|ground
   SHIELD|null|null|ground
 
-## 4. I/O MODULE MAP:
-# Format: slot | rack | type | channels | addr_start | addr_end | current
-ioModules[4|]{slot|rack|type|channels|addr_start|addr_end|current}:
-  0|0|DI|14|"%IX0.0"|"%IX0.7"|null
-  1|0|DO|10|"%QX0.0"|"%QX0.7"|null
-  2|0|AI|2|"%IW64"|"%IW66"|null
-  3|0|AO|2|"%QW64"|"%QW66"|null
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[2|]{pin|type|pwm|int|label|roles}:
+  0|digital|false|true|"Ia.0 / HSC0"|"di"
+  1|digital|false|true|"Ia.1 / HSC1"|"di"
 
-## 5. PERIPHERALS & PROTOCOLS:
+## 5. PERIPHERALS & USB:
 # Format: peripheral | param | value
-peripherals[3|]{peripheral|param|value}:
-  ethernet|"port:102"|"proto:PROFINET;Modbus-TCP"
-  modbus-tcp|"port:502"|"addr:1"
-  opc-ua|"port:4840"|null
+peripherals[1|]{peripheral|param|value}:
+  profinet|"speed:100Mbit"|"1x-RJ45-10-100Mbps-auto-MDI-X-isolated"
+usb:
+  type: null
+  chip: null
+  vid: "0x0000"
+  pid: "0x0000"
 
 ## 6. RESTRICTIONS & COMPATIBILITY:
 restrictions:
@@ -311,17 +238,16 @@ restrictions:
     - "Do not exceed 24V DC supply voltage"
     - "Ensure proper grounding via PE terminal"
 compatibility:
-  standard: "IEC 61131-3"
-  ide: "TIA Portal v17"
-  runtime: "S7-1200 FW4.5"
-  languages: "LD;FBD;ST;SFC"
+  sw: "STEP 7 Basic V11+"
+  frameworks: "IEC61131-3;TIA Portal"
+  languages: "LD;FBD;ST;SFC;Python"
 
 ## 7. AGENT SKILLS:
 dendriForge:
-  boardFamilySkillId: plc-family
+  boardFamilySkillId: siemens-simatic-s7-1200-plc-family
   boardProfileId: siemens-s7-1200
   defaultLanguageSkills[3]:
-    - st-iec61131
-    - ld-tia
-    - fbd-tia
+    - ladder-tia-portal-s7-1200
+    - fbd-tia-portal-s7-1200
+    - scl-tia-portal-s7-1200
 ```

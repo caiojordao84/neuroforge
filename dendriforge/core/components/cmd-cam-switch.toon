@@ -58,14 +58,14 @@ params:
 
 ## 3. ELECTRICAL PORTS:
 ports[8|]{id|direction|type|voltage_max|current_max|notes}:
-  NO1_in|input|digital|"400V"|"20A"|"NO contact 1 in"
-  NO1_out|output|digital|"400V"|"20A"|"NO contact 1 out"
-  NC1_in|input|digital|"400V"|"20A"|"NC contact 1 in"
-  NC1_out|output|digital|"400V"|"20A"|"NC contact 1 out"
-  NO2_in|input|digital|"400V"|"20A"|"NO contact 2 in"
-  NO2_out|output|digital|"400V"|"20A"|"NO contact 2 out"
-  NC2_in|input|digital|"400V"|"20A"|"NC contact 2 in"
-  NC2_out|output|digital|"400V"|"20A"|"NC contact 2 out"
+  NO1_IN|input|digital|"400V"|"20A"|"NO contact 1 in"
+  NO1_OUT|output|digital|"400V"|"20A"|"NO contact 1 out"
+  NC1_IN|input|digital|"400V"|"20A"|"NC contact 1 in"
+  NC1_OUT|output|digital|"400V"|"20A"|"NC contact 1 out"
+  NO2_IN|input|digital|"400V"|"20A"|"NO contact 2 in"
+  NO2_OUT|output|digital|"400V"|"20A"|"NO contact 2 out"
+  NC2_IN|input|digital|"400V"|"20A"|"NC contact 2 in"
+  NC2_OUT|output|digital|"400V"|"20A"|"NC contact 2 out"
 
 ## 4. SIMULATION BEHAVIOR:
 simulation:
@@ -107,14 +107,14 @@ canvas:
   width: 60
   height: 80
   ports_layout: custom
-  port_NO1_in: {x: 0, y: 10}
-  port_NO1_out: {x: 60, y: 10}
-  port_NC1_in: {x: 0, y: 30}
-  port_NC1_out: {x: 60, y: 30}
-  port_NO2_in: {x: 0, y: 50}
-  port_NO2_out: {x: 60, y: 50}
-  port_NC2_in: {x: 0, y: 70}
-  port_NC2_out: {x: 60, y: 70}
+  port_NO1_IN: {x: 0, y: 10}
+  port_NO1_OUT: {x: 60, y: 10}
+  port_NC1_IN: {x: 0, y: 30}
+  port_NC1_OUT: {x: 60, y: 30}
+  port_NO2_IN: {x: 0, y: 50}
+  port_NO2_OUT: {x: 60, y: 50}
+  port_NC2_IN: {x: 0, y: 70}
+  port_NC2_OUT: {x: 60, y: 70}
   label_position: bottom
   value_display: "{contact_config} / {positions}pos"
   animated: true

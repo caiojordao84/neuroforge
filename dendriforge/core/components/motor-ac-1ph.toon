@@ -3,7 +3,7 @@ project_name: motor-ac-1ph-profile
 version: 1
 editor: dendriForge
 author: schemasmith
-ASLversion: 0.2.0
+ASLversion: 0.1.0
 
 ## 1. IDENTIFICATION:
 id: motor-ac-1ph

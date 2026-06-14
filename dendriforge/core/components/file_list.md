@@ -1,4 +1,4 @@
-﻿# Lista de Arquivos
+# Lista de Arquivos
 
 **Pasta:** `D:\Documents\NeuroForge\dendriForge\dendriforge\core\components`
 **Data:** 2026-05-18 16:45:31

@@ -24,8 +24,8 @@ specs:
   voltage: "3.3V"
   cores: 2
 dims:
-  w: 21.0
-  h: 51.0
+  w: 51.0
+  h: 21.0
   t: 1.0
 
 ## 3. ELECTRICAL PROFILE (POWER PINS):

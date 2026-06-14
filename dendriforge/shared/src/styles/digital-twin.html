@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Digital Twin - S7-1200 LED Test</title>
+    <link rel="stylesheet" href="dendriForge-A11Y-Slate.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px;
+            background-color: #0f172a;
+            font-family: 'Roboto', sans-serif;
+            gap: 32px;
+        }
+
+        svg,
+        object {
+            width: 600px;
+            height: auto;
+            border-radius: 8px;
+        }
+
+        .control-panel {
+            background: rgba(30, 41, 59, 0.45);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+            width: 380px;
+        }
+
+        .control-panel h3 {
+            margin: 0;
+            color: #f8fafc;
+            font-size: 1rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.85rem;
+        }
+
+        .btn-on {
+            background-color: #10b981;
+            color: #0f172a;
+        }
+
+        .btn-on:hover {
+            background-color: #34d399;
+            transform: translateY(-2px);
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+        }
+
+        .btn-on:active {
+            transform: translateY(1px);
+        }
+
+        .btn-off {
+            background-color: #f43f5e;
+            color: #f8fafc;
+        }
+
+        .btn-off:hover {
+            background-color: #fb7185;
+            transform: translateY(-2px);
+            box-shadow: 0 0 12px rgba(244, 63, 94, 0.5);
+        }
+
+        .btn-off:active {
+            transform: translateY(1px);
+        }
+
+        .btn-demo {
+            background-color: #3b82f6;
+            color: #f8fafc;
+        }
+
+        .btn-demo:hover {
+            background-color: #60a5fa;
+            transform: translateY(-2px);
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+        }
+
+        .btn-demo:active {
+            transform: translateY(1px);
+        }
+
+        /* Mensagem de erro se o SVG falhar */
+        .board-error {
+            display: none;
+            width: 600px;
+            height: 200px;
+            background: rgba(244, 63, 94, 0.1);
+            border: 1px solid rgba(244, 63, 94, 0.3);
+            border-radius: 8px;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 8px;
+            color: #fb7185;
+            font-size: 0.9rem;
+        }
+
+        .board-error.visible {
+            display: flex;
+        }
+    </style>
+</head>
+
+<body>
+    <object id="board" data="siemens-s7-1200-cpu-1214c-corrigido.svg" type="image/svg+xml"></object>
+    <div id="board-error" class="board-error">
+        <span style="font-size:1.5rem;">⚠️</span>
+        <strong>Falha ao carregar o SVG do board</strong>
+        <span>Verifique se o ficheiro SVG está presente no mesmo diretório.</span>
+    </div>
+
+    <div class="control-panel">
+        <h3>Controle dos LEDs</h3>
+        <div class="btn-group">
+            <button id="btn-on" class="btn btn-on">ON</button>
+            <button id="btn-off" class="btn btn-off">OFF</button>
+            <button id="btn-demo" class="btn btn-demo">DEMO</button>
+        </div>
+    </div>
+</body>
+
+<script>
+    // ─── Estado Global ────────────────────────────────────────────────────────
+    let svgDoc = null;
+    const BOARD_LEDS = {};
+    let blinkInterval = null;
+    let activeTimeouts = [];
+    let appMode = 'none'; // 'on' | 'off' | 'demo' | 'none'
+    let svgListenerAbortController = null;
+
+    // ─── Utilitários de LED ───────────────────────────────────────────────────
+
+    /**
+     * Define o data-state de um LED pelo seu ID.
+     * Aceita: true/'on', false/'off', 'run'
+     */
+    function setLedState(ledId, state) {
+        if (!svgDoc) return;
+        const el = svgDoc.getElementById(ledId);
+        if (!el) {
+            console.warn(`LED '${ledId}' não encontrado no SVG`);
+            return;
+        }
+        if (state === true) state = 'on';
+        if (state === false) state = 'off';
+        el.dataset.state = state;
+    }
+
+    // ─── Gestão de Timeouts ───────────────────────────────────────────────────
+
+    function clearAllTimeouts() {
+        activeTimeouts.forEach(clearTimeout);
+        activeTimeouts = [];
+    }
+
+    /**
+     * Regista um setTimeout rastreado para poder ser cancelado em lote.
+     */
+    function registerTimeout(callback, delay) {
+        const t = setTimeout(() => {
+            callback();
+            activeTimeouts = activeTimeouts.filter(x => x !== t);
+        }, delay);
+        activeTimeouts.push(t);
+        return t;
+    }
+
+    // ─── Lógica de Animação ───────────────────────────────────────────────────
+
+    /**
+     * Liga um LED por `durationMs` milissegundos e depois desliga.
+     */
+    function pulseLed(ledId, durationMs = 500) {
+        setLedState(ledId, 'on');
+        registerTimeout(() => setLedState(ledId, 'off'), durationMs);
+    }
+
+    /**
+     * Inicia o modo demo: percorre todos os LEDs em sequência, em loop.
+     * Seguro para ser chamado múltiplas vezes — não duplica o intervalo.
+     */
+    function startDemo() {
+        // Para qualquer demo já em curso antes de recomeçar
+        stopDemo();
+        appMode = 'demo';
+        updatePinCursor();
+
+        const leds = Object.values(BOARD_LEDS);
+        if (leds.length === 0) {
+            console.warn('startDemo: nenhum LED encontrado no BOARD_LEDS');
+            return;
+        }
+
+        const runCycle = () => {
+            if (appMode !== 'demo') return;
+            leds.forEach((ledId, index) => {
+                registerTimeout(() => pulseLed(ledId, 500), index * 200);
+            });
+        };
+
+        // Executa o primeiro ciclo imediatamente
+        runCycle();
+
+        // Duração total: tempo até o último LED acender + tempo aceso + respiro
+        const cycleDuration = (leds.length * 200) + 1000;
+        blinkInterval = setInterval(runCycle, cycleDuration);
+    }
+
+    /**
+     * Para o demo e limpa todos os timeouts pendentes.
+     */
+    function stopDemo() {
+        if (blinkInterval) {
+            clearInterval(blinkInterval);
+            blinkInterval = null;
+        }
+        clearAllTimeouts();
+    }
+
+    // ─── Ações dos Botões ─────────────────────────────────────────────────────
+
+    function turnAllLedsOn() {
+        appMode = 'on';
+        stopDemo();
+        updatePinCursor();
+        if (!svgDoc) return;
+
+        Object.values(BOARD_LEDS).forEach(ledId => {
+            const el = svgDoc.getElementById(ledId);
+            if (!el) return;
+
+            // Remove animações CSS inline de todos os LEDs para estado estático
+            el.style.removeProperty('animation');
+
+            // led-power: força estático sem pulso
+            if (ledId === 'led-power') {
+                el.style.setProperty('animation', 'none', 'important');
+            }
+
+            // led run/stop (verde-amarelo): estado 'run' = verde
+            if (el.classList.contains('led-green-yellow')) {
+                setLedState(ledId, 'run');
+            } else {
+                setLedState(ledId, 'on');
+            }
+        });
+    }
+
+    function turnAllLedsOff() {
+        appMode = 'off';
+        stopDemo();
+        updatePinCursor();
+        if (!svgDoc) return;
+
+        Object.values(BOARD_LEDS).forEach(ledId => {
+            const el = svgDoc.getElementById(ledId);
+            if (el) el.style.removeProperty('animation');
+            setLedState(ledId, 'off');
+        });
+    }
+
+    // ─── Injeção de Estilos no SVG ────────────────────────────────────────────
+
+    /**
+     * Injeta a folha de estilos e o estilo de cursor no documento SVG interno.
+     * Usa IDs únicos para evitar injeções duplicadas em reinicializações.
+     */
+    function injectStyles(doc) {
+        if (!doc.getElementById('dendriForge-style-inject')) {
+            const styleEl = doc.createElementNS('http://www.w3.org/2000/svg', 'style');
+            styleEl.id = 'dendriForge-style-inject';
+            styleEl.textContent = `@import url("dendriForge-A11Y-Slate.css");`;
+            doc.documentElement.appendChild(styleEl);
+            console.log('Folha de estilos dendriForge-A11Y-Slate.css injetada no SVG.');
+        }
+
+        if (!doc.getElementById('pin-cursor-style')) {
+            const cursorStyle = doc.createElementNS('http://www.w3.org/2000/svg', 'style');
+            cursorStyle.id = 'pin-cursor-style';
+            cursorStyle.textContent = `[data-pin] { cursor: pointer; }`;
+            doc.documentElement.appendChild(cursorStyle);
+        }
+    }
+
+    // ─── Cursor dos Pins ─────────────────────────────────────────────────────
+
+    /**
+     * Atualiza o cursor dos [data-pin] conforme o modo atual.
+     * Só são interativos no modo 'off'.
+     */
+    function updatePinCursor() {
+        if (!svgDoc) return;
+        const pinStyle = svgDoc.getElementById('pin-cursor-style');
+        if (!pinStyle) return;
+        pinStyle.textContent = appMode === 'off'
+            ? `[data-pin] { cursor: pointer; }`
+            : `[data-pin] { cursor: not-allowed; pointer-events: none; }`;
+    }
+
+    // ─── Inicialização ────────────────────────────────────────────────────────
+
+    /**
+     * Inicializa o módulo de controlo de LEDs com o documento SVG carregado.
+     * Seguro para ser chamado múltiplas vezes — faz reset completo do estado.
+     */
+    function initializeLeds(doc) {
+        if (!doc || doc.documentElement?.tagName?.toLowerCase() !== 'svg') {
+            console.warn('initializeLeds: documento SVG inválido ou não carregado');
+            return;
+        }
+
+        // ── Reset de estado ───────────────────────────────────────────────────
+        stopDemo();
+        appMode = 'none';
+
+        // Limpa o mapa de LEDs para evitar stale data em reinicializações
+        Object.keys(BOARD_LEDS).forEach(k => delete BOARD_LEDS[k]);
+
+        // Remove o listener de click anterior no SVG, se existir
+        if (svgListenerAbortController) {
+            svgListenerAbortController.abort();
+        }
+        svgListenerAbortController = new AbortController();
+
+        svgDoc = doc;
+
+        // ── Injeção de estilos ────────────────────────────────────────────────
+        injectStyles(svgDoc);
+
+        // ── Mapeamento dinâmico dos LEDs ──────────────────────────────────────
+        const elements = svgDoc.querySelectorAll('[id^="led-"]');
+        console.log(`LEDs encontrados no SVG: ${elements.length}`);
+
+        elements.forEach(el => {
+            const key = el.id
+                .replace(/^led-/, '')
+                .replace(/-/g, '_')
+                .toUpperCase();
+            BOARD_LEDS[key] = el.id;
+        });
+
+        console.log('Mapa BOARD_LEDS:', BOARD_LEDS);
+
+        // ── Vinculação dos botões (sem acumulação de listeners) ───────────────
+        bindButton('btn-on', turnAllLedsOn);
+        bindButton('btn-off', turnAllLedsOff);
+        bindButton('btn-demo', () => {
+            turnAllLedsOff();
+            startDemo();
+        });
+
+        // ── Interatividade dos pins no SVG ────────────────────────────────────
+        svgDoc.addEventListener('click', (e) => {
+            if (appMode !== 'off') return;
+
+            const pinElement = e.target.closest('[data-pin]');
+            if (!pinElement) return;
+
+            const ledId = pinElement.getAttribute('data-pin');
+            if (!ledId) return;
+
+            const ledEl = svgDoc.getElementById(ledId);
+            if (!ledEl) return;
+
+            const currentState = ledEl.dataset.state;
+            if (currentState === 'on' || currentState === 'run') {
+                setLedState(ledId, 'off');
+            } else {
+                setLedState(ledId, ledEl.classList.contains('led-green-yellow') ? 'run' : 'on');
+            }
+        }, { signal: svgListenerAbortController.signal });
+
+        // ── Inicia o demo automaticamente ─────────────────────────────────────
+        startDemo();
+    }
+
+    // ─── Helpers de Botões ────────────────────────────────────────────────────
+
+    /**
+     * Vincula um handler a um botão, removendo quaisquer handlers anteriores
+     * via cloneNode para evitar acumulação em reinicializações.
+     */
+    function bindButton(id, handler) {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        const fresh = btn.cloneNode(true);
+        btn.parentNode.replaceChild(fresh, btn);
+        fresh.addEventListener('click', handler);
+    }
+
+    // ─── Verificação e Carregamento do SVG ────────────────────────────────────
+
+    /**
+     * Verifica se o <object> já tem o SVG acessível no contentDocument.
+     */
+    function isSvgLoaded(board) {
+        try {
+            const doc = board.contentDocument;
+            return doc &&
+                doc.documentElement &&
+                doc.documentElement.tagName.toLowerCase() === 'svg';
+        } catch (e) {
+            return false;
+        }
+    }
+
+    const boardObj = document.getElementById('board');
+    const boardError = document.getElementById('board-error');
+
+    if (boardObj) {
+        if (isSvgLoaded(boardObj)) {
+            // SVG já estava em cache/pronto
+            initializeLeds(boardObj.contentDocument);
+        } else {
+            boardObj.addEventListener('load', function () {
+                if (isSvgLoaded(this)) {
+                    initializeLeds(this.contentDocument);
+                } else {
+                    console.error('SVG carregado mas contentDocument inválido.');
+                    showBoardError();
+                }
+            });
+
+            boardObj.addEventListener('error', function () {
+                console.error('Falha ao carregar o SVG do board:', this.data);
+                showBoardError();
+            });
+        }
+    }
+
+    function showBoardError() {
+        if (boardObj) boardObj.style.display = 'none';
+        if (boardError) boardError.classList.add('visible');
+    }
+</script>
+
+</html>

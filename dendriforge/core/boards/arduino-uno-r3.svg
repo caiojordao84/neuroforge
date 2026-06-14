@@ -142,7 +142,7 @@
         <g transform="matrix(0,-1,1,0,-11.545184,270.947562)">
             <text x="129.701px" y="141.246px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3.52px;fill:#fff;">GND</text>
         </g>
-        <circle id="VIN" cx="135.253" cy="144.567" r="2.579" class="pin power" data-type="power" data-pin="VIN"/>
+        <circle id="VIN" cx="135.253" cy="144.567" r="2.579" class="pin power" data-type="power" data-pin="VIN" data-voltage="5V"/>
         <g transform="matrix(0,-1,1,0,-4.741853,277.750351)">
             <text x="136.504px" y="141.246px" style="font-family:'Roboto-BoldItalic', 'Roboto';font-weight:700;font-style:italic;font-size:3.52px;fill:#fff;">VIN</text>
         </g>

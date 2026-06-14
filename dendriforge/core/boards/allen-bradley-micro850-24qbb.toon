@@ -1,0 +1,102 @@
+# METADATA:
+project_name: allen-bradley-micro850-24qbb-profile
+version: 1
+editor: dendriForge
+author: schemasmith
+ASLversion: 0.1.0
+
+## 1. DEVICE IDENTIFICATION:
+id: allen-bradley-micro850-24qbb
+name: "Allen-Bradley Micro850 24-Point Ethernet PLC (2080-L50E-24QBB)"
+manufacturer: "Rockwell Automation"
+cpu: "Micro850 2080-L50E"
+category: plc
+form_factor: compact
+standard: "IEC 61131-3"
+image: allen-bradley-micro850-24qbb.svg
+url: "https://www.rockwellautomation.com/en-us/products/hardware/allen-bradley/programmable-controllers/micro-controllers/micro800-family/micro850-controllers.html"
+
+## 2. TECH SPECS & DIMENSIONS:
+specs:
+  flash_total: 262144
+  flash_available: 262144
+  sram: 131072
+  eeprom: 0
+  clock: 0
+  voltage: "24V"
+dims:
+  w: 153.18
+  h: 92.0
+  t: 80.0
+
+## 3. ELECTRICAL PROFILE (POWER PINS):
+# Format: name | direction | voltage | type
+powerPins[3|]{name|direction|voltage|type}:
+  24V_DC_PLUS|input|"24V"|null
+  24V_DC_MINUS|null|null|ground
+  PE|null|null|ground
+
+## 4. GPIO MAP:
+# Format: pin | type | pwm | int | label | roles
+gpio[24|]{pin|type|pwm|int|label|roles}:
+  0|digital|f|t|"I00 / HSC0"|"di;hsc;interrupt"
+  1|digital|f|t|"I01 / HSC1"|"di;hsc;interrupt"
+  2|digital|f|t|"I02 / HSC2"|"di;hsc;interrupt"
+  3|digital|f|t|"I03 / HSC3"|"di;hsc;interrupt"
+  4|digital|f|t|"I04 / HSC4"|"di;hsc;interrupt"
+  5|digital|f|t|"I05 / HSC5"|"di;hsc;interrupt"
+  6|digital|f|t|"I06"|"di"
+  7|digital|f|t|"I07"|"di"
+  8|digital|f|t|"I08"|"di"
+  9|digital|f|t|"I09"|"di"
+  10|digital|f|t|"I10"|"di"
+  11|digital|f|t|"I11"|"di"
+  12|digital|f|t|"I12"|"di"
+  13|digital|f|t|"I13"|"di"
+  14|digital|t|f|"O00 / PTO0 / PWM0"|"do;pwm"
+  15|digital|t|f|"O01 / PTO1 / PWM1"|"do;pwm"
+  16|digital|t|f|"O02 / PTO2 / PWM2"|"do;pwm"
+  17|digital|f|f|"O03"|"do"
+  18|digital|f|f|"O04"|"do"
+  19|digital|f|f|"O05"|"do"
+  20|digital|f|f|"O06"|"do"
+  21|digital|f|f|"O07"|"do"
+  22|digital|f|f|"O08"|"do"
+  23|digital|f|f|"O09"|"do"
+
+## 5. PERIPHERALS & USB:
+# Format: peripheral | param | value
+peripherals[5|]{peripheral|param|value}:
+  ethernet|"speed:100Mbit"|"1x-RJ45-10-100Mbps-EtherNet-IP-CIP-Modbus-TCP"
+  serial|"type:RS232-RS485"|"non-isolated-combo-port-CIP-Modbus-RTU-ASCII"
+  hsc|"count:6"|"100kHz-high-speed-counters"
+  pto|"axes:3"|"100kHz-pulse-train-outputs-for-motion-control"
+  expansion|"slots:8"|"4-plug-in-modules-slots;4-expansion-io-modules-max"
+usb:
+  type: "USB-B"
+  chip: null
+  vid: "0x0000"
+  pid: "0x0000"
+
+## 6. RESTRICTIONS & COMPATIBILITY:
+restrictions:
+  max_io_current: "500mA"
+  total_current_limit: "1500mA"
+  warnings[3]:
+    - "Outputs are 24V DC Source (QBB model) — they switch positive voltage. Verify load wiring."
+    - "Pulse Train Outputs (PTO) and PWM are only available on outputs O00, O01, and O02."
+    - "The serial port is non-isolated. Use 2080-ISO-xxx plug-ins for isolated communications."
+compatibility:
+  sw: "Connected Components Workbench (CCW) V20+"
+  frameworks: "IEC61131-3;EtherNet/IP;Modbus-RTU;Modbus-TCP;CIP"
+  languages: "LD;FBD;ST"
+  certifications: "CE;cULus;EAC;RCM;KC"
+
+## 7. AGENT SKILLS:
+dendriForge:
+  boardFamilySkillId: allen-bradley-micro800-plc-family
+  boardProfileId: allen-bradley-micro850-24qbb
+  defaultLanguageSkills[3]:
+    - ladder-ccw-micro800
+    - st-ccw-micro800
+    - fbd-ccw-micro800

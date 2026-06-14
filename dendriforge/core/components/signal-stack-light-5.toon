@@ -3,7 +3,7 @@ project_name: signal-stack-light-5-profile
 version: 1
 editor: dendriForge
 author: schemasmith
-ASLversion: 0.2.0
+ASLversion: 0.1.0
 
 ## 1. IDENTIFICATION:
 id: signal-stack-light-5

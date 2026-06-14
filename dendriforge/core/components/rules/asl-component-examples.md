@@ -6,7 +6,7 @@ project_name: dc-psu-prog-profile
 version: 1
 editor: dendriForge
 author: schemasmith
-ASLversion: 0.2.0
+ASLversion: 0.1.0
 
 ## 1. IDENTIFICATION:
 id: dc-psu-prog
@@ -148,7 +148,7 @@ project_name: signal-generator-profile
 version: 1
 editor: dendriForge
 author: schemasmith
-ASLversion: 0.2.0
+ASLversion: 0.1.0
 
 ## 1. IDENTIFICATION:
 id: signal-generator
@@ -299,7 +299,7 @@ project_name: resistor-profile
 version: 1
 editor: dendriForge
 author: schemasmith
-ASLversion: 0.2.0
+ASLversion: 0.1.0
 
 ## 1. IDENTIFICATION:
 id: resistor
@@ -420,7 +420,7 @@ project_name: motor-ac-3ph-profile
 version: 1
 editor: dendriForge
 author: schemasmith
-ASLversion: 0.2.0
+ASLversion: 0.1.0
 
 ## 1. IDENTIFICATION:
 id: motor-ac-3ph

@@ -115,8 +115,8 @@ canvas:
   width: 50
   height: 40
   ports_layout: horizontal
-  port_V+: {x: 0, y: 15}
-  port_V-: {x: 0, y: 25}
+  "port_V+": {x: 0, y: 15}
+  "port_V-": {x: 0, y: 25}
   label_position: top
   value_display: "Industrial buzzer / {supply_voltage}V / {sound_level}dB"
   animated: true

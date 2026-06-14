@@ -8,9 +8,9 @@ ASLversion: 0.1.0
 ## 1. IDENTIFICATION:
 id: act-ir-transmitter
 name: "Infrared Transmitter (Transmissor de infravermelho)"
-family: actuators
-subfamily: optical
-category: emitter
+family: communication
+subfamily: wireless
+category: stub
 standard: "custom"
 url: null
 image: act-ir-transmitter.svg
@@ -54,7 +54,7 @@ params:
 ports[3|]{id|direction|type|voltage_max|current_max|notes}:
   VCC|input|power|"{supply_voltage}"|"50mA"|"supply +"
   GND|input|ground|null|null|"supply -"
-  DATA|input|signal|"{supply_voltage}"|"20mA"|"transmission data input"
+  DATA|input|digital|"{supply_voltage}"|"20mA"|"transmission data input"
 
 ## 4c. PROTOCOL PORTS:
 protocol_ports[1|]{id|direction|protocol|notes}:
@@ -62,7 +62,7 @@ protocol_ports[1|]{id|direction|protocol|notes}:
 
 ## 4. SIMULATION BEHAVIOR:
 simulation:
-  model: actuator-script
+  model: script
   bidirectional: true
   dynamic: true
   thermal_model: false
@@ -105,9 +105,10 @@ canvas:
 
 ## 8. AGENT SKILLS:
 dendriForge:
-  componentFamilySkillId: actuators-family
+  componentFamilySkillId: communication-family
   componentProfileId: act-ir-transmitter
-  paletteGroup: "Actuators > Optical"
+  simulationEngine: protocol-stub-engine
+  paletteGroup: "Comunicacao > Wireless"
   tags[6]:
     - act
     - optical

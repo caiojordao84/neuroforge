@@ -76,8 +76,8 @@ simulation:
   leakage_model: true
   noise_model: false
   states[2]:
-    - state-0  # Default rest state
-    - state-1  # Actuated state
+    - state-0
+    - state-1
 
 ## 5. LIMITS & WARNINGS:
 limits:
@@ -124,7 +124,7 @@ dendriForge:
   paletteGroup: "Hydraulics > Directional Valves"
   tags[6]:
     - valve
-    - 2/2
+    - size-2-2
     - directional
     - hydraulic
     - solenoid

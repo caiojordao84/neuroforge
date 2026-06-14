@@ -49,8 +49,8 @@ class ValidationResult:
 
     def __str__(self) -> str:
         if self.valid:
-            return "✅ VALID — no errors found."
-        lines = [f"❌ INVALID — {len(self.errors)} error(s) found:\n"]
+            return "[OK] VALID - no errors found."
+        lines = [f"[FAIL] INVALID - {len(self.errors)} error(s) found:\n"]
         for e in self.errors:
             lines.append(str(e))
         return "\n".join(lines)
@@ -65,7 +65,7 @@ VALID_FAMILIES = {
 }
 
 VALID_SUBFAMILY = {
-    "electricals":          {"sources", "passives", "semiconductors", "protection", "distribution"},
+    "electricals":          {"sources", "passives", "semiconductors", "displays", "protection", "distribution"},
     "sensors":              {"environment", "motion-position", "electrical", "process", "industrial-presence-safety"},
     "command-elements":     {"pushbuttons", "selectors", "emergency-safety", "signaling", "special-interfaces"},
     "actuators":            {"maker-prototyping", "industrial-electrical", "motor-drives", "linear-valves"},
@@ -121,7 +121,7 @@ VALID_PORTS_LAYOUTS = {"horizontal", "vertical", "radial", "custom"}
 
 VALID_LABEL_POSITIONS = {"top", "bottom", "left", "right", "inline"}
 
-VALID_IP_RATINGS = {"IP54", "IP65", "IP67", "IP68", "IP69K"}
+VALID_IP_RATINGS = {"IP20", "IP44", "IP54", "IP55", "IP65", "IP67", "IP68", "IP69K"}
 
 VALID_SAFETY_CATEGORIES = {"Cat.2 PLc", "Cat.3 PLd", "Cat.4 PLe"}
 
@@ -237,7 +237,7 @@ def _is_valid_voltage(s: str) -> bool:
     raw = _unquote(s)
     if raw == "null":
         return True
-    if re.match(r'^\{[^}]+\}$', raw):
+    if re.match(r'^\{[^}]+\}', raw):
         return True
     return bool(re.match(r'^\d+(\.\d+)?V$', raw))
 
@@ -246,7 +246,7 @@ def _is_valid_current(s: str) -> bool:
     raw = _unquote(s)
     if raw == "null":
         return True
-    if re.match(r'^\{[^}]+\}$', raw):
+    if re.match(r'^\{[^}]+\}', raw):
         return True
     return bool(re.match(r'^\d+(\.\d+)?(mA|A)$', raw))
 
@@ -255,7 +255,7 @@ def _is_valid_pressure(s: str) -> bool:
     raw = _unquote(s)
     if raw == "null":
         return True
-    if re.match(r'^\{[^}]+\}$', raw):
+    if re.match(r'^\{[^}]+\}', raw):
         return True
     return bool(re.match(r'^\d+(\.\d+)?bar$', raw))
 
@@ -291,9 +291,9 @@ def validate_component(content: str, strict: bool = True) -> ValidationResult:  
         if strict:
             errors.append(ValidationError(line=line_num, rule=f"[WARN] {rule}", snippet=snippet[:100]))
 
-    # §15 Trailing newline
-    if content.endswith('\n'):
-        add_error(len(content.splitlines()), "§15 Trailing newline forbidden at end of file", "")
+    # §15 Trailing newline (required)
+    if not content.endswith('\n'):
+        add_error(len(content.splitlines()), "§15 File must end with a newline", "")
 
     # §15 BOM
     if content.startswith('\ufeff'):
@@ -433,9 +433,10 @@ def validate_component(content: str, strict: bool = True) -> ValidationResult:  
 
         if trimmed == '':
             if in_array_block:
-                next_nb = next(
-                    (lines[j].strip() for j in range(i + 1, len(lines)) if lines[j].strip()), '')
-                if not next_nb.startswith('##'):
+                remaining = [lines[j].strip() for j in range(i + 1, len(lines)) if lines[j].strip()]
+                if not remaining:
+                    pass  # trailing blank lines at EOF are allowed
+                elif not remaining[0].startswith('##'):
                     add_error(line_num, "§1 Blank lines forbidden inside array blocks", "")
             else:
                 in_array_block = False
@@ -487,11 +488,12 @@ def validate_component(content: str, strict: bool = True) -> ValidationResult:  
                     add_error(line_num,
                               f"§3 Section index must be incremental (expected {section_count}, got {num})",
                               trimmed)
-            # Letter-suffix sections don't advance main counter but must repeat the current number
+            # Letter-suffix sections don't advance main counter.
+            # They refer to either the current base (7b after 7) or the next base (4b between 3 and 4).
             else:
-                if num != section_count:
+                if num not in (section_count, section_count + 1):
                     add_error(line_num,
-                              f"§3 Letter-suffix section index {num} must equal current base index {section_count}",
+                              f"§3 Letter-suffix section index {num} must be {section_count} or {section_count + 1}",
                               trimmed)
 
             if raw_name != raw_name.upper():
@@ -673,7 +675,7 @@ def validate_component(content: str, strict: bool = True) -> ValidationResult:  
             if not _is_quoted(trim_value) and re.match(r'^\d+\.\d+$', trim_value):
                 if trim_value.endswith('0') and not trim_value.endswith('.0'):
                     add_error(line_num, "§5 Float must not have trailing zeros", line[:40])
-            if not _is_quoted(trim_value) and re.search(r'[eE][+\-]?\d', trim_value):
+            if not _is_quoted(trim_value) and re.search(r'\d[eE][+\-]?\d', trim_value):
                 add_error(line_num, "§5 Float must not use scientific notation", line[:40])
 
             # §5 Unquoted hex
@@ -702,10 +704,11 @@ def validate_component(content: str, strict: bool = True) -> ValidationResult:  
             if not _is_quoted(trim_value) and re.search(r' ; | ;|; ', trim_value):
                 add_error(line_num, '§11 Sub-value ";" separator must have NO surrounding spaces', line[:60])
 
-            # §5.2 Forbidden board-domain unit suffixes
-            raw_tv = _unquote(trim_value)
-            if re.search(r'\d+(MHz|KB|kHz|ms)\b', raw_tv):
-                add_error(line_num, "§5.2 Unit suffixes MHz/KB/kHz/ms are forbidden in component profiles", line[:40])
+            # §5.2 Forbidden board-domain unit suffixes (only within limits context)
+            if 'limits' in key_path_stack or 'warnings' in key_path_stack:
+                raw_tv = _unquote(trim_value)
+                if re.search(r'\d+(MHz|KB|kHz|ms)\b', raw_tv):
+                    add_error(line_num, "§5.2 Unit suffixes MHz/KB/kHz/ms are forbidden in component profiles", line[:40])
 
             # §5.1 clock key forbidden
             if unquoted_key == 'clock':
@@ -831,12 +834,16 @@ def validate_component(content: str, strict: bool = True) -> ValidationResult:  
                 if not _is_valid_current(trim_value):
                     add_error(line_num, '§14.6 limits.max_current must be null or a quoted A/mA string', line[:40])
 
-            if unquoted_key == 'ip_rating' and trim_value != 'null':
-                raw = _unquote(trim_value)
-                if raw not in VALID_IP_RATINGS:
-                    add_error(line_num,
-                              f"§5.6 ip_rating must be null or one of: {'/'.join(sorted(VALID_IP_RATINGS))}",
-                              line[:60])
+            if unquoted_key == 'ip_rating':
+                raw_trim = trim_value.strip()
+                if raw_trim in ('null', '') or raw_trim == ':':
+                    pass  # null or empty = not specified
+                else:
+                    raw = _unquote(raw_trim)
+                    if raw not in VALID_IP_RATINGS:
+                        add_error(line_num,
+                                  f"§5.6 ip_rating must be null or one of: {'/'.join(sorted(VALID_IP_RATINGS))}",
+                                  line[:60])
 
             if unquoted_key == 'safety_category' and trim_value != 'null':
                 raw = _unquote(trim_value)

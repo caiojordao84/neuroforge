@@ -78,7 +78,7 @@ simulation:
   leakage_model: true
   noise_model: false
   states[3]:
-    - center-state     # Default rest state
+    - center-state
     - position-a-active
     - position-b-active
 
@@ -130,7 +130,7 @@ dendriForge:
   paletteGroup: "Hydraulics > Directional Valves"
   tags[7]:
     - valve
-    - 4/3
+    - size-4-3
     - directional
     - hydraulic
     - center-closed

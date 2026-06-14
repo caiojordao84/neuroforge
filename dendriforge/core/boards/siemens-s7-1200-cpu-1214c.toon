@@ -7,9 +7,9 @@ ASLversion: 0.1.0
 
 ## 1. DEVICE IDENTIFICATION:
 id: siemens-s7-1200-cpu-1214c
-name: "Siemens SIMATIC S7-1200 CPU 1214C — Compact PLC, 100KB work memory, 14 DI 24VDC, 10 DO, 2 AI 0-10V, 6xHSC 100kHz, 4xPTO, PROFINET, Modbus TCP, OPC UA, 3 CM + 8 SM + 1 SB expansion"
+name: "Siemens SIMATIC S7-1200 CPU 1214C DC/DC/DC — Compact PLC, 100KB work memory, 14 DI 24VDC, 10 DO MOSFET 24VDC 0.5A, 2 AI 0-10V, 6xHSC 100kHz, 4xPTO 100kHz, PROFINET, Modbus TCP, OPC UA, 3 CM + 8 SM + 1 SB expansion"
 manufacturer: "Siemens AG"
-mcu: "Siemens proprietary CPU 1214C — 0.085µs bit op; 1.7µs word op; 2.5µs FP; RTC w/480h backup; 4MB load flash; IEC61131-3 LAD-FBD-SCL"
+mcu: "Siemens proprietary CPU 1214C DC/DC/DC — 0.085µs bit op; 1.7µs word op; 2.5µs FP; RTC w/480h supercap backup; 4MB load flash; 100KB work RAM; IEC61131-3 LAD-FBD-SCL"
 category: plc
 image: siemens-s7-1200-cpu-1214c.svg
 url: "https://www.siemens.com/global/en/products/automation/systems/industrial/plc/simatic-s7-1200.html"
@@ -29,61 +29,62 @@ dims:
 
 ## 3. ELECTRICAL PROFILE (POWER PINS):
 # Format: name | direction | voltage | type
-# DC/DC/DC and DC/DC/RLY: 24VDC supply, range 20.4-28.8VDC, max 1.5A input
-# AC/DC/RLY: 85-264VAC 47-63Hz, max 0.5A@120VAC or 0.25A@240VAC; inrush 20A peak
-# L+ and M are CPU power; 24VDC encoder/sensor supply output (max 300mA) available on terminal
-# PE: Protective Earth — mandatory for AC/DC/RLY variant; recommended for DC variants
-powerPins[7|]{name|direction|voltage|type}:
-  L_PLUS|input|"24V"|null
-  M_MINUS|null|null|ground
-  L_AC|input|"230V"|null
-  N_AC|null|null|ground
+# DC/DC/DC: 24VDC supply L+/M, range 20.4-28.8VDC, max 1.5A input
+# 1L+/1M: DO supply rail — connected to same 24VDC source as CPU on DC/DC/DC variant
+# SENS_L+/SENS_M: 24VDC sensor/encoder supply output, max 300mA, built-in short-circuit protection
+# PE: Protective Earth — connect to DIN rail; recommended for DC variants; mandatory for CE/EMC compliance
+powerPins[9|]{name|direction|voltage|type}:
+  BOARD_L_PLUS|input|"24V"|null
+  BOARD_M|null|null|ground
   PE|null|null|ground
-  SENS_PWR|output|"24V"|null
-  SENS_GND|null|null|ground
+  SENS_L_PLUS|output|"24V"|null
+  SENS_M|null|null|
+  1_M|null|null|ground
+  2_M|null|null|ground
+  3_L_PLUS|output|"24V"|null
+  3_M|null|null|ground
 
 ## 4. GPIO MAP:
 # Format: pin | type | pwm | int | label | roles
-# All DI: 24VDC sink/source; IEC Type 1; isolation 707VDC field-to-logic; 1 group
-# HSC inputs Ia.0-Ia.5: up to 100kHz single-phase / 80kHz differential; cable max 50m shielded
-# Standard DI Ia.6-Ib.5: up to 30kHz for HSC / 20kHz differential; filter 0.1-20ms configurable
-# DO DC (MOSFET sourcing): 24VDC 0.5A; Qa.0-Qa.3=100kHz PTO; Qa.4-Qb.1=20kHz PTO; no overcurrent protection
-# DO Relay: SPST-NO 2A 250VAC/30VDC; 2 isolation groups; 1500VAC group-to-group; 10ms; 10M mech
-# AI: 0-10VDC only; 10-bit; 625µs/ch; no isolation from CPU logic; ≥100kΩ input resistance
+# DI Ia.0-Ia.5: 24VDC; HSC 100kHz single-phase / 80kHz diff; filter 0.1µs-20ms; isolation 707VDC; 50m shielded
+# DI Ia.6-Ib.5: 24VDC; standard; 30kHz HSC; filter 0.2-12.8ms; 500m shielded / 300m unshielded
+# DO Qa.0-Qa.3: MOSFET 24VDC 0.5A; PTO up to 100kHz; no overcurrent protection
+# DO Qa.4-Qb.1: MOSFET 24VDC 0.5A; Qa.4 max 20kHz PTO; no overcurrent protection
+# AI AIW0/AIW2: 0-10VDC; 10-bit (0-27648); 625µs/ch; no isolation from CPU; max 100m shielded
 gpio[26|]{pin|type|pwm|int|label|roles}:
-  0|digital|false|true|"Ia.0 / HSC0 — Digital Input 0; 24VDC sink/source; HSC high-speed: 100kHz single-phase, 80kHz differential; interrupt-capable; filter 0.1µs-20ms; isolation 707VDC; cable max 50m shielded for HSC"|"di"
-  1|digital|false|true|"Ia.1 / HSC1 — Digital Input 1; 24VDC; HSC 100kHz single / 80kHz diff; interrupt; 50m shielded HSC"|"di"
-  2|digital|false|true|"Ia.2 / HSC2 — Digital Input 2; 24VDC; HSC 100kHz single / 80kHz diff; interrupt; 50m shielded HSC"|"di"
-  3|digital|false|true|"Ia.3 / HSC3 — Digital Input 3; 24VDC; HSC 100kHz single / 80kHz diff; interrupt; 50m shielded HSC"|"di"
-  4|digital|false|true|"Ia.4 / HSC4 — Digital Input 4; 24VDC; HSC 100kHz single / 80kHz diff; interrupt; 50m shielded HSC"|"di"
-  5|digital|false|true|"Ia.5 / HSC5 — Digital Input 5; 24VDC; HSC 100kHz single / 80kHz diff; interrupt; 50m shielded HSC"|"di"
-  6|digital|false|true|"Ia.6 — Digital Input 6; 24VDC sink/source; standard; 30kHz for HSC use; filter 0.2-12.8ms; cable 500m shielded/300m unshielded; interrupt"|"di"
-  7|digital|false|true|"Ia.7 — Digital Input 7; 24VDC; standard; interrupt; 500m shielded"|"di"
-  8|digital|false|true|"Ib.0 — Digital Input 8; 24VDC; standard; interrupt"|"di"
-  9|digital|false|true|"Ib.1 — Digital Input 9; 24VDC; standard; interrupt"|"di"
-  10|digital|false|true|"Ib.2 — Digital Input 10; 24VDC; standard; interrupt"|"di"
-  11|digital|false|true|"Ib.3 — Digital Input 11; 24VDC; standard; interrupt"|"di"
-  12|digital|false|true|"Ib.4 — Digital Input 12; 24VDC; standard; interrupt"|"di"
-  13|digital|false|true|"Ib.5 — Digital Input 13; 24VDC; standard; interrupt"|"di"
-  14|digital|true|false|"Qa.0 / PTO0 — Digital Output 0; DC/DC/DC: MOSFET sourcing 24VDC 0.5A; PTO0 up to 100kHz pulse train output; motion control axis 0; 1µs on-delay; relay variant: SPST-NO 2A 250VAC isolation-group-1; relay NOT recommended for PTO — install SB instead"|"do;pwm"
-  15|digital|true|false|"Qa.1 / PTO1 — Digital Output 1; DC/DC/DC: MOSFET 0.5A PTO1 100kHz; relay: 2A group-1; motion control axis 1"|"do;pwm"
-  16|digital|true|false|"Qa.2 / PTO2 — Digital Output 2; DC/DC/DC: MOSFET 0.5A PTO2 100kHz; relay: 2A group-1"|"do;pwm"
-  17|digital|true|false|"Qa.3 / PTO3 — Digital Output 3; DC/DC/DC: MOSFET 0.5A PTO3 100kHz; relay: 2A group-1"|"do;pwm"
-  18|digital|true|false|"Qa.4 — Digital Output 4; DC/DC/DC: MOSFET 0.5A 20kHz PTO; 5µs delay; relay variant: SPST-NO 2A group-2 isolation 1500VAC group-to-group; 10ms; 10M mech cycles; 100k rated cycles"|"do;pwm"
-  19|digital|false|false|"Qa.5 — Digital Output 5; DC/DC/DC: MOSFET 0.5A; relay: 2A group-2"|"do"
-  20|digital|false|false|"Qa.6 — Digital Output 6; DC/DC/DC: MOSFET 0.5A; relay: 2A group-2"|"do"
-  21|digital|false|false|"Qa.7 — Digital Output 7; DC/DC/DC: MOSFET 0.5A; relay: 2A group-2"|"do"
-  22|digital|false|false|"Qb.0 — Digital Output 8; DC/DC/DC: MOSFET 0.5A; relay: 2A group-2"|"do"
-  23|digital|false|false|"Qb.1 — Digital Output 9; DC/DC/DC: MOSFET 0.5A; relay: 2A group-2; last output in integrated set"|"do"
-  24|analog|false|false|"AIW0 / Channel 0 — Analog Input 0; 0-10VDC unipolar; 10-bit resolution (0-27648 raw); ≥100kΩ input resistance; 625µs conversion; no isolation from CPU; shielded twisted pair max 100m; no 4-20mA support without SB add-on"|"adc:t"
-  25|analog|false|false|"AIW2 / Channel 1 — Analog Input 1; 0-10VDC; 10-bit; same specs as AIW0; use external dropping resistor 500Ω for 4-20mA — measure voltage across it; shielded max 100m"|"adc:t"
+  0|digital|false|true|"Ia.0 / HSC0"|"di"
+  1|digital|false|true|"Ia.1 / HSC1"|"di"
+  2|digital|false|true|"Ia.2 / HSC2"|"di"
+  3|digital|false|true|"Ia.3 / HSC3"|"di"
+  4|digital|false|true|"Ia.4 / HSC4"|"di"
+  5|digital|false|true|"Ia.5 / HSC5"|"di"
+  6|digital|false|true|"Ia.6"|"di"
+  7|digital|false|true|"Ia.7"|"di"
+  8|digital|false|true|"Ib.0"|"di"
+  9|digital|false|true|"Ib.1"|"di"
+  10|digital|false|true|"Ib.2"|"di"
+  11|digital|false|true|"Ib.3"|"di"
+  12|digital|false|true|"Ib.4"|"di"
+  13|digital|false|true|"Ib.5"|"di"
+  14|digital|true|false|"Qa.0"|"do;pwm"
+  15|digital|true|false|"Qa.1"|"do;pwm"
+  16|digital|true|false|"Qa.2"|"do;pwm"
+  17|digital|true|false|"Qa.3"|"do;pwm"
+  18|digital|true|false|"Qa.4"|"do;pwm"
+  19|digital|false|false|"Qa.5"|"do"
+  20|digital|false|false|"Qa.6"|"do"
+  21|digital|false|false|"Qa.7"|"do"
+  22|digital|false|false|"Qb.0"|"do"
+  23|digital|false|false|"Qb.1"|"do"
+  24|analog|false|false|"AIW0"|"adc:t"
+  25|analog|false|false|"AIW2"|"adc:t"
 
 ## 5. PERIPHERALS & USB:
 # Format: peripheral | param | value
 peripherals[8|]{peripheral|param|value}:
   profinet|"speed:100Mbit"|"1x-RJ45-10-100Mbps-auto-MDI-X-isolated;proto:PROFINET-IO-controller+device,S7-comm-client+server,TCP-IP,ISO-on-TCP-RFC1006,UDP,Modbus-TCP-client+server,WebServer-user-pages,OPC-UA-V4.4plus;max-PROFINET-devices:16"
   hsc_counters|"count:6"|"HSC0-5:high-speed-counting;modes:single-phase-100kHz,2-phase-80kHz-differential,A-B-quadrature-80kHz,PTO-direction;inputs:Ia.0-Ia.5;external-reset-start-preset;capture;gate;interrupt-on-CV-equals-PV"
-  pto_motion|"axes:4"|"PTO0-3:pulse-train-output;Qa.0-Qa.3=100kHz;Qa.4=20kHz-max;V-profile+S-curve-motion;axis-homing;MC_MoveAbsolute-MC_MoveRelative-MC_MoveVelocity;requires-external-drive-PULSE+DIR;relay-CPUs-need-SB-for-PTO"
+  pto_motion|"axes:4"|"PTO0-3:pulse-train-output;Qa.0-Qa.3=100kHz;Qa.4=20kHz-max;V-profile+S-curve-motion;axis-homing;MC_MoveAbsolute-MC_MoveRelative-MC_MoveVelocity;requires-external-drive-PULSE+DIR"
   pid_control|"loops:unlimited"|"PID_Compact:auto-tune-pretuning-fine-tuning;PID_3Step:valve-control;PID_Temp:cascade;sampling-time-configurable;output:analog-or-PWM-digital"
   expansion_sm|"modules:8"|"up-to-8-Signal-Modules-SM-right-side;types:SM1221-DI,SM1222-DO,SM1223-DI-DO,SM1231-AI,SM1232-AO,SM1234-AI-AO,SM1238-EnergyMeter;5VDC-backplane-bus-max-1600mA"
   expansion_sb|"modules:1"|"1x-Signal-Board-top-slot;types:SB1221-DI4,SB1222-DO4,SB1223-DI2-DO2,SB1231-AI1,SB1232-AO1,SB1231-RTD,SB1231-TC,SB1241-RS485,CB1241-RS485,BB1297-battery;adds-AO-AI-RS485-or-battery-backup"
@@ -99,15 +100,13 @@ usb:
 restrictions:
   max_io_current: "500mA"
   total_current_limit: "1500mA"
-  warnings[9]:
-    - "Digital outputs on DC/DC/DC variant (MOSFET) have NO overload or short-circuit protection — always install external fuses or breakers rated for the load; a short circuit on any DO will permanently damage the output MOSFET driver; use 0.5A fuses per output channel"
-    - "Relay output variants (DC/DC/RLY and AC/DC/RLY) split 10 relay outputs into 2 isolation groups (Qa.0-Qa.3 = group 1; Qa.4-Qb.1 = group 2) — the 1500VAC group-to-group isolation separates line voltage from SELV and different phases up to 250VAC; do NOT mix voltages within the same group as they share a common terminal"
-    - "Pulse Train Output (PTO) for motion control is ONLY reliable on DC/DC/DC variant (MOSFET outputs) — PTO on relay variants is NOT recommended by Siemens; for motion control on relay CPU models, install a Signal Board (SB1222 DO4 or SB1232 AO1) in the top slot and use that output for PTO"
-    - "The 2 built-in analog inputs (AIW0, AIW2) support ONLY 0-10VDC — there is NO built-in current (4-20mA) input; to measure 4-20mA, add an external shunt resistor (500Ω precision) across the analog input and measure the resulting voltage; alternatively install SM1231 AI or SB1231 AI for true current inputs with proper isolation"
+  warnings[7]:
+    - "Digital outputs (MOSFET) have NO overload or short-circuit protection — always install external fuses or breakers rated for the load; a short circuit on any DO will permanently damage the output MOSFET driver; use 0.5A fuses per output channel"
+    - "PTO pulse train output is fully supported on this DC/DC/DC variant — Qa.0-Qa.3 support up to 100kHz; Qa.4 supports up to 20kHz; use MC_MoveAbsolute/MC_MoveRelative/MC_MoveVelocity with an external PULSE+DIR drive"
+    - "The 2 built-in analog inputs (AIW0, AIW2) support ONLY 0-10VDC — there is NO built-in current (4-20mA) input; to measure 4-20mA, add an external shunt resistor (500 ohm precision) across the analog input; alternatively install SM1231 AI or SB1231 AI for true current inputs with proper isolation"
     - "The built-in analog inputs have NO isolation from the CPU logic — always use shielded and twisted pair cables (max 100m) and connect the shield at only one end (preferably the PLC end) to avoid ground loops; floating signal sources require a reference connection to M terminal of the CPU sensor supply"
     - "The 5VDC backplane bus for expansion modules is limited to 1600mA total — each SM draws approximately 40-200mA from the backplane; if the total current exceeds 1600mA a Power Module PM1207 must be inserted between SMs; always calculate the backplane current budget before selecting expansion modules"
     - "The RTC backup uses an internal supercapacitor (no battery) that provides approximately 480 hours (20 days) of clock backup after power loss — for longer retention the SB1297 Battery Board must be installed in the Signal Board slot; installing SB1297 permanently occupies the SB slot and prevents use of other Signal Boards simultaneously"
-    - "The PROFINET port does NOT support PROFIBUS — to connect S7-1200 to a PROFIBUS network install a CM1243-5 master or CM1244-1 slave in a CM slot; the CM slots are on the left side of the CPU; max 3 CM modules may be installed; each CM consumes current from the 5VDC backplane bus"
     - "OPC UA server is available from firmware V4.4 and TIA Portal V16 — older firmware versions do NOT support OPC UA; before enabling OPC UA ensure the CPU firmware is updated; OPC UA requires a security certificate to be configured in TIA Portal and deployed to the CPU; unsecured OPC UA is disabled by default from V4.4"
 compatibility:
   sw: "STEP 7 Basic V11+ / TIA Portal V11+; TIA Portal Professional V13+ for full SCL and advanced motion; STEP 7 V5.x NOT compatible"
@@ -117,7 +116,7 @@ compatibility:
 
 ## 7. AGENT SKILLS:
 dendriForge:
-  boardFamilySkillId: siemens-simatic-s7-1200-family
+  boardFamilySkillId: siemens-simatic-s7-1200-plc-family
   boardProfileId: siemens-s7-1200-cpu-1214c
   defaultLanguageSkills[3]:
     - ladder-tia-portal-s7-1200

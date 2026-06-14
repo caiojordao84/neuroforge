@@ -121,8 +121,8 @@ canvas:
   width: 60
   height: 50
   ports_layout: custom
-  port_IN+: {x: 0, y: 10}
-  port_IN-: {x: 0, y: 25}
+  "port_IN+": {x: 0, y: 10}
+  "port_IN-": {x: 0, y: 25}
   port_OUT: {x: 60, y: 15}
   port_GND: {x: 20, y: 50}
   port_COM: {x: 60, y: 35}

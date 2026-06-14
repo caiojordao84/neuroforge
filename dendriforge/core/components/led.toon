@@ -3,7 +3,7 @@ project_name: led-profile
 version: 1
 editor: dendriForge
 author: schemasmith
-ASLversion: 0.2.0
+ASLversion: 0.1.0
 
 ## 1. IDENTIFICATION:
 id: led
@@ -22,7 +22,7 @@ params:
   color:
     label: "Color"
     default: "red"
-    options: ["red", "green", "blue", "yellow", "orange", "white", "warm-white", "cool-white", "uv", "ir", "cutom"]
+    options: ["red", "green", "blue", "yellow", "orange", "white", "warm-white", "cool-white", "uv", "ir", "custom"]
     type: enum
     editable: true
   vf:
@@ -64,13 +64,6 @@ params:
     max: 940
     type: float
     editable: false
-  viewing_angle:
-    label: "Half-Angle (2θ½)"
-    unit: V
-    default: 30
-    options: [5, 10, 15, 20, 30, 45, 60, 90, 120, 160]
-    type: enum
-    editable: true
   vr_max:
     label: "Max Reverse Voltage (Vr)"
     unit: V
@@ -79,12 +72,6 @@ params:
     max: 50
     type: float
     editable: false
-  led_type:
-    label: "LED Type"
-    default: "standard-thru-hole"
-    options: ["standard-thru-hole", "smd-0402", "smd-0603", "smd-0805", "smd-1206", "power-led", "rgb-common-cathode", "rgb-common-anode", "addressable-ws2812"]
-    type: enum
-    editable: true
   power_rated:
     label: "Power Rating"
     unit: W

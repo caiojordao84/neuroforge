@@ -3,14 +3,14 @@ project_name: led-matrix-profile
 version: 1
 editor: dendriForge
 author: schemasmith
-ASLversion: 0.2.0
+ASLversion: 0.1.0
 
 ## 1. IDENTIFICATION:
 id: led-matrix
 name: "LED Matrix"
 family: electricals
-subfamily: passives
-category: passive
+subfamily: displays
+category: signal
 standard: "IEC 60810"
 url: null
 image: led-matrix.svg
@@ -139,7 +139,7 @@ dendriForge:
   componentFamilySkillId: electricals-family
   componentProfileId: led-matrix
   simulationEngine: basic-analog
-  paletteGroup: "Fundamental Electricals > Passives"
+  paletteGroup: "Fundamental Electricals > Displays"
   tags[7]:
     - led-matrix
     - display

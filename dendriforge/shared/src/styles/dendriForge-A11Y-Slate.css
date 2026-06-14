@@ -105,7 +105,7 @@
      All values WCAG AAA over --df-bg-main (#0f172a).
      ========================================= */
   --df-pin-digital: var(--prism-operator);  /* 11.14:1 */
-  --df-pin-pwm:     #ffb347;                /* 10.02:1 */
+  --df-pin-pwm:     #ffd700;                /* Amarelo Ouro */
   --df-pin-analog:  var(--prism-string);    /* 11.71:1 */
   --df-pin-power:   #fc8181;               /*  7.31:1 */
   --df-pin-gnd:     #a0aec0;               /*  7.91:1 — also --df-pin-aref, --df-sim-wire-gnd */
@@ -114,8 +114,9 @@
   --df-pin-uart:    var(--prism-macro);     /*  9.67:1 */
   --df-pin-nc:      #ff8080;               /*  7.35:1 */
   --df-pin-icsp:    #94d2bd;               /*  8.12:1 */
-  --df-pin-reset:   #fb923c;               /*  7.98:1 */
+  --df-pin-reset:   #f97316;               /* Laranja Vivo */
   --df-pin-aref:    var(--df-pin-gnd);      /*  7.91:1 */
+  --df-pin-interrupt:    #f43f5e;           /* Vermelho Rose */
 }
 
 /* =========================================
@@ -244,29 +245,72 @@ svg .led {
   transition: fill 0.2s ease, filter 0.2s ease;
 }
 
-svg .digital                        { fill: var(--df-pin-digital) !important; }
-svg .digital[data-pwm="true"]       { fill: var(--df-pin-pwm)     !important; }
+/* Preenchimentos Básicos (Fills) */
+svg .digital { fill: var(--df-pin-digital) !important; }
+svg .analog  { fill: var(--df-pin-analog) !important; }
+svg .power   { fill: var(--df-pin-power) !important; }
+svg .ground  { fill: var(--df-pin-gnd) !important; }
+svg .earth   { fill: var(--df-pin-gnd) !important; }
+
+/* Casos especiais de Fills */
+svg .power[data-pin="NC"]    { fill: var(--df-pin-nc) !important; }
+svg .power[data-pin="RESET"] { fill: var(--df-pin-reset) !important; }
+
+/* Contornos Especiais (Strokes) */
+
+/* 1. PWM: Tracejado curto e fino */
+svg .digital[data-pwm="true"] { 
+  display: block; 
+  stroke: var(--df-pin-pwm) !important; 
+  stroke-width: 0.8; 
+  stroke-dasharray: 3 1.5; 
+  stroke-dashoffset: 0;
+}
+
+/* 2. Interrupts: Linha contínua (sólida) e mais espessa para destaque */
+svg .digital[data-interrupt="true"] { 
+  display: block;
+  stroke: var(--df-pin-interrupt) !important; 
+  stroke-width: 1.2; 
+  stroke-dasharray: none; 
+}
+
+/* 3. Protocolos de Comunicação (UART, I2C, SPI) e Auxiliares (AREF, ICSP): Tracejado médio */
 svg .digital[data-uart="TX"],
-svg .digital[data-uart="RX"]        { fill: var(--df-pin-uart)    !important; }
+svg .digital[data-uart="RX"],
+svg .digital[data-uart="CTS"],
+svg .digital[data-uart="RTS"] { 
+  display: block; 
+  stroke: var(--df-pin-uart) !important; 
+  stroke-width: 0.8; 
+  stroke-dasharray: 4 1.5; 
+}
 svg .digital[data-i2c="SDA"],
-svg .digital[data-i2c="SCL"]        { fill: var(--df-pin-i2c)     !important; }
-svg .digital[data-spi]              { fill: var(--df-pin-spi)     !important; }
-
-svg .analog                         { fill: var(--df-pin-analog)  !important; }
+svg .digital[data-i2c="SCL"],
 svg .analog[data-i2c="SDA"],
-svg .analog[data-i2c="SCL"]         { fill: var(--df-pin-i2c)     !important; }
-
-svg .power                          { fill: var(--df-pin-power)   !important; }
-svg .power[data-pin="NC"]           { fill: var(--df-pin-nc)      !important; }
-svg .power[data-pin="AREF"]         { fill: var(--df-pin-aref)    !important; }
-svg .power[data-pin="RESET"]        { fill: var(--df-pin-reset)   !important; }
-
-svg .ground                         { fill: var(--df-pin-gnd)     !important; }
-svg .icsp                           { fill: var(--df-pin-icsp)    !important; }
-
-svg .digital[data-interrupt="true"] {
-  stroke:       var(--df-pin-pwm) !important;
-  stroke-width: 0.8;
+svg .analog[data-i2c="SCL"] { 
+  display: block; 
+  stroke: var(--df-pin-i2c) !important; 
+  stroke-width: 0.8; 
+  stroke-dasharray: 4 1.5; 
+}
+svg .digital[data-spi] { 
+  display: block; 
+  stroke: var(--df-pin-spi) !important; 
+  stroke-width: 0.8; 
+  stroke-dasharray: 4 1.5; 
+}
+svg .power[data-pin="AREF"] { 
+  display: block; 
+  stroke: var(--df-pin-aref) !important; 
+  stroke-width: 0.8; 
+  stroke-dasharray: 4 1.5; 
+}
+svg .icsp { 
+  display: block; 
+  stroke: var(--df-pin-icsp) !important; 
+  stroke-width: 0.8; 
+  stroke-dasharray: 4 1.5; 
 }
 
 svg .pin:hover,
@@ -286,6 +330,7 @@ svg .analog:hover {
 
 svg .led {
   fill: var(--df-led-off-base) !important;
+  transition: fill 0.3s ease, filter 0.3s ease;
 }
 
 svg .led[data-state="off"] {
@@ -461,3 +506,26 @@ pre[class*="language-"] {
 .token.bold   { font-weight: bold; }
 .token.italic { font-style: italic; }
 .token.entity { cursor: help; }
+
+/* =========================================
+   SVG Board — LED Run/Stop (Dual Color)
+   ========================================= */
+svg .led-green-yellow[data-state="run"] {
+  fill: var(--df-led-color-green) !important;
+  filter: drop-shadow(0 0 0.125em var(--df-led-glow-green));
+}
+
+svg .led-green-yellow[data-state="stop"] {
+  fill: var(--df-led-color-yellow) !important;
+  filter: drop-shadow(0 0 0.125em var(--df-led-glow-yellow));
+}
+
+/* Opcional: Se quiser que ele pisque no modo STOP */
+@keyframes df-led-pulse-yellow {
+  0%, 100% {filter: drop-shadow(0 0 0.125em var(--df-led-glow-yellow)) brightness(1);}
+  50% {filter: drop-shadow(0 0 0px transparent) brightness(0.5);}
+}
+svg .led-green-yellow[data-state="stop-blink"] {
+  fill: var(--df-led-color-yellow) !important;
+  animation: df-led-pulse-yellow 1.0s ease-in-out infinite;
+}

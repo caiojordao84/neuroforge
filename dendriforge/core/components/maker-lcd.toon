@@ -9,7 +9,7 @@ ASLversion: 0.1.0
 id: maker-lcd
 name: "LCD Alphanumeric Display"
 family: electricals
-subfamily: semiconductors
+subfamily: displays
 category: signal
 standard: "IEC 61747-1"
 url: null
@@ -108,7 +108,7 @@ dendriForge:
   componentFamilySkillId: electricals-family
   componentProfileId: maker-lcd
   simulationEngine: basic-analog
-  paletteGroup: "Fundamental Electricals > Semiconductors"
+  paletteGroup: "Fundamental Electricals > Displays"
   tags[6]:
     - lcd
     - display

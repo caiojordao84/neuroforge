@@ -3,7 +3,7 @@ project_name: multi-display-dashboard
 version: 1
 editor: dendriForge
 author: GEMINI
-ASLversion: 0.2.0
+ASLversion: 0.1.0
 
 ## 1. HARDWARE INTERFACE:
 hardware[11|]{pin|type|io_mode|label|target_role}:

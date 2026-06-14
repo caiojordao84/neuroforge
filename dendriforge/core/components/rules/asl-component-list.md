@@ -31,11 +31,17 @@
 - PTC                                   | thermistor-ptc
 - Shunt resistivo                       | shunt-resistor
 
+### Displays
+- Display 7 segmentos                   | display-7seg
+- Display 16 segmentos                  | display-16seg
+- Matriz LED                            | led-matrix
+- LCD Alfanumérico                      | maker-lcd
+- OLED Display                          | maker-oled
+- TFT Display                           | maker-tft
+
 ### Semicondutores
 - LED                                   | led
 - LED RGB                               | led-rgb
-- Display 7 segmentos                   | display-7seg
-- Matriz LED                            | led-matrix
 - Diodo                                 | diode
 - Diodo Schottky                        | diode-schottky
 - Diodo Zener                           | diode-zener

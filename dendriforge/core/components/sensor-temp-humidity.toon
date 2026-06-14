@@ -53,8 +53,8 @@ params:
 ports[4|]{id|direction|type|voltage_max|current_max|notes}:
   VCC|input|power|"{supply_voltage}"|"100mA"|"supply +"
   GND|input|ground|null|null|"supply -"
-  SIG1|bidirectional|signal|"{supply_voltage}"|"20mA"|"Temp analog / 1-Wire Data / I2C SDA"
-  SIG2|bidirectional|signal|"{supply_voltage}"|"20mA"|"Humidity analog / I2C SCL (leave open for 1-Wire)"
+  SIG1|bidirectional|i2c|"{supply_voltage}"|"20mA"|"Temp analog / 1-Wire Data / I2C SDA"
+  SIG2|bidirectional|i2c|"{supply_voltage}"|"20mA"|"Humidity analog / I2C SCL (leave open for 1-Wire)"
 
 ## 4. SIMULATION BEHAVIOR:
 simulation:
